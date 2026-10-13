@@ -38,8 +38,11 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
         }).filter(Boolean);
         // Units at the same Initiative strike simultaneously: apply damage only after all rolls.
         strikes.forEach(({u,target,result})=>say('<b>Melee dice — '+u.name+' attacks '+target.name+'</b>'+diceStack(u,result)));
-        strikes.forEach(({u,target,result})=>{wounds.set(u.id,(wounds.get(u.id)||0)+result.wounds);});
-        strikes.forEach(({target,result})=>applyDamage(target,result.wounds,false));
+        strikes.forEach(({u,target,result})=>{
+          if(!alive(target))return;
+          wounds.set(u.id,(wounds.get(u.id)||0)+result.wounds);
+          applyDamage(target,result.wounds,false,result.cascadePlan);
+        });
       });
       const sideUnits={player:group.filter(u=>u.side==="player"&&alive(u)),ai:group.filter(u=>u.side==="ai"&&alive(u))};
       if(!sideUnits.player.length||!sideUnits.ai.length)return;
