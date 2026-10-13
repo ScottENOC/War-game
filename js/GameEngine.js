@@ -29,13 +29,18 @@ const { roll, diceStack, diceDuel } = DICE;
 function closestEnemy(u){return enemies(u).sort((a,b)=>dist(u,a)-dist(u,b))[0]||null;}
 function selectedTarget(u){const list=enemies(u);return list.find(v=>v.id===S.targetId)||closestEnemy(u);}
 function eligibleForActivation(u){return alive(u)&&!u.fled&&!u.engaged&&!u.activated;}
+const RULES = createRules({ roll });
+const { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage, meleeAttack } = RULES;
+const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $ });
+const { shoot } = SHOOTING;
 function startActivations(){S.activationSide="player";const p=units().filter(u=>u.side==="player"&&eligibleForActivation(u));if(!p.length){runAiActivations();return;}S.selected=p[0].id;render();}
 const AI = createAI({ S, units, alive, eligibleForActivation, enemies, dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, BOW_RANGE, beginCombatPhase });
 const runAiActivation = AI.runAiActivation;
 const runAiActivations = AI.runAiActivations;
 function finishActivation(){const u=S.units[S.selected];if(!u||u.side!=="player"||u.activated||S.phase!=="movement")return;u.activated=true;S.mode=null;say(u.name+" completes its activation.");if(runAiActivation()){const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.activationSide="player";S.selected=next.id;render();return;}}const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.activationSide="player";S.selected=next.id;render();return;}runAiActivations();}
 function beginCombatPhase(){if(units().some(u=>u.engaged&&alive(u))){setPhase("combat");}else{S.turn++;setPhase("charges");say("Turn "+S.turn+" begins.");}}
-const COMBAT = createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render, endTurn, finishBattle });
+let render = () => {};
+const COMBAT = createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render: () => render(), endTurn, finishBattle });
 const { resolveCombat, resolveBreak } = COMBAT;
 function endTurn(){units().forEach(u=>{u.charged=false;if(!alive(u)||!units().some(v=>v.side!==u.side&&alive(v)&&v.engaged&&dist(u,v)<4))u.engaged=false;});S.turn++;say("Turn "+S.turn+" begins.");setPhase("charges");}
 function finishBattle(msg){S.finished=true;S.phase="over";say('<b>'+msg+'</b>');render();}
@@ -47,7 +52,7 @@ function requestRender(){ render(); }
 const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, dist, enemies, say, shoot, render:requestRender, startActivations });
 const { setPhase, declareCharge, finishMovement, passCharges, aiChargeStep, resolveDeclaredCharges } = PHASES;
 const UI = createUI({ S, $, units, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset });
-const { render } = UI;
+render = UI.render;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, shoot, declareCharge, render, draw, $ });
 reset();setupCanvas();
 })();
