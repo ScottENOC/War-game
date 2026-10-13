@@ -9,6 +9,7 @@ import { createInput } from "./input.js";
 import { createUI } from "./ui.js";
 import { createPhases } from "./phases.js";
 import { createDice } from "./dice.js";
+import { createMovement } from "./movement.js";
 
 export function startGame() {
 (() => {
@@ -19,8 +20,9 @@ const BATTLEFIELD_WIDTH_IN=48, MODEL_BASE_IN=.9, BOW_RANGE=24;
 const S=createGameState(createStartingUnits());
 const units=()=>Object.values(S.units), alive=u=>u.models>0;
 const W=()=>canvas.clientWidth,H=()=>canvas.clientHeight,PX_PER_IN=()=>W()/BATTLEFIELD_WIDTH_IN,fieldHeightIn=()=>H()/Math.max(1,PX_PER_IN());
-const dist=(a,b)=>Math.hypot((a.x-b.x)*BATTLEFIELD_WIDTH_IN,(a.y-b.y)*fieldHeightIn());
 const enemies=u=>units().filter(v=>v.side!==u.side&&alive(v));
+const MOVEMENT = createMovement({ W, H, PX_PER_IN, MODEL_BASE_IN, BATTLEFIELD_WIDTH_IN, fieldHeightIn, units, alive });
+const { dist, shape, corners, overlap, canPlace } = MOVEMENT;
 function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,80);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");if(msg.includes("dice-stack")||msg.includes("dice-duel")){$("rollcontent").innerHTML=msg;$("rollview").classList.add("show");}if($("logpanel").classList.contains("open"))$("log").scrollTop=0;}
 const DICE = createDice({ S });
 const { roll, diceStack, diceDuel } = DICE;
