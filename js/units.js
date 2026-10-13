@@ -1,7 +1,7 @@
 import { FACTIONS } from "./factions.js";
 
 function unitCost(config) {
-  if (config.type === "captain") return 50 + (config.heavyArmour ? 4 : 0) + ((config.weapon && config.weapon !== "handWeapon") || config.greatWeapon ? 4 : 0);
+  if (config.type === "captain" || config.type === "lord") return (config.type === "lord" ? 80 : 50) + (config.heavyArmour ? 4 : 0) + ((config.weapon && config.weapon !== "handWeapon") || config.greatWeapon ? 4 : 0);
   const base = config.type === "swordsmen" ? 8 : 10;
   return config.models * base + (config.champion ? 6 : 0) +
     (config.type === "swordsmen" && config.lightArmour ? config.models : 0) +
@@ -10,15 +10,15 @@ function unitCost(config) {
 
 function buildUnit(template, config) {
   const stats = { ...template.stats };
-  if (config.type === "captain" && config.heavyArmour) stats.M = Math.max(1, stats.M - 1);
+  if ((config.type === "captain" || config.type === "lord") && config.heavyArmour) stats.M = Math.max(1, stats.M - 1);
 
   return {
     id: config.id, name: template.name + " " + config.index, short: template.short, side: config.side,
-    kind: template.kind, isCharacter: config.type === "captain", attachedTo: null, baseMove: stats.M,
-    models: config.type === "captain" ? 1 : config.models, startModels: config.type === "captain" ? 1 : config.models, points: unitCost(config), weapon: config.type === "captain" ? (config.weapon || (config.greatWeapon ? "greatWeapon" : "handWeapon")) : "handWeapon",
+    kind: template.kind, isCharacter: config.type === "captain" || config.type === "lord", isGeneral: config.type === "lord", attachedTo: null, baseMove: stats.M,
+    models: config.type === "captain" || config.type === "lord" ? 1 : config.models, startModels: config.type === "captain" || config.type === "lord" ? 1 : config.models, points: unitCost(config), weapon: config.type === "captain" || config.type === "lord" ? (config.weapon || (config.greatWeapon ? "greatWeapon" : "handWeapon")) : "handWeapon",
     spears: config.type === "swordsmen" && !!config.spears,
     lightArmour: !!config.lightArmour, heavyArmour: !!config.heavyArmour,
-    armour: config.type === "captain" ? (config.heavyArmour ? "heavy" : "light") : (config.lightArmour ? "light" : "none"), shield: false, wardSave: null,
+    armour: config.type === "captain" || config.type === "lord" ? (config.heavyArmour ? "heavy" : "light") : (config.lightArmour ? "light" : "none"), shield: false, wardSave: null,
     // Optional rule tags consumed by shooting modifiers when a unit/profile or
     // future battlefield-terrain interaction sets them.
     largeTarget: false, singleCharacter: false, skirmisher: false, cover: null,
@@ -27,7 +27,7 @@ function buildUnit(template, config) {
     formationWidth: 5, canCounterCharge: true, fleeingCharge: false, activated: false, moved: false, shot: false, charged: false, fled: false,
     moveUsed: 0, damage: 0, shootCasualties: 0, panicTested: false,
     stats, champion: { enabled: !!config.champion && config.type !== "captain", stats: null },
-    attachedCharacters: [], characterWounds: config.type === "captain" ? template.stats.W : null, delayedDeath: false, delayedDeathSnapshot: null, championAlive: !!config.champion, championWounds: config.champion ? template.stats.W : 0
+    attachedCharacters: [], characterWounds: config.type === "captain" || config.type === "lord" ? template.stats.W : null, delayedDeath: false, delayedDeathSnapshot: null, championAlive: !!config.champion, championWounds: config.champion ? template.stats.W : 0
   };
 }
 
