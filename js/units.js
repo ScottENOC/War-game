@@ -1,22 +1,42 @@
 import { FACTIONS } from "./factions.js";
 
+function unitCost(config) {
+  const base = config.type === "swordsmen" ? 8 : 10;
+  return config.models * base + (config.champion ? 6 : 0) +
+    (config.type === "swordsmen" && config.lightArmour ? config.models : 0);
+}
+
 function buildUnit(template, config) {
+  const stats = { ...template.stats };
+  if (config.type === "swordsmen" && config.lightArmour) stats.save = "6+";
   return {
-    id: config.id, name: template.name, short: template.short, side: config.side,
-    kind: template.kind, models: template.models, startModels: template.models,
+    id: config.id, name: template.name + " " + config.index, short: template.short, side: config.side,
+    kind: template.kind, models: config.models, startModels: config.models, points: unitCost(config),
+    lightArmour: !!config.lightArmour,
     x: config.x, y: config.y, facing: config.facing, deployed: config.side === "ai",
     engaged: false, activated: false, moved: false, shot: false, charged: false, fled: false,
     moveUsed: 0, damage: 0, shootCasualties: 0, panicTested: false,
-    stats: { ...template.stats }, champion: { enabled: false, stats: null }
+    stats, champion: { enabled: !!config.champion, stats: null }
   };
 }
 
+export function createUnitsFromArmy(army) {
+  const units = {};
+  army.forEach((entry, index) => {
+    const n = index + 1, y = n / (army.length + 1);
+    units["p" + n] = buildUnit(FACTIONS.empire.units[entry.type], {
+      ...entry, id: "p" + n, index: n, side: "player", x: 0.22, y, facing: 0
+    });
+    units["a" + n] = buildUnit(FACTIONS.opposing.units[entry.type], {
+      ...entry, id: "a" + n, index: n, side: "ai", x: 0.78, y, facing: Math.PI
+    });
+  });
+  return units;
+}
+
 export function createStartingUnits() {
-  const empire = FACTIONS.empire.units, opposing = FACTIONS.opposing.units;
-  return {
-    pSword: buildUnit(empire.swordsmen, { id: "pSword", side: "player", x: 0.22, y: 0.36, facing: 0 }),
-    pArch: buildUnit(empire.archers, { id: "pArch", side: "player", x: 0.22, y: 0.70, facing: 0 }),
-    aSword: buildUnit(opposing.swordsmen, { id: "aSword", side: "ai", x: 0.78, y: 0.36, facing: Math.PI }),
-    aArch: buildUnit(opposing.archers, { id: "aArch", side: "ai", x: 0.78, y: 0.70, facing: Math.PI })
-  };
+  return createUnitsFromArmy([
+    { type: "swordsmen", models: 20, champion: false, lightArmour: false },
+    { type: "archers", models: 10, champion: false, lightArmour: false }
+  ]);
 }
