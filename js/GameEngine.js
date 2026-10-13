@@ -29,12 +29,17 @@ function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,80);$("log").innerHTML=
 const DICE = createDice({ S });
 const { roll, diceStack, diceDuel } = DICE;
 function closestEnemy(u){return enemies(u).sort((a,b)=>dist(u,a)-dist(u,b))[0]||null;}
+function leadership(u){
+  if(!u)return 0;
+  const embedded=(u.attachedCharacters||[]).map(id=>S.units[id]).filter(h=>h&&h.models>0&&!h.fled);
+  return Math.max(u.stats.Ld,...embedded.map(h=>h.stats.Ld));
+}
 function panicNearby(source,reason="a nearby friendly unit is lost"){
   if(!source)return;
-  units().filter(v=>v!==source&&v.side===source.side&&alive(v)&&!v.fled&&!v.panicTested&&dist(v,source)<=6).forEach(v=>{
-    v.panicTested=true;const dice=roll(2),total=dice[0]+dice[1],snakeEyes=dice[0]===1&&dice[1]===1;
-    say("Panic test — "+v.name+" ("+reason+"): "+dice.join(" + ")+" = "+total+" against Leadership "+v.stats.Ld+".");
-    if(!snakeEyes&&total>v.stats.Ld){v.fled=true;v.engaged=false;v.engagedWith=null;say(v.name+" panics and flees.");}
+  units().filter(v=>v!==source&&!v.attachedTo&&v.side===source.side&&alive(v)&&!v.fled&&!v.panicTested&&dist(v,source)<=6).forEach(v=>{
+    v.panicTested=true;const ld=leadership(v),dice=roll(2),total=dice[0]+dice[1],snakeEyes=dice[0]===1&&dice[1]===1;
+    say("Panic test — "+v.name+" ("+reason+"): "+dice.join(" + ")+" = "+total+" against Leadership "+ld+".");
+    if(!snakeEyes&&total>ld){v.fled=true;v.engaged=false;v.engagedWith=null;say(v.name+" panics and flees.");}
     else if(snakeEyes)say("Snake eyes! "+v.name+" automatically holds.");
     else say(v.name+" holds.");
   });
@@ -68,11 +73,11 @@ const AI = createAI({ S, units, alive, eligibleForActivation, enemies, dist, BAT
 const runAiActivation = AI.runAiActivation;
 const runAiActivations = AI.runAiActivations;
 function finishActivation(){const u=S.units[S.selected];if(!u||u.side!=="player"||u.activated||S.phase!=="movement")return;u.activated=true;S.mode=null;say(u.name+" completes its activation.");if(runAiActivation()){const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.activationSide="player";S.selected=next.id;render();return;}}const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.activationSide="player";S.selected=next.id;render();return;}runAiActivations();}
-function rallyUnit(u){if(!u||!u.fled)return;if(u.models*4<u.startModels){say(u.name+" is below a quarter of its starting strength and cannot rally.");return;}const dice=roll(2),total=dice[0]+dice[1];say("Rally test — "+u.name+": "+dice.join(" + ")+" = "+total+" against Leadership "+u.stats.Ld+".");if(total<=u.stats.Ld){u.fled=false;u.moveUsed=u.stats.M;u.activated=true;say(u.name+" rallies, but cannot move further this turn.");}else{const foe=closestEnemy(u),dx=foe?(u.x-foe.x)*W():Math.cos(u.facing+Math.PI)*W(),dy=foe?(u.y-foe.y)*H():Math.sin(u.facing+Math.PI)*H(),len=Math.max(1,Math.hypot(dx,dy)),distanceRoll=roll(2),distance=distanceRoll[0]+distanceRoll[1],px=distance*PX_PER_IN();u.x+=dx/len*px/W();u.y+=dy/len*px/H();say(u.name+" fails to rally and flees "+distance+" inches ("+distanceRoll.join(" + ")+").");if(u.x<0||u.x>1||u.y<0||u.y>1){u.models=0;u.fled=false;say(u.name+" flees off the battlefield.");}}render();}
+function rallyUnit(u){if(!u||!u.fled)return;if(u.models*4<u.startModels){say(u.name+" is below a quarter of its starting strength and cannot rally.");return;}const ld=leadership(u),dice=roll(2),total=dice[0]+dice[1];say("Rally test — "+u.name+": "+dice.join(" + ")+" = "+total+" against Leadership "+ld+".");if(total<=ld){u.fled=false;u.moveUsed=u.stats.M;u.activated=true;say(u.name+" rallies, but cannot move further this turn.");}else{const foe=closestEnemy(u),dx=foe?(u.x-foe.x)*W():Math.cos(u.facing+Math.PI)*W(),dy=foe?(u.y-foe.y)*H():Math.sin(u.facing+Math.PI)*H(),len=Math.max(1,Math.hypot(dx,dy)),distanceRoll=roll(2),distance=distanceRoll[0]+distanceRoll[1],px=distance*PX_PER_IN();u.x+=dx/len*px/W();u.y+=dy/len*px/H();say(u.name+" fails to rally and flees "+distance+" inches ("+distanceRoll.join(" + ")+").");if(u.x<0||u.x>1||u.y<0||u.y>1){u.models=0;u.fled=false;say(u.name+" flees off the battlefield.");}}render();}
 function beginCombatPhase(){const playerReady=units().some(u=>u.side==="player"&&alive(u)&&!u.fled),aiReady=units().some(u=>u.side==="ai"&&alive(u)&&!u.fled);if(!playerReady||!aiReady){finishBattle(playerReady?"Player wins the battle!":"Opponent wins the battle!");return;}if(units().some(u=>u.engaged&&alive(u))){setPhase("combat");}else{S.turn++;setPhase("charges");say("Turn "+S.turn+" begins.");}}
 function reformCombatPairs(){const pairs=[];units().filter(u=>u.engaged&&alive(u)).forEach(u=>{const v=u.engagedWith?S.units[u.engagedWith]:null;if(v&&alive(v)&&v.engagedWith===u.id&&!pairs.some(p=>p.includes(u)||p.includes(v)))pairs.push([u,v]);});if(pairs.length!==1)return;const [a,b]=pairs[0];if(!a.engaged||!b.engaged)return;const defender=[a,b].find(u=>["left","right","rear"].includes(u.attackedFromSide)&&u.flankedBy===([a,b].find(v=>v!==u)?.id));if(defender){const enemy=defender===a?b:a;const oldRanks=shape(defender).ranks;defender.formationWidth=Math.max(1,Math.min(defender.models,oldRanks+1,Math.max(1,enemy.formationWidth||5)));say(defender.name+" turns to face "+enemy.name+" and reforms to "+defender.formationWidth+" files. Its disrupted rank bonus and the flank bonus end for the next round.");}else say("The engaged units turn to face each other before the next round.");const dx=(b.x-a.x)*W(),dy=(b.y-a.y)*H(),angle=Math.atan2(dy,dx);a.facing=angle;b.facing=angle+Math.PI;const gap=(shape(a).depth+shape(b).depth)/2,midX=(a.x+b.x)/2,midY=(a.y+b.y)/2;a.x=midX-Math.cos(angle)*gap/2/W();a.y=midY-Math.sin(angle)*gap/2/H();b.x=midX+Math.cos(angle)*gap/2/W();b.y=midY+Math.sin(angle)*gap/2/H();for(const u of [a,b]){u.engagedSide="front";u.chargedSide="front";u.attackedFromSide="front";u.flankedBy=null;}}
 let render = () => {};
-const COMBAT = createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render: () => render(), endTurn, finishBattle, reformCombatPairs, pursueAfterBreak, panicNearby });
+const COMBAT = createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render: () => render(), endTurn, finishBattle, reformCombatPairs, pursueAfterBreak, panicNearby, leadership });
 const { resolveCombat, resolveBreak } = COMBAT;
 function endTurn(){S.combatResolved=false;units().forEach(u=>{u.charged=false;if(!alive(u)||u.fled||!u.engagedWith||!alive(S.units[u.engagedWith])||S.units[u.engagedWith].fled){u.engaged=false;u.engagedWith=null;u.engagedSide=null;u.chargedSide=null;u.attackedFromSide=null;u.flankedBy=null;}});S.turn++;say("Turn "+S.turn+" begins.");setPhase("charges");}
 function finishBattle(msg){S.finished=true;S.phase="over";say('<b>'+msg+'</b>');render();}
