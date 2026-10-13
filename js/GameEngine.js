@@ -29,6 +29,17 @@ function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,80);$("log").innerHTML=
 const DICE = createDice({ S });
 const { roll, diceStack, diceDuel } = DICE;
 function closestEnemy(u){return enemies(u).sort((a,b)=>dist(u,a)-dist(u,b))[0]||null;}
+function panicNearby(source,reason="a nearby friendly unit is lost"){
+  if(!source)return;
+  units().filter(v=>v!==source&&v.side===source.side&&alive(v)&&!v.fled&&!v.panicTested&&dist(v,source)<=6).forEach(v=>{
+    v.panicTested=true;const dice=roll(2),total=dice[0]+dice[1],snakeEyes=dice[0]===1&&dice[1]===1;
+    say("Panic test — "+v.name+" ("+reason+"): "+dice.join(" + ")+" = "+total+" against Leadership "+v.stats.Ld+".");
+    if(!snakeEyes&&total>v.stats.Ld){v.fled=true;v.engaged=false;v.engagedWith=null;say(v.name+" panics and flees.");}
+    else if(snakeEyes)say("Snake eyes! "+v.name+" automatically holds.");
+    else say(v.name+" holds.");
+  });
+}
+
 function selectedTarget(u){const list=enemies(u);return list.find(v=>v.id===S.targetId)||closestEnemy(u);}
 function eligibleForActivation(u){return alive(u)&&!u.fled&&!u.engaged&&!u.activated;}
 function canCharge(u,target){
@@ -44,13 +55,13 @@ function pursueAfterBreak(winner,loser){
   const clearPair=u=>{u.engaged=false;u.engagedWith=null;u.engagedSide=null;u.chargedSide=null;u.attackedFromSide=null;u.flankedBy=null;};
   clearPair(winner);clearPair(loser);
   say("Pursuit: "+winner.name+" rolls "+pursuitDice.join(" + ")+" = "+pursuitDistance+"; "+loser.name+" flees "+fleeDice.join(" + ")+" = "+fleeDistance+".");
-  if(pursuitDistance>=fleeDistance){loser.models=0;loser.fled=false;say(winner.name+" catches and destroys "+loser.name+".");}
-  else {const px=fleeDistance*PX_PER_IN();loser.x+=nx*px/W();loser.y+=ny*px/H();const pursuePx=pursuitDistance*PX_PER_IN();winner.x+=nx*pursuePx/W();winner.y+=ny*pursuePx/H();loser.fled=true;winner.charged=true;say(loser.name+" escapes; "+winner.name+" pursues "+pursuitDistance+'".');if(loser.x<0||loser.x>1||loser.y<0||loser.y>1){loser.models=0;loser.fled=false;say(loser.name+" flees off the battlefield.");}}
+  if(pursuitDistance>=fleeDistance){loser.models=0;loser.fled=false;say(winner.name+" catches and destroys "+loser.name+".");panicNearby(loser,"a friendly unit is destroyed in combat");}
+  else {const px=fleeDistance*PX_PER_IN();loser.x+=nx*px/W();loser.y+=ny*px/H();const pursuePx=pursuitDistance*PX_PER_IN();winner.x+=nx*pursuePx/W();winner.y+=ny*pursuePx/H();loser.fled=true;winner.charged=true;say(loser.name+" escapes; "+winner.name+" pursues "+pursuitDistance+'".');if(loser.x<0||loser.x>1||loser.y<0||loser.y>1){loser.models=0;loser.fled=false;say(loser.name+" flees off the battlefield.");panicNearby(loser,"a friendly unit flees off the battlefield");}else panicNearby(loser,"a friendly unit flees from combat");}
 }
 
 const RULES = createRules({ roll });
 const { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage, meleeAttack, shootingAttack } = RULES;
-const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack });
+const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby });
 const { shoot } = SHOOTING;
 function startActivations(){S.activationSide="player";units().filter(u=>u.side==="ai"&&u.fled&&alive(u)).forEach(rallyUnit);const p=units().filter(u=>u.side==="player"&&eligibleForActivation(u));if(!p.length){runAiActivations();return;}S.selected=p[0].id;render();}
 const AI = createAI({ S, units, alive, eligibleForActivation, enemies, dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, BOW_RANGE, beginCombatPhase });
