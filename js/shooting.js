@@ -25,9 +25,10 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
   function shoot(u, target, standShoot) {
     if (!alive(u) || !alive(target) || u.kind !== "archer" && !(u.isCavalry && u.hasBow) || u.shot || u.engaged || target.engaged) return false;
     const distance = dist(u, target);
-    if (distance > BOW_RANGE || (standShoot && distance <= 4)) return false;
+    const range=u.range||BOW_RANGE;
+    if (distance > range || (standShoot && distance <= 4)) return false;
     const context = {
-      longRange: distance > BOW_RANGE / 2,
+      longRange: distance > range / 2,
       moved: u.moved,
       standShoot,
       distance,
