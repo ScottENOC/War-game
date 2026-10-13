@@ -1,10 +1,10 @@
 export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   let faction="empire";
-  let army=[{type:"swordsmen",models:20,champion:false,championBonus:"A",upgrades:{},lightArmour:false,heavyArmour:false,weapon:"handWeapon",spears:false,bow:false,barding:false,mounted:false,shield:false,freeCavalryOption:"bow"}];
+  let army=[{type:"swordsmen",models:20,champion:false,championBonus:"A",upgrades:{},skills:{},lightArmour:false,heavyArmour:false,weapon:"handWeapon",spears:false,bow:false,barding:false,mounted:false,shield:false,freeCavalryOption:"bow"}];
   const list=$("army-list"),total=$("army-total"),addButton=$("add-unit"),startButton=$("begin-deployment");
   const elf=()=>faction==="highElves",fmt=n=>Number.isInteger(n)?String(n):n.toFixed(1);
   function defaults(u){
-    u.champion=false;u.championBonus=u.type==="archers"?"BS":"A";u.upgrades={};u.elvenArchery=false;u.lightArmour=false;u.heavyArmour=false;u.weapon="handWeapon";u.spears=false;u.bow=false;u.barding=false;u.mounted=false;u.shield=false;u.freeCavalryOption="bow";
+    u.champion=false;u.championBonus=u.type==="archers"?"BS":"A";u.upgrades={};u.skills={};u.elvenArchery=false;u.lightArmour=false;u.heavyArmour=false;u.weapon="handWeapon";u.spears=false;u.bow=false;u.barding=false;u.mounted=false;u.shield=false;u.freeCavalryOption="bow";
     if(elf()){if(u.type==="swordsmen"){u.lightArmour=true;u.shield=true;u.spears=true;u.weapon="spear";}if(u.type==="archers")u.lightArmour=true;}
     if(u.type==="captain"||u.type==="lord")u.models=1;else if(u.type==="cavalry")u.models=Math.min(15,Math.max(5,u.models||5));else u.models=Math.min(30,Math.max(5,u.models||10));
   }
@@ -21,7 +21,8 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     const e=elf(),m=u.models||1;
     const character=u.type==="captain"||u.type==="lord";
     const upgradeCost=statUpgrades.reduce((sum,s)=>sum+(u.upgrades&&u.upgrades[s.key]?(character?s.character:s.unit*m):0),0);
-    if(u.type==="captain"||u.type==="lord")return (e?(u.type==="lord"?120:75):(u.type==="lord"?80:50))+(u.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(u.weapon)?4:0)+(u.mounted?8:0)+(u.mounted&&u.weapon==="spear"?2:0)+(u.mounted&&u.weapon==="lance"?4:0)+(u.mounted&&u.barding?4:0)+(u.shield&&!["halberd","greatWeapon"].includes(u.weapon)?2:0)+upgradeCost;
+    const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3:0),0);
+    if(u.type==="captain"||u.type==="lord")return (e?(u.type==="lord"?120:75):(u.type==="lord"?80:50))+(u.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(u.weapon)?4:0)+(u.mounted?8:0)+(u.mounted&&u.weapon==="spear"?2:0)+(u.mounted&&u.weapon==="lance"?4:0)+(u.mounted&&u.barding?4:0)+(u.shield&&!["halberd","greatWeapon"].includes(u.weapon)?2:0)+upgradeCost+skillCost;
     if(u.type==="cavalry"){const free=u.freeCavalryOption||"bow";return m*(e?24:16)+(u.elvenArchery&&e&&(u.bow||free==="bow")?2*m:0)+(u.bow&&!(e&&free==="bow")?2*m:0)+(u.heavyArmour?2*m:0)+(u.barding?2*m:0)+(u.shield&&u.weapon!=="greatWeapon"?0.5*m:0)+(u.weapon==="spear"&&!(e&&free==="spear")?m:0)+(["lance","greatWeapon"].includes(u.weapon)?2*m:0)+upgradeCost;}
     const base=m*(e?12:8);
     const weaponCost=u.type==="archers"?(e?3:2)*m:u.weapon==="spear"&&!(e&&u.type==="swordsmen")?m:u.weapon==="greatWeapon"?2*m:u.weapon==="halberd"?m:0;
@@ -74,6 +75,15 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
           options.append(check("Shield",{cost:"+0.5/model, +1 front armour save",checked:!!u.shield,onChange:v=>{u.shield=v;updateTotals();}}));
           if(u.type==="swordsmen"&&!elf()&&u.weapon!=="spear")options.append(check("Spears",{cost:"+1/model, fights in two ranks",checked:!!u.spears,onChange:v=>{u.spears=v;u.weapon=v?"spear":"handWeapon";renderRows();}}));
         }
+      }
+      {
+        const skillBox=document.createElement("div");skillBox.className="stat-upgrades";
+        const skillHeading=document.createElement("p");skillHeading.className="stat-upgrades-heading";skillHeading.textContent="Special skills · 3 pts each";skillBox.append(skillHeading);
+        skillBox.append(check("Melee Mastery",{cost:"+3 pts · reroll natural 1s to hit in melee",checked:!!u.skills?.rerollOnesMelee,onChange:v=>{u.skills={...(u.skills||{}),rerollOnesMelee:v};updateTotals();}}));
+        const hasBow=u.type==="archers"||(u.type==="cavalry"&&(!!u.bow||(elf()&&(u.freeCavalryOption||"bow")==="bow")));
+        if(hasBow)skillBox.append(check("Marksman",{cost:"+3 pts · reroll natural 1s to hit when shooting",checked:!!u.skills?.rerollOnesShooting,onChange:v=>{u.skills={...(u.skills||{}),rerollOnesShooting:v};updateTotals();}}));
+        skillBox.append(check("Steadfast",{cost:"+3 pts · ignore combat-result penalty on break tests",checked:!!u.skills?.steadfast,onChange:v=>{u.skills={...(u.skills||{}),steadfast:v};updateTotals();}}));
+        options.append(skillBox);
       }
       {
         const upgradeBox=document.createElement("div");upgradeBox.className="stat-upgrades";
