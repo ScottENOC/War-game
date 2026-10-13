@@ -10,8 +10,9 @@ export function createRules({ roll, units = () => [] }) {
   }
   function shieldFacesAttacker(defender,attacker) {
     if(!defender.shield||!attacker||!Number.isFinite(defender.x)||!Number.isFinite(attacker.x))return false;
-    const bearing=Math.atan2(attacker.y-defender.y,attacker.x-defender.x);
-    let delta=bearing-(defender.facing||0);
+    const facingUnit=defender.attachedTo?units().find(u=>u.id===defender.attachedTo)||defender:defender;
+    const bearing=Math.atan2(attacker.y-facingUnit.y,attacker.x-facingUnit.x);
+    let delta=bearing-(facingUnit.facing||0);
     while(delta>Math.PI)delta-=Math.PI*2;
     while(delta< -Math.PI)delta+=Math.PI*2;
     return Math.abs(delta)<=Math.PI/4;
@@ -57,7 +58,7 @@ export function createRules({ roll, units = () => [] }) {
     const shield=shieldFacesAttacker(target,attacker);
     if(target.isCharacter)return target.delayedDeath?[]:[{kind:"character",id:target.id,hero:target,label:target.name,stats:target.stats,remaining:v.characters[target.id]??0,armour:target.armour,shield,wardSave:target.wardSave}];
     const tiers=[];
-    if(!target.delayedDeath&&v.rankFiles>0)tiers.push({kind:"rankFile",label:"Rank and file",stats:target.stats,remaining:v.rankFiles,armour:target.armour,shield:target.shield,wardSave:target.wardSave});
+    if(!target.delayedDeath&&v.rankFiles>0)tiers.push({kind:"rankFile",label:"Rank and file",stats:target.stats,remaining:v.rankFiles,armour:target.armour,shield,wardSave:target.wardSave});
     if(!target.delayedDeath&&v.championAlive)tiers.push({kind:"champion",label:"Champion",stats:{...target.stats,...(target.champion?.stats||{})},remaining:v.championWounds,armour:target.armour,shield:target.shield,wardSave:target.wardSave});
     for(const id of (target.attachedCharacters||[])){const hero=v.heroRefs[id];if(hero&&!hero.delayedDeath&&hero.models>0&&v.characters[id]>0)tiers.push({kind:"character",id,hero,label:hero.name,stats:hero.stats,remaining:v.characters[id],armour:hero.armour,shield:shieldFacesAttacker(hero,attacker),wardSave:hero.wardSave});}
     return tiers;
@@ -94,7 +95,7 @@ export function createRules({ roll, units = () => [] }) {
   function attack(u,target,mode,context={}) {
     const v=newVirtual(target),pools=[];
     const charging=!!context.charging;
-    const strengthBonus=(u.weapon==="greatWeapon"?2:u.weapon==="halberd"?1:(charging&&u.weapon==="lance"?2:charging&&u.weapon==="spear"?1:0));
+    const strengthBonus=context.attackComponent==="mount"?0:(u.weapon==="greatWeapon"?2:u.weapon==="halberd"?1:(charging&&u.weapon==="lance"?2:charging&&u.weapon==="spear"?1:0));
     const attacker=strengthBonus?{...u,stats:{...u.stats,S:u.stats.S+strengthBonus}}:u;
     const attackContext={...context,attacker:u};
     for(const attackerPool of modelPools(attacker,mode,attackContext))pools.push(...rollPool(attackerPool,target,mode,attackContext,v));
