@@ -50,8 +50,8 @@ const canvas = $("field"), ctx = canvas.getContext("2d");
 const S = {
  turn:1, phase:"charges", active:"player", selected:"player", finished:false,
  units:{
-  player:{id:"player",name:"Empire Swordsmen",side:"player",models:20,x:0.32,y:0.5,facing:0,engaged:false,activated:false,charged:false,fled:false,moveUsed:0},
-  ai:{id:"ai",name:"Opponent Swordsmen",side:"ai",models:20,x:0.68,y:0.5,facing:Math.PI,engaged:false,activated:false,charged:false,fled:false,moveUsed:0}
+  player:{id:"player",name:"Empire Swordsmen",side:"player",models:20,x:0.32,y:0.5,facing:0,engaged:false,activated:false,charged:false,fled:false,moveUsed:0,stats:{M:4,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7,save:"-"}},
+  ai:{id:"ai",name:"Opponent Swordsmen",side:"ai",models:20,x:0.68,y:0.5,facing:Math.PI,engaged:false,activated:false,charged:false,fled:false,moveUsed:0,stats:{M:4,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7,save:"-"}}
  },
  log:[], pending:[], passes:{player:false,ai:false}, combatRound:0
 };
@@ -83,9 +83,7 @@ function draw(){
   ctx.strokeStyle="rgba(160,205,230,.55)";ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(p.x*w,p.y*h);ctx.lineTo(p.x*w+Math.cos(p.facing)*MOVE_ALLOWANCE*PX_PER_IN(),p.y*h+Math.sin(p.facing)*MOVE_ALLOWANCE*PX_PER_IN());ctx.stroke();ctx.setLineDash([]);
  }
  drawUnit(p,w,h);drawUnit(a,w,h);
- const d=dist();ctx.fillStyle="#f3eedc";ctx.font="600 12px system-ui";ctx.textAlign="center";ctx.fillText("Gap: "+d.toFixed(1)+" inches",w/2,22);
- ctx.textAlign="left";ctx.fillStyle="rgba(255,255,255,.8)";ctx.font="11px system-ui";ctx.fillText("Your deployment",12,h-12);
- ctx.textAlign="right";ctx.fillText("AI deployment",w-12,h-12);
+
 }
 function unitCorners(u, atX=u.x, atY=u.y, atFacing=u.facing){
  const scale=PX_PER_IN(),front=5*MODEL_BASE_IN*scale,depth=4*MODEL_BASE_IN*scale;
@@ -114,16 +112,29 @@ function canPlace(u,x,y,facing){
  const other=S.units[u.id==="player"?"ai":"player"];
  return !alive(other)||!polygonOverlap(poly,unitCorners(other));
 }
+function formationShape(u){
+ const files=5,ranks=Math.max(1,Math.ceil(u.models/files)),base=MODEL_BASE_IN*PX_PER_IN();
+ return {files,ranks,base,front:files*base,depth:ranks*base};
+}
 function drawUnit(u,w,h){
- const x=u.x*w,y=u.y*h,selected=S.selected===u.id&&!S.finished,scale=w/BATTLEFIELD_WIDTH_IN;
- const front=5*MODEL_BASE_IN*scale,depth=4*MODEL_BASE_IN*scale;
+ const x=u.x*w,y=u.y*h,selected=S.selected===u.id&&!S.finished,shape=formationShape(u),{files,ranks,base,front,depth}=shape;
  ctx.save();ctx.translate(x,y);ctx.rotate(u.facing);
  ctx.fillStyle="rgba(0,0,0,.24)";ctx.fillRect(-depth/2+3,-front/2+4,depth,front);
  ctx.fillStyle=u.side==="player"?"#365e7e":"#813c36";ctx.strokeStyle=selected?"#f7d98b":"#e3d6b5";ctx.lineWidth=selected?2.5:1.2;
- ctx.fillRect(-depth/2,-front/2,depth,front);ctx.strokeRect(-depth/2,-front/2,depth,front);
- ctx.strokeStyle="rgba(255,255,255,.65)";ctx.lineWidth=.8;
- for(let col=1;col<4;col++){const xx=-depth/2+depth*col/4;ctx.beginPath();ctx.moveTo(xx,-front/2);ctx.lineTo(xx,front/2);ctx.stroke()}
- for(let row=1;row<5;row++){const yy=-front/2+front*row/5;ctx.beginPath();ctx.moveTo(-depth/2,yy);ctx.lineTo(depth/2,yy);ctx.stroke()}
+ ctx.fillRect(-depth/2,-front/2,depth,front);
+ // Casualties are removed from the rear; surviving models stay in the front ranks.
+ let remaining=u.models;
+ for(let rank=0;rank<ranks;rank++){
+  const count=Math.min(files,remaining),start=-front/2+(files-count)*base/2;
+  for(let file=0;file<count;file++){
+   const cx=depth/2-(rank+.5)*base,cy=start+file*base+base/2;
+   ctx.fillStyle=u.side==="player"?"#456f91":"#a44a42";
+   ctx.fillRect(cx-base/2+0.7,cy-base/2+0.7,base-1.4,base-1.4);
+   ctx.strokeStyle="rgba(255,255,255,.8)";ctx.lineWidth=.9;ctx.strokeRect(cx-base/2+0.7,cy-base/2+0.7,base-1.4,base-1.4);
+  }
+  remaining-=count;
+ }
+ ctx.strokeStyle=selected?"#f7d98b":"#e3d6b5";ctx.lineWidth=selected?2.5:1.2;ctx.strokeRect(-depth/2,-front/2,depth,front);
  ctx.fillStyle="#f6e1a0";ctx.strokeStyle="#2a2a25";ctx.lineWidth=1;
  ctx.beginPath();ctx.moveTo(depth/2+9,0);ctx.lineTo(depth/2-1,-7);ctx.lineTo(depth/2-1,7);ctx.closePath();ctx.fill();ctx.stroke();
  if(selected&&S.phase==="movement"&&u.side==="player"&&!u.engaged&&!u.fled){
@@ -132,7 +143,7 @@ function drawUnit(u,w,h){
  }
  ctx.restore();
  ctx.fillStyle="#fff8e9";ctx.font="bold 11px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";
- ctx.fillText(u.side==="player"?"EMPIRE":"OPPONENT",x,y-front/2-11);
+ ctx.fillText(u.name,x,y-front/2-11);
  ctx.font="bold 14px system-ui";ctx.fillText(String(u.models),x,y+front/2+14);
  if(u.engaged){ctx.fillStyle="#f2d67d";ctx.font="bold 10px system-ui";ctx.fillText("IN MELEE",x,y+front/2+27)}
  if(u.fled){ctx.fillStyle="#ffb3ad";ctx.font="bold 10px system-ui";ctx.fillText("FLEEING",x,y+front/2+27)}
