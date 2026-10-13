@@ -23,7 +23,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if (!snakeEyes && total > target.stats.Ld) { target.fled = true; target.engaged = false; say(target.name + " fails its unmodified Leadership test and flees."); }
   }
   function shoot(u, target, standShoot) {
-    if (!alive(u) || !alive(target) || u.kind !== "archer" || u.shot || u.engaged || target.engaged) return false;
+    if (!alive(u) || !alive(target) || u.kind !== "archer" && !(u.isCavalry && u.hasBow) || u.shot || u.engaged || target.engaged) return false;
     const distance = dist(u, target);
     if (distance > BOW_RANGE || (standShoot && distance <= 4)) return false;
     const context = {
