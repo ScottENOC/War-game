@@ -6,6 +6,7 @@ export function createArmyBuilder({ $, onStart, onBack }) {
   const list = $("army-list"), total = $("army-total"), addButton = $("add-unit"), startButton = $("begin-deployment");
 
   function unitPoints(unit) {
+    if (unit.type === "captain") return 50;
     return unit.models * (unit.type === "swordsmen" ? 8 : 10) +
       (unit.champion ? 6 : 0) +
       (unit.type === "swordsmen" && unit.lightArmour ? unit.models : 0);
@@ -31,18 +32,20 @@ export function createArmyBuilder({ $, onStart, onBack }) {
       main.className = "army-row-main";
       const type = document.createElement("select");
       type.setAttribute("aria-label", "Unit " + (index + 1) + " type");
-      type.innerHTML = '<option value="swordsmen">Swordsmen · 8 pts/model</option><option value="archers">Archers · 10 pts/model</option>';
+      type.innerHTML = '<option value="swordsmen">Swordsmen · 8 pts/model</option><option value="archers">Archers · 10 pts/model</option><option value="captain">Human Captain · 50 pts</option>';
       type.value = unit.type;
       type.addEventListener("change", () => {
         unit.type = type.value;
         if (unit.type !== "swordsmen") unit.lightArmour = false;
+        if (unit.type === "captain") { unit.models = 1; unit.champion = false; unit.lightArmour = false; }
+        else if (unit.models < 5) unit.models = 5;
         renderRows();
       });
       const modelLabel = document.createElement("label");
       modelLabel.append(document.createTextNode("Models "));
       const models = document.createElement("input");
       models.type = "number"; models.min = "5"; models.max = "30"; models.step = "1";
-      models.value = unit.models; models.inputMode = "numeric";
+      models.value = unit.models; models.inputMode = "numeric"; models.disabled = unit.type === "captain";
       models.setAttribute("aria-label", "Unit " + (index + 1) + " model count");
       models.addEventListener("change", () => {
         const parsed = Number.parseInt(models.value, 10);
@@ -55,7 +58,7 @@ export function createArmyBuilder({ $, onStart, onBack }) {
       options.className = "army-options";
       const championLabel = document.createElement("label");
       const champion = document.createElement("input");
-      champion.type = "checkbox"; champion.checked = unit.champion;
+      champion.type = "checkbox"; champion.checked = unit.champion; champion.disabled = unit.type === "captain";
       champion.addEventListener("change", () => { unit.champion = champion.checked; updateTotals(); });
       championLabel.append(champion, document.createTextNode("Champion (+6 pts)"));
       options.append(championLabel);
