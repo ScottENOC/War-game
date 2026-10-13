@@ -19,7 +19,7 @@ const $ = id => document.getElementById(id);
 const canvas = $("field"), ctx = canvas.getContext("2d");
 const BATTLEFIELD_WIDTH_IN=48, MODEL_BASE_IN=.9, BOW_RANGE=24;
 const S=createGameState({});
-const units=()=>Object.values(S.units), alive=u=>u.models>0;
+const units=()=>Object.values(S.units), alive=u=>!!u&&(u.models>0||(u.attachedCharacters||[]).some(id=>S.units[id]&&S.units[id].models>0));
 const W=()=>canvas.clientWidth,H=()=>canvas.clientHeight,PX_PER_IN=()=>W()/BATTLEFIELD_WIDTH_IN,fieldHeightIn=()=>H()/Math.max(1,PX_PER_IN());
 const enemies=u=>units().filter(v=>v.side!==u.side&&alive(v)&&!v.attachedTo);
 const MOVEMENT = createMovement({ W, H, PX_PER_IN, MODEL_BASE_IN, BATTLEFIELD_WIDTH_IN, fieldHeightIn, units, alive });
