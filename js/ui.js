@@ -10,7 +10,7 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
           (side === "player" && !u.moved && !u.shot && !u.fled ? " unmoved" : "");
         b.setAttribute("aria-label", u.name + " " + u.models + " models, " + u.points + " points" + (u.champion.enabled ? ", champion" : "") + (u.lightArmour ? ", light armour" : ""));
         b.title = u.name + " — " + u.points + " pts" + (u.champion.enabled ? ", champion included" : "") + (u.lightArmour ? ", light armour" : "");
-        b.innerHTML = '<span class="sigil">' + (u.kind === "archer" ? "🏹" : "⚔") + '</span>' +
+        b.innerHTML = '<span class="sigil">' + (u.kind === "archer" || u.hasBow ? "🏹" : u.kind === "cavalry" ? "🐎" : "⚔") + '</span>' +
           (u.champion.enabled ? '<span class="champion-mark">♛</span>' : "") +
           '<span class="count">' + u.models + '</span><span class="points-mark">' + u.points + '</span><span class="bar ' + (side === "ai" ? "ai" : "") + '"></span>';
         b.onclick = () => { if(S.phase==="deployment"&&side==="ai")return; S.selected = u.id; S.mode = null; render(); };
@@ -53,13 +53,13 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
       btn("Widen formation", "＋", () => {if(u&&u.formationWidth<Math.max(1,u.models)&&u.moveUsed+u.stats.M/2<=u.stats.M){u.formationWidth++;if(canPlace(u,u.x,u.y,u.facing)){u.moveUsed+=u.stats.M/2;u.moved=true;}else{u.formationWidth--;}render();}},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.shot||u.formationWidth>=u.models||u.moveUsed+u.stats.M/2>u.stats.M);
       btn("Narrow formation", "－", () => {if(u&&u.formationWidth>1&&u.moveUsed+u.stats.M/2<=u.stats.M){u.formationWidth--;if(canPlace(u,u.x,u.y,u.facing)){u.moveUsed+=u.stats.M/2;u.moved=true;}else{u.formationWidth++;}render();}},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.shot||u.formationWidth<=1||u.moveUsed+u.stats.M/2>u.stats.M);
       btn("Shoot", "◎", () => { S.mode = S.mode === "shoot" ? null : "shoot"; render(); },
-        !u || u.side !== "player" || u.activated || u.kind !== "archer" || u.shot || u.engaged || u.charged, S.mode === "shoot");
+        !u || u.side !== "player" || u.activated || u.kind !== "archer" && !(u.isCavalry && u.hasBow) || u.shot || u.engaged || u.charged, S.mode === "shoot");
       btn("End activation", "✓", finishActivation, !u || u.side !== "player" || u.activated || u.engaged || u.fled); return;
     }
     if (S.phase === "combat") {
       const activeMelee=units().some(v=>v.engaged&&alive(v));
       btn("Resolve melee", "⚔", resolveCombat, S.combatResolved||!units().some(v => v.side === "player" && v.engaged && alive(v)));
-      if(u&&u.isCharacter&&u.side==="player"){const weaponOrder=["handWeapon","halberd","greatWeapon"],weaponLabels={handWeapon:"hand weapon",halberd:"halberd (+1 Strength)",greatWeapon:"great weapon (+2 Strength, −10 Initiative)"};const nextWeapon=weaponOrder[(weaponOrder.indexOf(u.weapon)+1)%weaponOrder.length];btn("Switch to "+weaponLabels[nextWeapon],"⚒",()=>{u.weapon=nextWeapon;u.greatWeapon=nextWeapon==="greatWeapon";say(u.name+" switches to a "+weaponLabels[u.weapon]+" for the next combat.");render();},!S.combatResolved||u.fled);}
+      if(u&&u.isCharacter&&u.side==="player"){const weaponOrder=u.mounted?["handWeapon","halberd","greatWeapon","spear","lance"]:["handWeapon","halberd","greatWeapon"],weaponLabels={handWeapon:"hand weapon",halberd:"halberd (+1 Strength)",greatWeapon:"great weapon (+2 Strength, −10 Initiative)",spear:"spear (+1 Strength on charge)",lance:"lance (+2 Strength on charge)"};const nextWeapon=weaponOrder[(weaponOrder.indexOf(u.weapon)+1)%weaponOrder.length];btn("Switch to "+weaponLabels[nextWeapon],"⚒",()=>{u.weapon=nextWeapon;u.greatWeapon=nextWeapon==="greatWeapon";say(u.name+" switches to a "+weaponLabels[u.weapon]+" for the next combat.");render();},!S.combatResolved||u.fled);}
       btn("End turn", "▶", endTurn, !S.combatResolved); return;
     }
     if (S.phase === "break") btn("Break test", "🎲", resolveBreak);
