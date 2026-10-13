@@ -1,7 +1,8 @@
 export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $ , shootingAttack }) {
   function showAttack(label, u, target, result, kind) {
     const extra = (kind === "shoot" ? " · " + (result.longRange ? "long range " : "") +
-      (result.moved ? "moved " : "") + (result.standShoot ? "stand & shoot" : "") : "");
+      (result.moved ? "moved " : "") + (result.standShoot ? "stand & shoot " : "") +
+      (result.hitModifier ? "hit modifier " + (result.hitModifier > 0 ? "+" : "") + result.hitModifier : "") : "");
     const distText = Number.isFinite(result.distance) ? " · " + result.distance.toFixed(1) + '"' : "";
     const stack = diceStack(u, result);
     say("<b>" + label + ": " + u.name + " → " + target.name + "</b><div class=\"rollsummary\">" +
@@ -24,9 +25,20 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if (!alive(u) || !alive(target) || u.kind !== "archer" || u.shot || u.engaged || target.engaged) return false;
     const distance = dist(u, target);
     if (distance > BOW_RANGE || (standShoot && distance <= 4)) return false;
-    const context = { longRange: distance > BOW_RANGE / 2, moved: u.moved, standShoot, distance };
+    const context = {
+      longRange: distance > BOW_RANGE / 2,
+      moved: u.moved,
+      standShoot,
+      distance,
+      targetCharging: !!target.charged,
+      largeTarget: !!target.largeTarget,
+      singleCharacter: !!target.singleCharacter,
+      skirmisher: !!target.skirmisher,
+      cover: target.cover === "soft" || target.cover === "hard" ? target.cover : null
+    };
     const result = shootingAttack(u, target, context);
     Object.assign(result, context);
+    result.hitModifier = result.pools.length ? result.pools[0].hitModifier : 0;
     u.shot = true;
     showAttack(standShoot ? "Stand and shoot" : "Shooting", u, target, result, "shoot");
     const killed = applyDamage(target, result.wounds, true);
