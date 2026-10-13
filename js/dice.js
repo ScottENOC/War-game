@@ -1,12 +1,12 @@
 export function createDice({ S }) {
   function roll(n) { return Array.from({ length: Math.max(0, n) }, () => 1 + Math.floor(Math.random() * 6)); }
-  function dieHtml(n, pass, kind) {
-    return '<span class="die ' + (pass ? "success" : "fail") + (kind === "save" ? " save" : "") +
-      '" title="' + (pass ? "success" : "failure") + '">' + n + "</span>";
+  function dieHtml(n, pass, kind, friendlyFire=false) {
+    return '<span class="die ' + (pass ? "success" : "fail") + (kind === "save" ? " save" : "") + (friendlyFire ? " friendly-fire" : "") +
+      '" title="' + (friendlyFire ? "Miss redirects into friendly unit" : pass ? "success" : "failure") + '">' + n + "</span>";
   }
-  function lane(label, values, threshold, mode, passFlags) {
+  function lane(label, values, threshold, mode, passFlags, friendlyFlags) {
     return '<div class="dice-lane"><span class="lane-label">' + label + "</span>" +
-      values.map((value, index) => dieHtml(value, passFlags ? !!passFlags[index] : value >= threshold, mode)).join("") + "</div>";
+      values.map((value, index) => dieHtml(value, passFlags ? !!passFlags[index] : value >= threshold, mode, !!friendlyFlags?.[index])).join("") + "</div>";
   }
   function diceStack(u, result) {
     let out = '<div class="dice-stack"><b>' + u.name + "</b>";
@@ -20,7 +20,7 @@ export function createDice({ S }) {
       const hitLabel = pool.hitNeed >= 10 ? "To hit — impossible (10+)" :
         pool.hitNeed >= 7 ? "To hit — 6, then " + (pool.hitNeed - 3) + "+" :
         "To hit — need " + pool.hitNeed + "+";
-      out += lane(hitLabel, pool.hitRolls || [], pool.hitNeed, "hit", pool.hitPasses);
+      out += lane(hitLabel, pool.hitRolls || [], pool.hitNeed, "hit", pool.hitPasses, pool.friendlyFireMisses);
       const followUps = (pool.hitFollowUps || []).filter(value => value !== null);
       if (followUps.length) out += lane("Follow-up roll", followUps, 4, "hit",
         (pool.hitFollowUpPasses || []).filter(value => value !== null));
