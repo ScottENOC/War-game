@@ -42,7 +42,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     result.hitModifier = result.pools.length ? result.pools[0].hitModifier : 0;
     u.shot = true;
     showAttack(standShoot ? "Stand and shoot" : "Shooting", u, target, result, "shoot");
-    const killed = applyDamage(target, result.wounds, true);
+    const killed = applyDamage(target, result.wounds, true, result.cascadePlan);
     say(target.name + " loses " + killed + " model" + (killed === 1 ? "" : "s") + " to shooting.");
     if (!alive(target)) panicNearby?.(target, "a friendly unit is destroyed by shooting");
     if (!standShoot) panicTest(target);
