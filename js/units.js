@@ -17,7 +17,8 @@ function buildUnit(template, config) {
     // future battlefield-terrain interaction sets them.
     largeTarget: false, singleCharacter: false, skirmisher: false, cover: null,
     x: config.x, y: config.y, facing: config.facing, deployed: config.side === "ai",
-    engaged: false, activated: false, moved: false, shot: false, charged: false, fled: false,
+    engaged: false, engagedWith: null, engagedSide: null, chargedSide: null, attackedFromSide: null, flankedBy: null,
+    formationWidth: 5, canCounterCharge: template.kind === "cavalry" || template.canCounterCharge === true, activated: false, moved: false, shot: false, charged: false, fled: false,
     moveUsed: 0, damage: 0, shootCasualties: 0, panicTested: false,
     stats, champion: { enabled: !!config.champion, stats: null }
   };
