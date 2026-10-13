@@ -34,7 +34,12 @@ export function createRules({ roll }) {
   // separate rolls whenever a profile differs.
   function modelPools(u, mode) {
     const hasChampion = !!(u.champion && u.champion.enabled && u.models > 0);
-    const normalCount = Math.max(0, u.models - (hasChampion ? 1 : 0));
+    const normalModels = Math.max(0, u.models - (hasChampion ? 1 : 0));
+    // Melee is limited to five fighting models total; a champion occupies
+    // one of those places. Ranged attacks can use every surviving model.
+    const normalCount = mode === "melee"
+      ? Math.min(hasChampion ? 4 : 5, normalModels)
+      : normalModels;
     const profiles = [];
     const add = (count, stats, label) => {
       if (!count) return;
@@ -62,7 +67,7 @@ export function createRules({ roll }) {
 
   function meleeAttack(u, target) {
     const pools = modelPools(u, "melee").map(pool => {
-      const s = pool.stats.S, attacks = Math.min(5, pool.count) * pool.stats.A;
+      const s = pool.stats.S, attacks = pool.count * pool.stats.A;
       const hitNeed = hitTarget(pool.stats.WS, target.stats.WS);
       const woundNeed = woundTarget(s, target.stats.T);
       const saveNeed = saveTarget(target, s);
