@@ -23,10 +23,11 @@ export function createRules({ roll, units = () => [] }) {
     if(shooting)u.shootCasualties+=before-u.models;
     return before-u.models;
   }
-  function modelPools(u,mode) {
-    const hasChampion=!!(u.champion&&u.champion.enabled&&u.championAlive!==false&&u.models>0);
-    const normalModels=Math.max(0,u.models-(hasChampion?1:0));
-    const frontRank=Math.min(Math.max(1,Math.floor(u.formationWidth||5)),u.models);
+  function modelPools(u,mode,context={}) {
+    const attackModels=Number.isFinite(context.attackingModels)?Math.max(0,context.attackingModels):u.models;
+    const hasChampion=context.attackingChampion!==undefined?!!context.attackingChampion:!!(u.champion&&u.champion.enabled&&u.championAlive!==false&&u.models>0);
+    const normalModels=Math.max(0,attackModels-(hasChampion?1:0));
+    const frontRank=Math.min(Math.max(1,Math.floor(u.formationWidth||5)),attackModels);
     const normalCount=mode==="melee"?Math.max(0,Math.min(frontRank-(hasChampion?1:0),normalModels)):normalModels;
     const profiles=[];
     const add=(count,stats,label)=>{if(!count)return;const key=mode==="melee"?[stats.WS,stats.S,stats.A].join("/"):[stats.BS,stats.S].join("/");let pool=profiles.find(p=>p.key===key);if(!pool){pool={key,stats,count:0,labels:[]};profiles.push(pool);}pool.count+=count;if(!pool.labels.includes(label))pool.labels.push(label);};
@@ -79,7 +80,8 @@ export function createRules({ roll, units = () => [] }) {
   }
   function attack(u,target,mode,context={}) {
     const v=newVirtual(target),pools=[];
-    for(const attackerPool of modelPools(u,mode))pools.push(...rollPool(attackerPool,target,mode,context,v));
+    const attacker=u.isCharacter&&u.weapon==="greatWeapon"?{...u,stats:{...u.stats,S:u.stats.S+2}}:u;
+    for(const attackerPool of modelPools(attacker,mode,context))pools.push(...rollPool(attackerPool,target,mode,context,v));
     const sum=k=>pools.reduce((n,p)=>n+(p[k]||0),0);
     return {attacks:sum("attacks"),hitNeed:pools[0]?.hitNeed??7,hitRolls:pools.flatMap(p=>p.hitRolls),hitPasses:pools.flatMap(p=>p.hitPasses),hitFollowUps:pools.flatMap(p=>p.hitFollowUps),hitFollowUpPasses:pools.flatMap(p=>p.hitFollowUpPasses),hits:sum("hits"),woundNeed:pools[0]?.woundNeed??null,woundRolls:pools.flatMap(p=>p.woundRolls),woundsBeforeSave:sum("woundsBeforeSave"),saveNeed:pools.every(p=>p.saveNeed==null)?null:pools[0]?.saveNeed,saveRolls:pools.flatMap(p=>p.saveRolls),saved:sum("saved"),wardSaved:sum("wardSaved"),wounds:sum("wounds"),pools,cascadePlan:{rankFileLost:v.rankFileLost,rankFileDamage:v.rankFileDamage,championKilled:v.championKilled,characterDamage:v.characterDamage}};
   }
