@@ -5,6 +5,7 @@ import { createShooting } from "./shooting.js";
 import { createCombat } from "./combat.js";
 import { createRendering } from "./rendering.js";
 import { createInput } from "./input.js";
+import { createUI } from "./ui.js";
 
 export function startGame() {
 (() => {
@@ -34,16 +35,6 @@ function diceStack(u,r){
 function diceDuel(title,r1,r2){return '<div><b>'+title+'</b><div class="dice-duel">'+(r1?'<div class="dice-side"><h3>Player</h3>'+diceStack(S.units.pSword.side==='player'?S.units.pSword:S.units.pArch,r1)+'</div>':'')+(r2?'<div class="dice-side"><h3>Opponent</h3>'+diceStack(S.units.aSword.side==='ai'?S.units.aSword:S.units.aArch,r2)+'</div>':'')+'</div></div>';}
 function closestEnemy(u){return enemies(u).sort((a,b)=>dist(u,a)-dist(u,b))[0]||null;}
 function selectedTarget(u){const list=enemies(u);return list.find(v=>v.id===S.targetId)||closestEnemy(u);}
-function renderRoster(){for(const side of ["ai","player"]){const el=$(side==="ai"?"enemycards":"playercards");el.innerHTML="";units().filter(u=>u.side===side).forEach(u=>{const b=document.createElement("button");b.className="unit-card"+(u.id===S.selected?" selected":"")+(side==="player"&&!u.moved&&!u.shot&&!u.fled?" unmoved":"");b.setAttribute("aria-label",u.name+" "+u.models+" models");b.title=u.name;b.innerHTML='<span class="sigil">'+(u.kind==="archer"?"🏹":"⚔")+'</span><span class="count">'+u.models+'</span><span class="bar '+(side==="ai"?"ai":"")+'"></span>';b.onclick=()=>{S.selected=u.id;S.mode=null;render();};el.append(b);});}}
-function render(){const u=S.units[S.selected];renderRoster();draw();controls();}
-function hint(){return "";}
-function btn(label,icon,fn,disabled,active){const b=document.createElement("button");b.textContent=icon;b.title=label;b.setAttribute("aria-label",label);b.disabled=!!disabled;if(active)b.classList.add("active");b.onclick=fn;$("actions").append(b);}
-function controls(){const el=$("actions");el.replaceChildren();if(S.finished){btn("New battle","↻",reset,false);return;}const u=S.units[S.selected],target=selectedTarget(u);
- if(S.phase==="charges"){if(S.chargeSide!=="player"){btn("Opponent declaring charges","…",()=>{},true);return;}btn("Declare charge","➜",()=>{S.mode=S.mode==="charge"?null:"charge";render();},!u||u.side!=="player"||u.engaged||u.fled||u.charged||!target||target.engaged||dist(u,target)>u.stats.M*2,S.mode==="charge");btn("Pass charges","Ⅱ",passCharges);return;}
- if(S.phase==="movement"){btn("Move","↔",()=>{S.mode=S.mode==="move"?null:"move";render();},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.shot||u.moveUsed>=u.stats.M,S.mode==="move");btn("Shoot","◎",()=>{S.mode=S.mode==="shoot"?null:"shoot";render();},!u||u.side!=="player"||u.activated||u.kind!=="archer"||u.shot||u.engaged,S.mode==="shoot");btn("End activation","✓",finishActivation,!u||u.side!=="player"||u.activated||u.engaged||u.fled);return;}
- if(S.phase==="combat"){btn("Resolve melee","⚔",resolveCombat,!units().some(v=>v.side==="player"&&v.engaged&&alive(v)));btn("End turn","▶",endTurn,!units().some(v=>v.engaged&&alive(v)));return;}
- if(S.phase==="break")btn("Break test","🎲",resolveBreak);
-}
 function setPhase(p){S.phase=p;S.mode=null;units().forEach(u=>{u.activated=false;if(p==="charges"){u.moved=false;u.moveUsed=0;u.shot=false;u.shootCasualties=0;u.panicTested=false;u.charged=false;}});if(p==="charges"){S.chargeSide="player";S.chargePasses=0;S.declaredCharges=[];}if(p==="movement")S.activationSide="player";S.targetId=null;render();if(p==="movement")startActivations();}
 function declareCharge(u,target){if(!u||!target||u.engaged||u.fled||u.charged||!alive(u)||!alive(target)||target.engaged||dist(u,target)>u.stats.M*2)return false;S.declaredCharges.push({unitId:u.id,targetId:target.id});u.charged=true;say(u.name+" declares a charge against "+target.name+".");S.chargePasses=0;S.mode=null;S.chargeSide=u.side==="player"?"ai":"player";if(S.chargeSide==="ai")aiChargeStep();else render();return true;}
 function finishMovement(){finishActivation();}
@@ -66,6 +57,8 @@ const view={zoom:1,x:0,y:0};
 $("logtoggle").onclick=()=>$("logpanel").classList.add("open");$("logclose").onclick=()=>$("logpanel").classList.remove("open");$("rollclose").onclick=()=>$("rollview").classList.remove("show");
 const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_IN, BATTLEFIELD_WIDTH_IN, MODEL_BASE_IN, shape, view });
 const { setupCanvas, draw } = RENDERING;
+const UI = createUI({ S, $, units, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset });
+const { render } = UI;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, shoot, declareCharge, render, draw, $ });
 reset();setupCanvas();
 })();
