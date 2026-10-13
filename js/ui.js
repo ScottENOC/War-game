@@ -1,4 +1,4 @@
-export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset }) {
+export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, startBattle }) {
   function renderRoster() {
     for (const side of ["ai", "player"]) {
       const el = $(side === "ai" ? "enemycards" : "playercards");
@@ -12,7 +12,7 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
         b.innerHTML = '<span class="sigil">' + (u.kind === "archer" ? "🏹" : "⚔") + '</span>' +
           (u.champion.enabled ? '<span class="champion-mark">♛</span>' : "") +
           '<span class="count">' + u.models + '</span><span class="bar ' + (side === "ai" ? "ai" : "") + '"></span>';
-        b.onclick = () => { S.selected = u.id; S.mode = null; render(); };
+        b.onclick = () => { if(S.phase==="deployment"&&side==="ai")return; S.selected = u.id; S.mode = null; render(); };
         el.append(b);
       });
     }
@@ -27,6 +27,13 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
     const el = $("actions"); el.replaceChildren();
     if (S.finished) { btn("New battle", "↻", reset, false); return; }
     const u = S.units[S.selected], target = selectedTarget(u);
+    if(S.phase==="deployment"){
+      const placed=units().filter(v=>v.side==="player"&&v.deployed&&alive(v)).length, total=units().filter(v=>v.side==="player"&&alive(v)).length;
+      btn("Rotate selected unit left 15 degrees","↶",()=>{if(u&&u.side==="player"){const f=u.facing-Math.PI/12;if(!u.deployed||validDeployment(u,u.x,u.y,f))u.facing=f;render();}},!u||u.side!=="player");
+      btn("Rotate selected unit right 15 degrees","↷",()=>{if(u&&u.side==="player"){const f=u.facing+Math.PI/12;if(!u.deployed||validDeployment(u,u.x,u.y,f))u.facing=f;render();}},!u||u.side!=="player");
+      btn("Start battle","▶",startBattle,placed!==total);
+      return;
+    }
     if (u) btn(u.champion.enabled ? "Remove champion" : "Add champion", "♛",
       () => { u.champion.enabled = !u.champion.enabled; render(); },
       u.models < 1, u.champion.enabled);
