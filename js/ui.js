@@ -32,8 +32,8 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
       const preview=document.createElement("div");preview.className="shoot-preview";
       if(!target){preview.textContent="Select an enemy target.";el.append(preview);}
       else{
-        const d=dist(u,target),range=u.range||BOW_RANGE,dx=target.x-u.x,dy=target.y-u.y,len2=dx*dx+dy*dy||1;
-        const blockers=units().filter(v=>v!==u&&v!==target&&!v.attachedTo&&alive(v)).filter(v=>{const t=((v.x-u.x)*dx+(v.y-u.y)*dy)/len2;if(t<=.04||t>=.96)return false;const px=u.x+t*dx,py=u.y+t*dy;return Math.hypot(v.x-px,v.y-py)<.055;});
+        const d=dist(u,target),range=u.range||BOW_RANGE,wx=W(),hy=H(),dx=(target.x-u.x)*wx,dy=(target.y-u.y)*hy,len2=dx*dx+dy*dy||1;
+        const blockers=units().filter(v=>v!==u&&v!==target&&!v.attachedTo&&alive(v)).filter(v=>{const vx=(v.x-u.x)*wx,vy=(v.y-u.y)*hy,t=(vx*dx+vy*dy)/len2;if(t<=.04||t>=.96)return false;const px=u.x*wx+t*dx,py=u.y*hy+t*dy;return Math.hypot(v.x*wx-px,v.y*hy-py)<Math.max(wx,hy)/48*.8;});
         let arc=true;if(!u.skirmishing){let a=Math.atan2(dy*H(),dx*W())-(u.facing||0);while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;arc=Math.abs(a)<=Math.PI/4;}
         const friendlyBlockers=blockers.filter(v=>v.side===u.side),blocked=friendlyBlockers.length>0&&u.rangedWeapon==="firearm";
         const over=blockers.length?(u.rangedWeapon==="bow"?1:2):0;
