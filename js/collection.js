@@ -214,6 +214,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
  document.querySelectorAll("[data-mode]").forEach(btn=>btn.addEventListener("click",()=>{
   const mode=btn.dataset.mode;
   if(mode==="skirmish"){onSkirmish();return;}
+  if(mode==="narrative"){onNarrativeCampaign();return;}
   const info={
    grand:["Grand Campaign","Lead a faction across a living world. Expand territory, manage resources and fight battles with only the miniatures in your collection."],
    narrative:["Narrative Campaign","Fight a connected story of missions, choices and persistent rewards. Mission rewards can add specific models to your collection."],
