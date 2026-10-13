@@ -23,6 +23,8 @@ function buildUnit(template,config,faction,opposing=false) {
   const spears=config.type==="swordsmen"&&(elf||!!config.spears),shield=(!!config.shield&&!["halberd","greatWeapon"].includes(config.weapon))||(elf&&config.type==="swordsmen");
   const hasBow=isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"));
   let weapon=(isCharacter||isCavalry)?(config.weapon||"handWeapon"):"handWeapon";
+  // Halberds are infantry weapons; prevent stale or malformed mounted loadouts.
+  if(mounted&&weapon==="halberd")weapon="handWeapon";
   if(isCavalry&&elf&&(config.freeCavalryOption||"bow")==="spear"&&weapon==="handWeapon")weapon="spear";
   const costFaction=opposing?"empire":faction;
   return {id:config.id,name:template.name+" "+config.index,short:template.short,side:config.side,kind:template.kind,
