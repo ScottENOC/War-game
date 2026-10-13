@@ -84,3 +84,12 @@ The main menu now exposes four game-mode entry points: Grand Campaign (4X), Narr
 The persistent browser collection starts with 100 human swordsmen, 50 human archers, and one Empire hero equipped with a sword only. Skirmish roster validation checks that the player owns enough models matching each selected unit's faction, type, weapon, shield and mounted status. The Developer Menu includes a persistent ownership-check bypass and a one-item lootbox test button.
 
 The Army Builder groups owned miniatures, lets players permanently add compatible components to existing models, and assembles new models by consuming a matching main body, weapon arms, left arm (empty hand or shield), and horse when mounted. Arms are faction-neutral. Lootboxes award one random bit (currently 72% chance) or one complete model; complete-model weights are inversely proportional to their base points cost. Inventory is stored in browser local storage. This is a prototype economy, not a monetised system.
+
+
+### Lootbox rewards
+
+- Claim one free lootbox per local calendar day from the Collection screen.
+- Win a skirmish to earn one additional unopened lootbox; a defeat gives no victory reward.
+- Open earned lootboxes from the Collection screen. Each currently grants one random usable bit (72%) or a complete model (28%); complete-model odds are weighted inversely by points cost.
+- The Developer Menu retains a direct test button that grants a random item immediately, without consuming an earned lootbox.
+- Daily claim state, unopened boxes, and collection progress are stored in this browser's local storage. This is a prototype, not a secure account-wide reward system: clearing browser data can erase it, and changing the device clock can affect daily claims. A future online release would need account/server-side tracking to enforce one claim per day across devices.
