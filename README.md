@@ -8,9 +8,11 @@ Open [index.html](./index.html) in a browser, or enable GitHub Pages for the rep
 
 ## Current prototype
 
-- One regiment per side: 20 identical swordsmen, five files wide.
-- Empire-inspired player faction versus a simple AI opponent.
-- Hand weapons only; no armour, standards, characters, shooting, magic, terrain or army construction yet.
+- Main menu, point-based army builder and blind deployment phase.
+- Up to six player units, each with 5–30 models: swordsmen and archers.
+- Optional unit champions and optional swordsman light armour, with per-unit and total army points.
+- A simple AI opponent that currently mirrors the player's army list.
+- Movement, charges, shooting, melee, morale, and visible dice results.
 - Movement activation and charge declarations.
 - Melee attack rolls, wounds, rank bonus, combat result and Leadership-based break test.
 - Visible dice results and battle log.
