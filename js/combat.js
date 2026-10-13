@@ -46,6 +46,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       });
       const levels=[...new Set(combatants.map(c=>effectiveI(c.u,c.host,c.component)))].sort((a,b)=>b-a);
       levels.forEach(initiative=>{
+        const shownInitiative=initiative>=100?initiative-100:initiative;
         const attackers=combatants.filter(c=>alive(c.host)&&!c.host.fled&&effectiveI(c.u,c.host,c.component)===initiative);
         const keyOf=c=>c.u.id+":"+c.component;
         const pending=new Map(attackers.map(c=>[keyOf(c),{snapshot:captureFighter(c.u),attacked:false}]));
@@ -74,7 +75,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
             if(wasAlive&&!combatantAlive(potential)&&pending.has(potentialKey)&&!pending.get(potentialKey).attacked){
               potential.delayedDeath=true;
               potential.delayedDeathSnapshot=pending.get(potentialKey).snapshot;
-              say(potential.name+' suffers a fatal wound; '+(potential.isCharacter?'they':'up to '+snapshot.eligibleModels+' front-rank fighters')+' will strike before dying at Initiative '+initiative+'.');
+              say(potential.name+' suffers a fatal wound; '+(potential.isCharacter?'they':'up to '+snapshot.eligibleModels+' front-rank fighters')+' will strike before dying at Initiative '+shownInitiative+'.');
             }
           });
           const hasLaterPacket=attackers.some(c=>c.u===u&&!pending.get(keyOf(c))?.attacked);
