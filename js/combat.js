@@ -1,4 +1,4 @@
-export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render, endTurn, finishBattle, reformCombatPairs, pursueAfterBreak, panicNearby }) {
+export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render, endTurn, finishBattle, reformCombatPairs, pursueAfterBreak, panicNearby, leadership = u => u.stats.Ld }) {
   const linked = u => {
     const ids = Array.isArray(u.engagedWithIds) ? u.engagedWithIds : (u.engagedWith ? [u.engagedWith] : []);
     return [...new Set(ids)].map(id => S.units[id]).filter(v => v && v !== u && alive(v) && v.engaged && !v.fled);
@@ -18,7 +18,8 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
   function combatantAlive(u) { return !!u && u.models > 0 && !u.fled; }
   function captureFighter(u) {
     const champion = !!(u.champion?.enabled && u.championAlive !== false && u.models > 0);
-    const eligibleModels = u.isCharacter ? 1 : Math.min(Math.max(1,Math.floor(u.formationWidth||5)),u.models);
+    const rankWidth=Math.max(1,Math.floor(u.formationWidth||5));
+    const eligibleModels = u.isCharacter ? 1 : Math.min(rankWidth*(u.spears?2:1),u.models);
     return { models:u.models, damage:u.damage||0, championAlive:u.championAlive, championWounds:u.championWounds, characterWounds:u.characterWounds, eligibleModels, eligibleChampion:champion };
   }
   function resolveCombat(){
@@ -100,8 +101,9 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
   function resolveBreak(){
     const u=S.loser;if(!u||!alive(u)){endTurn();return;}
     const dice=roll(2),total=dice[0]+dice[1],snakeEyes=dice[0]===1&&dice[1]===1;
-    const holds=snakeEyes||total+S.crDiff<=u.stats.Ld;
-    say('<b>Break test — '+u.name+'</b>: 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; Leadership '+u.stats.Ld+' − combat result '+S.crDiff+' (modified total '+(total+S.crDiff)+').');
+    const testLeadership=leadership(u);
+    const holds=snakeEyes||total+S.crDiff<=testLeadership;
+    say('<b>Break test — '+u.name+'</b>: 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; Leadership '+leadership(u)+' − combat result '+S.crDiff+' (modified total '+(total+S.crDiff)+').');
     if(snakeEyes)say('Snake eyes! A double 1 always holds, regardless of the combat result.');
     if(!holds){
       const pursuer=linked(u).find(v=>alive(v)&&!v.fled);
