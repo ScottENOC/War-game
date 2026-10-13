@@ -1,6 +1,6 @@
-export function createGameState(startingUnits) {
+export function createGameState(startingUnits = {}) {
   return {
-    turn: 1, phase: "deployment", selected: "pSword", finished: false,
+    turn: 1, phase: "menu", selected: null, finished: false,
     combatRound: 0, loser: null, crDiff: 0, log: [], mode: null,
     chargeSide: "player", chargePasses: 0, declaredCharges: [],
     activationSide: "player", units: startingUnits
