@@ -1,5 +1,5 @@
 export function createRules({ roll }) {
-  function rankBonus(u) { return Math.min(3, Math.max(0, Math.floor(u.models / 5) - 1)); }
+  function rankBonus(u) { const width=Math.max(1,Math.floor(u.formationWidth||5)); if(width<4)return 0; const full=Math.floor(u.models/width),remainder=u.models%width; return Math.min(3,Math.max(0,full-1)+(remainder>=4?1:0)); }
 
   // Warhammer Fantasy 6th edition close-combat Weapon Skill chart:
   // 3+ when attacker WS is higher; 5+ only when defender WS is MORE than double.
@@ -76,9 +76,8 @@ export function createRules({ roll }) {
   function modelPools(u, mode) {
     const hasChampion = !!(u.champion && u.champion.enabled && u.models > 0);
     const normalModels = Math.max(0, u.models - (hasChampion ? 1 : 0));
-    const normalCount = mode === "melee"
-      ? Math.min(hasChampion ? 4 : 5, normalModels)
-      : normalModels;
+    const frontRank = Math.min(Math.max(1,Math.floor(u.formationWidth||5)),u.models);
+    const normalCount = mode === "melee" ? Math.max(0,Math.min(frontRank-(hasChampion?1:0),normalModels)) : normalModels;
     const profiles = [];
     const add = (count, stats, label) => {
       if (!count) return;
