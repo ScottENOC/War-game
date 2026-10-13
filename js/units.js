@@ -14,7 +14,7 @@ function buildUnit(template, config) {
 
   return {
     id: config.id, name: template.name + " " + config.index, short: template.short, side: config.side,
-    kind: template.kind, isCharacter: config.type === "captain" || config.type === "lord", isGeneral: config.type === "lord", attachedTo: null, baseMove: stats.M,
+    kind: template.kind, isCharacter: config.type === "captain" || config.type === "lord", isGeneral: false, attachedTo: null, baseMove: stats.M,
     models: config.type === "captain" || config.type === "lord" ? 1 : config.models, startModels: config.type === "captain" || config.type === "lord" ? 1 : config.models, points: unitCost(config), weapon: config.type === "captain" || config.type === "lord" ? (config.weapon || (config.greatWeapon ? "greatWeapon" : "handWeapon")) : "handWeapon",
     spears: config.type === "swordsmen" && !!config.spears,
     lightArmour: !!config.lightArmour, heavyArmour: !!config.heavyArmour,
@@ -50,6 +50,13 @@ export function createUnitsFromArmy(army) {
     host.attachedCharacters=[...new Set([...(host.attachedCharacters||[]),hero.id])];
     host.stats.M=Math.min(host.baseMove??host.stats.M,hero.stats.M);
   });
+  // The character with the highest Leadership is the army's General.
+  // Ties are resolved by roster order, and a General is not replaced if killed.
+  for (const side of ["player", "ai"]) {
+    const general = Object.values(units).filter(u => u.side === side && u.isCharacter)
+      .sort((a, b) => b.stats.Ld - a.stats.Ld)[0];
+    if (general) general.isGeneral = true;
+  }
   return units;
 }
 
