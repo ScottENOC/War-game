@@ -9,5 +9,8 @@ function controls(){const el=$("actions");el.replaceChildren();if(S.finished){bt
  if(S.phase==="combat"){btn("Resolve melee","⚔",resolveCombat,!units().some(v=>v.side==="player"&&v.engaged&&alive(v)));btn("End turn","▶",endTurn,!units().some(v=>v.engaged&&alive(v)));return;}
  if(S.phase==="break")btn("Break test","🎲",resolveBreak);
 }
+  $("logtoggle").onclick = () => $("logpanel").classList.add("open");
+  $("logclose").onclick = () => $("logpanel").classList.remove("open");
+  $("rollclose").onclick = () => $("rollview").classList.remove("show");
   return { render };
 }
