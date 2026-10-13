@@ -76,7 +76,8 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
               say(potential.name+' suffers a fatal wound; '+(potential.isCharacter?'they':'up to '+snapshot.eligibleModels+' front-rank fighters')+' will strike before dying at Initiative '+initiative+'.');
             }
           });
-          if(u.delayedDeath&&component==="rider"){u.models=0;u.damage=0;u.characterWounds=0;u.championAlive=false;u.delayedDeath=false;u.delayedDeathSnapshot=null;say(u.name+' succumbs after making its attack.');}
+          const hasLaterPacket=attackers.some(c=>c.u===u&&!pending.get(keyOf(c))?.attacked);
+          if(u.delayedDeath&&!hasLaterPacket){u.models=0;u.damage=0;u.characterWounds=0;u.championAlive=false;u.delayedDeath=false;u.delayedDeathSnapshot=null;say(u.name+' succumbs after making its attack.');}
         });
       });
       const sideUnits={player:group.filter(u=>u.side==="player"&&alive(u)),ai:group.filter(u=>u.side==="ai"&&alive(u))};
