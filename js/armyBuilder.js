@@ -21,7 +21,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     const e=elf(),m=u.models||1;
     const character=u.type==="captain"||u.type==="lord";
     const upgradeCost=statUpgrades.reduce((sum,s)=>sum+(u.upgrades&&u.upgrades[s.key]?(character?s.character:s.unit*m):0),0);
-    const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3:0),0);
+    const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3:0),0);
     if(u.type==="captain"||u.type==="lord")return (e?(u.type==="lord"?120:75):(u.type==="lord"?80:50))+(u.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(u.weapon)?4:0)+(u.mounted?8:0)+(u.mounted&&u.weapon==="spear"?2:0)+(u.mounted&&u.weapon==="lance"?4:0)+(u.mounted&&u.barding?4:0)+(u.shield&&!["halberd","greatWeapon"].includes(u.weapon)?2:0)+(u.rangedWeapon==="bow"?(e?3:2):u.rangedWeapon==="crossbow"?3:u.rangedWeapon==="firearm"?4:0)+upgradeCost+skillCost;
     if(u.type==="cavalry"){const free=u.freeCavalryOption||"bow";return m*(e?24:16)+(u.elvenArchery&&e&&(u.bow||free==="bow")?2*m:0)+(u.bow&&!(e&&free==="bow")?2*m:0)+(u.rangedWeapon==="crossbow"?3*m:u.rangedWeapon==="firearm"?4*m:0)+(u.heavyArmour?2*m:0)+(u.barding?2*m:0)+(u.shield&&u.weapon!=="greatWeapon"?0.5*m:0)+(u.weapon==="spear"&&!(e&&free==="spear")?m:0)+(["lance","greatWeapon"].includes(u.weapon)?2*m:0)+upgradeCost+skillCost;}
     const base=m*(e?12:8);
@@ -85,6 +85,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         const hasBow=u.type==="archers"||["bow","crossbow","firearm"].includes(u.weapon)||!!u.rangedWeapon||(u.type==="cavalry"&&(!!u.bow||!!u.rangedWeapon||(elf()&&(u.freeCavalryOption||"bow")==="bow")));
         if(hasBow)skillBox.append(check("Marksman",{cost:"+3 pts · reroll natural 1s to hit when shooting",checked:!!u.skills?.rerollOnesShooting,onChange:v=>{u.skills={...(u.skills||{}),rerollOnesShooting:v};updateTotals();}}));
         skillBox.append(check("Steadfast",{cost:"+3 pts · ignore combat-result penalty on break tests",checked:!!u.skills?.steadfast,onChange:v=>{u.skills={...(u.skills||{}),steadfast:v};updateTotals();}}));
+        skillBox.append(check("Skirmish",{cost:"+3 pts · free pivot, 360° shooting and shields",checked:!!u.skills?.skirmish,onChange:v=>{u.skills={...(u.skills||{}),skirmish:v};updateTotals();}}));
         options.append(skillBox);
       }
       {
