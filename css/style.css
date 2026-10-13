@@ -158,3 +158,5 @@ h1{font-size:clamp(28px,6vw,44px);line-height:1.1;margin:10px 0 16px;letter-spac
 .campaign-choice small{font-size:11px;line-height:1.4;color:#c0c8bf}
 .campaign-actions{display:grid;gap:9px;margin-top:16px}
 @media(max-width:600px){.campaign-choice-list{grid-template-columns:1fr}.campaign-panel{padding:14px}}
+
+.shoot-preview{flex:0 0 100%;max-width:min(96vw,620px);padding:7px 10px;border:1px solid #ffffff35;border-radius:8px;background:rgba(15,20,22,.9);font-size:11px;font-weight:750;text-align:center;line-height:1.4;white-space:normal;box-shadow:0 2px 8px #0005}.shoot-preview.friendly-fire{background:rgba(115,37,31,.95);border-color:#ffb4a8;color:#fff}
