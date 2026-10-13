@@ -1,4 +1,4 @@
-export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, startBattle }) {
+export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, startBattle }) {
   function renderRoster() {
     for (const side of ["ai", "player"]) {
       const el = $(side === "ai" ? "enemycards" : "playercards");
@@ -44,6 +44,8 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
     if (S.phase === "movement") {
       btn("Move", "↔", () => { S.mode = S.mode === "move" ? null : "move"; render(); },
         !u || u.side !== "player" || u.activated || u.engaged || u.fled || u.shot || u.moveUsed >= u.stats.M, S.mode === "move");
+      btn("Widen formation", "＋", () => {if(u&&u.formationWidth<Math.max(1,u.models)&&u.moveUsed+u.stats.M/2<=u.stats.M){u.formationWidth++;if(canPlace(u,u.x,u.y,u.facing)){u.moveUsed+=u.stats.M/2;u.moved=true;}else{u.formationWidth--;}render();}},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.shot||u.formationWidth>=u.models||u.moveUsed+u.stats.M/2>u.stats.M);
+      btn("Narrow formation", "－", () => {if(u&&u.formationWidth>1&&u.moveUsed+u.stats.M/2<=u.stats.M){u.formationWidth--;if(canPlace(u,u.x,u.y,u.facing)){u.moveUsed+=u.stats.M/2;u.moved=true;}else{u.formationWidth++;}render();}},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.shot||u.formationWidth<=1||u.moveUsed+u.stats.M/2>u.stats.M);
       btn("Shoot", "◎", () => { S.mode = S.mode === "shoot" ? null : "shoot"; render(); },
         !u || u.side !== "player" || u.activated || u.kind !== "archer" || u.shot || u.engaged, S.mode === "shoot");
       btn("End activation", "✓", finishActivation, !u || u.side !== "player" || u.activated || u.engaged || u.fled); return;
