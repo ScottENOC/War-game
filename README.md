@@ -36,7 +36,7 @@ The browser entry point is `index.html`, which loads `js/main.js` as an ES modul
 - `movement.js` — unit footprints, distances, overlap checks and legal placement.
 - `phases.js` — charge declarations and phase transitions.
 - `ai.js` — AI activation priorities, target selection and movement decisions.
-- `rules.js`, `shooting.js`, `combat.js` and `dice.js` — rules resolution and dice results.
+- `rules.js`, `shooting.js`, `combat.js` and `dice.js` — rules resolution and dice results. Attack dice are grouped by matching profiles; an optional champion replaces one rank-and-file model, with 2 melee attacks or +1 BS for archers. Champion stat overrides are supported in unit state for future profiles.
 - `rendering.js` — battlefield canvas drawing.
 - `input.js` — pointer, touch, drag, pivot, pan and zoom handling.
 - `ui.js` — unit cards, action controls and log/dice overlay controls.
