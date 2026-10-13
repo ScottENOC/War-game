@@ -23,7 +23,7 @@ footer{max-width:1280px;margin:0 auto;padding:0 18px 24px;color:var(--muted);fon
 </style>
 </head>
 <body>
-<header><h1>WAR-GAME</h1></header>
+
 <main>
 <section class="battle">
  <div class="statusbar"><div><div class="eyebrow" id="turnlabel">TURN 1</div><div class="phase" id="phaselabel">Movement — Charge declarations</div></div><div class="hint" id="instruction">Select your regiment, then declare a charge or move.</div></div>
@@ -59,7 +59,6 @@ const W=()=>canvas.clientWidth, H=()=>canvas.clientHeight;
 const alive=u=>u.models>0;
 const BATTLEFIELD_WIDTH_IN=48;
 const MODEL_BASE_IN=0.9;
-const MOVE_ALLOWANCE=4;
 const PX_PER_IN=()=>W()/BATTLEFIELD_WIDTH_IN;
 const fieldHeightIn=()=>H()/Math.max(1,PX_PER_IN());
 const dist=()=>Math.hypot((S.units.player.x-S.units.ai.x)*BATTLEFIELD_WIDTH_IN,(S.units.player.y-S.units.ai.y)*fieldHeightIn());
@@ -158,10 +157,10 @@ function render(){
  $("unitshield").className="shield "+u.side;
  $("detailname").textContent=u.name;
  $("detailmeta").textContent=u.models+" models · "+(u.engaged?"In melee":u.fled?"Fleeing":"Hand weapon");
- $("unitstats").innerHTML=[["M",st.M],["WS",st.WS],["BS",st.BS],["S",st.S],["T",st.T],["W",st.W],["I",st.I],["A",st.A],["Ld",st.Ld],["Save",st.save]].map(([label,value])=>'<div class="stat '+(label==="Save"?"save":"")+'"><b>'+value+'</b><span>'+label+'</span></div>').join("");
+ $("unitstats").innerHTML=[["M",st.M],["WS",st.WS],["BS",st.BS],["S",st.S],["T",st.T],["W",st.W],["I",st.I],["A",st.A],["Ld",st.Ld],["AS",st.save]].map(([label,value])=>'<div class="stat '+(label==="AS"?"save":"")+'"><b>'+value+'</b><span>'+label+'</span></div>').join("");
  const shape=formationShape(u);
  $("unitformation").textContent="Formation: "+Math.min(5,u.models)+" files × "+shape.ranks+" ranks · "+u.models+" models";
- $("unitrules").textContent="Move allowance: "+st.M+" inches · Charge: up to "+(st.M*2)+" inches · Movement used this turn: "+u.moveUsed.toFixed(1)+" inches";
+ $("unitrules").textContent="Move: "+st.M+" inches · Charge: up to "+(st.M*2)+" inches · Movement used: "+u.moveUsed.toFixed(1)+" inches. Melee: WS determines hits; Strength vs Toughness determines wounds; armour saves are modified by Strength. Leadership tests use Ld.";
  draw();controls();
 }
 function hint(){
@@ -188,7 +187,7 @@ function controls(){
   if(S.active==="player"){
    const p=S.units.player;
    el.append(btn("Finish movement",()=>passMovement("player")));
-   const remaining=Math.max(0,MOVE_ALLOWANCE-p.moveUsed);
+   const remaining=Math.max(0,p.stats.M-p.moveUsed);
    const meter=document.createElement("span");meter.className="pill";meter.textContent="Movement remaining: "+remaining.toFixed(1)+" inches";el.append(meter);
   }else el.append(btn("AI passes",()=>passMovement("ai")));
   return;
@@ -250,12 +249,17 @@ function resolveCombat(){
  const p=S.units.player,a=S.units.ai;
  if(!p.engaged||!a.engaged){endTurn();return}
  S.combatRound++;
- const pFirst=p.charged&&!a.charged;
+ const pFirst=(p.charged&&!a.charged)||(!p.charged&&!a.charged&&p.stats.I>a.stats.I);
+ const aFirst=(a.charged&&!p.charged)||(!p.charged&&!a.charged&&a.stats.I>p.stats.I);
  let pr,ar;
  if(pFirst){
   pr=attack(p,a);a.models=Math.max(0,a.models-pr.wounds);
   ar=alive(a)?attack(a,p):null;
   if(ar)p.models=Math.max(0,p.models-ar.wounds);
+ }else if(aFirst){
+  ar=attack(a,p);p.models=Math.max(0,p.models-ar.wounds);
+  pr=alive(p)?attack(p,a):null;
+  if(pr)a.models=Math.max(0,a.models-pr.wounds);
  }else{
   pr=attack(p,a);ar=attack(a,p);
   a.models=Math.max(0,a.models-pr.wounds);
