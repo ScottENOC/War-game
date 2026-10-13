@@ -44,7 +44,7 @@ The browser entry point is `index.html`, which loads `js/main.js` as an ES modul
 - `movement.js` — unit footprints, distances, overlap checks and legal placement.
 - `phases.js` — charge declarations and phase transitions.
 - `ai.js` — AI activation priorities, target selection and movement decisions.
-- `rules.js`, `shooting.js`, `combat.js` and `dice.js` — rules resolution and dice results. Attack dice are grouped by matching profiles; an optional champion replaces one rank-and-file model, with 2 melee attacks or +1 BS for archers. Hit, wound and save pools use the relevant WS/BS, Strength and target stats, while melee sequencing uses each unit’s Initiative.
+- `rules.js`, `shooting.js`, `combat.js` and `dice.js` — rules resolution and dice results. Attack dice are grouped by matching profiles; an optional champion replaces one rank-and-file model and can specialise for +1 Attack or +1 BS; the default is +1 BS for bow-equipped infantry and +1 Attack otherwise. Hit, wound and save pools use the relevant WS/BS, Strength and target stats, while melee sequencing uses each unit’s Initiative.
 - `rendering.js` — battlefield canvas drawing, including the blind-deployment view.
 - `input.js` — pointer, touch, drag, pivot, pan, zoom and deployment placement handling.
 - `ui.js` — unit cards, action controls and log/dice overlay controls.
@@ -93,3 +93,13 @@ The Army Builder groups owned miniatures, lets players permanently add compatibl
 - Open earned lootboxes from the Collection screen. Each currently grants one random usable bit (72%) or a complete model (28%); complete-model odds are weighted inversely by points cost.
 - The Developer Menu retains a direct test button that grants a random item immediately, without consuming an earned lootbox.
 - Daily claim state, unopened boxes, and collection progress are stored in this browser's local storage. This is a prototype, not a secure account-wide reward system: clearing browser data can erase it, and changing the device clock can affect daily claims. A future online release would need account/server-side tracking to enforce one claim per day across devices.
+
+
+## Personalised units and skirmish stat upgrades
+
+- Infantry now uses one underlying combat profile: choose a sword/hand weapon, spear, bow, great weapon or infantry-only halberd. Bow-equipped infantry receives a ranged attack; melee weapon choice controls melee rules. Humans and High Elves use the same infantry profile within their faction, with equipment and racial rules creating the difference.
+- Infantry weapons use the following starting premiums per model: bow +2 points for humans / +3 for High Elves, spear +1, great weapon +2, halberd +1. Existing faction equipment defaults and shield/armour costs remain.
+- Unit champions can specialise for +1 Attack or +1 Ballistic Skill. The default is +1 BS when equipped with a bow and +1 Attack otherwise; the army builder exposes a selector to change it.
+- Skirmish stat upgrades are available to infantry, cavalry and characters, once per stat, excluding Wounds and Attacks. Regiment upgrades cost per model: Movement +2, Weapon Skill +2, Ballistic Skill +2, Strength +3, Toughness +4, Initiative +1, Leadership +1. Character upgrades cost once: Movement +5, Weapon Skill +5, Ballistic Skill +5, Strength +6, Toughness +8, Initiative +3, Leadership +3.
+- High Elves have an Elven Archery passive: they ignore the shooting penalties for moving and long range. Other modifiers, including cover once terrain is implemented, still apply.
+- These prices are provisional balance values intended for iteration. The campaign modes remain placeholders; this stat-upgrade structure is currently implemented in the skirmish army builder as the prototype for later campaign progression.
