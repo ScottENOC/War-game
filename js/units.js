@@ -70,7 +70,7 @@ export function createUnitsFromArmy(army,faction="empire") {
     units["p"+n]=buildUnit(FACTIONS[playerFaction].units[entry.type],{...playerEntry,id:"p"+n,index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
     units["a"+n]=buildUnit(FACTIONS.opposing.units[entry.type],{...aiEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},"empire",true);
   });
-  Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter).forEach(hero=>{
+  Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter&&!u.hasRangedWeapon).forEach(hero=>{
     const host=Object.values(units).find(u=>u.side==="ai"&&!u.isCharacter&&u.models>0&&!!u.isCavalry===!!hero.mounted);
     if(!host)return;hero.attachedTo=host.id;hero.x=host.x;hero.y=host.y;host.attachedCharacters=[...new Set([...(host.attachedCharacters||[]),hero.id])];host.stats.M=Math.min(host.baseMove??host.stats.M,hero.stats.M);
   });
