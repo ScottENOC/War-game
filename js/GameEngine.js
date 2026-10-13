@@ -8,6 +8,7 @@ import { createRendering } from "./rendering.js";
 import { createInput } from "./input.js";
 import { createUI } from "./ui.js";
 import { createPhases } from "./phases.js";
+import { createDice } from "./dice.js";
 
 export function startGame() {
 (() => {
@@ -21,17 +22,8 @@ const W=()=>canvas.clientWidth,H=()=>canvas.clientHeight,PX_PER_IN=()=>W()/BATTL
 const dist=(a,b)=>Math.hypot((a.x-b.x)*BATTLEFIELD_WIDTH_IN,(a.y-b.y)*fieldHeightIn());
 const enemies=u=>units().filter(v=>v.side!==u.side&&alive(v));
 function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,80);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");if(msg.includes("dice-stack")||msg.includes("dice-duel")){$("rollcontent").innerHTML=msg;$("rollview").classList.add("show");}if($("logpanel").classList.contains("open"))$("log").scrollTop=0;}
-function roll(n){return Array.from({length:n},()=>1+Math.floor(Math.random()*6));}
-function dieHtml(n,pass,kind){return '<span class="die '+(pass?'success':'fail')+(kind==='save'?' save':'')+'" title="'+(pass?'success':'failure')+'">'+n+'</span>';}
-function lane(label,values,threshold,mode){return '<div class="dice-lane"><span class="lane-label">'+label+'</span>'+values.map(v=>dieHtml(v,mode==='save'?v>=threshold:v>=threshold,mode)).join("")+'</div>';}
-function diceStack(u,r){
- let out='<div class="dice-stack"><b>'+u.name+'</b>';
- out+=lane('To hit — need '+(r.hitNeed>6?'7+ (impossible)':r.hitNeed+'+'),r.hitRolls,r.hitNeed,'hit');
- out+=lane('To wound — '+r.hits+' hits; need '+r.woundNeed+'+',r.woundRolls,r.woundNeed,'wound');
- if(r.saveNeed!==null)out+=lane('Armour saves — '+r.woundsBeforeSave+' wounds; need '+(r.saveNeed>6?'7+ (impossible)':r.saveNeed+'+'),r.saveRolls,r.saveNeed,'save');
- out+='<div class="unitmeta">Result: '+r.hits+' hits, '+r.woundsBeforeSave+' wounds, '+r.saved+' saved, <b>'+r.wounds+' unsaved</b>.</div></div>';return out;
-}
-function diceDuel(title,r1,r2){return '<div><b>'+title+'</b><div class="dice-duel">'+(r1?'<div class="dice-side"><h3>Player</h3>'+diceStack(S.units.pSword.side==='player'?S.units.pSword:S.units.pArch,r1)+'</div>':'')+(r2?'<div class="dice-side"><h3>Opponent</h3>'+diceStack(S.units.aSword.side==='ai'?S.units.aSword:S.units.aArch,r2)+'</div>':'')+'</div></div>';}
+const DICE = createDice({ S });
+const { roll, diceStack, diceDuel } = DICE;
 function closestEnemy(u){return enemies(u).sort((a,b)=>dist(u,a)-dist(u,b))[0]||null;}
 function selectedTarget(u){const list=enemies(u);return list.find(v=>v.id===S.targetId)||closestEnemy(u);}
 function eligibleForActivation(u){return alive(u)&&!u.fled&&!u.engaged&&!u.activated;}
