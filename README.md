@@ -13,7 +13,7 @@ Open [index.html](./index.html) in a browser, or enable GitHub Pages for the rep
 - Optional unit champions and optional swordsman light armour, with per-unit and total army points.
 - A simple AI opponent that currently mirrors the player's army list.
 - Movement, charges, shooting, melee, morale, and visible dice results.
-- A unit that alone charges in a combat receives +10 Initiative for that round; if both sides charged, they use actual Initiative and a dice-off for ties.
+- Each unit that charges or counter-charges receives +10 Initiative for that combat round, independently of other units in the fight. Units that did not charge use their normal Initiative; equal Initiative strikes simultaneously.
 - Formation width can be changed during movement at a half-Move cost per file.
 - Flank/rear charges record the engagement side, suppress the defender’s rank bonus when the attacker has Unit Strength 5+, and add the relevant combat-resolution bonus.
 - In a one-on-one combat, surviving units turn to face each other between rounds; a flank-charged unit reforms one file wider, capped by the opponent’s frontage.
