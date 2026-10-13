@@ -51,7 +51,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const levels=[...new Set(combatants.map(c=>effectiveI(c.u,c.host,c.component)))].sort((a,b)=>b-a);
       levels.forEach(initiative=>{
         const shownInitiative=initiative;
-        const attackers=combatants.filter(c=>alive(c.host)&&!c.host.fled&&effectiveI(c.u,c.host,c.component)===initiative);
+        const attackers=combatants.filter(c=>(alive(c.host)||c.host.delayedDeath)&&!c.host.fled&&effectiveI(c.u,c.host,c.component)===initiative);
         // Entitlements and snapshots span every Initiative level. A rider dying
         // before their mount acts must not erase the mount's separate attack.
         const pending=new Map(attackers.map(c=>[keyOf(c),{snapshot:snapshots.get(keyOf(c)),attacked:attackedPackets.has(keyOf(c))}]));
@@ -79,7 +79,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           entitlement.attacked=true;attackedPackets.add(key);
           before.forEach(({u:potential,component:potentialComponent,wasAlive,snapshot})=>{
             const potentialKey=potential.id+":"+potentialComponent;
-            if(wasAlive&&!combatantAlive(potential)&&!attackedPackets.has(potentialKey)){
+            if(wasAlive&&!combatantAlive(potential)&&!potential.delayedDeath&&!attackedPackets.has(potentialKey)){
               potential.delayedDeath=true;
               potential.delayedDeathSnapshot=snapshot;
               say(potential.name+' suffers a fatal wound; '+(potential.isCharacter?'they':'up to '+snapshot.eligibleModels+' front-rank fighters')+' will strike before dying at Initiative '+shownInitiative+'.');
