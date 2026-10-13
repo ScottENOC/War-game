@@ -61,7 +61,7 @@ const S = {
 };
 const W=()=>canvas.clientWidth, H=()=>canvas.clientHeight;
 const alive=u=>u.models>0;
-const dist=()=>Math.abs(S.units.player.x-S.units.ai.x)*W();
+const BATTLEFIELD_WIDTH_IN=48;\nconst dist=()=>Math.abs(S.units.player.x-S.units.ai.x)*BATTLEFIELD_WIDTH_IN;
 function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,45);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");}
 function roll(n=1){return Array.from({length:n},()=>1+Math.floor(Math.random()*6));}
 function d6(n=1){return roll(n).reduce((a,b)=>a+b,0);}
@@ -83,7 +83,7 @@ function draw(){
   ctx.strokeStyle="rgba(160,205,230,.7)";ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(p.x*w,0);ctx.lineTo(p.x*w,h);ctx.stroke();ctx.setLineDash([]);
  }
  drawUnit(p,w,h);drawUnit(a,w,h);
- const d=Math.round(dist());ctx.fillStyle="#f3eedc";ctx.font="600 12px system-ui";ctx.textAlign="center";ctx.fillText("Gap: "+d+" px",w/2,22);
+ const d=dist();ctx.fillStyle="#f3eedc";ctx.font="600 12px system-ui";ctx.textAlign="center";ctx.fillText("Gap: "+d.toFixed(1)+" inches",w/2,22);
  ctx.textAlign="left";ctx.fillStyle="rgba(255,255,255,.8)";ctx.font="11px system-ui";ctx.fillText("Your deployment",12,h-12);
  ctx.textAlign="right";ctx.fillText("AI deployment",w-12,h-12);
 }
@@ -160,7 +160,7 @@ function declareCharge(){
  // In a one-unit prototype the response is automatic; resolve charge immediately after declaration window.
  p.charged=true;p.activated=true;
  const gap=dist();
- if(gap<=8){p.x=a.x-(Math.sign(a.x-p.x)||1)*0.105;p.y=a.y;p.engaged=true;a.engaged=true;say('Charge succeeds — both regiments are now engaged.');}
+ if(gap<=8){p.x=a.x-(Math.sign(a.x-p.x)||1)*(5/BATTLEFIELD_WIDTH_IN);p.y=a.y;p.engaged=true;a.engaged=true;say('Charge succeeds — both regiments are now engaged.');}
  else say('Charge fails; the unit advances its normal move.');
  S.active="player";setPhase("movement");
 }
@@ -172,9 +172,9 @@ function passCharge(side){
 }
 function movePlayer(){
  const p=S.units.player,a=S.units.ai;if(p.activated||p.engaged||p.fled)return;
- const max=4/W();const dir=Math.sign(a.x-p.x)||1;
+ const max=4/BATTLEFIELD_WIDTH_IN;const dir=Math.sign(a.x-p.x)||1;
  const next=p.x+dir*max;
- if(Math.abs(a.x-next)*W()<24){say("Move blocked: the regiment cannot move into contact without charging.");return}
+ if(Math.abs(a.x-next)*BATTLEFIELD_WIDTH_IN<5){say("Move blocked: the regiment cannot move into contact without charging.");return}
  p.x=next;p.activated=true;say("Empire Swordsmen move up to 4 inches.");S.active="ai";render();
 }
 function passMovement(side){
@@ -188,16 +188,22 @@ function resolveCombat(){
  if(!p.engaged||!a.engaged){endTurn();return}
  S.combatRound++;
  // Five models in the front rank fight. WS3 vs WS3 hits on 4+, S3 vs T3 wounds on 4+.
- function attack(u,target){
+ function attack(u){
   const attacks=Math.min(5,u.models),hit=roll(attacks),hits=hit.filter(x=>x>=4).length,woundsRoll=roll(hits),wounds=woundsRoll.filter(x=>x>=4).length;
-  target.models=Math.max(0,target.models-wounds);
   return {attacks,hit,hits,woundsRoll,wounds};
  }
- // Charging side strikes first. On subsequent rounds both sides attack; equal Initiative is simultaneous.
+ // Equal Initiative attacks are simultaneous. A charger strikes first only in the charge round.
  const pFirst=p.charged&&!a.charged;
  let pr,ar;
- if(pFirst){pr=attack(p,a);if(alive(a))ar=attack(a,p)}
- else {pr=attack(p,a);ar=attack(a,p)}
+ if(pFirst){
+  pr=attack(p);a.models=Math.max(0,a.models-pr.wounds);
+  ar=alive(a)?attack(a):null;
+  if(ar)p.models=Math.max(0,p.models-ar.wounds);
+ }else{
+  pr=attack(p);ar=attack(a);
+  a.models=Math.max(0,a.models-pr.wounds);
+  p.models=Math.max(0,p.models-ar.wounds);
+ }
  say('<b>Melee round '+S.combatRound+'</b> — Empire: '+pr.hits+'/'+pr.attacks+' hits, '+pr.wounds+' wounds. AI: '+(ar?ar.hits+'/'+ar.attacks+' hits, '+ar.wounds+' wounds':'no attacks (destroyed before striking)')+'.');
  draw();
  if(!alive(p)||!alive(a)){finishBattle(!alive(a)?"Empire wins the battle!":"AI wins the battle!");return}
