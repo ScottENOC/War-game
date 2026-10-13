@@ -47,9 +47,9 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
       if(character){
         if(elf()){const rule=document.createElement("p");rule.textContent="Always Strikes First: +10 Initiative; reroll missed melee hits when your final modified Initiative is at least 11 higher than the target’s.";options.append(rule);}
         options.append(check("Heavy armour",{cost:"+4 pts (5+ save"+((elf()||u.mounted)?", no Move penalty":", −1 Move")+")",checked:!!u.heavyArmour,onChange:v=>{u.heavyArmour=v;updateTotals();}}));
-        options.append(check("Shield",{cost:"+2 pts, +1 front armour save",checked:!!u.shield,disabled:["halberd","greatWeapon"].includes(u.weapon),onChange:v=>{u.shield=v;updateTotals();}}));
+        options.append(check("Shield",{cost:"+2 pts, +1 front armour save",checked:!!u.shield,disabled:["halberd","greatWeapon"].includes(u.weapon)||!!u.rangedWeapon,onChange:v=>{u.shield=v;updateTotals();}}));
         options.append(select("Melee weapon",'<option value="handWeapon">Sword/hand weapon (included)</option>'+(u.mounted?"":'<option value="halberd">Halberd (+4 pts)</option>')+'<option value="greatWeapon">Great weapon (+4 pts, +2 Strength, −10 Initiative)</option>'+(u.mounted?'<option value="spear">Spear (+2 pts, charge)</option><option value="lance">Lance (+4 pts, charge)</option>':""),u.weapon,v=>{u.weapon=v;if(["halberd","greatWeapon"].includes(v))u.shield=false;updateTotals();renderRows();}));
-        if(!elf())options.append(select("Ranged weapon",'<option value="">None</option><option value="bow">Bow (+2 pts)</option><option value="crossbow">Crossbow (+3 pts)</option><option value="firearm">Firearm (+4 pts)</option>',u.rangedWeapon||"",v=>{u.rangedWeapon=v||null;updateTotals();}));
+        options.append(select("Ranged weapon",'<option value="">None</option>'+(elf()?'<option value="bow">Longbow (+3 pts)</option>':'<option value="bow">Bow (+2 pts)</option><option value="crossbow">Crossbow (+3 pts)</option><option value="firearm">Firearm (+4 pts)</option>'),u.rangedWeapon||"",v=>{u.rangedWeapon=v||null;if(v)u.shield=false;updateTotals();renderRows();}));
         options.append(check("Warhorse",{cost:"+8 pts",checked:!!u.mounted,onChange:v=>{u.mounted=v;u.barding=false;if(v&&u.weapon==="halberd")u.weapon="handWeapon";if(!v&&["spear","lance"].includes(u.weapon))u.weapon="handWeapon";renderRows();}}));
         if(u.mounted)options.append(check("Barding",{cost:"+4 pts, +1 save"+(elf()?", no Move penalty":", −1 Move"),checked:!!u.barding,onChange:v=>{u.barding=v;updateTotals();}}));
       }else if(cavalry){
@@ -61,11 +61,11 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
           if(u.bow||u.freeCavalryOption==="bow")options.append(check("Elven Archery",{cost:"+2/model · ignores moving and long-range penalties",checked:!!u.elvenArchery,onChange:v=>{u.elvenArchery=v;updateTotals();}}));
         }else{
           options.append(select("Melee weapon",'<option value="handWeapon">Sword/hand weapon (included)</option><option value="spear">Spear (+1/model)</option><option value="lance">Lance (+2/model)</option><option value="greatWeapon">Great weapon (+2/model)</option>',u.weapon||"handWeapon",v=>{u.weapon=v;if(["halberd","greatWeapon"].includes(v))u.shield=false;updateTotals();renderRows();}));
-          options.append(select("Ranged weapon",'<option value="">None</option><option value="bow">Bow (+2/model)</option><option value="crossbow">Crossbow (+3/model)</option><option value="firearm">Firearm (+4/model)</option>',u.rangedWeapon||(u.bow?"bow":""),v=>{u.rangedWeapon=v||null;u.bow=v==="bow";updateTotals();}));
+          options.append(select("Ranged weapon",'<option value="">None</option><option value="bow">Bow (+2/model)</option><option value="crossbow">Crossbow (+3/model)</option><option value="firearm">Firearm (+4/model)</option>',u.rangedWeapon||(u.bow?"bow":""),v=>{u.rangedWeapon=v||null;u.bow=v==="bow";if(v)u.shield=false;updateTotals();renderRows();}));
         }
         options.append(check("Heavy armour",{cost:"+2/model",checked:!!u.heavyArmour,onChange:v=>{u.heavyArmour=v;updateTotals();}}));
         options.append(check("Barding",{cost:"+2/model, +1 save"+(elf()?", no Move penalty":", −1 Move"),checked:!!u.barding,onChange:v=>{u.barding=v;updateTotals();}}));
-        options.append(check("Shield",{cost:"+0.5/model, +1 front armour save",checked:!!u.shield,disabled:u.weapon==="greatWeapon",onChange:v=>{u.shield=v;updateTotals();}}));
+        options.append(check("Shield",{cost:"+0.5/model, +1 front armour save",checked:!!u.shield,disabled:u.weapon==="greatWeapon"||!!u.rangedWeapon,onChange:v=>{u.shield=v;updateTotals();}}));
       }else if(infantry){
         options.append(select("Weapon",'<option value="handWeapon">Sword / hand weapon (included)</option><option value="spear">Spear (+1 pt/model)</option><option value="bow">Bow ('+(elf()?"+3":" +2")+' pts/model)</option>'+(elf()?"":'<option value="crossbow">Crossbow (+3 pts/model)</option><option value="firearm">Firearm (+4 pts/model)</option>')+'<option value="greatWeapon">Great weapon (+2 pts/model)</option><option value="halberd">Halberd (+1 pt/model)</option>',u.type==="archers"?"bow":(u.weapon||"handWeapon"),v=>{u.type=v==="bow"?"archers":"swordsmen";u.weapon=v;u.rangedWeapon=null;u.spears=v==="spear";if(["bow","crossbow","firearm","halberd","greatWeapon"].includes(v))u.shield=false;else if(elf())u.shield=true;u.championBonus=["bow","crossbow","firearm"].includes(v)?"BS":"A";renderRows();}));
         if(elf()&&u.type==="archers")options.append(check("Elven Archery",{cost:"+2/model · ignores moving and long-range penalties",checked:!!u.elvenArchery,onChange:v=>{u.elvenArchery=v;updateTotals();}}));
@@ -73,7 +73,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         else{
           if(elf()&&u.type==="archers"){const kit=document.createElement("p");kit.textContent="Includes light armour and longbow (30″ range). Always Strikes First.";options.append(kit);}
           else options.append(check("Light armour",{cost:"+1/model",checked:!!u.lightArmour,onChange:v=>{u.lightArmour=v;updateTotals();}}));
-          options.append(check("Shield",{cost:"+0.5/model, +1 front armour save",checked:!!u.shield,onChange:v=>{u.shield=v;updateTotals();}}));
+          options.append(check("Shield",{cost:"+0.5/model, +1 front armour save",checked:!!u.shield,disabled:["bow","crossbow","firearm","halberd","greatWeapon"].includes(u.weapon),onChange:v=>{u.shield=v;updateTotals();}}));
           if(u.type==="swordsmen"&&!elf()&&u.weapon!=="spear")options.append(check("Spears",{cost:"+1/model, fights in two ranks",checked:!!u.spears,onChange:v=>{u.spears=v;u.weapon=v?"spear":"handWeapon";renderRows();}}));
         }
       }
@@ -81,7 +81,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         const skillBox=document.createElement("div");skillBox.className="stat-upgrades";
         const skillHeading=document.createElement("p");skillHeading.className="stat-upgrades-heading";skillHeading.textContent="Special skills · 3 pts each";skillBox.append(skillHeading);
         skillBox.append(check("Melee Mastery",{cost:"+3 pts · reroll natural 1s to hit in melee",checked:!!u.skills?.rerollOnesMelee,onChange:v=>{u.skills={...(u.skills||{}),rerollOnesMelee:v};updateTotals();}}));
-        const hasBow=u.type==="archers"||["bow","crossbow","firearm"].includes(u.weapon)||(u.type==="cavalry"&&(!!u.bow||!!u.rangedWeapon||(elf()&&(u.freeCavalryOption||"bow")==="bow")));
+        const hasBow=u.type==="archers"||["bow","crossbow","firearm"].includes(u.weapon)||!!u.rangedWeapon||(u.type==="cavalry"&&(!!u.bow||!!u.rangedWeapon||(elf()&&(u.freeCavalryOption||"bow")==="bow")));
         if(hasBow)skillBox.append(check("Marksman",{cost:"+3 pts · reroll natural 1s to hit when shooting",checked:!!u.skills?.rerollOnesShooting,onChange:v=>{u.skills={...(u.skills||{}),rerollOnesShooting:v};updateTotals();}}));
         skillBox.append(check("Steadfast",{cost:"+3 pts · ignore combat-result penalty on break tests",checked:!!u.skills?.steadfast,onChange:v=>{u.skills={...(u.skills||{}),steadfast:v};updateTotals();}}));
         options.append(skillBox);
