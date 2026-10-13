@@ -40,7 +40,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
  const bitCount=id=>data.bits[id]||0;
  const addBit=(id,n=1)=>{data.bits[id]=(data.bits[id]||0)+n;};
  const consumeBit=id=>{if(bitCount(id)<1)return false;data.bits[id]--;if(!data.bits[id])delete data.bits[id];return true;};
- const modelLabel=m=>m.name||((m.faction==="empire"?"Empire ":"High Elf ")+title(m.type)+" · "+title(m.weapon)+(m.shield?" + Shield":"")+(m.mounted?" · Mounted":""));
+ const modelLabel=m=>(m.faction==="empire"?"Empire ":"High Elf ")+title(m.type)+" · "+title(m.weapon)+(m.shield?" + Shield":"")+(m.mounted?" · Mounted":"");
  const canUseBit=(m,id)=>{
    const b=bitDefs.find(x=>x.id===id);if(!b)return false;
    if(b.kind==="shield")return !m.shield;
@@ -114,7 +114,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
     const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=body.kind==="cavalry";const hero=body.kind==="captain"||body.kind==="lord";
     [...weapon.options].forEach(o=>o.remove());
     const arms=cavalry?["right_sword","right_spear","right_lance","both_greatWeapon"]:(hero?(horseWrap.value==="yes"?["right_sword","right_spear","right_lance","both_greatWeapon"]:["right_sword","right_spear","right_lance","both_greatWeapon","both_halberd"]):["right_sword","right_spear","both_bow"]);
-    if(body.kind==="lord"&&!arms.includes("both_bow")&&!cavalry)arms.push("both_bow");
+    
     arms.forEach(id=>{const d=bitDefs.find(b=>b.id===id);const o=document.createElement("option");o.value=id;o.textContent=d.label+" ("+bitCount(id)+" owned)";weapon.append(o);});
     horseWrap.parentElement.hidden=!cavalry&&!hero;
     if(!cavalry&&!hero)horseWrap.value="no";
