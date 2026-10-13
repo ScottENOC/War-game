@@ -63,7 +63,9 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           const targets=linked(host).filter(v=>alive(v)&&!v.fled&&!v.delayedDeath);
           if(!targets.length){
             if(u.delayedDeath&&component==="rider"){u.models=0;u.characterWounds=0;u.delayedDeath=false;u.delayedDeathSnapshot=null;}
-            entitlement.attacked=true;return;
+            entitlement.attacked=true;attackedPackets.add(key);
+            if(u.delayedDeath&&!combatants.some(c=>c.u===u&&!attackedPackets.has(keyOf(c)))){u.models=0;u.damage=0;u.characterWounds=0;u.championAlive=false;u.delayedDeath=false;u.delayedDeathSnapshot=null;say(u.name+' succumbs after its final attack.');}
+            return;
           }
           const target=targets.sort((a,b)=>dist(host,a)-dist(host,b))[0];
           const before=new Map(attackers.filter(c=>!pending.get(keyOf(c))?.attacked).map(c=>[keyOf(c),{...c,wasAlive:combatantAlive(c.u),snapshot:captureFighter(c.u)}]));
