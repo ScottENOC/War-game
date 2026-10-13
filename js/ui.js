@@ -10,7 +10,7 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
           (side === "player" && !u.moved && !u.shot && !u.fled ? " unmoved" : "");
         b.setAttribute("aria-label", u.name + " " + u.models + " models, " + u.points + " points" + (u.champion.enabled ? ", champion" : "") + (u.lightArmour ? ", light armour" : "") + (u.alwaysStrikesFirst ? ", Always Strikes First" : ""));
         b.title = u.name + " — " + u.points + " pts" + (u.champion.enabled ? ", champion included" : "") + (u.lightArmour ? ", light armour" : "");
-        b.innerHTML = '<span class="sigil">' + (u.kind === "archer" || u.hasBow ? "🏹" : u.kind === "cavalry" ? "🐎" : "⚔") + '</span>' +
+        b.innerHTML = '<span class="sigil">' + (u.hasRangedWeapon ? "🏹" : u.kind === "cavalry" ? "🐎" : "⚔") + '</span>' +
           (u.champion.enabled ? '<span class="champion-mark">♛</span>' : "") +
           '<span class="count">' + u.models + '</span><span class="points-mark">' + u.points + '</span><span class="bar ' + (side === "ai" ? "ai" : "") + '"></span>';
         b.onclick = () => { if(S.phase==="deployment"&&side==="ai")return; S.selected = u.id; S.mode = null; render(); };
@@ -53,7 +53,7 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
       btn("Widen formation", "＋", () => {if(u&&u.formationWidth<Math.max(1,u.models)&&u.moveUsed+u.stats.M/2<=u.stats.M){u.formationWidth++;if(canPlace(u,u.x,u.y,u.facing)){u.moveUsed+=u.stats.M/2;u.moved=true;}else{u.formationWidth--;}render();}},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.shot||u.formationWidth>=u.models||u.moveUsed+u.stats.M/2>u.stats.M);
       btn("Narrow formation", "－", () => {if(u&&u.formationWidth>1&&u.moveUsed+u.stats.M/2<=u.stats.M){u.formationWidth--;if(canPlace(u,u.x,u.y,u.facing)){u.moveUsed+=u.stats.M/2;u.moved=true;}else{u.formationWidth++;}render();}},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.shot||u.formationWidth<=1||u.moveUsed+u.stats.M/2>u.stats.M);
       btn("Shoot", "◎", () => { S.mode = S.mode === "shoot" ? null : "shoot"; render(); },
-        !u || u.side !== "player" || u.activated || u.kind !== "archer" && !(u.isCavalry && u.hasBow) || u.shot || u.engaged || u.charged, S.mode === "shoot");
+        !u || u.side !== "player" || u.activated || !u.hasRangedWeapon || u.shot || u.engaged || u.charged, S.mode === "shoot");
       btn("End activation", "✓", finishActivation, !u || u.side !== "player" || u.activated || u.engaged || u.fled); return;
     }
     if (S.phase === "combat") {
