@@ -20,7 +20,28 @@ main{max-width:1280px;margin:auto;padding:18px;display:grid;grid-template-column
 footer{max-width:1280px;margin:0 auto;padding:0 18px 24px;color:var(--muted);font-size:12px}.unit-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.unit-stats .stat{min-width:0}.unit-stats .stat.save b{font-size:13px}.detail-line{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 @media(max-width:850px){main{grid-template-columns:1fr;padding:12px}.side{display:grid;grid-template-columns:1fr}.side .logpanel{grid-column:auto}#field{aspect-ratio:1.15}.statusbar{align-items:flex-start;flex-direction:column}header{padding:10px 14px}}
 @media(max-width:500px){.unit-stats{grid-template-columns:repeat(5,minmax(0,1fr))}#field{aspect-ratio:.95}.hint{font-size:12px}}
-</style>
+
+.dice-stack{display:grid;gap:6px;margin-top:7px;padding:8px;background:#182024;border:1px solid #3b484e;border-radius:8px}
+.dice-duel{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dice-side{min-width:0;border:1px solid #455158;border-radius:7px;padding:7px}
+.dice-side h3{font-size:11px;margin:0 0 5px;color:var(--text)}
+.dice-lane{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin:4px 0}
+.lane-label{width:100%;font-size:10px;color:var(--muted)}
+.die{width:25px;height:25px;display:inline-grid;place-items:center;border:1px solid #6e7b80;border-radius:5px;background:#354148;color:#fff;font-size:12px;font-weight:800}
+.die.success{background:#245d43;border-color:#65bb89;color:#e4ffed}
+.die.fail{background:#783d3a;border-color:#c76c64;color:#ffe7e4}
+.die.save{background:#285274;border-color:#75b5e0;color:#e9f7ff}
+.roster{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.unit-card{display:flex;align-items:center;gap:8px;text-align:left;padding:8px;border:1px solid var(--line);border-radius:8px;background:#1b2226;min-width:0}
+.unit-card.unmoved{border:2px solid #d5b66d;box-shadow:inset 0 0 0 1px rgba(213,182,109,.2)}
+.unit-card.selected{background:#334149;border-color:#f4dda1}
+.unit-card .unitmeta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.unit-card .shield{flex:0 0 30px;width:30px;height:34px}
+.unit-card .unitname{font-size:12px}
+.unit-card .unitmeta{font-size:10px}
+.phase-note{font-size:12px;color:var(--muted);margin-top:7px}
+@media(max-width:500px){.dice-duel{grid-template-columns:1fr}.roster{grid-template-columns:1fr 1fr}.unit-card{padding:6px;gap:5px}}
+\n</style>
 </head>
 <body>
 
@@ -31,7 +52,7 @@ footer{max-width:1280px;margin:0 auto;padding:0 18px 24px;color:var(--muted);fon
  <div class="controls" id="controls"></div>
 </section>
 <aside class="side">
- <section class="panel" id="unitdetails">
+ <section class="panel"><h2>Units</h2><div class="roster" id="roster"></div><div class="phase-note">Gold border = not yet moved this phase.</div></section>\n <section class="panel" id="unitdetails">
   <h2>Selected unit</h2>
   <div class="unitrow"><div class="shield player" id="unitshield">✦</div><div><div class="unitname" id="detailname">Empire Swordsmen</div><div class="unitmeta" id="detailmeta">20 models · Hand weapon</div></div></div>
   <div class="unit-stats" id="unitstats"></div>
@@ -47,331 +68,86 @@ footer{max-width:1280px;margin:0 auto;padding:0 18px 24px;color:var(--muted);fon
 "use strict";
 const $ = id => document.getElementById(id);
 const canvas = $("field"), ctx = canvas.getContext("2d");
-const S = {
- turn:1, phase:"charges", active:"player", selected:"player", finished:false,
+const BATTLEFIELD_WIDTH_IN=48, MODEL_BASE_IN=.9, BOW_RANGE=24;
+const S={
+ turn:1,phase:"charges",selected:"pSword",finished:false,combatRound:0,loser:null,crDiff:0,log:[],
  units:{
-  player:{id:"player",name:"Empire Swordsmen",side:"player",models:20,damage:0,x:0.32,y:0.5,facing:0,engaged:false,activated:false,charged:false,fled:false,moveUsed:0,stats:{M:4,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7,save:"-"}},
-  ai:{id:"ai",name:"Opponent Swordsmen",side:"ai",models:20,damage:0,x:0.68,y:0.5,facing:Math.PI,engaged:false,activated:false,charged:false,fled:false,moveUsed:0,stats:{M:4,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7,save:"-"}}
- },
- log:[], pending:[], passes:{player:false,ai:false}, combatRound:0
+  pSword:{id:"pSword",name:"Empire Swordsmen",short:"Swordsmen",side:"player",kind:"melee",models:20,startModels:20,x:.22,y:.36,facing:0,engaged:false,activated:false,moved:false,shot:false,charged:false,fled:false,moveUsed:0,damage:0,shootCasualties:0,stats:{M:4,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7,save:"-"}},
+  pArch:{id:"pArch",name:"Empire Archers",short:"Archers",side:"player",kind:"archer",models:10,startModels:10,x:.22,y:.70,facing:0,engaged:false,activated:false,moved:false,shot:false,charged:false,fled:false,moveUsed:0,damage:0,shootCasualties:0,stats:{M:4,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7,save:"-"}},
+  aSword:{id:"aSword",name:"Opposing Swordsmen",short:"Swordsmen",side:"ai",kind:"melee",models:20,startModels:20,x:.78,y:.36,facing:Math.PI,engaged:false,activated:false,moved:false,shot:false,charged:false,fled:false,moveUsed:0,damage:0,shootCasualties:0,stats:{M:4,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7,save:"-"}},
+  aArch:{id:"aArch",name:"Opposing Archers",short:"Archers",side:"ai",kind:"archer",models:10,startModels:10,x:.78,y:.70,facing:Math.PI,engaged:false,activated:false,moved:false,shot:false,charged:false,fled:false,moveUsed:0,damage:0,shootCasualties:0,stats:{M:4,WS:3,BS:3,S:3,T:3,W:1,A:1,Ld:7,save:"-"}}
+ }
 };
-const W=()=>canvas.clientWidth, H=()=>canvas.clientHeight;
-const alive=u=>u.models>0;
-const BATTLEFIELD_WIDTH_IN=48;
-const MODEL_BASE_IN=0.9;
-const PX_PER_IN=()=>W()/BATTLEFIELD_WIDTH_IN;
-const fieldHeightIn=()=>H()/Math.max(1,PX_PER_IN());
-const dist=()=>Math.hypot((S.units.player.x-S.units.ai.x)*BATTLEFIELD_WIDTH_IN,(S.units.player.y-S.units.ai.y)*fieldHeightIn());
+const units=()=>Object.values(S.units), alive=u=>u.models>0;
+const W=()=>canvas.clientWidth,H=()=>canvas.clientHeight,PX_PER_IN=()=>W()/BATTLEFIELD_WIDTH_IN,fieldHeightIn=()=>H()/Math.max(1,PX_PER_IN());
+const dist=(a,b)=>Math.hypot((a.x-b.x)*BATTLEFIELD_WIDTH_IN,(a.y-b.y)*fieldHeightIn());
+const enemies=u=>units().filter(v=>v.side!==u.side&&alive(v));
 function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,45);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");}
-function roll(n=1){return Array.from({length:n},()=>1+Math.floor(Math.random()*6));}
-function d6(n=1){return roll(n).reduce((a,b)=>a+b,0);}
+function roll(n){return Array.from({length:n},()=>1+Math.floor(Math.random()*6));}
+function dieHtml(n,pass,kind){return '<span class="die '+(pass?'success':'fail')+(kind==='save'?' save':'')+'" title="'+(pass?'success':'failure')+'">'+n+'</span>';}
+function lane(label,values,threshold,mode){return '<div class="dice-lane"><span class="lane-label">'+label+'</span>'+values.map(v=>dieHtml(v,mode==='save'?v>=threshold:v>=threshold,mode)).join("")+'</div>';}
+function diceStack(u,r){
+ let out='<div class="dice-stack"><b>'+u.name+'</b>';
+ out+=lane('To hit — need '+(r.hitNeed>6?'7+ (impossible)':r.hitNeed+'+'),r.hitRolls,r.hitNeed,'hit');
+ out+=lane('To wound — '+r.hits+' hits; need '+r.woundNeed+'+',r.woundRolls,r.woundNeed,'wound');
+ if(r.saveNeed!==null)out+=lane('Armour saves — '+r.woundsBeforeSave+' wounds; need '+(r.saveNeed>6?'7+ (impossible)':r.saveNeed+'+'),r.saveRolls,r.saveNeed,'save');
+ out+='<div class="unitmeta">Result: '+r.hits+' hits, '+r.woundsBeforeSave+' wounds, '+r.saved+' saved, <b>'+r.wounds+' unsaved</b>.</div></div>';return out;
+}
+function diceDuel(title,r1,r2){return '<div><b>'+title+'</b><div class="dice-duel">'+(r1?'<div class="dice-side"><h3>Player</h3>'+diceStack(S.units.pSword.side==='player'?S.units.pSword:S.units.pArch,r1)+'</div>':'')+(r2?'<div class="dice-side"><h3>Opponent</h3>'+diceStack(S.units.aSword.side==='ai'?S.units.aSword:S.units.aArch,r2)+'</div>':'')+'</div></div>';}
 function setupCanvas(){const r=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
-function draw(){
- const w=W(),h=H();if(!w||!h)return;
- ctx.clearRect(0,0,w,h);
- // textured-looking field and subtle terrain-free deployment grid
- ctx.fillStyle="#59654d";ctx.fillRect(0,0,w,h);
- ctx.strokeStyle="rgba(235,231,190,.12)";ctx.lineWidth=1;
- for(let x=0;x<w;x+=w/12){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}
- for(let y=0;y<h;y+=h/8){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
- // central ground line
- ctx.strokeStyle="rgba(240,230,185,.32)";ctx.setLineDash([5,7]);ctx.beginPath();ctx.moveTo(w/2,12);ctx.lineTo(w/2,h-12);ctx.stroke();ctx.setLineDash([]);
- // show move / charge range when selecting during movement
- const p=S.units.player,a=S.units.ai;
- if(S.phase==="movement"&&S.selected==="player"&&!p.engaged){
-  ctx.strokeStyle="rgba(160,205,230,.55)";ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(p.x*w,p.y*h);ctx.lineTo(p.x*w+Math.cos(p.facing)*p.stats.M*PX_PER_IN(),p.y*h+Math.sin(p.facing)*p.stats.M*PX_PER_IN());ctx.stroke();ctx.setLineDash([]);
- }
- drawUnit(p,w,h);drawUnit(a,w,h);
-
+function shape(u){const files=5,ranks=Math.max(1,Math.ceil(u.models/files)),base=MODEL_BASE_IN*PX_PER_IN();return {files,ranks,base,front:files*base,depth:ranks*base};}
+function corners(u,x=u.x,y=u.y,f=u.facing){const q=shape(u),fx=Math.cos(f),fy=Math.sin(f),lx=-fy,ly=fx,cx=x*W(),cy=y*H(),front=q.front/2,depth=q.depth/2;return [{x:cx-fx*depth-lx*front,y:cy-fy*depth-ly*front},{x:cx+fx*depth-lx*front,y:cy+fy*depth-ly*front},{x:cx+fx*depth+lx*front,y:cy+fy*depth+ly*front},{x:cx-fx*depth+lx*front,y:cy-fy*depth+ly*front}];}
+function overlap(a,b){for(const poly of [a,b])for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],ax=-(q.y-p.y),ay=q.x-p.x,A=a.map(v=>v.x*ax+v.y*ay),B=b.map(v=>v.x*ax+v.y*ay);if(Math.max(...A)<Math.min(...B)+.01||Math.max(...B)<Math.min(...A)+.01)return false;}return true;}
+function canPlace(u,x,y,f){const poly=corners(u,x,y,f),w=W(),h=H();if(poly.some(p=>p.x<1||p.y<1||p.x>w-1||p.y>h-1))return false;return !units().some(v=>v!==u&&alive(v)&&overlap(poly,corners(v)));}
+function drawCone(u){if(u.side!=="player"||u.engaged||u.fled||u.charged||!alive(u)||S.phase==="combat"||S.phase==="over")return;const q=shape(u),x=u.x*W(),y=u.y*H(),f=u.facing,range=u.stats.M*2*PX_PER_IN(),half=Math.PI/4,front=q.depth/2,fy=-Math.sin(f),fx=Math.cos(f),left=-Math.sin(f),ly=Math.cos(f);const sx=x+fx*front,sy=y+fy*front;ctx.save();ctx.fillStyle="rgba(229,195,105,.13)";ctx.strokeStyle="rgba(250,220,140,.7)";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sx+left*q.front/2,sy+ly*q.front/2);ctx.lineTo(sx+left*q.front/2+Math.cos(f-half)*range,sy+ly*q.front/2+Math.sin(f-half)*range);ctx.arc(sx,sy,range,f-half,f+half);ctx.lineTo(sx+left*q.front/2,sy+ly*q.front/2);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
+function drawUnit(u){if(!alive(u))return;const w=W(),h=H(),x=u.x*w,y=u.y*h,q=shape(u),selected=S.selected===u.id,base=q.base;ctx.save();ctx.translate(x,y);ctx.rotate(u.facing);
+ ctx.fillStyle="rgba(0,0,0,.24)";ctx.fillRect(-q.depth/2+3,-q.front/2+4,q.depth,q.front);
+ ctx.fillStyle=u.side==="player"?(u.kind==="archer"?"#4b8065":"#365e7e"):(u.kind==="archer"?"#a17b42":"#813c36");ctx.fillRect(-q.depth/2,-q.front/2,q.depth,q.front);
+ let left=u.models;for(let rank=0;rank<q.ranks;rank++){const count=Math.min(q.files,left);for(let file=0;file<count;file++){const cx=q.depth/2-(rank+.5)*base,cy=-q.front/2+(file+.5)*base;ctx.fillStyle=u.side==="player"?(u.kind==="archer"?"#71aa84":"#456f91"):(u.kind==="archer"?"#c4a05f":"#a44a42");ctx.fillRect(cx-base/2+.7,cy-base/2+.7,base-1.4,base-1.4);ctx.strokeStyle="rgba(255,255,255,.8)";ctx.lineWidth=.9;ctx.strokeRect(cx-base/2+.7,cy-base/2+.7,base-1.4,base-1.4);}left-=count;}
+ ctx.strokeStyle=selected?"#f7d98b":"#e3d6b5";ctx.lineWidth=selected?3:1.2;ctx.strokeRect(-q.depth/2,-q.front/2,q.depth,q.front);
+ ctx.fillStyle="#f6e1a0";ctx.strokeStyle="#2a2a25";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(q.depth/2+9,0);ctx.lineTo(q.depth/2-1,-7);ctx.lineTo(q.depth/2-1,7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+ ctx.fillStyle="#fff8e9";ctx.font="bold 11px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(u.short,x,y-q.front/2-11);ctx.font="bold 14px system-ui";ctx.fillText(String(u.models),x,y+q.front/2+14);if(u.engaged){ctx.fillStyle="#f2d67d";ctx.font="bold 10px system-ui";ctx.fillText("IN MELEE",x,y+q.front/2+27)}if(u.fled){ctx.fillStyle="#ffb3ad";ctx.font="bold 10px system-ui";ctx.fillText("FLEEING",x,y+q.front/2+27);}
 }
-function unitCorners(u, atX=u.x, atY=u.y, atFacing=u.facing){
- const shape=formationShape(u),front=shape.front,depth=shape.depth;
- const fx=Math.cos(atFacing),fy=Math.sin(atFacing),lx=-fy,ly=fx;
- const cx=atX*W(),cy=atY*H();
- return [
-  {x:cx-fx*depth/2-lx*front/2,y:cy-fy*depth/2-ly*front/2},
-  {x:cx+fx*depth/2-lx*front/2,y:cy+fy*depth/2-ly*front/2},
-  {x:cx+fx*depth/2+lx*front/2,y:cy+fy*depth/2+ly*front/2},
-  {x:cx-fx*depth/2+lx*front/2,y:cy-fy*depth/2+ly*front/2}
- ];
-}
-function polygonOverlap(a,b){
- for(const poly of [a,b]){
-  for(let i=0;i<poly.length;i++){
-   const p1=poly[i],p2=poly[(i+1)%poly.length],ax=-(p2.y-p1.y),ay=p2.x-p1.x;
-   const pA=a.map(p=>p.x*ax+p.y*ay),pB=b.map(p=>p.x*ax+p.y*ay);
-   if(Math.max(...pA)<Math.min(...pB)+0.01||Math.max(...pB)<Math.min(...pA)+0.01)return false;
-  }
- }
- return true;
-}
-function canPlace(u,x,y,facing){
- const poly=unitCorners(u,x,y,facing),w=W(),h=H();
- if(poly.some(p=>p.x<1||p.y<1||p.x>w-1||p.y>h-1))return false;
- const other=S.units[u.id==="player"?"ai":"player"];
- return !alive(other)||!polygonOverlap(poly,unitCorners(other));
-}
-function formationShape(u){
- const files=5,ranks=Math.max(1,Math.ceil(u.models/files)),base=MODEL_BASE_IN*PX_PER_IN();
- return {files,ranks,base,front:files*base,depth:ranks*base};
-}
-function drawUnit(u,w,h){
- if(!alive(u))return;
- const x=u.x*w,y=u.y*h,selected=S.selected===u.id&&!S.finished,shape=formationShape(u),{files,ranks,base,front,depth}=shape;
- ctx.save();ctx.translate(x,y);ctx.rotate(u.facing);
- ctx.fillStyle="rgba(0,0,0,.24)";ctx.fillRect(-depth/2+3,-front/2+4,depth,front);
- ctx.fillStyle=u.side==="player"?"#365e7e":"#813c36";ctx.strokeStyle=selected?"#f7d98b":"#e3d6b5";ctx.lineWidth=selected?2.5:1.2;
- ctx.fillRect(-depth/2,-front/2,depth,front);
- // Casualties are removed from the rear; surviving models stay in the front ranks.
- let remaining=u.models;
- for(let rank=0;rank<ranks;rank++){
-  const count=Math.min(files,remaining),start=-front/2;
-  for(let file=0;file<count;file++){
-   const cx=depth/2-(rank+.5)*base,cy=start+file*base+base/2;
-   ctx.fillStyle=u.side==="player"?"#456f91":"#a44a42";
-   ctx.fillRect(cx-base/2+0.7,cy-base/2+0.7,base-1.4,base-1.4);
-   ctx.strokeStyle="rgba(255,255,255,.8)";ctx.lineWidth=.9;ctx.strokeRect(cx-base/2+0.7,cy-base/2+0.7,base-1.4,base-1.4);
-  }
-  remaining-=count;
- }
- ctx.strokeStyle=selected?"#f7d98b":"#e3d6b5";ctx.lineWidth=selected?2.5:1.2;ctx.strokeRect(-depth/2,-front/2,depth,front);
- ctx.fillStyle="#f6e1a0";ctx.strokeStyle="#2a2a25";ctx.lineWidth=1;
- ctx.beginPath();ctx.moveTo(depth/2+9,0);ctx.lineTo(depth/2-1,-7);ctx.lineTo(depth/2-1,7);ctx.closePath();ctx.fill();ctx.stroke();
- if(selected&&S.phase==="movement"&&u.side==="player"&&!u.engaged&&!u.fled){
-  ctx.fillStyle="#ffe3a0";
-  for(const sign of [-1,1]){ctx.beginPath();ctx.arc(depth/2,sign*front/2,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#312b1e";ctx.stroke()}
- }
- ctx.restore();
- ctx.fillStyle="#fff8e9";ctx.font="bold 11px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";
- ctx.fillText(u.name,x,y-front/2-11);
- ctx.font="bold 14px system-ui";ctx.fillText(String(u.models),x,y+front/2+14);
- if(u.engaged){ctx.fillStyle="#f2d67d";ctx.font="bold 10px system-ui";ctx.fillText("IN MELEE",x,y+front/2+27)}
- if(u.fled){ctx.fillStyle="#ffb3ad";ctx.font="bold 10px system-ui";ctx.fillText("FLEEING",x,y+front/2+27)}
-}
-function setPhase(phase){S.phase=phase;S.active="player";S.passes={player:false,ai:false};S.units.player.activated=false;S.units.ai.activated=false;S.units.player.moveUsed=0;S.units.ai.moveUsed=0;render();}
-function render(){
- $("turnlabel").textContent="TURN "+S.turn;
- const names={charges:"Movement — Charge declarations",movement:"Movement — Remaining moves",combat:"Melee — Attacks & combat resolution",break:"Combat resolution — Break test",over:"Battle complete"};
- $("phaselabel").textContent=names[S.phase]||S.phase;
- $("instruction").textContent=hint();
- const u=S.units[S.selected]||S.units.player,st=u.stats;
- $("unitshield").className="shield "+u.side;
- $("detailname").textContent=u.name;
- $("detailmeta").textContent=u.models+" models · "+(u.engaged?"In melee":u.fled?"Fleeing":"Hand weapon");
- $("unitstats").innerHTML=[["M",st.M],["WS",st.WS],["BS",st.BS],["S",st.S],["T",st.T],["W",st.W],["I",st.I],["A",st.A],["Ld",st.Ld],["AS",st.save]].map(([label,value])=>'<div class="stat '+(label==="AS"?"save":"")+'"><b>'+value+'</b><span>'+label+'</span></div>').join("");
- const shape=formationShape(u);
- $("unitformation").textContent="Formation: "+Math.min(5,u.models)+" files × "+shape.ranks+" ranks · "+u.models+" models";
- $("unitrules").textContent="Move: "+st.M+" inches · Charge: up to "+(st.M*2)+" inches · Movement used: "+u.moveUsed.toFixed(1)+" inches. Melee: WS determines hits; Strength vs Toughness determines wounds; armour saves are modified by Strength. Leadership tests use Ld.";
- draw();controls();
-}
-function hint(){
- if(S.finished)return "Battle ended. Start a fresh battle to play again.";
- if(S.phase==="charges")return S.active==="player"?"Declare a charge if the enemy is within 8 inches, or pass.":"AI passes on charge declarations.";
- if(S.phase==="movement")return S.active==="player"?"Drag the unit forward to advance, or drag a highlighted front corner to pivot. Combine moves up to 4 inches total.":"AI passes its movement activation.";
- if(S.phase==="combat")return "Both engaged units fight. Chargers strike first; otherwise Initiative decides.";
- if(S.phase==="break")return "Resolve the losing unit's Leadership test.";
- return "";
-}
-function btn(label,fn,cls="",disabled=false){const b=document.createElement("button");b.textContent=label;b.className=cls;b.disabled=disabled;b.onclick=fn;return b}
-function controls(){
- const el=$("controls");el.replaceChildren();
- if(S.finished||S.phase==="over"){el.append(btn("New battle",reset,"primary"));return}
- if(S.phase==="charges"){
-  if(S.active==="player"){
-   const p=S.units.player,a=S.units.ai;
-   el.append(btn("Declare charge",()=>declareCharge(), "primary",p.engaged||p.fled||p.charged||!alive(a)||dist()>S.units.player.stats.M*2));
-   el.append(btn("Pass charges",()=>passCharge("player")));
-  }else el.append(btn("AI passes",()=>passCharge("ai"),"",false));
-  return;
- }
- if(S.phase==="movement"){
-  if(S.active==="player"){
-   const p=S.units.player;
-   el.append(btn("Finish movement",()=>passMovement("player")));
-   const remaining=Math.max(0,p.stats.M-p.moveUsed);
-   const meter=document.createElement("span");meter.className="pill";meter.textContent="Movement remaining: "+remaining.toFixed(1)+" inches";el.append(meter);
-  }else el.append(btn("AI passes",()=>passMovement("ai")));
-  return;
- }
- if(S.phase==="combat"){
-  el.append(btn("Resolve melee combat",resolveCombat,"primary",!S.units.player.engaged||!S.units.ai.engaged));
-  el.append(btn("Skip combat (no melee)",()=>endTurn(),"",S.units.player.engaged&&S.units.ai.engaged));
-  return;
- }
- if(S.phase==="break")el.append(btn("Roll break test",resolveBreak,"primary"));
-}
-function declareCharge(){
- const p=S.units.player,a=S.units.ai;
- if(!alive(p)||!alive(a)||dist()>p.stats.M*2||p.engaged||p.fled)return;
- S.pending.push({from:"player",to:"ai",response:"hold"});
- say('<b>Empire Swordsmen</b> declare a charge. The AI chooses <b>Hold</b>.');
- // In a one-unit prototype the response is automatic; resolve charge immediately after declaration window.
- p.charged=true;p.activated=true;
- const gap=dist();
- if(gap<=8){p.x=a.x-(Math.sign(a.x-p.x)||1)*(5/BATTLEFIELD_WIDTH_IN);p.y=a.y;p.engaged=true;a.engaged=true;say('Charge succeeds — both regiments are now engaged.');}
- else say('Charge fails; the unit advances its normal move.');
- S.active="player";setPhase("movement");
-}
-function passCharge(side){
- if(side==="ai"){say("AI passes on declaring a charge.");S.passes.ai=true;S.active="player";render();return}
- say("You pass on further charge declarations.");S.passes.player=true;
- // Both have passed, move into remaining movement.
- setPhase("movement");
-}
-function movePlayer(){ /* Movement is performed directly on the battlefield by dragging. */ }
-function passMovement(side){
- if(side==="ai"){say("AI passes its movement activation.");S.passes.ai=true;S.active="player";render();return}
- if(!S.units.player.activated&&!S.units.player.engaged&&!S.units.player.fled){S.units.player.activated=true;say("Empire Swordsmen remain in position.");}
- S.passes.player=true;
- if(S.units.player.engaged&&S.units.ai.engaged)setPhase("combat");else {setPhase("charges");S.turn++;say("Turn "+S.turn+" begins.");}
-}
-function hitTarget(attacker,defender){
- const a=attacker.stats.WS,d=defender.stats.WS;
- if(a>=d*2)return 3;if(a>d)return 3;if(a===d)return 4;if(a*2<=d)return 5;return 4;
-}
-function woundTarget(strength,toughness){
- if(strength>=toughness*2)return 2;if(strength>toughness)return 3;if(strength===toughness)return 4;
- if(strength*2<=toughness)return 6;return 5;
-}
-function saveTarget(defender,strength){
- const raw=defender.stats.save;
- if(raw==="-"||raw===null||raw===undefined)return null;
- const target=parseInt(raw,10);if(!Number.isFinite(target))return null;
- return target+Math.max(0,strength-3);
-}
-function attack(u,target){
- const attacks=Math.min(formationShape(u).files,u.models)*u.stats.A;
- const neededHit=hitTarget(u,target),neededWound=woundTarget(u.stats.S,target.stats.T),save=saveTarget(target,u.stats.S);
- const hitRolls=roll(attacks),hits=hitRolls.filter(x=>x>=neededHit).length,woundRolls=roll(hits),woundsBeforeSave=woundRolls.filter(x=>x>=neededWound).length;
- const saves=save===null?[]:roll(woundsBeforeSave),saved=save===null?0:saves.filter(x=>x>=save).length;
- return {attacks,hits,neededHit,woundsBeforeSave,neededWound,saved,wounds:Math.max(0,woundsBeforeSave-saved)};
-}
-function resolveCombat(){
- const p=S.units.player,a=S.units.ai;
- if(!p.engaged||!a.engaged){endTurn();return}
- S.combatRound++;
- const pFirst=(p.charged&&!a.charged)||(!p.charged&&!a.charged&&p.stats.I>a.stats.I);
- const aFirst=(a.charged&&!p.charged)||(!p.charged&&!a.charged&&a.stats.I>p.stats.I);
- let pr,ar;
- if(pFirst){
-  pr=attack(p,a);applyDamage(a,pr.wounds);
-  ar=alive(a)?attack(a,p):null;
-  if(ar)applyDamage(p,ar.wounds);
- }else if(aFirst){
-  ar=attack(a,p);applyDamage(p,ar.wounds);
-  pr=alive(p)?attack(p,a):null;
-  if(pr)applyDamage(a,pr.wounds);
- }else{
-  pr=attack(p,a);ar=attack(a,p);
-  applyDamage(a,pr.wounds);
-  applyDamage(p,ar.wounds);
- }
- say('<b>Melee round '+S.combatRound+'</b> — Empire: '+(pr?pr.hits+'/'+pr.attacks+' hits, '+pr.wounds+' unsaved wounds':'no attacks (destroyed before striking)')+'. AI: '+(ar?ar.hits+'/'+ar.attacks+' hits, '+ar.wounds+' unsaved wounds':'no attacks (destroyed before striking)')+'.');
- draw();
- if(!alive(p)||!alive(a)){finishBattle(!alive(a)?"Empire wins the battle!":"AI wins the battle!");return}
- const crP=(pr?pr.wounds:0)+rankBonus(p);const crA=(ar?ar.wounds:0)+rankBonus(a);
- const diff=crP-crA;
- say('Combat result — Empire '+crP+' (wounds '+(pr?pr.wounds:0)+' + ranks '+rankBonus(p)+'), AI '+crA+' (wounds '+(ar?ar.wounds:0)+' + ranks '+rankBonus(a)+').');
- if(diff===0){say('Combat drawn; both units hold.');endTurn();return}
- S.loser=diff>0?"ai":"player";S.crDiff=Math.abs(diff);S.phase="break";render();
-}
-function applyDamage(u,wounds){
- const total=(u.damage||0)+wounds,killed=Math.floor(total/u.stats.W);
- u.models=Math.max(0,u.models-killed);u.damage=u.models?total%u.stats.W:0;
-}
-function rankBonus(u){return Math.min(3,Math.max(0,Math.floor((u.models-1)/5)));}
-function resolveBreak(){
- const loser=S.units[S.loser];if(!loser||!alive(loser)){endTurn();return}
- const dice=roll(2),total=dice[0]+dice[1],ld=loser.stats.Ld-S.crDiff;
- say((loser.side==="player"?"Empire":"AI")+" break test: 2D6 = <span class='dice'>"+dice.join(" + ")+" = "+total+"</span>; modified Leadership "+Math.max(2,ld)+".");
- if(total>Math.max(2,ld)){
-  loser.fled=true;loser.engaged=false;S.units[loser.side==="player"?"ai":"player"].engaged=false;
-  say((loser.side==="player"?"Empire":"AI")+" fails the break test and flees. The opposing unit holds the field.");
-  finishBattle((loser.side==="player"?"AI wins the battle!":"Empire wins the battle!"));
- }else{say((loser.side==="player"?"Empire":"AI")+" holds despite losing combat.");endTurn()}
-}
-function endTurn(){
- S.units.player.charged=false;S.units.ai.charged=false;
- S.units.player.engaged=alive(S.units.player)&&alive(S.units.ai)&&S.units.player.engaged;
- S.units.ai.engaged=S.units.player.engaged;
- S.turn++;S.units.player.activated=false;S.units.ai.activated=false;S.pending=[];
- if(S.units.player.engaged&&S.units.ai.engaged)setPhase("combat");else setPhase("charges");
-}
-function finishBattle(msg){S.finished=true;S.phase="over";say('<b>'+msg+'</b>');render()}
-function reset(){
- S.turn=1;S.phase="charges";S.active="player";S.selected="player";S.finished=false;S.pending=[];S.passes={player:false,ai:false};S.combatRound=0;S.loser=null;S.crDiff=0;
- Object.assign(S.units.player,{models:20,damage:0,x:.32,y:.5,facing:0,engaged:false,activated:false,charged:false,fled:false,moveUsed:0});
- Object.assign(S.units.ai,{models:20,damage:0,x:.68,y:.5,facing:Math.PI,engaged:false,activated:false,charged:false,fled:false,moveUsed:0});
- S.log=[];$("log").replaceChildren();say("Battle deployed: 20 Empire Swordsmen face 20 opposing Swordsmen.");render();
-}
+function draw(){const w=W(),h=H();if(!w||!h)return;ctx.clearRect(0,0,w,h);ctx.fillStyle="#59654d";ctx.fillRect(0,0,w,h);ctx.strokeStyle="rgba(235,231,190,.12)";ctx.lineWidth=1;for(let x=0;x<w;x+=w/12){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=h/8){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}ctx.strokeStyle="rgba(240,230,185,.32)";ctx.setLineDash([5,7]);ctx.beginPath();ctx.moveTo(w/2,12);ctx.lineTo(w/2,h-12);ctx.stroke();ctx.setLineDash([]);
+ const selected=S.units[S.selected];if(selected)drawCone(selected);units().forEach(drawUnit);}
+function rankBonus(u){return Math.min(3,Math.max(0,Math.floor(u.models/5)-1));}
+function hitTarget(attacker,defender){const a=attacker.stats.WS,d=defender.stats.WS;if(a>=d*2)return 3;if(a>d)return 3;if(a===d)return 4;if(a*2<=d)return 5;return 4;}
+function woundTarget(s,t){if(s>=t*2)return 2;if(s>t)return 3;if(s===t)return 4;if(s*2<=t)return 6;return 5;}
+function saveTarget(defender,strength){const raw=defender.stats.save;if(raw==="-"||raw==null)return null;const t=parseInt(raw,10);return Number.isFinite(t)?t+Math.max(0,strength-3):null;}
+function applyDamage(u,wounds,shooting){const before=u.models,total=(u.damage||0)+wounds,killed=Math.floor(total/u.stats.W);u.models=Math.max(0,u.models-killed);u.damage=u.models?total%u.stats.W:0;if(shooting)u.shootCasualties+=before-u.models;return before-u.models;}
+function meleeAttack(u,target){const attacks=Math.min(5,u.models)*u.stats.A,hitNeed=hitTarget(u,target),woundNeed=woundTarget(u.stats.S,target.stats.T),saveNeed=saveTarget(target,u.stats.S),hitRolls=roll(attacks),hits=hitRolls.filter(x=>x>=hitNeed).length,woundRolls=roll(hits),woundsBeforeSave=woundRolls.filter(x=>x>=woundNeed).length,saveRolls=saveNeed===null?[]:roll(woundsBeforeSave),saved=saveNeed===null?0:saveRolls.filter(x=>x>=saveNeed).length;return {attacks,hitNeed,hitRolls,hits,woundNeed,woundRolls,woundsBeforeSave,saveNeed,saveRolls,saved,wounds:Math.max(0,woundsBeforeSave-saved)};}
+function bsTarget(u,target,longRange,moved,standShoot){let need=u.stats.BS>=5?2:u.stats.BS===4?3:u.stats.BS===3?4:u.stats.BS===2?5:6;if(longRange)need++;if(moved)need++;if(standShoot)need++;return Math.min(7,need);}
+function shootAttack(u,target,standShoot){const d=dist(u,target),longRange=d>BOW_RANGE/2,hitNeed=bsTarget(u,target,longRange,u.moved,standShoot),shots=Math.min(10,u.models),hitRolls=roll(shots),hits=hitRolls.filter(x=>x>=hitNeed).length,woundNeed=woundTarget(u.stats.S,target.stats.T),woundRolls=roll(hits),woundsBeforeSave=woundRolls.filter(x=>x>=woundNeed).length,saveNeed=saveTarget(target,u.stats.S),saveRolls=saveNeed===null?[]:roll(woundsBeforeSave),saved=saveNeed===null?0:saveRolls.filter(x=>x>=saveNeed).length;return {attacks:shots,hitNeed,hitRolls,hits,woundNeed,woundRolls,woundsBeforeSave,saveNeed,saveRolls,saved,wounds:Math.max(0,woundsBeforeSave-saved),longRange,moved:u.moved,standShoot,distance:d};}
+function showAttack(label,u,target,r,kind){const stack=diceStack(u,r);say('<b>'+label+': '+u.name+' → '+target.name+'</b><div class="unitmeta">'+r.attacks+' '+(kind==="shoot"?"bow shots":"attacks")+' · '+r.distance?.toFixed(1)+' inches'+(kind==="shoot"?' · '+(r.longRange?'long range, ':'')+(r.moved?'moved, ':'')+(r.standShoot?'stand and shoot':''):'')+'</div>'+stack); }
+function panicTest(target){const threshold=Math.ceil(target.startModels*.25);if(target.shootCasualties<threshold||!alive(target))return;const dice=roll(2),total=dice[0]+dice[1];say('<b>Panic test — '+target.name+'</b>: shooting casualties '+target.shootCasualties+'/'+target.startModels+' (25% threshold '+threshold+'). 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; need '+target.stats.Ld+' or less.');if(total>target.stats.Ld){target.fled=true;target.engaged=false;say(target.name+' fails its unmodified Leadership test and flees.');}}
+function shoot(u,target,standShoot){if(!alive(u)||!alive(target)||u.kind!=="archer"||u.shot||u.engaged)return false;const d=dist(u,target);if(d>BOW_RANGE)return false;if(standShoot&&d<=4)return false;const r=shootAttack(u,target,standShoot);u.shot=true;showAttack(standShoot?"Stand and shoot":"Shooting",u,target,r,"shoot");const killed=applyDamage(target,r.wounds,true);say(target.name+' loses '+killed+' model'+(killed===1?'':'s')+' to shooting.');if(!standShoot)panicTest(target);return true;}
+function closestEnemy(u){return enemies(u).sort((a,b)=>dist(u,a)-dist(u,b))[0]||null;}
+function renderRoster(){const el=$("roster");el.innerHTML="";units().forEach(u=>{const b=document.createElement("button");b.className="unit-card"+(u.id===S.selected?" selected":"")+(u.side==="player"&&!u.moved&&!u.fled?" unmoved":"");b.innerHTML='<span class="shield '+(u.side==="player"?"player":"ai")+'">'+(u.kind==="archer"?"➶":"✦")+'</span><span style="min-width:0"><span class="unitname" style="display:block">'+u.name+'</span><span class="unitmeta">'+u.models+' models · '+(u.moved?"moved":u.shot?"fired":"not moved")+'</span></span>';b.onclick=()=>{S.selected=u.id;render();};el.append(b);});}
+function render(){const names={charges:"Movement — Charge declarations",movement:"Movement & shooting",combat:"Melee — Attacks & combat resolution",break:"Combat resolution — Break test",over:"Battle complete"};$("turnlabel").textContent="TURN "+S.turn;$("phaselabel").textContent=names[S.phase]||S.phase;$("instruction").textContent=hint();const u=S.units[S.selected]||S.units.pSword,st=u.stats;$("unitshield").className="shield "+(u.side==="player"?"player":"ai");$("detailname").textContent=u.name;$("detailmeta").textContent=u.models+" models · "+(u.kind==="archer"?"Bow (24-inch range)":u.engaged?"In melee":u.fled?"Fleeing":"Hand weapon");$("unitstats").innerHTML=[["M",st.M],["WS",st.WS],["BS",st.BS],["S",st.S],["T",st.T],["W",st.W],["I",st.I],["A",st.A],["Ld",st.Ld],["AS",st.save]].map(([l,v])=>'<div class="stat '+(l==="AS"?"save":"")+'"><b>'+v+'</b><span>'+l+'</span></div>').join("");const q=shape(u);$("unitformation").textContent="Formation: "+Math.min(5,u.models)+" files × "+q.ranks+" ranks · "+u.models+" models · rank bonus +"+rankBonus(u);$("unitrules").textContent=u.kind==="archer"?"Bows: 24-inch range, front two ranks fire (up to 10 shots). −1 to hit over 12 inches and −1 after moving. Firing prevents further movement this phase.": "Melee: only the front rank fights. Complete ranks behind it add +1 combat resolution each, up to +3 (5 models wide). WS sets hit target; S vs T sets wound target.";renderRoster();draw();controls();}
+function hint(){if(S.finished)return "Battle ended. Start a fresh battle to play again.";if(S.phase==="charges")return "Select a unit and declare a charge if an enemy is within double Move. Archers may stand and shoot if the charger is more than 4 inches away.";if(S.phase==="movement")return "Drag a player unit forward to move, then select an enemy and shoot with archers. Shooting locks that unit in place.";if(S.phase==="combat")return "Resolve all melee engagements. Equal Initiative units roll simultaneously.";if(S.phase==="break")return "Resolve the losing unit’s 2D6 Leadership test.";return "";}
+function btn(label,fn,cls,disabled){const b=document.createElement("button");b.textContent=label;b.className=cls||"";b.disabled=!!disabled;b.onclick=fn;$("controls").append(b);}
+function controls(){const el=$("controls");el.replaceChildren();if(S.finished){btn("New battle",reset,"primary");return;}const u=S.units[S.selected],target=closestEnemy(u);
+ if(S.phase==="charges"){btn("Declare charge",()=>declareCharge(u,target),"primary",!u||u.side!=="player"||u.engaged||u.fled||u.charged||!target||dist(u,target)>u.stats.M*2);btn("Pass charges",()=>{say("You pass on further charge declarations.");setPhase("movement");});return;}
+ if(S.phase==="movement"){btn("Shoot selected archers",()=>{const t=closestEnemy(u);if(!t||!shoot(u,t,false))say("No legal shot: select living archers with an enemy within 24 inches.");S.selected=u.id;render();},"primary",!u||u.side!=="player"||u.kind!=="archer"||u.shot||u.engaged||!target||dist(u,target)>BOW_RANGE);btn("Finish movement & shooting",finishMovement,"");const meter=document.createElement("span");meter.className="pill";meter.textContent=u.name+": "+Math.max(0,u.stats.M-u.moveUsed).toFixed(1)+" in movement left";el.append(meter);return;}
+ if(S.phase==="combat"){btn("Resolve melee combat",resolveCombat,"primary",!units().some(v=>v.side==="player"&&v.engaged&&alive(v)));btn("Skip combat (no melee)",endTurn,"",!units().some(v=>v.engaged&&alive(v)));return;}
+ if(S.phase==="break")btn("Roll break test",resolveBreak,"primary");}
+function setPhase(p){S.phase=p;units().forEach(u=>{u.activated=false;u.moved=false;u.shot=false;u.moveUsed=0;u.shootCasualties=0;});render();}
+function declareCharge(u,target){if(!u||!target||u.side!=="player"||u.engaged||u.fled||dist(u,target)>u.stats.M*2)return;const gap=dist(u,target);if(target.kind==="archer"&&gap>4&&gap<=BOW_RANGE){say(target.name+' chooses Stand and Shoot.');shoot(target,u,true);if(!alive(u)){render();return;}}if(gap<=u.stats.M*2&&alive(u)&&alive(target)){const q=shape(u),t=shape(target),dir=target.x>=u.x?1:-1;u.x=target.x-dir*(q.depth+t.depth)/2/BATTLEFIELD_WIDTH_IN;u.y=target.y;u.engaged=true;target.engaged=true;u.charged=true;say(u.name+' charges '+target.name+' and makes contact.');}else say(u.name+' charge fails.');setPhase("movement");}
+function finishMovement(){units().filter(u=>u.side==="ai"&&u.kind==="archer"&&!u.shot&&!u.engaged&&alive(u)).forEach(u=>{const t=closestEnemy(u);if(t&&dist(u,t)<=BOW_RANGE)shoot(u,t,false);});units().forEach(u=>{if(u.side==="player"&&!u.moved)u.activated=true;});if(units().some(u=>u.engaged&&alive(u)))setPhase("combat");else{S.turn++;setPhase("charges");say("Turn "+S.turn+" begins.");}}
+function resolveCombat(){const pairs=[];units().filter(u=>u.engaged&&alive(u)).forEach(u=>{const target=units().find(v=>v.engaged&&v.side!==u.side&&alive(v)&&dist(u,v)<4);if(target&&!pairs.some(p=>p.includes(u)||p.includes(target)))pairs.push([u,target]);});if(!pairs.length){say("No units are in melee.");endTurn();return;}S.combatRound++;let tests=[];
+ pairs.forEach(pair=>{let p=pair[0],a=pair[1];if(p.side==="ai"){const tmp=p;p=a;a=tmp;}const pFirst=(p.charged&&!a.charged)||(!p.charged&&!a.charged&&p.stats.I>a.stats.I),aFirst=(a.charged&&!p.charged)||(!p.charged&&!a.charged&&a.stats.I>p.stats.I);let pr=null,ar=null;if(pFirst){pr=meleeAttack(p,a);applyDamage(a,pr.wounds,false);if(alive(a)){ar=meleeAttack(a,p);applyDamage(p,ar.wounds,false);}}else if(aFirst){ar=meleeAttack(a,p);applyDamage(p,ar.wounds,false);if(alive(p)){pr=meleeAttack(p,a);applyDamage(a,pr.wounds,false);}}else{pr=meleeAttack(p,a);ar=meleeAttack(a,p);applyDamage(a,pr.wounds,false);applyDamage(p,ar.wounds,false);}
+ if(pr)say('<b>Melee dice — '+p.name+' attacks '+a.name+'</b>'+diceStack(p,pr));if(ar)say('<b>Melee dice — '+a.name+' attacks '+p.name+'</b>'+diceStack(a,ar));if(!alive(p)||!alive(a))return;const crP=pr?pr.wounds:0,crA=ar?ar.wounds:0,scoreP=crP+rankBonus(p),scoreA=crA+rankBonus(a),diff=scoreP-scoreA;say('Combat resolution: '+p.name+' '+scoreP+' (unsaved wounds '+crP+' + rank bonus '+rankBonus(p)+') vs '+a.name+' '+scoreA+' (unsaved wounds '+crA+' + rank bonus '+rankBonus(a)+').');if(diff!==0)tests.push({loser:diff>0?a:p,diff:Math.abs(diff)});});
+ if(units().filter(alive).filter(u=>u.side==="player").length===0){finishBattle("Opponent wins the battle!");return;}if(units().filter(alive).filter(u=>u.side==="ai").length===0){finishBattle("Player wins the battle!");return;}if(tests.length){S.loser=tests.sort((a,b)=>b.diff-a.diff)[0].loser;S.crDiff=tests[0].diff;S.phase="break";render();}else{say("Combat drawn; engaged units hold.");endTurn();}}
+function resolveBreak(){const u=S.loser;if(!u||!alive(u)){endTurn();return;}const dice=roll(2),total=dice[0]+dice[1],needed=Math.max(2,u.stats.Ld-S.crDiff);say('<b>Break test — '+u.name+'</b>: 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; need '+needed+' or less (Leadership '+u.stats.Ld+' − combat result '+S.crDiff+').');if(total>needed){u.fled=true;u.engaged=false;say(u.name+' fails its break test and flees.');}else say(u.name+' holds.');if(units().filter(alive).every(v=>v.fled)||units().filter(v=>v.side==="player"&&alive(v)).length===0||units().filter(v=>v.side==="ai"&&alive(v)).length===0){finishBattle(units().some(v=>v.side==="player"&&alive(v)&&!v.fled)?"Player wins the battle!":"Opponent wins the battle!");}else endTurn();}
+function endTurn(){units().forEach(u=>{u.charged=false;u.engaged=alive(u)&&u.engaged;});S.turn++;setPhase("charges");}
+function finishBattle(msg){S.finished=true;S.phase="over";say('<b>'+msg+'</b>');render();}
+function reset(){S.turn=1;S.phase="charges";S.selected="pSword";S.finished=false;S.combatRound=0;S.loser=null;S.crDiff=0;S.log=[];units().forEach(u=>Object.assign(u,{models:u.startModels,damage:0,x:u.id==="pSword"||u.id==="pArch"?.22:.78,y:u.id==="pSword"||u.id==="aSword"?.36:.70,facing:u.side==="player"?0:Math.PI,engaged:false,activated:false,moved:false,shot:false,charged:false,fled:false,moveUsed:0,shootCasualties:0}));$("log").replaceChildren();say("Battle deployed: 20 swordsmen and 10 archers on each side.");render();}
 let drag=null;
-function pointerPoint(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
-function near(a,b,r){return Math.hypot(a.x-b.x,a.y-b.y)<=r}
-canvas.addEventListener("pointerdown",e=>{
- if(S.finished)return;
- const pt=pointerPoint(e),p=S.units.player,a=S.units.ai,w=W(),h=H();
- const dp=Math.hypot(pt.x-p.x*w,pt.y-p.y*h),da=Math.hypot(pt.x-a.x*w,pt.y-a.y*h);
- const chosen=dp<=da?p:a;S.selected=chosen.id;
- if(S.phase==="movement"&&S.active==="player"&&chosen===p&&!p.engaged&&!p.fled&&alive(p)){
-  const shape=formationShape(p),front=shape.front,depth=shape.depth;
-  const fx=Math.cos(p.facing),fy=Math.sin(p.facing),lx=-fy,ly=fx,cx=p.x*w,cy=p.y*h;
-  const corners=[{x:cx+fx*depth/2+lx*front/2,y:cy+fy*depth/2+ly*front/2,sign:1},{x:cx+fx*depth/2-lx*front/2,y:cy+fy*depth/2-ly*front/2,sign:-1}];
-  const corner=corners.find(c=>near(pt,c,16));
-  drag={kind:corner?"pivot":"move",start:pt,origin:{x:p.x,y:p.y,facing:p.facing,used:p.moveUsed},pivot:corner?.sign??0,changed:false};
-  if(corner){
-   const sign=corner.sign,anchor={x:cx+fx*depth/2-lx*front/2*sign,y:cy+fy*depth/2-ly*front/2*sign};
-   drag.anchor=anchor;
-   const actual={x:cx+fx*depth/2+lx*front/2*sign,y:cy+fy*depth/2+ly*front/2*sign};
-   drag.startAngle=Math.atan2(actual.y-anchor.y,actual.x-anchor.x);
-  }
-  canvas.setPointerCapture(e.pointerId);canvas.style.cursor="grabbing";e.preventDefault();
- }else render();
-});
-canvas.addEventListener("pointermove",e=>{
- if(!drag)return;
- const p=S.units.player,pt=pointerPoint(e),w=W(),h=H(),scale=PX_PER_IN();
- const remaining=Math.max(0,p.stats.M-drag.origin.used);
- if(drag.kind==="move"){
-  const dx=(pt.x-drag.start.x)/scale,dy=(pt.y-drag.start.y)/scale;
-  const along=dx*Math.cos(drag.origin.facing)+dy*Math.sin(drag.origin.facing);
-  const advance=Math.max(0,Math.min(remaining,along));
-  const steps=Math.max(1,Math.ceil(advance/0.1));let best=0;
-  for(let i=1;i<=steps;i++){
-   const amount=advance*i/steps,x=drag.origin.x+Math.cos(drag.origin.facing)*amount/BATTLEFIELD_WIDTH_IN;
-   const y=drag.origin.y+Math.sin(drag.origin.facing)*amount/BATTLEFIELD_WIDTH_IN;
-   if(!canPlace(p,x,y,drag.origin.facing))break;best=amount;
-  }
-  p.x=drag.origin.x+Math.cos(drag.origin.facing)*best/BATTLEFIELD_WIDTH_IN;
-  p.y=drag.origin.y+Math.sin(drag.origin.facing)*best/BATTLEFIELD_WIDTH_IN;
-  p.facing=drag.origin.facing;p.moveUsed=drag.origin.used+best;drag.changed=best>0;
- }else{
-  const anchor=drag.anchor,angle=Math.atan2(pt.y-anchor.y,pt.x-anchor.x);
-  let delta=angle-drag.startAngle;while(delta>Math.PI)delta-=Math.PI*2;while(delta< -Math.PI)delta+=Math.PI*2;
-  const shape=formationShape(p),front=shape.front,depth=shape.depth;
-  const maxAngle=remaining/Math.max(0.01,front/scale);
-  delta=Math.max(-maxAngle,Math.min(maxAngle,delta));
-  const steps=Math.max(1,Math.ceil(Math.abs(delta)/0.025));let best=0;
-  for(let i=1;i<=steps;i++){
-   const d=delta*i/steps,newFacing=drag.origin.facing+d,sign=drag.pivot;
-   const ax=anchor.x/w,ay=anchor.y/h,fx=Math.cos(newFacing),fy=Math.sin(newFacing),lx=-fy,ly=fx;
-   const cx=anchor.x-fx*depth/2+lx*front/2*sign,cy=anchor.y-fy*depth/2+ly*front/2*sign;
-   if(!canPlace(p,cx/w,cy/h,newFacing))break;best=d;
-  }
-  const facing=drag.origin.facing+best,fx=Math.cos(facing),fy=Math.sin(facing),lx=-fy,ly=fx,sign=drag.pivot;
-  const cx=anchor.x-fx*depth/2+lx*front/2*sign,cy=anchor.y-fy*depth/2+ly*front/2*sign;
-  p.x=cx/w;p.y=cy/h;p.facing=facing;p.moveUsed=drag.origin.used+Math.abs(best)*(formationShape(p).front/PX_PER_IN());drag.changed=Math.abs(best)>0.001;
- }
- draw();controls();
-});
-function finishDrag(){
- if(!drag)return;
- const p=S.units.player,changed=drag.changed,kind=drag.kind;
- if(changed)say(kind==="move"?"Empire Swordsmen advance "+(p.moveUsed-drag.origin.used).toFixed(1)+" inches.":"Empire Swordsmen pivot; movement spent "+(p.moveUsed-drag.origin.used).toFixed(1)+" inches.");
- drag=null;canvas.style.cursor="grab";render();
-}
-canvas.addEventListener("pointerup",finishDrag);
-canvas.addEventListener("pointercancel",finishDrag);
-window.addEventListener("resize",setupCanvas);
+function pointerPoint(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
+canvas.addEventListener("pointerdown",e=>{if(S.finished)return;const pt=pointerPoint(e),ranked=units().filter(alive).map(u=>({u,d:Math.hypot(pt.x-u.x*W(),pt.y-u.y*H())})).sort((a,b)=>a.d-b.d);if(!ranked.length)return;const chosen=ranked[0].u;S.selected=chosen.id;if(S.phase==="movement"&&chosen.side==="player"&&!chosen.engaged&&!chosen.fled&&!chosen.shot&&chosen.moveUsed<chosen.stats.M){drag={u:chosen,start:pt,origin:{x:chosen.x,y:chosen.y,facing:chosen.facing,used:chosen.moveUsed},changed:false};canvas.setPointerCapture(e.pointerId);canvas.style.cursor="grabbing";e.preventDefault();}else render();});
+canvas.addEventListener("pointermove",e=>{if(!drag)return;const u=drag.u,pt=pointerPoint(e),scale=PX_PER_IN(),remaining=Math.max(0,u.stats.M-drag.origin.used),dx=(pt.x-drag.start.x)/scale,dy=(pt.y-drag.start.y)/scale,along=dx*Math.cos(drag.origin.facing)+dy*Math.sin(drag.origin.facing),advance=Math.max(0,Math.min(remaining,along)),steps=Math.max(1,Math.ceil(advance/.1));let best=0;for(let i=1;i<=steps;i++){const n=advance*i/steps,x=drag.origin.x+Math.cos(drag.origin.facing)*n/BATTLEFIELD_WIDTH_IN,y=drag.origin.y+Math.sin(drag.origin.facing)*n/BATTLEFIELD_WIDTH_IN;if(!canPlace(u,x,y,drag.origin.facing))break;best=n;}u.x=drag.origin.x+Math.cos(drag.origin.facing)*best/BATTLEFIELD_WIDTH_IN;u.y=drag.origin.y+Math.sin(drag.origin.facing)*best/BATTLEFIELD_WIDTH_IN;u.facing=drag.origin.facing;u.moveUsed=drag.origin.used+best;u.moved=u.moved||best>0;drag.changed=best>0;draw();controls();});
+function finishDrag(){if(!drag)return;const u=drag.u;if(drag.changed)say(u.name+' moves '+(u.moveUsed-drag.origin.used).toFixed(1)+' inches.');drag=null;canvas.style.cursor="grab";render();}
+canvas.addEventListener("pointerup",finishDrag);canvas.addEventListener("pointercancel",finishDrag);window.addEventListener("resize",setupCanvas);
 reset();setupCanvas();
 })();
 </script>
