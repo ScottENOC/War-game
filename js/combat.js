@@ -28,18 +28,15 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const levels=[...new Set(group.map(effectiveI))].sort((a,b)=>b-a);
       levels.forEach(initiative=>{
         const attackers=group.filter(u=>alive(u)&&!u.fled&&effectiveI(u)===initiative);
-        const strikes=attackers.map(u=>{
+        // The digital house rule resolves each attack packet in sequence, allowing
+        // remaining attacks to cascade into the next surviving defender tier.
+        attackers.forEach(u=>{
+          if(!alive(u)||u.fled)return;
           const targets=linked(u).filter(v=>alive(v)&&!v.fled);
-          if(!targets.length)return null;
-          // Allocate each unit's attacks to one enemy it is actually engaged with.
+          if(!targets.length)return;
           const target=targets.sort((a,b)=>dist(u,a)-dist(u,b))[0];
           const result=meleeAttack(u,target);
-          return {u,target,result};
-        }).filter(Boolean);
-        // Units at the same Initiative strike simultaneously: apply damage only after all rolls.
-        strikes.forEach(({u,target,result})=>say('<b>Melee dice — '+u.name+' attacks '+target.name+'</b>'+diceStack(u,result)));
-        strikes.forEach(({u,target,result})=>{
-          if(!alive(target))return;
+          say('<b>Melee dice — '+u.name+' attacks '+target.name+'</b>'+diceStack(u,result));
           wounds.set(u.id,(wounds.get(u.id)||0)+result.wounds);
           applyDamage(target,result.wounds,false,result.cascadePlan);
         });
