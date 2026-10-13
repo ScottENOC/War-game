@@ -52,9 +52,9 @@ const view={zoom:1,x:0,y:0};
 const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_IN, BATTLEFIELD_WIDTH_IN, MODEL_BASE_IN, shape, view });
 const { setupCanvas, draw } = RENDERING;
 function requestRender(){ render(); }
-const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, dist, enemies, say, shoot, render:requestRender, startActivations, canPlace });
+const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, BOW_RANGE, dist, enemies, say, shoot, render:requestRender, startActivations, canPlace });
 const { setPhase, declareCharge, finishMovement, passCharges, aiChargeStep, resolveDeclaredCharges } = PHASES;
-const UI = createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
+const UI = createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
 render = UI.render;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, declareCharge, render, draw, $, say });
 function startBattleWithArmy(army){S.units=createUnitsFromArmy(army);$("mainmenu").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();}
