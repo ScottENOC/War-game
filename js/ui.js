@@ -33,16 +33,16 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
       if(!target){preview.textContent="Select an enemy target.";el.append(preview);}
       else{
         const d=dist(u,target),range=u.range||BOW_RANGE,dx=target.x-u.x,dy=target.y-u.y,len2=dx*dx+dy*dy||1;
-        const blockers=units().filter(v=>v!==u&&v!==target&&v.side===u.side&&!v.attachedTo&&alive(v)).filter(v=>{const t=((v.x-u.x)*dx+(v.y-u.y)*dy)/len2;if(t<=.04||t>=.96)return false;const px=u.x+t*dx,py=u.y+t*dy;return Math.hypot(v.x-px,v.y-py)<.055;});
+        const blockers=units().filter(v=>v!==u&&v!==target&&!v.attachedTo&&alive(v)).filter(v=>{const t=((v.x-u.x)*dx+(v.y-u.y)*dy)/len2;if(t<=.04||t>=.96)return false;const px=u.x+t*dx,py=u.y+t*dy;return Math.hypot(v.x-px,v.y-py)<.055;});
         let arc=true;if(!u.skirmishing){let a=Math.atan2(dy,dx)-(u.facing||0);while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;arc=Math.abs(a)<=Math.PI/4;}
-        const blocked=blockers.length>0&&u.rangedWeapon==="firearm";
+        const friendlyBlockers=blockers.filter(v=>v.side===u.side),blocked=friendlyBlockers.length>0&&u.rangedWeapon==="firearm";
         const over=blockers.length?(u.rangedWeapon==="bow"?1:2):0;
         const long=d>range/2?(u.rangedWeapon==="firearm"?2:1):0,moved=u.moved?1:0,single=(target.isCharacter||target.models===1||target.skirmishing)?1:0,charge=target.charged?1:0,cover=target.cover==="hard"?2:target.cover==="soft"?1:0;
         const reducible=long+moved+over,elfReduce=u.elvenArchery?Math.min(2,reducible):0;
-        const bs=Math.min(u.stats.BS,u.bsCap||99),need=7-bs+long+moved+over+single+charge+cover-elfReduce-(target.largeTarget?1:0);
+        const meleePenalty=target.engaged&&!over?1:0,bs=Math.min(u.stats.BS,u.bsCap||99),need=7-bs+long+moved+over+single+charge+cover+meleePenalty-elfReduce-(target.largeTarget?1:0);
         let status=d>range?"OUT OF RANGE":!arc?"OUTSIDE FIRING ARC":blocked?"BLOCKED BY FRIENDLY UNIT": "Hit roll: "+(need>=10?"impossible (10+)":need+"+");
-        preview.textContent=target.name+" · "+d.toFixed(1)+"″ / "+range+"″ · "+status+(blockers.length&&u.rangedWeapon!=="firearm"?" · ! FRIENDLY FIRE POSSIBLE":"");
-        if(blockers.length&&u.rangedWeapon!=="firearm")preview.classList.add("friendly-fire");
+        preview.textContent=target.name+" · "+d.toFixed(1)+"″ / "+range+"″ · "+status+(friendlyBlockers.length&&u.rangedWeapon!=="firearm"?" · ! FRIENDLY FIRE POSSIBLE":"");
+        if(friendlyBlockers.length&&u.rangedWeapon!=="firearm")preview.classList.add("friendly-fire");
         el.append(preview);
       }
     }
