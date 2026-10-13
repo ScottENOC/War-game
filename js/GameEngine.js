@@ -104,7 +104,7 @@ function validateArmy(army,faction){
  const owned=collectionManager?.getInventory()||[],used=new Set(),shortages=[];
  for(const entry of army){
   const count=(entry.type==="captain"||entry.type==="lord")?1:(entry.models||1);
-  const weapon=entry.type==="archers"?"bow":entry.type==="swordsmen"?(entry.spears?"spear":"handWeapon"):(entry.weapon||"handWeapon");
+  const weapon=entry.type==="archers"?"bow":entry.type==="swordsmen"?(entry.spears?"spear":"handWeapon"):entry.type==="cavalry"&&faction==="highElves"&&(entry.freeCavalryOption||"bow")==="spear"&&(entry.weapon||"handWeapon")==="handWeapon"?"spear":(entry.weapon||"handWeapon");
   const mounted=entry.type==="cavalry"||((entry.type==="captain"||entry.type==="lord")&&!!entry.mounted);
   const shield=!!entry.shield;
   const matches=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&m.type===entry.type&&m.weapon===weapon&&!!m.shield===shield&&!!m.mounted===mounted);
