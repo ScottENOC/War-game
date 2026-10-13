@@ -6,6 +6,7 @@ import { createCombat } from "./combat.js";
 import { createRendering } from "./rendering.js";
 import { createInput } from "./input.js";
 import { createUI } from "./ui.js";
+import { createPhases } from "./phases.js";
 
 export function startGame() {
 (() => {
@@ -35,12 +36,6 @@ function diceStack(u,r){
 function diceDuel(title,r1,r2){return '<div><b>'+title+'</b><div class="dice-duel">'+(r1?'<div class="dice-side"><h3>Player</h3>'+diceStack(S.units.pSword.side==='player'?S.units.pSword:S.units.pArch,r1)+'</div>':'')+(r2?'<div class="dice-side"><h3>Opponent</h3>'+diceStack(S.units.aSword.side==='ai'?S.units.aSword:S.units.aArch,r2)+'</div>':'')+'</div></div>';}
 function closestEnemy(u){return enemies(u).sort((a,b)=>dist(u,a)-dist(u,b))[0]||null;}
 function selectedTarget(u){const list=enemies(u);return list.find(v=>v.id===S.targetId)||closestEnemy(u);}
-function setPhase(p){S.phase=p;S.mode=null;units().forEach(u=>{u.activated=false;if(p==="charges"){u.moved=false;u.moveUsed=0;u.shot=false;u.shootCasualties=0;u.panicTested=false;u.charged=false;}});if(p==="charges"){S.chargeSide="player";S.chargePasses=0;S.declaredCharges=[];}if(p==="movement")S.activationSide="player";S.targetId=null;render();if(p==="movement")startActivations();}
-function declareCharge(u,target){if(!u||!target||u.engaged||u.fled||u.charged||!alive(u)||!alive(target)||target.engaged||dist(u,target)>u.stats.M*2)return false;S.declaredCharges.push({unitId:u.id,targetId:target.id});u.charged=true;say(u.name+" declares a charge against "+target.name+".");S.chargePasses=0;S.mode=null;S.chargeSide=u.side==="player"?"ai":"player";if(S.chargeSide==="ai")aiChargeStep();else render();return true;}
-function finishMovement(){finishActivation();}
-function passCharges(){if(S.phase!=="charges"||S.chargeSide!=="player")return;S.chargePasses++;S.mode=null;say("Player passes on charges.");S.chargeSide="ai";aiChargeStep();}
-function aiChargeStep(){if(S.phase!=="charges"||S.chargeSide!=="ai")return;const candidates=units().filter(u=>u.side==="ai"&&alive(u)&&!u.engaged&&!u.fled&&!u.charged).map(u=>({u,t:enemies(u).filter(t=>!t.engaged&&!t.fled&&dist(u,t)<=u.stats.M*2).sort((a,b)=>dist(u,a)-dist(u,b))[0]})).filter(x=>x.t).sort((a,b)=>dist(a.u,a.t)-dist(b.u,b.t));if(candidates.length){declareCharge(candidates[0].u,candidates[0].t);return;}S.chargePasses++;say("Opponent passes on charges.");if(S.chargePasses>=2){resolveDeclaredCharges();return;}S.chargeSide="player";render();}
-function resolveDeclaredCharges(){const declared=S.declaredCharges.slice();S.chargeSide=null;say("Resolving declared charges.");declared.forEach(c=>{const u=S.units[c.unitId],target=S.units[c.targetId];if(!u||!target||!alive(u)||!alive(target)||target.engaged||u.engaged||dist(u,target)>u.stats.M*2)return;const gap=dist(u,target);if(target.kind==="archer"&&gap>4&&gap<=BOW_RANGE){say(target.name+" chooses Stand and Shoot.");shoot(target,u,true);if(!alive(u)||u.fled)return;}const q=shape(u),t=shape(target),dx=target.x-u.x,dy=target.y-u.y,d=Math.max(.001,Math.hypot(dx,dy)),stop=(q.depth+t.depth)/2/BATTLEFIELD_WIDTH_IN;u.x=target.x-dx/d*stop;u.y=target.y-dy/d*stop;u.facing=Math.atan2(dy,dx);target.facing=Math.atan2(u.y-target.y,u.x-target.x);u.engaged=true;target.engaged=true;u.charged=true;say(u.name+" completes its charge into "+target.name+".");});setPhase("movement");}
 function eligibleForActivation(u){return alive(u)&&!u.fled&&!u.engaged&&!u.activated;}
 function startActivations(){S.activationSide="player";const p=units().filter(u=>u.side==="player"&&eligibleForActivation(u));if(!p.length){runAiActivations();return;}S.selected=p[0].id;render();}
 const AI = createAI({ S, units, alive, eligibleForActivation, enemies, dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, BOW_RANGE, beginCombatPhase });
@@ -59,6 +54,8 @@ const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_I
 const { setupCanvas, draw } = RENDERING;
 const UI = createUI({ S, $, units, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset });
 const { render } = UI;
+const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, dist, enemies, say, shoot, render, startActivations });
+const { setPhase, declareCharge, finishMovement, passCharges, aiChargeStep, resolveDeclaredCharges } = PHASES;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, shoot, declareCharge, render, draw, $ });
 reset();setupCanvas();
 })();
