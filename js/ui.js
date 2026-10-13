@@ -33,7 +33,7 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
       btn("Rotate selected unit left 15 degrees","↶",()=>{if(u&&u.side==="player"){const f=u.facing-Math.PI/12;if(!u.deployed||validDeployment(u,u.x,u.y,f))u.facing=f;render();}},!u||u.side!=="player");
       btn("Rotate selected unit right 15 degrees","↷",()=>{if(u&&u.side==="player"){const f=u.facing+Math.PI/12;if(!u.deployed||validDeployment(u,u.x,u.y,f))u.facing=f;render();}},!u||u.side!=="player");
       if (u && u.side === "player" && u.isCharacter && !u.attachedTo) btn("Attach captain to a unit","♟",()=>{S.mode=S.mode==="attachHero"?null:"attachHero";render();},false,S.mode==="attachHero");
-      if (u && u.side === "player" && u.isCharacter && u.attachedTo) btn("Detach captain","↗",()=>{const host=S.units[u.attachedTo];if(host){u.x=host.x+0.025;u.y=host.y+0.025;u.deployed=true;host.attachedCharacters=(host.attachedCharacters||[]).filter(id=>id!==u.id);u.attachedTo=null;S.mode=null;say(u.name+" leaves "+host.name+".");render();}},false);
+      if (u && u.side === "player" && u.isCharacter && u.attachedTo) btn("Detach captain","↗",()=>{const host=S.units[u.attachedTo];if(host){u.x=host.x+0.025;u.y=host.y+0.025;u.deployed=true;host.attachedCharacters=(host.attachedCharacters||[]).filter(id=>id!==u.id);host.stats.M=host.baseMove??host.stats.M;(host.attachedCharacters||[]).forEach(id=>{const h=S.units[id];if(h)host.stats.M=Math.min(host.stats.M,h.stats.M);});u.attachedTo=null;S.mode=null;say(u.name+" leaves "+host.name+".");render();}},false);
       btn("Start battle","▶",startBattle,placed!==total);
       return;
     }
