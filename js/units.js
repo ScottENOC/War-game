@@ -25,7 +25,7 @@ function buildUnit(template, config) {
     formationWidth: 5, canCounterCharge: true, fleeingCharge: false, activated: false, moved: false, shot: false, charged: false, fled: false,
     moveUsed: 0, damage: 0, shootCasualties: 0, panicTested: false,
     stats, champion: { enabled: !!config.champion && config.type !== "captain", stats: null },
-    attachedCharacters: [], characterWounds: config.type === "captain" ? template.stats.W : null, championAlive: !!config.champion, championWounds: config.champion ? template.stats.W : 0
+    attachedCharacters: [], characterWounds: config.type === "captain" ? template.stats.W : null, delayedDeath: false, delayedDeathSnapshot: null, championAlive: !!config.champion, championWounds: config.champion ? template.stats.W : 0
   };
 }
 
