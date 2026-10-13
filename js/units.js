@@ -4,7 +4,7 @@ function unitCost(config, faction) {
   const elf=faction==="highElves",type=config.type,models=config.models||1;
   if(type==="captain"||type==="lord"){
     const base=elf?(type==="lord"?120:75):(type==="lord"?80:50);
-    return base+(config.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(config.weapon)?4:0)+(config.mounted?8:0)+(config.mounted&&config.weapon==="spear"?2:0)+(config.mounted&&config.weapon==="lance"?4:0)+(config.mounted&&config.barding?4:0)+(config.shield&&!["halberd","greatWeapon"].includes(config.weapon)?1:0);
+    return base+(config.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(config.weapon)?4:0)+(config.mounted?8:0)+(config.mounted&&config.weapon==="spear"?2:0)+(config.mounted&&config.weapon==="lance"?4:0)+(config.mounted&&config.barding?4:0)+(config.shield&&!["halberd","greatWeapon"].includes(config.weapon)?2:0);
   }
   if(type==="cavalry"){
     const free=config.freeCavalryOption||"bow";
