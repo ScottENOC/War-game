@@ -76,3 +76,11 @@ Shooting modifiers are cumulative: long range −1, moving −1, Stand & Shoot �
 - High Elf spearmen begin with light armour, shields and spears and fight in three ranks. High Elf archers begin with light armour and 30-inch longbows. High Elf cavalry begins with light armour and chooses either a bow or spear for free. Elven heavy armour and barding do not reduce movement.
 - Shields cost 0.5 points per troop model and 2 points per character. They improve armour saves only when the attacker is in the defender's front arc; side and rear attacks receive no shield bonus. Shields cannot be combined with a two-handed great weapon or halberd.
 - Rider and mount attacks now resolve in separate Initiative packets. Mounts use their own Initiative and do not inherit the rider's great-weapon penalty or racial Always Strikes First rule.
+
+## Miniature collection prototype
+
+The main menu now exposes four game-mode entry points: Grand Campaign (4X), Narrative Campaign, Roguelike Expedition, and Skirmish. The first three are UI placeholders; Skirmish connects to the existing battle prototype.
+
+The persistent browser collection starts with 100 human swordsmen, 50 human archers, and one Empire hero equipped with a sword only. Skirmish roster validation checks that the player owns enough models matching each selected unit's faction, type, weapon, shield and mounted status. The Developer Menu includes a persistent ownership-check bypass and a one-item lootbox test button.
+
+The Army Builder groups owned miniatures, lets players permanently add compatible components to existing models, and assembles new models by consuming a matching main body, weapon arms, left arm (empty hand or shield), and horse when mounted. Arms are faction-neutral. Lootboxes award one random bit (currently 72% chance) or one complete model; complete-model weights are inversely proportional to their base points cost. Inventory is stored in browser local storage. This is a prototype economy, not a monetised system.
