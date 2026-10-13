@@ -83,7 +83,15 @@ let render = () => {};
 const COMBAT = createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render: () => render(), endTurn, finishBattle, reformCombatPairs, pursueAfterBreak, panicNearby, leadership });
 const { resolveCombat, resolveBreak } = COMBAT;
 function endTurn(){S.combatResolved=false;units().forEach(u=>{u.charged=false;if(!alive(u)||u.fled||!u.engagedWith||!alive(S.units[u.engagedWith])||S.units[u.engagedWith].fled){u.engaged=false;u.engagedWith=null;u.engagedSide=null;u.chargedSide=null;u.attackedFromSide=null;u.flankedBy=null;}});S.turn++;say("Turn "+S.turn+" begins.");setPhase("charges");}
-function finishBattle(msg){S.finished=true;S.phase="over";say('<b>'+msg+'</b>');render();}
+function finishBattle(msg){
+ if(S.finished)return;
+ S.finished=true;S.phase="over";
+ const won=msg.toLowerCase().includes("player wins");
+ if(won&&collectionManager){collectionManager.grantLootbox("skirmish");say("Skirmish victory reward: one lootbox added to your collection.");}
+ say('<b>'+msg+'</b>');
+ $("battle-return").hidden=false;
+ render();
+}
 function reset(){S.turn=1;S.phase="deployment";S.mode=null;S.chargeSide="player";S.chargePasses=0;S.declaredCharges=[];S.activationSide="player";view.zoom=1;view.x=0;view.y=0;S.finished=false;S.combatRound=0;S.loser=null;S.crDiff=0;S.breakTests=[];S.log=[];const all=units();S.selected=all.find(u=>u.side==="player")?.id||null;all.forEach(u=>{const sideUnits=all.filter(v=>v.side===u.side),index=sideUnits.indexOf(u);Object.assign(u,{models:u.startModels,damage:0,x:u.side==="player"?.22:.78,y:(index+1)/(sideUnits.length+1),facing:u.side==="player"?0:Math.PI,deployed:u.side==="ai",engaged:false,engagedWith:null,engagedWithIds:[],engagementSides:{},engagedSide:null,chargedSide:null,attackedFromSide:null,flankedBy:null,formationWidth:5,fleeingCharge:false,activated:false,moved:false,shot:false,charged:false,fled:false,moveUsed:0,shootCasualties:0,panicTested:false,delayedDeath:false,delayedDeathSnapshot:null});u.stats.M=u.baseMove??u.stats.M;u.characterWounds=u.isCharacter?u.stats.W:null;u.delayedDeath=false;u.delayedDeathSnapshot=null;u.championAlive=!!u.champion?.enabled;u.championWounds=u.championAlive?u.stats.W:0;});all.filter(u=>!u.isCharacter).forEach(host=>{host.stats.M=host.baseMove??host.stats.M;(host.attachedCharacters||[]).forEach(id=>{const hero=S.units[id];if(hero&&hero.models>0)host.stats.M=Math.min(host.stats.M,hero.stats.M);});});$("log").replaceChildren();$("logpanel").classList.remove("open");$("rollview").classList.remove("show");say("Deployment: select a unit card, tap your half of the field to place it, and rotate as needed. The opponent's deployment is hidden until you are ready.");render();}
 const view={zoom:1,x:0,y:0};
 const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_IN, BATTLEFIELD_WIDTH_IN, MODEL_BASE_IN, shape, view });
@@ -116,6 +124,7 @@ function validateArmy(army,faction){
 let armyBuilder=null;
 armyBuilder=createArmyBuilder({ $, onStart:startBattleWithArmy, onBack:showCollection, validateArmy });
 collectionManager=createCollectionManager({$,onSkirmish:showSkirmishBuilder,onMainMenu:showMainMenu});
+$("battle-return").addEventListener("click",()=>{ $("battle-return").hidden=true;showCollection();collectionManager?.open();});
 })();
 }
 ;
