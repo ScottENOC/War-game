@@ -13,6 +13,9 @@ function buildUnit(template, config) {
     id: config.id, name: template.name + " " + config.index, short: template.short, side: config.side,
     kind: template.kind, models: config.models, startModels: config.models, points: unitCost(config),
     lightArmour: !!config.lightArmour,
+    // Optional rule tags consumed by shooting modifiers when a unit/profile or
+    // future battlefield-terrain interaction sets them.
+    largeTarget: false, singleCharacter: false, skirmisher: false, cover: null,
     x: config.x, y: config.y, facing: config.facing, deployed: config.side === "ai",
     engaged: false, activated: false, moved: false, shot: false, charged: false, fled: false,
     moveUsed: 0, damage: 0, shootCasualties: 0, panicTested: false,
