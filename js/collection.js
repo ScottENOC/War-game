@@ -19,9 +19,11 @@ const bitDefs=[
  {id:"left_shield",label:"Left arm · shield",kind:"shield"},
  {id:"both_greatWeapon",label:"Both arms · great weapon",kind:"twohand",weapon:"greatWeapon"},
  {id:"both_halberd",label:"Both arms · halberd",kind:"twohand",weapon:"halberd"},
- {id:"both_bow",label:"Both arms · bow",kind:"twohand",weapon:"bow"}
+ {id:"both_bow",label:"Both arms · bow",kind:"twohand",weapon:"bow"},
+ {id:"both_crossbow",label:"Both arms · crossbow",kind:"twohand",weapon:"crossbow"},
+ {id:"both_firearm",label:"Both arms · firearm",kind:"twohand",weapon:"firearm"}
 ];
-const labels={empire:"Human / Empire",highElves:"High Elf",swordsmen:"Swordsmen",archers:"Archers",cavalry:"Cavalry",captain:"Hero",lord:"Lord",handWeapon:"Sword",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow"};
+const labels={empire:"Human / Empire",highElves:"High Elf",swordsmen:"Swordsmen",archers:"Archers",cavalry:"Cavalry",captain:"Hero",lord:"Lord",handWeapon:"Sword",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm"};
 const makeModel=(id,faction,type,weapon,extra={})=>({id,faction,type,weapon,shield:!!extra.shield,mounted:!!extra.mounted,components:["body",weapon,...(extra.shield?["shield"]:[]),...(extra.mounted?["horse"]:[])],name:extra.name||((faction==="empire"?"Empire ":"High Elf ")+labels[type]+(type==="swordsmen"||type==="archers"||type==="cavalry"?"":"")+" · "+labels[weapon])});
 function starterData(){
  const models=[];let id=1;
@@ -123,7 +125,8 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const refresh=()=>{
     const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=body.kind==="cavalry";const hero=body.kind==="captain"||body.kind==="lord";
     [...weapon.options].forEach(o=>o.remove());
-    const arms=cavalry?["right_sword","right_spear","right_lance","both_greatWeapon"]:(hero?(horseWrap.value==="yes"?["right_sword","right_spear","right_lance","both_greatWeapon"]:["right_sword","right_spear","both_greatWeapon","both_halberd"]):["right_sword","right_spear","both_bow","both_greatWeapon","both_halberd"]);
+    const rangedArms=body.faction==="empire"?["both_bow","both_crossbow","both_firearm"]:["both_bow"];
+    const arms=cavalry?(body.faction==="empire"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]):(hero?(horseWrap.value==="yes"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","both_greatWeapon","both_halberd",...rangedArms]):(body.faction==="empire"?["right_sword","right_spear","both_bow","both_crossbow","both_firearm","both_greatWeapon","both_halberd"]:["right_sword","right_spear","both_bow","both_greatWeapon","both_halberd"]));
     
     arms.forEach(id=>{const d=bitDefs.find(b=>b.id===id);const o=document.createElement("option");o.value=id;o.textContent=d.label+" ("+bitCount(id)+" owned)";weapon.append(o);});
     horseWrap.parentElement.hidden=!cavalry&&!hero;
@@ -142,6 +145,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     const need=[body.id,arms.id];if(arms.kind==="right")need.push(addShield?"left_shield":"left_empty_arm");if(mounted)need.push("horse");
     const shortage=need.find(id=>bitCount(id)<1);if(shortage){status.textContent="Not enough bits: "+bitDefs.find(b=>b.id===shortage).label+".";return;}
     if(body.kind==="cavalry"&&!mounted){status.textContent="Cavalry bodies require a horse.";return;}
+    if(body.faction==="highElves"&&["crossbow","firearm"].includes(arms.weapon)){status.textContent="High Elves refuse crossbows and firearms.";return;}
     need.forEach(consumeBit);
     const type=body.kind==="infantry"?(arms.weapon==="bow"?"archers":"swordsmen"):body.kind;
     const model=makeModel("assembled-"+data.nextId++,body.faction,type,arms.weapon,{mounted,shield:addShield,name:(body.faction==="empire"?"Empire ":"High Elf ")+title(type)+" · "+title(arms.weapon)+(addShield?" + Shield":"")+(mounted?" · Mounted":"")});
@@ -157,9 +161,15 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
   const pool=[
    {faction:"empire",type:"swordsmen",weapon:"handWeapon",cost:8},
    {faction:"empire",type:"archers",weapon:"bow",cost:10},
+   {faction:"empire",type:"swordsmen",weapon:"crossbow",cost:11},
+   {faction:"empire",type:"swordsmen",weapon:"firearm",cost:12},
    {faction:"empire",type:"cavalry",weapon:"handWeapon",cost:16,mounted:true},
    {faction:"empire",type:"captain",weapon:"handWeapon",cost:50},
+   {faction:"empire",type:"captain",weapon:"crossbow",cost:53},
+   {faction:"empire",type:"captain",weapon:"firearm",cost:54},
    {faction:"empire",type:"lord",weapon:"handWeapon",cost:80},
+   {faction:"empire",type:"lord",weapon:"crossbow",cost:83},
+   {faction:"empire",type:"lord",weapon:"firearm",cost:84},
    {faction:"highElves",type:"swordsmen",weapon:"handWeapon",cost:12},
    {faction:"highElves",type:"archers",weapon:"bow",cost:15},
    {faction:"highElves",type:"cavalry",weapon:"handWeapon",cost:24,mounted:true},
