@@ -126,8 +126,9 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     const u=S.loser;if(!u||!alive(u)){endTurn();return;}
     const dice=roll(2),total=dice[0]+dice[1],snakeEyes=dice[0]===1&&dice[1]===1;
     const testLeadership=leadership(u);
-    const holds=snakeEyes||total+S.crDiff<=testLeadership;
-    say('<b>Break test — '+u.name+'</b>: 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; Leadership '+leadership(u)+' − combat result '+S.crDiff+' (modified total '+(total+S.crDiff)+').');
+    const appliedDiff=u.skills?.steadfast?0:S.crDiff;
+    const holds=snakeEyes||total+appliedDiff<=testLeadership;
+    say('<b>Break test — '+u.name+'</b>: 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; Leadership '+leadership(u)+(u.skills?.steadfast?' (Steadfast ignores combat-result penalty)':' − combat result '+S.crDiff)+' (modified total '+(total+appliedDiff)+').');
     if(snakeEyes)say('Snake eyes! A double 1 always holds, regardless of the combat result.');
     if(!holds){
       const pursuer=linked(u).find(v=>alive(v)&&!v.fled);
