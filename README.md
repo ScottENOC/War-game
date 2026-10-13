@@ -79,7 +79,7 @@ Shooting modifiers are cumulative: long range −1, moving −1, Stand & Shoot �
 
 ## Miniature collection prototype
 
-The main menu now exposes four game-mode entry points: Grand Campaign (4X), Narrative Campaign, Roguelike Expedition, and Skirmish. The first three are UI placeholders; Skirmish connects to the existing battle prototype.
+The main menu now exposes four game-mode entry points: Grand Campaign (4X), Narrative Campaign, Roguelike Expedition, and Skirmish. Grand Campaign and Roguelike Expedition remain placeholders. Narrative Campaign now has a three-mission leveling prototype: 20 human swordsmen, one human hero and 20 human archers fight 20 human swordsmen in each mission. Every victory offers one upgrade for each player unit; the force is restored to full strength between missions while upgrades persist.
 
 The persistent browser collection starts with 100 human swordsmen, 50 human archers, and one Empire hero equipped with a sword only. Skirmish roster validation checks that the player owns enough models matching each selected unit's faction, type, weapon, shield and mounted status. The Developer Menu includes a persistent ownership-check bypass and a one-item lootbox test button.
 
@@ -101,5 +101,13 @@ The Army Builder groups owned miniatures, lets players permanently add compatibl
 - Infantry weapons use the following starting premiums per model: bow +2 points for humans / +3 for High Elves, spear +1, great weapon +2, halberd +1. Existing faction equipment defaults and shield/armour costs remain.
 - Unit champions can specialise for +1 Attack or +1 Ballistic Skill. The default is +1 BS when equipped with a bow and +1 Attack otherwise; the army builder exposes a selector to change it.
 - Skirmish stat upgrades are available to infantry, cavalry and characters, once per stat, excluding Wounds and Attacks. Regiment upgrades cost per model: Movement +2, Weapon Skill +2, Ballistic Skill +2, Strength +3, Toughness +4, Initiative +1, Leadership +1. Character upgrades cost once: Movement +5, Weapon Skill +5, Ballistic Skill +5, Strength +6, Toughness +8, Initiative +3, Leadership +3.
-- High Elves have an Elven Archery passive: they ignore the shooting penalties for moving and long range. Other modifiers, including cover once terrain is implemented, still apply.
+- Elven Archery is a purchasable High Elf shooting upgrade for bow-equipped infantry and cavalry. It costs +2 points per model, matching the current +1 BS upgrade price, and ignores moving and long-range penalties; other modifiers, including cover once terrain is implemented, still apply.
 - These prices are provisional balance values intended for iteration. The campaign modes remain placeholders; this stat-upgrade structure is currently implemented in the skirmish army builder as the prototype for later campaign progression.
+
+
+## Narrative campaign progression prototype
+
+- The Narrative Campaign menu entry launches a three-mission sequence. Each mission pits the same starting force (20 human swordsmen, one human hero, 20 human archers) against 20 human swordsmen.
+- After each victory, every player unit selects one upgrade: +1 Strength, +1 Toughness, +1 Movement and Initiative, +1 Weapon Skill, +1 Ballistic Skill, or +1 Leadership. Stat bonuses stack across missions.
+- A unit that has increased Weapon Skill can later choose Melee Mastery (reroll natural 1s to hit in melee); Ballistic Skill unlocks Marksman (reroll natural 1s to hit with shooting); Leadership unlocks Steadfast (ignore combat-result penalties on break tests). Each skill can be selected once and takes one level-up choice.
+- Campaign progress is stored in browser local storage. This is a prototype: it does not yet persist battle casualties, has no branching story or campaign map, and does not use the collection/ownership system to gate the starting force. The three missions currently reuse the same battlefield and enemy roster.
