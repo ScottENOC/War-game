@@ -1,4 +1,5 @@
 import { createStartingUnits } from "./units.js";
+import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js";
 import { createRules } from "./rules.js";
 import { createShooting } from "./shooting.js";
@@ -14,10 +15,7 @@ export function startGame() {
 const $ = id => document.getElementById(id);
 const canvas = $("field"), ctx = canvas.getContext("2d");
 const BATTLEFIELD_WIDTH_IN=48, MODEL_BASE_IN=.9, BOW_RANGE=24;
-const S={
- turn:1,phase:"charges",selected:"pSword",finished:false,combatRound:0,loser:null,crDiff:0,log:[],mode:null,chargeSide:"player",chargePasses:0,declaredCharges:[],activationSide:"player",
- units:createStartingUnits()
-};
+const S=createGameState(createStartingUnits());
 const units=()=>Object.values(S.units), alive=u=>u.models>0;
 const W=()=>canvas.clientWidth,H=()=>canvas.clientHeight,PX_PER_IN=()=>W()/BATTLEFIELD_WIDTH_IN,fieldHeightIn=()=>H()/Math.max(1,PX_PER_IN());
 const dist=(a,b)=>Math.hypot((a.x-b.x)*BATTLEFIELD_WIDTH_IN,(a.y-b.y)*fieldHeightIn());
