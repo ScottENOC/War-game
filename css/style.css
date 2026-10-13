@@ -122,3 +122,11 @@ h1{font-size:clamp(28px,6vw,44px);line-height:1.1;margin:10px 0 16px;letter-spac
 #roster-validation.invalid{border-color:#d98578;color:#ffb9ad}
 #roster-validation.valid{border-color:#9bbd86;color:#d9efc8}
 @media(max-width:700px){.collection-columns{grid-template-columns:1fr}.mode-grid{grid-template-columns:1fr}.collection-panel{padding:14px}.collection-summary{gap:6px}.collection-stat{padding:9px}.collection-stat strong{font-size:21px}.collection-stat span{font-size:9px}.collection-actions{align-items:stretch;flex-direction:column}.collection-actions button{width:100%}.bit-grid{grid-template-columns:1fr}}
+
+
+.daily-reward-card{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:16px;margin:12px 0 18px;border:1px solid #d9bf7566;background:linear-gradient(120deg,#302b1d99,#11191b99);border-radius:14px}
+.daily-reward-card h2{font-size:16px;color:#f4e9c8;margin:0 0 5px}
+.daily-reward-card p{font-size:12px;color:#c6cdc4;line-height:1.4;margin:0}
+.daily-reward-card button{font-size:12px;min-height:40px;padding:8px 12px}
+#battle-return{position:fixed;z-index:30;left:50%;bottom:calc(env(safe-area-inset-bottom) + 132px);transform:translateX(-50%);white-space:nowrap;box-shadow:0 5px 22px #000b}
+@media(max-width:700px){.daily-reward-card{grid-template-columns:1fr;gap:9px}.daily-reward-card button{width:100%}}
