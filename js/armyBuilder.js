@@ -6,7 +6,8 @@ export function createArmyBuilder({ $, onStart, onBack }) {
   const list = $("army-list"), total = $("army-total"), addButton = $("add-unit"), startButton = $("begin-deployment");
 
   function unitPoints(unit) {
-    if (unit.type === "captain" || unit.type === "lord") return (unit.type === "lord" ? 80 : 50) + (unit.heavyArmour ? 4 : 0) + ((unit.weapon && unit.weapon !== "handWeapon") || unit.greatWeapon ? 4 : 0);
+    if (unit.type === "captain" || unit.type === "lord") return (unit.type === "lord" ? 80 : 50) + (unit.heavyArmour ? 4 : 0) + ((unit.weapon && !["handWeapon","spear","lance"].includes(unit.weapon)) || unit.greatWeapon ? 4 : 0) + (unit.mounted ? 8 : 0) + (unit.mounted && unit.weapon === "spear" ? 2 : 0) + (unit.mounted && unit.weapon === "lance" ? 4 : 0) + (unit.mounted && unit.barding ? 4 : 0);
+    if (unit.type === "cavalry") return unit.models * (16 + (unit.bow ? 2 : 0) + (unit.heavyArmour ? 2 : 0) + (unit.barding ? 2 : 0) + (unit.weapon === "spear" ? 1 : ["lance","greatWeapon"].includes(unit.weapon) ? 2 : 0));
     return unit.models * (unit.type === "swordsmen" ? 8 : 10) +
       (unit.champion ? 6 : 0) +
       (unit.type === "swordsmen" && unit.lightArmour ? unit.models : 0) +
@@ -33,24 +34,24 @@ export function createArmyBuilder({ $, onStart, onBack }) {
       main.className = "army-row-main";
       const type = document.createElement("select");
       type.setAttribute("aria-label", "Unit " + (index + 1) + " type");
-      type.innerHTML = '<option value="swordsmen">Swordsmen · 8 pts/model</option><option value="archers">Archers · 10 pts/model</option><option value="captain">Human Captain · 50 pts</option><option value="lord">Empire General (Lord) · 80 pts</option>';
+      type.innerHTML = '<option value="swordsmen">Swordsmen · 8 pts/model</option><option value="archers">Archers · 10 pts/model</option><option value="captain">Human Captain · 50 pts</option><option value="lord">Empire General (Lord) · 80 pts</option><option value="cavalry">Cavalry · 16 pts/model</option>';
       type.value = unit.type;
       type.addEventListener("change", () => {
         unit.type = type.value;
         if (unit.type !== "swordsmen") unit.lightArmour = false;
-        if (unit.type === "captain" || unit.type === "lord") { unit.models = 1; unit.champion = false; unit.lightArmour = false; unit.heavyArmour = false; unit.greatWeapon = false; unit.weapon = "handWeapon"; unit.spears = false; }
-        else { if (unit.models < 5) unit.models = 5; if (unit.type !== "swordsmen") unit.spears = false; }
+        if (unit.type === "captain" || unit.type === "lord") { unit.models = 1; unit.champion = false; unit.lightArmour = false; unit.heavyArmour = false; unit.greatWeapon = false; unit.weapon = "handWeapon"; unit.spears = false; unit.bow=false; unit.barding=false; unit.mounted=false; }
+        else { if (unit.models < 5) unit.models = 5; if (unit.type !== "swordsmen") unit.spears = false; if(unit.type!=="cavalry"){unit.bow=false;unit.barding=false;unit.heavyArmour=false;unit.weapon="handWeapon";} }
         renderRows();
       });
       const modelLabel = document.createElement("label");
       modelLabel.append(document.createTextNode("Models "));
       const models = document.createElement("input");
-      models.type = "number"; models.min = "5"; models.max = "30"; models.step = "1";
+      models.type = "number"; models.min = "5"; models.max = unit.type === "cavalry" ? "15" : "30"; models.step = "1";
       models.value = unit.models; models.inputMode = "numeric"; models.disabled = unit.type === "captain" || unit.type === "lord";
       models.setAttribute("aria-label", "Unit " + (index + 1) + " model count");
       models.addEventListener("change", () => {
         const parsed = Number.parseInt(models.value, 10);
-        unit.models = Number.isFinite(parsed) ? Math.max(5, Math.min(30, parsed)) : 5;
+        unit.models = Number.isFinite(parsed) ? Math.max(5, Math.min(unit.type === "cavalry" ? 15 : 30, parsed)) : 5;
         models.value = unit.models;
         updateTotals();
       });
@@ -59,13 +60,20 @@ export function createArmyBuilder({ $, onStart, onBack }) {
       options.className = "army-options";
       const championLabel = document.createElement("label");
       const champion = document.createElement("input");
-      champion.type = "checkbox"; champion.checked = unit.champion; champion.disabled = unit.type === "captain" || unit.type === "lord";
+      champion.type = "checkbox"; champion.checked = unit.champion; champion.disabled = unit.type === "captain" || unit.type === "lord" || unit.type === "cavalry";
       champion.addEventListener("change", () => { unit.champion = champion.checked; updateTotals(); });
       championLabel.append(champion, document.createTextNode("Champion (+6 pts)"));
       options.append(championLabel);
       if (unit.type === "captain" || unit.type === "lord") {
-        const armourLabel=document.createElement("label"); const armour=document.createElement("input"); armour.type="checkbox"; armour.checked=!!unit.heavyArmour; armour.addEventListener("change",()=>{unit.heavyArmour=armour.checked;updateTotals();}); armourLabel.append(armour,document.createTextNode("Heavy armour (+4 pts, 5+ save, −1 Move)")); options.append(armourLabel);
-        const weaponLabel=document.createElement("label"); weaponLabel.append(document.createTextNode("Weapon ")); const weapon=document.createElement("select"); weapon.innerHTML='<option value="handWeapon">Hand weapon (included)</option><option value="halberd">Halberd (+4 pts, +1 Strength, two-handed)</option><option value="greatWeapon">Great weapon (+4 pts, +2 Strength, −10 Initiative, two-handed)</option>'; weapon.value=unit.weapon||(unit.greatWeapon?"greatWeapon":"handWeapon"); weapon.addEventListener("change",()=>{unit.weapon=weapon.value;unit.greatWeapon=weapon.value==="greatWeapon";updateTotals();}); weaponLabel.append(weapon); options.append(weaponLabel);
+        const armourLabel=document.createElement("label"); const armour=document.createElement("input"); armour.type="checkbox"; armour.checked=!!unit.heavyArmour; armour.addEventListener("change",()=>{unit.heavyArmour=armour.checked;updateTotals();}); armourLabel.append(armour,document.createTextNode("Heavy armour (+4 pts, 5+ save)")); options.append(armourLabel);
+        const weaponLabel=document.createElement("label"); weaponLabel.append(document.createTextNode("Weapon ")); const weapon=document.createElement("select"); weapon.innerHTML='<option value="handWeapon">Sword/hand weapon (included)</option><option value="halberd">Halberd (+4 pts, +1 Strength, two-handed)</option><option value="greatWeapon">Great weapon (+4 pts, +2 Strength, −10 Initiative, two-handed)</option>'+(unit.mounted?'<option value="spear">Spear (+2 pts, +1 Strength on charge)</option><option value="lance">Lance (+4 pts, +2 Strength on charge)</option>':''); weapon.value=unit.weapon||(unit.greatWeapon?"greatWeapon":"handWeapon"); weapon.addEventListener("change",()=>{unit.weapon=weapon.value;unit.greatWeapon=weapon.value==="greatWeapon";updateTotals();}); weaponLabel.append(weapon); options.append(weaponLabel);
+        const mountLabel=document.createElement("label"),mount=document.createElement("input");mount.type="checkbox";mount.checked=!!unit.mounted;mount.addEventListener("change",()=>{unit.mounted=mount.checked;unit.barding=false;if(!unit.mounted&&["spear","lance"].includes(unit.weapon))unit.weapon="handWeapon";renderRows();});mountLabel.append(mount,document.createTextNode("Warhorse (+8 pts, M8, 1 mount attack, +1 armour save)"));options.append(mountLabel);
+        if(unit.mounted){const bardingLabel=document.createElement("label"),barding=document.createElement("input");barding.type="checkbox";barding.checked=!!unit.barding;barding.addEventListener("change",()=>{unit.barding=barding.checked;updateTotals();});bardingLabel.append(barding,document.createTextNode("Barding (+4 pts, +1 save, −1 Move)"));options.append(bardingLabel);}
+      }
+      if (unit.type === "cavalry") {
+        const weaponLabel=document.createElement("label");weaponLabel.append(document.createTextNode("Weapon "));
+        const weapon=document.createElement("select");weapon.innerHTML='<option value="handWeapon">Sword/hand weapon (included)</option><option value="spear">Spear (+1/model, +1 Strength on charge)</option><option value="lance">Lance (+2/model, +2 Strength on charge)</option><option value="greatWeapon">Great weapon (+2/model, +2 Strength, −10 Initiative)</option>';weapon.value=unit.weapon||"handWeapon";weapon.addEventListener("change",()=>{unit.weapon=weapon.value;updateTotals();});weaponLabel.append(weapon);options.append(weaponLabel);
+        for(const [key,label] of [["bow","Bow (+2/model)"],["heavyArmour","Heavy armour (+2/model, 4+ save when mounted)"],["barding","Barding (+2/model, further +1 save, −1 Move)"]]){const l=document.createElement("label"),c=document.createElement("input");c.type="checkbox";c.checked=!!unit[key];c.addEventListener("change",()=>{unit[key]=c.checked;updateTotals();});l.append(c,document.createTextNode(label));options.append(l);}
       }
       if (unit.type === "swordsmen") {
         const spearLabel = document.createElement("label");
@@ -104,7 +112,7 @@ export function createArmyBuilder({ $, onStart, onBack }) {
   $("builder-back").addEventListener("click", onBack);
   addButton.addEventListener("click", () => {
     if (army.length >= 6) return;
-    army.push({ type: "swordsmen", models: 20, champion: false, lightArmour: false, heavyArmour: false, greatWeapon: false, weapon: "handWeapon", spears: false });
+    army.push({ type: "swordsmen", models: 20, champion: false, lightArmour: false, heavyArmour: false, greatWeapon: false, weapon: "handWeapon", spears: false, bow:false, barding:false, mounted:false });
     renderRows();
   });
   startButton.addEventListener("click", () => {
