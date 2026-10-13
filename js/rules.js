@@ -78,6 +78,8 @@ export function createRules({ roll, units = () => [] }) {
       else if(hit!==1){if(hitNeed<=6)hitPass=hit>=hitNeed;else if(hitNeed<10&&hit===6){follow=roll(1)[0];hitPass=follow>=hitNeed-3;}}
       if(follow!==null){g.hitFollowUps.push(follow);g.hitFollowUpPasses.push(hitPass);}
       g.hitPasses.push(hitPass);
+      const rerollNaturalOne=hit===1&&((mode==="melee"&&context.rerollOnesMelee)||(mode==="shooting"&&context.rerollOnesShooting));
+      if(rerollNaturalOne){const reroll=roll(1)[0];let pass=mode==="melee"?(reroll!==1&&(reroll===6||reroll>=hitNeed)):(reroll!==1&&(hitNeed<=6?reroll>=hitNeed:(hitNeed<10&&reroll===6&&roll(1)[0]>=hitNeed-3)));g.hitRerolls.push(reroll);g.hitRerollPasses.push(pass);if(pass)hitPass=true;}
       if(!hitPass&&mode==="melee"&&context.rerollMisses){const reroll=roll(1)[0],rerollPass=reroll!==1&&(reroll===6||reroll>=hitNeed);g.hitRerolls.push(reroll);g.hitRerollPasses.push(rerollPass);if(rerollPass)hitPass=true;}
       if(!hitPass)continue;g.hits++;
       const woundNeed=woundTarget(attackerPool.stats.S,tier.stats.T);g.woundNeed=woundNeed;if(woundNeed===null)continue;
@@ -97,7 +99,7 @@ export function createRules({ roll, units = () => [] }) {
     const charging=!!context.charging;
     const strengthBonus=context.attackComponent==="mount"?0:(u.weapon==="greatWeapon"?2:u.weapon==="halberd"?1:(charging&&u.weapon==="lance"?2:charging&&u.weapon==="spear"?1:0));
     const attacker=strengthBonus?{...u,stats:{...u.stats,S:u.stats.S+strengthBonus}}:u;
-    const attackContext={...context,attacker:u};
+    const attackContext={...context,attacker:u,rerollOnesMelee:!!u.skills?.rerollOnesMelee,rerollOnesShooting:!!u.skills?.rerollOnesShooting};
     for(const attackerPool of modelPools(attacker,mode,attackContext))pools.push(...rollPool(attackerPool,target,mode,attackContext,v));
     const sum=k=>pools.reduce((n,p)=>n+(p[k]||0),0);
     return {attacks:sum("attacks"),hitNeed:pools[0]?.hitNeed??7,hitRolls:pools.flatMap(p=>p.hitRolls),hitPasses:pools.flatMap(p=>p.hitPasses),hitFollowUps:pools.flatMap(p=>p.hitFollowUps),hitFollowUpPasses:pools.flatMap(p=>p.hitFollowUpPasses),hits:sum("hits"),woundNeed:pools[0]?.woundNeed??null,woundRolls:pools.flatMap(p=>p.woundRolls),woundsBeforeSave:sum("woundsBeforeSave"),saveNeed:pools.every(p=>p.saveNeed==null)?null:pools[0]?.saveNeed,saveRolls:pools.flatMap(p=>p.saveRolls),saved:sum("saved"),wardSaved:sum("wardSaved"),wounds:sum("wounds"),pools,cascadePlan:{rankFileLost:v.rankFileLost,rankFileDamage:v.rankFileDamage,championKilled:v.championKilled,characterDamage:v.characterDamage}};
