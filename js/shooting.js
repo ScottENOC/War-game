@@ -33,7 +33,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       distance,
       targetCharging: !!target.charged,
       largeTarget: !!target.largeTarget,
-      singleCharacter: !!target.singleCharacter,
+      singleCharacter: !!target.isCharacter || !!target.singleCharacter || (target.models <= 0 && (target.attachedCharacters || []).some(id => S.units[id] && S.units[id].models > 0)),
       skirmisher: !!target.skirmisher,
       cover: target.cover === "soft" || target.cover === "hard" ? target.cover : null
     };
