@@ -21,7 +21,7 @@ const BATTLEFIELD_WIDTH_IN=48, MODEL_BASE_IN=.9, BOW_RANGE=24;
 const S=createGameState({});
 const units=()=>Object.values(S.units), alive=u=>u.models>0;
 const W=()=>canvas.clientWidth,H=()=>canvas.clientHeight,PX_PER_IN=()=>W()/BATTLEFIELD_WIDTH_IN,fieldHeightIn=()=>H()/Math.max(1,PX_PER_IN());
-const enemies=u=>units().filter(v=>v.side!==u.side&&alive(v));
+const enemies=u=>units().filter(v=>v.side!==u.side&&alive(v)&&!v.attachedTo);
 const MOVEMENT = createMovement({ W, H, PX_PER_IN, MODEL_BASE_IN, BATTLEFIELD_WIDTH_IN, fieldHeightIn, units, alive });
 const { dist, shape, corners, overlap, canPlace } = MOVEMENT;
 function validDeployment(u,x,y,f){const poly=corners(u,x,y,f),w=W(),h=H();return canPlace(u,x,y,f)&&poly.every(p=>p.x>=1&&p.y>=1&&p.x<=w/2-1&&p.y<=h-1);}
@@ -41,7 +41,7 @@ function panicNearby(source,reason="a nearby friendly unit is lost"){
 }
 
 function selectedTarget(u){const list=enemies(u);return list.find(v=>v.id===S.targetId)||closestEnemy(u);}
-function eligibleForActivation(u){return alive(u)&&!u.fled&&!u.engaged&&!u.activated;}
+function eligibleForActivation(u){return alive(u)&&!u.attachedTo&&!u.fled&&!u.engaged&&!u.activated;}
 function canCharge(u,target){
   const dx=(target.x-u.x)*W(),dy=(target.y-u.y)*H(),bearing=Math.atan2(dy,dx);
   let delta=bearing-(u.facing||0);while(delta>Math.PI)delta-=Math.PI*2;while(delta< -Math.PI)delta+=Math.PI*2;
