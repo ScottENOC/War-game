@@ -44,7 +44,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
  const canUseBit=(m,id)=>{
    const b=bitDefs.find(x=>x.id===id);if(!b)return false;
    if(b.kind==="shield")return !m.shield;
-   if(b.kind==="mount")return m.type==="captain"||m.type==="lord"||m.type==="cavalry"? !m.mounted&&m.type!=="swordsmen"&&m.type!=="archers":false;
+   if(b.kind==="mount")return (m.type==="captain"||m.type==="lord"||m.type==="cavalry")&&!m.mounted&&m.weapon!=="halberd";
    if(b.kind==="right")return m.weapon==="none"&&m.type!=="archers"&&m.type!=="swordsmen";
    if(b.kind==="twohand")return m.weapon==="none"&&(b.weapon!=="halberd"||!m.mounted);
    return false;
@@ -113,25 +113,28 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
    const refresh=()=>{
     const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=body.kind==="cavalry";const hero=body.kind==="captain"||body.kind==="lord";
     [...weapon.options].forEach(o=>o.remove());
-    const arms=(cavalry||hero)?["right_sword","right_spear","right_lance","both_greatWeapon","both_halberd"]:["right_sword","right_spear","both_bow"];
-    if(body.kind==="lord")arms.push("both_bow");
+    const arms=cavalry?["right_sword","right_spear","right_lance","both_greatWeapon"]:(hero?(horseWrap.value==="yes"?["right_sword","right_spear","right_lance","both_greatWeapon"]:["right_sword","right_spear","right_lance","both_greatWeapon","both_halberd"]):["right_sword","right_spear","both_bow"]);
+    if(body.kind==="lord"&&!arms.includes("both_bow")&&!cavalry)arms.push("both_bow");
     arms.forEach(id=>{const d=bitDefs.find(b=>b.id===id);const o=document.createElement("option");o.value=id;o.textContent=d.label+" ("+bitCount(id)+" owned)";weapon.append(o);});
     horseWrap.parentElement.hidden=!cavalry&&!hero;
     if(!cavalry&&!hero)horseWrap.value="no";
     if(cavalry)horseWrap.value="yes";
    };
-   kind.addEventListener("change",refresh);refresh();
+   kind.addEventListener("change",refresh);horseWrap.addEventListener("change",refresh);refresh();
+   const shieldLabel=document.createElement("label");shieldLabel.className="assembly-shield";const shieldCheck=document.createElement("input");shieldCheck.type="checkbox";shieldCheck.checked=false;shieldLabel.append(shieldCheck,document.createTextNode("Add left arm holding a shield (requires a shield bit)"));panel.append(shieldLabel);
    const p=document.createElement("p");p.className="subtle";p.textContent="A finished model consumes its main body, the selected arms, and a horse if mounted. Elf and human arms are interchangeable.";panel.append(p);
    const assemble=document.createElement("button");assemble.className="primary-button";assemble.textContent="Assemble model";
    assemble.addEventListener("click",()=>{
     const body=bodyKinds.find(b=>b.id===kind.value),arms=bitDefs.find(b=>b.id===weapon.value),mounted=horseWrap.value==="yes"&&(body.kind==="cavalry"||body.kind==="captain"||body.kind==="lord");
     if(body.faction!==faction.value){status.textContent="Choose a main body matching the selected faction.";return;}
-    const need=[body.id,arms.id];if(mounted)need.push("horse");
+    if(mounted&&arms.weapon==="halberd"){status.textContent="Halberds cannot be used by mounted models.";return;}
+    const addShield=shieldCheck.checked&&arms.kind==="right";if(shieldCheck.checked&&!addShield){status.textContent="Two-handed weapons use both arms and cannot take a shield.";return;}
+    const need=[body.id,arms.id];if(addShield)need.push("left_shield");if(mounted)need.push("horse");
     const shortage=need.find(id=>bitCount(id)<1);if(shortage){status.textContent="Not enough bits: "+bitDefs.find(b=>b.id===shortage).label+".";return;}
     if(body.kind==="cavalry"&&!mounted){status.textContent="Cavalry bodies require a horse.";return;}
     need.forEach(consumeBit);
     const type=body.kind==="infantry"?(arms.weapon==="bow"?"archers":"swordsmen"):body.kind;
-    const model=makeModel("assembled-"+data.nextId++,body.faction,type,arms.weapon,{mounted,name:(body.faction==="empire"?"Empire ":"High Elf ")+title(type)+" · "+title(arms.weapon)+(mounted?" · Mounted":"")});
+    const model=makeModel("assembled-"+data.nextId++,body.faction,type,arms.weapon,{mounted,shield:addShield,name:(body.faction==="empire"?"Empire ":"High Elf ")+title(type)+" · "+title(arms.weapon)+(addShield?" + Shield":"")+(mounted?" · Mounted":"")});
     data.models.push(model);save();renderAll();status.textContent="Model assembled and added to your collection.";
    });panel.append(assemble);
    const status=document.createElement("p");status.className="workbench-status";panel.append(status);
