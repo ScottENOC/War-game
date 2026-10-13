@@ -38,7 +38,10 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
         // Rider and mount are separate combatants: only the rider uses their
         // weapon and racial Initiative modifiers.
         if(component==="mount")return (u.mountStats?.I??0)+chargeBonus;
-        return u.stats.I-(u.weapon==="greatWeapon"?10:0)+chargeBonus+(u.alwaysStrikesFirst?10:0);
+        const initiative=u.stats.I-(u.weapon==="greatWeapon"?10:0)+chargeBonus+(u.alwaysStrikesFirst?10:0);
+        // Always Strikes First is a priority rule as well as a +10 Initiative
+        // modifier; the 100 offset is ordering-only and is removed for display.
+        return u.alwaysStrikesFirst?100+initiative:initiative;
       };
       const combatants=[];
       group.forEach(host=>{
@@ -50,7 +53,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const attackedPackets=new Set();
       const levels=[...new Set(combatants.map(c=>effectiveI(c.u,c.host,c.component)))].sort((a,b)=>b-a);
       levels.forEach(initiative=>{
-        const shownInitiative=initiative;
+        const shownInitiative=initiative>=100?initiative-100:initiative;
         const attackers=combatants.filter(c=>(alive(c.host)||c.host.delayedDeath)&&!c.host.fled&&effectiveI(c.u,c.host,c.component)===initiative);
         // Entitlements and snapshots span every Initiative level. A rider dying
         // before their mount acts must not erase the mount's separate attack.
