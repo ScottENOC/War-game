@@ -37,8 +37,10 @@ The browser entry point is `index.html`, which loads `js/main.js` as an ES modul
 - `phases.js` — charge declarations and phase transitions.
 - `ai.js` — AI activation priorities, target selection and movement decisions.
 - `rules.js`, `shooting.js`, `combat.js` and `dice.js` — rules resolution and dice results. Attack dice are grouped by matching profiles; an optional champion replaces one rank-and-file model, with 2 melee attacks or +1 BS for archers. Hit, wound and save pools use the relevant WS/BS, Strength and target stats, while melee sequencing uses each unit’s Initiative.
-- `rendering.js` — battlefield canvas drawing.
-- `input.js` — pointer, touch, drag, pivot, pan and zoom handling.
+- `rendering.js` — battlefield canvas drawing, including the blind-deployment view.
+- `input.js` — pointer, touch, drag, pivot, pan, zoom and deployment placement handling.
 - `ui.js` — unit cards, action controls and log/dice overlay controls.
+
+- Deployment phase: the player places units in the left half by selecting a card and tapping a position; rotate in 15-degree increments without movement costs. The AI deploys in the right half but remains hidden until the player starts the battle. All player units must be placed before starting.
 
 Keep gameplay rules independent of drawing and input. New actions should be routed through the same rules and state changes regardless of whether the player or AI initiates them. Continue making and testing changes on `development`; promote to `main` only after review.
