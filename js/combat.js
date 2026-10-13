@@ -68,7 +68,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
             return;
           }
           const target=targets.sort((a,b)=>dist(host,a)-dist(host,b))[0];
-          const before=new Map(attackers.filter(c=>!pending.get(keyOf(c))?.attacked).map(c=>[keyOf(c),{...c,wasAlive:combatantAlive(c.u),snapshot:captureFighter(c.u)}]));
+          const before=new Map(combatants.filter(c=>!attackedPackets.has(keyOf(c))).map(c=>[keyOf(c),{...c,wasAlive:combatantAlive(c.u),snapshot:snapshots.get(keyOf(c))}]));
           const naturalI=u.stats.I-(u.weapon==="greatWeapon"?10:0)+(host.charged?10:0);
           const targetI=target.stats.I-(target.weapon==="greatWeapon"?10:0)+(target.charged?10:0);
           const rerollMisses=component==="rider"&&!!u.alwaysStrikesFirst&&naturalI>targetI;
@@ -79,9 +79,9 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           entitlement.attacked=true;attackedPackets.add(key);
           before.forEach(({u:potential,component:potentialComponent,wasAlive,snapshot})=>{
             const potentialKey=potential.id+":"+potentialComponent;
-            if(wasAlive&&!combatantAlive(potential)&&pending.has(potentialKey)&&!pending.get(potentialKey).attacked){
+            if(wasAlive&&!combatantAlive(potential)&&!attackedPackets.has(potentialKey)){
               potential.delayedDeath=true;
-              potential.delayedDeathSnapshot=pending.get(potentialKey).snapshot;
+              potential.delayedDeathSnapshot=snapshot;
               say(potential.name+' suffers a fatal wound; '+(potential.isCharacter?'they':'up to '+snapshot.eligibleModels+' front-rank fighters')+' will strike before dying at Initiative '+shownInitiative+'.');
             }
           });
