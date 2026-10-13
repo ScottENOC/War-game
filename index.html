@@ -86,7 +86,7 @@ function draw(){
 
 }
 function unitCorners(u, atX=u.x, atY=u.y, atFacing=u.facing){
- const scale=PX_PER_IN(),front=5*MODEL_BASE_IN*scale,depth=4*MODEL_BASE_IN*scale;
+ const shape=formationShape(u),front=shape.front,depth=shape.depth;
  const fx=Math.cos(atFacing),fy=Math.sin(atFacing),lx=-fy,ly=fx;
  const cx=atX*W(),cy=atY*H();
  return [
@@ -225,31 +225,46 @@ function passMovement(side){
  S.passes.player=true;
  if(S.units.player.engaged&&S.units.ai.engaged)setPhase("combat");else {setPhase("charges");S.turn++;say("Turn "+S.turn+" begins.");}
 }
+function hitTarget(attacker,defender){
+ const a=attacker.stats.WS,d=defender.stats.WS;
+ if(a>=d*2)return 3;if(a>d)return 3;if(a===d)return 4;if(a*2<=d)return 5;return 4;
+}
+function woundTarget(strength,toughness){
+ if(strength>=toughness*2)return 2;if(strength>toughness)return 3;if(strength===toughness)return 4;
+ if(strength*2<=toughness)return 6;return 5;
+}
+function saveTarget(defender,strength){
+ const raw=defender.stats.save;
+ if(raw==="-"||raw===null||raw===undefined)return null;
+ const target=parseInt(raw,10);if(!Number.isFinite(target))return null;
+ return target+Math.max(0,strength-3);
+}
+function attack(u,target){
+ const attacks=Math.min(formationShape(u).files,u.models)*u.stats.A;
+ const neededHit=hitTarget(u,target),neededWound=woundTarget(u.stats.S,target.stats.T),save=saveTarget(target,u.stats.S);
+ const hitRolls=roll(attacks),hits=hitRolls.filter(x=>x>=neededHit).length,woundRolls=roll(hits),woundsBeforeSave=woundRolls.filter(x=>x>=neededWound).length;
+ const saves=save===null?[]:roll(woundsBeforeSave),saved=save===null?0:saves.filter(x=>x>=save).length;
+ return {attacks,hits,neededHit,woundsBeforeSave,neededWound,saved,wounds:Math.max(0,woundsBeforeSave-saved)};
+}
 function resolveCombat(){
  const p=S.units.player,a=S.units.ai;
  if(!p.engaged||!a.engaged){endTurn();return}
  S.combatRound++;
- // Five models in the front rank fight. WS3 vs WS3 hits on 4+, S3 vs T3 wounds on 4+.
- function attack(u){
-  const attacks=Math.min(5,u.models),hit=roll(attacks),hits=hit.filter(x=>x>=4).length,woundsRoll=roll(hits),wounds=woundsRoll.filter(x=>x>=4).length;
-  return {attacks,hit,hits,woundsRoll,wounds};
- }
- // Equal Initiative attacks are simultaneous. A charger strikes first only in the charge round.
  const pFirst=p.charged&&!a.charged;
  let pr,ar;
  if(pFirst){
-  pr=attack(p);a.models=Math.max(0,a.models-pr.wounds);
-  ar=alive(a)?attack(a):null;
+  pr=attack(p,a);a.models=Math.max(0,a.models-pr.wounds);
+  ar=alive(a)?attack(a,p):null;
   if(ar)p.models=Math.max(0,p.models-ar.wounds);
  }else{
-  pr=attack(p);ar=attack(a);
+  pr=attack(p,a);ar=attack(a,p);
   a.models=Math.max(0,a.models-pr.wounds);
   p.models=Math.max(0,p.models-ar.wounds);
  }
- say('<b>Melee round '+S.combatRound+'</b> — Empire: '+pr.hits+'/'+pr.attacks+' hits, '+pr.wounds+' wounds. AI: '+(ar?ar.hits+'/'+ar.attacks+' hits, '+ar.wounds+' wounds':'no attacks (destroyed before striking)')+'.');
+ say('<b>Melee round '+S.combatRound+'</b> — Empire: '+pr.hits+'/'+pr.attacks+' hits, '+pr.wounds+' unsaved wounds. AI: '+(ar?ar.hits+'/'+ar.attacks+' hits, '+ar.wounds+' unsaved wounds':'no attacks (destroyed before striking)')+'.');
  draw();
  if(!alive(p)||!alive(a)){finishBattle(!alive(a)?"Empire wins the battle!":"AI wins the battle!");return}
- const crP=pr.wounds+rankBonus(p)+0;const crA=(ar?ar.wounds:0)+rankBonus(a)+0;
+ const crP=pr.wounds+rankBonus(p);const crA=(ar?ar.wounds:0)+rankBonus(a);
  const diff=crP-crA;
  say('Combat result — Empire '+crP+' (wounds '+pr.wounds+' + ranks '+rankBonus(p)+'), AI '+crA+' (wounds '+(ar?ar.wounds:0)+' + ranks '+rankBonus(a)+').');
  if(diff===0){say('Combat drawn; both units hold.');endTurn();return}
@@ -258,7 +273,7 @@ function resolveCombat(){
 function rankBonus(u){return Math.min(3,Math.max(0,Math.floor((u.models-1)/5)));}
 function resolveBreak(){
  const loser=S.units[S.loser];if(!loser||!alive(loser)){endTurn();return}
- const dice=roll(2),total=dice[0]+dice[1],ld=7-S.crDiff;
+ const dice=roll(2),total=dice[0]+dice[1],ld=loser.stats.Ld-S.crDiff;
  say((loser.side==="player"?"Empire":"AI")+" break test: 2D6 = <span class='dice'>"+dice.join(" + ")+" = "+total+"</span>; modified Leadership "+Math.max(2,ld)+".");
  if(total>Math.max(2,ld)){
   loser.fled=true;loser.engaged=false;S.units[loser.side==="player"?"ai":"player"].engaged=false;
