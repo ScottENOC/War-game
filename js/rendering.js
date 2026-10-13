@@ -18,5 +18,6 @@ const RULES = createRules({ roll });
 const { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage, meleeAttack } = RULES;
 const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $ });
 const shoot = SHOOTING.shoot;
+  window.addEventListener("resize", setupCanvas);
   return { setupCanvas, draw };
 }
