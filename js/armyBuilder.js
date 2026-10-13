@@ -1,4 +1,4 @@
-export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>\"\" }) {
+export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   let faction="empire";
   let army=[{type:"swordsmen",models:20,champion:false,lightArmour:false,heavyArmour:false,weapon:"handWeapon",spears:false,bow:false,barding:false,mounted:false,shield:false,freeCavalryOption:"bow"}];
   const list=$("army-list"),total=$("army-total"),addButton=$("add-unit"),startButton=$("begin-deployment");
