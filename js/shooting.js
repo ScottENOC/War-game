@@ -48,11 +48,17 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     for(let i=0;i<poly.length;i++)if(segmentsIntersect(a,b,poly[i],poly[(i+1)%poly.length]))return true;
     return false;
   }
+  function unitFootprint(u) {
+    const q=shape(u);
+    if(u.models>0)return corners(u);
+    const x=u.x*W(),y=u.y*H(),c=Math.cos(u.facing||0),sn=Math.sin(u.facing||0),hw=q.baseDepth/2,hh=q.baseWidth/2;
+    return [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([lx,ly])=>({x:x+lx*c-ly*sn,y:y+lx*sn+ly*c}));
+  }
   function getShotVisibility(u,target,rankLimit) {
     const shooters=modelCentres(u,rankLimit),targets=modelCentres(target);
-    const blockers=units().filter(v=>v!==u&&v!==target&&!v.attachedTo&&alive(v)&&!v.fled&&v.deployed!==false);
+    const blockers=units().filter(v=>v!==u&&v.id!==u.attachedTo&&v!==target&&!v.attachedTo&&alive(v)&&!v.fled&&v.deployed!==false);
     // Unit footprints are oriented rectangles, computed from the same formation geometry used by movement.
-    blockers.forEach(v=>{v._losPolygon=corners(v);});
+    blockers.forEach(v=>{v._losPolygon=unitFootprint(v);});
     const candidates=blockers.map(v=>({u:v}));
     const visible=[];
     let anyOver=false;
@@ -83,7 +89,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(distance>range||(standShoot&&distance<=4))return false;
     // Build the actual rectangular unit footprints used for obstruction checks.
     const all=units().filter(v=>!v.attachedTo&&alive(v)&&v.deployed!==false);
-    for(const v of all)v._losPolygon=corners(v);
+    for(const v of all)v._losPolygon=unitFootprint(v);
     const rankLimit=Math.max(1,u.ranksToShoot||1);
     const visibility=getShotVisibility(u,target,rankLimit);
     all.forEach(v=>{delete v._losPolygon;delete v._losCorners;});
