@@ -9,10 +9,11 @@ function unitCost(config) {
 
 function buildUnit(template, config) {
   const stats = { ...template.stats };
+  if (config.type === "captain" && config.heavyArmour) stats.M = Math.max(1, stats.M - 1);
 
   return {
     id: config.id, name: template.name + " " + config.index, short: template.short, side: config.side,
-    kind: template.kind, isCharacter: config.type === "captain", attachedTo: null,
+    kind: template.kind, isCharacter: config.type === "captain", attachedTo: null, baseMove: stats.M,
     models: config.type === "captain" ? 1 : config.models, startModels: config.type === "captain" ? 1 : config.models, points: unitCost(config),
     lightArmour: !!config.lightArmour, heavyArmour: !!config.heavyArmour,
     armour: config.type === "captain" ? (config.heavyArmour ? "heavy" : "light") : (config.lightArmour ? "light" : "none"), shield: false, wardSave: null,
