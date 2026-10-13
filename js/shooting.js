@@ -77,7 +77,8 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     return {visibleModels:visible.length,overUnitPenalty:anyOver?(u.overUnitPenalty||0):0};
   }
   function shoot(u,target,standShoot) {
-    if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||target.engaged)return false;
+    const host=u.attachedTo?S.units[u.attachedTo]:null;
+    if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged||target.engaged)return false;
     const distance=dist(u,target),range=u.range||BOW_RANGE;
     if(distance>range||(standShoot&&distance<=4))return false;
     // Build the actual rectangular unit footprints used for obstruction checks.
