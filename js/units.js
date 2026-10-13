@@ -1,6 +1,7 @@
 import { FACTIONS } from "./factions.js";
 
 function unitCost(config) {
+  if (config.type === "captain") return 50;
   const base = config.type === "swordsmen" ? 8 : 10;
   return config.models * base + (config.champion ? 6 : 0) +
     (config.type === "swordsmen" && config.lightArmour ? config.models : 0);
@@ -11,7 +12,8 @@ function buildUnit(template, config) {
   if (config.type === "swordsmen" && config.lightArmour) stats.save = "6+";
   return {
     id: config.id, name: template.name + " " + config.index, short: template.short, side: config.side,
-    kind: template.kind, models: config.models, startModels: config.models, points: unitCost(config),
+    kind: template.kind, isCharacter: config.type === "captain", attachedTo: null,
+    models: config.type === "captain" ? 1 : config.models, startModels: config.type === "captain" ? 1 : config.models, points: unitCost(config),
     lightArmour: !!config.lightArmour,
     // Optional rule tags consumed by shooting modifiers when a unit/profile or
     // future battlefield-terrain interaction sets them.
@@ -20,7 +22,8 @@ function buildUnit(template, config) {
     engaged: false, engagedWith: null, engagedSide: null, chargedSide: null, attackedFromSide: null, flankedBy: null,
     formationWidth: 5, canCounterCharge: true, fleeingCharge: false, activated: false, moved: false, shot: false, charged: false, fled: false,
     moveUsed: 0, damage: 0, shootCasualties: 0, panicTested: false,
-    stats, champion: { enabled: !!config.champion, stats: null }
+    stats, champion: { enabled: !!config.champion && config.type !== "captain", stats: null },
+    attachedCharacters: [], characterWounds: config.type === "captain" ? template.stats.W : null, wardSave: null
   };
 }
 
