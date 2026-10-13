@@ -80,7 +80,7 @@ function draw(){
  // show move / charge range when selecting during movement
  const p=S.units.player,a=S.units.ai;
  if(S.phase==="movement"&&S.selected==="player"&&!p.engaged){
-  ctx.strokeStyle="rgba(160,205,230,.55)";ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(p.x*w,p.y*h);ctx.lineTo(p.x*w+Math.cos(p.facing)*MOVE_ALLOWANCE*PX_PER_IN(),p.y*h+Math.sin(p.facing)*MOVE_ALLOWANCE*PX_PER_IN());ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle="rgba(160,205,230,.55)";ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(p.x*w,p.y*h);ctx.lineTo(p.x*w+Math.cos(p.facing)*p.stats.M*PX_PER_IN(),p.y*h+Math.sin(p.facing)*p.stats.M*PX_PER_IN());ctx.stroke();ctx.setLineDash([]);
  }
  drawUnit(p,w,h);drawUnit(a,w,h);
 
@@ -153,9 +153,15 @@ function render(){
  $("turnlabel").textContent="TURN "+S.turn;
  const names={charges:"Movement — Charge declarations",movement:"Movement — Remaining moves",combat:"Melee — Attacks & combat resolution",break:"Combat resolution — Break test",over:"Battle complete"};
  $("phaselabel").textContent=names[S.phase]||S.phase;
- $("playerstatus").textContent=S.units.player.models+" models · "+(S.units.player.engaged?"In melee":S.units.player.fled?"Fleeing":"Hand weapon");
- $("aistatus").textContent=S.units.ai.models+" models · "+(S.units.ai.engaged?"In melee":S.units.ai.fled?"Fleeing":"Hand weapon");
  $("instruction").textContent=hint();
+ const u=S.units[S.selected]||S.units.player,st=u.stats;
+ $("unitshield").className="shield "+u.side;
+ $("detailname").textContent=u.name;
+ $("detailmeta").textContent=u.models+" models · "+(u.engaged?"In melee":u.fled?"Fleeing":"Hand weapon");
+ $("unitstats").innerHTML=[["M",st.M],["WS",st.WS],["BS",st.BS],["S",st.S],["T",st.T],["W",st.W],["I",st.I],["A",st.A],["Ld",st.Ld],["Save",st.save]].map(([label,value])=>'<div class="stat '+(label==="Save"?"save":"")+'"><b>'+value+'</b><span>'+label+'</span></div>').join("");
+ const shape=formationShape(u);
+ $("unitformation").textContent="Formation: "+Math.min(5,u.models)+" files × "+shape.ranks+" ranks · "+u.models+" models";
+ $("unitrules").textContent="Move allowance: "+st.M+" inches · Charge: up to "+(st.M*2)+" inches · Movement used this turn: "+u.moveUsed.toFixed(1)+" inches";
  draw();controls();
 }
 function hint(){
@@ -173,7 +179,7 @@ function controls(){
  if(S.phase==="charges"){
   if(S.active==="player"){
    const p=S.units.player,a=S.units.ai;
-   el.append(btn("Declare charge",()=>declareCharge(), "primary",p.engaged||p.fled||p.charged||!alive(a)||dist()>8));
+   el.append(btn("Declare charge",()=>declareCharge(), "primary",p.engaged||p.fled||p.charged||!alive(a)||dist()>S.units.player.stats.M*2));
    el.append(btn("Pass charges",()=>passCharge("player")));
   }else el.append(btn("AI passes",()=>passCharge("ai"),"",false));
   return;
@@ -196,7 +202,7 @@ function controls(){
 }
 function declareCharge(){
  const p=S.units.player,a=S.units.ai;
- if(!alive(p)||!alive(a)||dist()>8||p.engaged||p.fled)return;
+ if(!alive(p)||!alive(a)||dist()>p.stats.M*2||p.engaged||p.fled)return;
  S.pending.push({from:"player",to:"ai",response:"hold"});
  say('<b>Empire Swordsmen</b> declare a charge. The AI chooses <b>Hold</b>.');
  // In a one-unit prototype the response is automatic; resolve charge immediately after declaration window.
@@ -283,7 +289,7 @@ canvas.addEventListener("pointerdown",e=>{
  const dp=Math.hypot(pt.x-p.x*w,pt.y-p.y*h),da=Math.hypot(pt.x-a.x*w,pt.y-a.y*h);
  const chosen=dp<=da?p:a;S.selected=chosen.id;
  if(S.phase==="movement"&&S.active==="player"&&chosen===p&&!p.engaged&&!p.fled&&alive(p)){
-  const front=5*MODEL_BASE_IN*PX_PER_IN(),depth=4*MODEL_BASE_IN*PX_PER_IN();
+  const shape=formationShape(p),front=shape.front,depth=shape.depth;
   const fx=Math.cos(p.facing),fy=Math.sin(p.facing),lx=-fy,ly=fx,cx=p.x*w,cy=p.y*h;
   const corners=[{x:cx+fx*depth/2+lx*front/2,y:cy+fy*depth/2+ly*front/2,sign:1},{x:cx+fx*depth/2-lx*front/2,y:cy+fy*depth/2-ly*front/2,sign:-1}];
   const corner=corners.find(c=>near(pt,c,16));
@@ -300,7 +306,7 @@ canvas.addEventListener("pointerdown",e=>{
 canvas.addEventListener("pointermove",e=>{
  if(!drag)return;
  const p=S.units.player,pt=pointerPoint(e),w=W(),h=H(),scale=PX_PER_IN();
- const remaining=Math.max(0,MOVE_ALLOWANCE-drag.origin.used);
+ const remaining=Math.max(0,p.stats.M-drag.origin.used);
  if(drag.kind==="move"){
   const dx=(pt.x-drag.start.x)/scale,dy=(pt.y-drag.start.y)/scale;
   const along=dx*Math.cos(drag.origin.facing)+dy*Math.sin(drag.origin.facing);
@@ -317,8 +323,8 @@ canvas.addEventListener("pointermove",e=>{
  }else{
   const anchor=drag.anchor,angle=Math.atan2(pt.y-anchor.y,pt.x-anchor.x);
   let delta=angle-drag.startAngle;while(delta>Math.PI)delta-=Math.PI*2;while(delta< -Math.PI)delta+=Math.PI*2;
-  const front=5*MODEL_BASE_IN*scale,depth=4*MODEL_BASE_IN*scale;
-  const maxAngle=remaining/Math.max(0.01,5*MODEL_BASE_IN);
+  const shape=formationShape(p),front=shape.front,depth=shape.depth;
+  const maxAngle=remaining/Math.max(0.01,front/scale);
   delta=Math.max(-maxAngle,Math.min(maxAngle,delta));
   const steps=Math.max(1,Math.ceil(Math.abs(delta)/0.025));let best=0;
   for(let i=1;i<=steps;i++){
@@ -329,7 +335,7 @@ canvas.addEventListener("pointermove",e=>{
   }
   const facing=drag.origin.facing+best,fx=Math.cos(facing),fy=Math.sin(facing),lx=-fy,ly=fx,sign=drag.pivot;
   const cx=anchor.x-fx*depth/2+lx*front/2*sign,cy=anchor.y-fy*depth/2+ly*front/2*sign;
-  p.x=cx/w;p.y=cy/h;p.facing=facing;p.moveUsed=drag.origin.used+Math.abs(best)*5*MODEL_BASE_IN;drag.changed=Math.abs(best)>0.001;
+  p.x=cx/w;p.y=cy/h;p.facing=facing;p.moveUsed=drag.origin.used+Math.abs(best)*(formationShape(p).front/PX_PER_IN());drag.changed=Math.abs(best)>0.001;
  }
  draw();controls();
 });
