@@ -88,6 +88,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     const host=u.attachedTo?S.units[u.attachedTo]:null;
     if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged)return false;
     const distance=dist(u,target),range=u.range||BOW_RANGE;
+    if(!u.skirmishing){const bearing=Math.atan2((target.y-u.y),((target.x-u.x)||0.000001));let arc=bearing-(u.facing||0);while(arc>Math.PI)arc-=Math.PI*2;while(arc< -Math.PI)arc+=Math.PI*2;if(Math.abs(arc)>Math.PI/4){say(u.name+" cannot shoot "+target.name+": target is outside its 90° firing arc.");return false;}}
     if(distance>range){say(u.name+" cannot shoot "+target.name+": out of range ("+distance.toFixed(1)+"″; maximum "+range+"″).");return false;}if(standShoot&&distance<=4){say("Stand and Shoot is unavailable at 4″ or closer.");return false;}
     // Build the actual rectangular unit footprints used for obstruction checks.
     const all=units().filter(v=>!v.attachedTo&&alive(v)&&v.deployed!==false);
@@ -100,7 +101,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       longRange:distance>range/2,moved:!!u.moved,elvenArchery:!!u.elvenArchery,standShoot,distance,
       targetCharging:!!target.charged,largeTarget:!!target.largeTarget,
       singleCharacter:!!target.isCharacter||!!target.singleCharacter||target.models===1,
-      skirmisher:!!target.skirmisher,cover:target.cover==="soft"||target.cover==="hard"?target.cover:null,
+      skirmisher:!!target.skirmishing||!!target.skirmisher,cover:target.cover==="soft"||target.cover==="hard"?target.cover:null,
       overUnitPenalty:visibility.overUnitPenalty,longRangePenalty:u.rangedWeapon==="firearm"?2:1,
       armourPiercing:u.armourPiercing||0,attackingModels:visibility.visibleModels,attackingChampion:visibility.visibleChampion
     };
