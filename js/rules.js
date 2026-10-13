@@ -2,11 +2,11 @@ export function createRules({ roll, units = () => [] }) {
   function rankBonus(u) { const width=Math.max(1,Math.floor(u.formationWidth||5)); if(width<4)return 0; const full=Math.floor(u.models/width),remainder=u.models%width; return Math.min(3,Math.max(0,full-1)+(remainder>=4?1:0)); }
   function hitTarget(attacker,defender) { if(attacker>defender)return 3;if(defender>attacker*2)return 5;return 4; }
   function woundTarget(strength,toughness) { if(strength<=0||toughness<=0)return null;if(strength>=toughness*2)return 2;if(strength>toughness)return 3;if(strength===toughness)return 4;if(strength*2>toughness)return 5;if(strength*2===toughness)return 6;return null; }
-  function saveTarget(defender,strength) {
+  function saveTarget(defender,strength,armourPiercing=0) {
     const type=defender.armour||(defender.lightArmour?"light":"none");
     const base=type==="fullPlate"?4:type==="heavy"?5:type==="light"?6:(defender.shield?7:0);
     if(!base)return null;
-    return base+Math.max(0,strength-3)-(defender.shield?1:0)-(defender.mountStats?1:0)-(defender.barding?1:0);
+    return base+Math.max(0,strength-3)+Math.max(0,armourPiercing)-(defender.shield?1:0)-(defender.mountStats?1:0)-(defender.barding?1:0);
   }
   function shieldFacesAttacker(defender,attacker) {
     if(!defender.shield||!attacker||!Number.isFinite(defender.x)||!Number.isFinite(attacker.x))return false;
@@ -41,9 +41,9 @@ export function createRules({ roll, units = () => [] }) {
     const normalCount=mode==="melee"?Math.max(0,Math.min(frontRank-(hasChampion?1:0),normalModels)):normalModels;
     const profiles=[];
     const add=(count,stats,label)=>{if(!count)return;const key=mode==="melee"?[stats.WS,stats.S,stats.A].join("/"):[stats.BS,stats.S].join("/");let pool=profiles.find(p=>p.key===key);if(!pool){pool={key,stats,count:0,labels:[]};profiles.push(pool);}pool.count+=count;if(!pool.labels.includes(label))pool.labels.push(label);};
-    if(context.attackComponent!=="mount")add(normalCount,{...u.stats},"Rider");
+    if(context.attackComponent!=="mount")add(normalCount,mode==="shooting"&&u.hasRangedWeapon?{...u.stats,S:u.rangedStrength||u.stats.S}:{...u.stats},"Rider");
     if(u.mountStats&&mode==="melee"&&context.attackComponent!=="rider")add(attackModels,{...u.mountStats},"Mount");
-    if(context.attackComponent!=="mount"&&hasChampion){const overrides=u.champion.stats||{},s={...u.stats,...overrides};if(mode==="melee"&&overrides.A==null)s.A=u.stats.A+((u.champion?.bonus||(u.kind==="archer"?"BS":"A"))==="A"?1:0);if(mode==="shooting"&&overrides.BS==null)s.BS=u.stats.BS+((u.champion?.bonus||(u.kind==="archer"?"BS":"A"))==="BS"?1:0);add(1,s,"Champion");}
+    if(context.attackComponent!=="mount"&&hasChampion){const overrides=u.champion.stats||{},s={...u.stats,...overrides};if(mode==="melee"&&overrides.A==null)s.A=u.stats.A+((u.champion?.bonus||(u.kind==="archer"||u.hasRangedWeapon?"BS":"A"))==="A"?1:0);if(mode==="shooting"&&overrides.BS==null)s.BS=u.stats.BS+((u.champion?.bonus||(u.kind==="archer"||u.hasRangedWeapon?"BS":"A"))==="BS"?1:0);if(mode==="shooting"&&u.hasRangedWeapon)s.S=u.rangedStrength||u.stats.S;add(1,s,"Champion");}
     return profiles;
   }
   function newVirtual(target) {
@@ -71,7 +71,16 @@ export function createRules({ roll, units = () => [] }) {
       const tier=tiers[0],g=groupFor(tier);g.attacks++;
       let hitNeed;
       if(mode==="melee")hitNeed=hitTarget(attackerPool.stats.WS,tier.stats.WS);
-      else {const mods=(context.longRange&&!context.elvenArchery?-1:0)+(context.moved&&!context.elvenArchery?-1:0)+(context.standShoot?-1:0)+(context.targetCharging?-1:0)+((context.singleCharacter||context.skirmisher)?-1:0)+(context.cover==="soft"?-1:context.cover==="hard"?-2:0)+(context.largeTarget?1:0);hitNeed=7-attackerPool.stats.BS-mods;}
+      else {
+        const bs=Math.min(attackerPool.stats.BS,context.attacker?.bsCap||99);
+        const longRangePenalty=context.longRange?(context.longRangePenalty||1):0;
+        const movePenalty=context.moved?1:0;
+        const overPenalty=Math.max(0,context.overUnitPenalty||0);
+        const reducible=longRangePenalty+movePenalty+overPenalty;
+        const elfReduction=context.elvenArchery?Math.min(2,reducible):0;
+        const mods=-(longRangePenalty+movePenalty+overPenalty-elfReduction)-(context.standShoot?1:0)-(context.targetCharging?1:0)-((context.singleCharacter||context.skirmisher)?1:0)-(context.cover==="soft"?1:context.cover==="hard"?2:0)+(context.largeTarget?1:0);
+        hitNeed=7-bs-mods;
+      }
       g.hitNeed=hitNeed;const hit=roll(1)[0];g.hitRolls.push(hit);
       let hitPass=false,follow=null;
       if(mode==="melee")hitPass=hit!==1&&(hit===6||hit>=hitNeed);
@@ -84,7 +93,7 @@ export function createRules({ roll, units = () => [] }) {
       if(!hitPass)continue;g.hits++;
       const woundNeed=woundTarget(attackerPool.stats.S,tier.stats.T);g.woundNeed=woundNeed;if(woundNeed===null)continue;
       const wr=roll(1)[0];g.woundRolls.push(wr);if(wr<woundNeed)continue;g.woundsBeforeSave++;
-      const saveNeed=saveTarget(tier,attackerPool.stats.S);g.saveNeed=saveNeed;let saved=false;
+      const saveNeed=saveTarget(tier,attackerPool.stats.S,mode==="shooting"?(context.armourPiercing||0):0);g.saveNeed=saveNeed;let saved=false;
       if(saveNeed!==null&&saveNeed<=6){const sr=roll(1)[0];g.saveRolls.push(sr);saved=sr!==1&&sr>=saveNeed;}
       if(!saved&&tier.wardSave){const wn=parseInt(tier.wardSave,10);g.wardNeed=wn;if(Number.isFinite(wn)){const wrd=roll(1)[0];g.wardRolls.push(wrd);if(wrd!==1&&wrd>=wn){g.wardSaved++;saved=true;}}}
       if(saved){g.saved++;continue;}g.wounds++;
