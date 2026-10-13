@@ -1,4 +1,4 @@
-export function createArmyBuilder({ $, onStart, onBack }) {
+export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>\"\" }) {
   let faction="empire";
   let army=[{type:"swordsmen",models:20,champion:false,lightArmour:false,heavyArmour:false,weapon:"handWeapon",spears:false,bow:false,barding:false,mounted:false,shield:false,freeCavalryOption:"bow"}];
   const list=$("army-list"),total=$("army-total"),addButton=$("add-unit"),startButton=$("begin-deployment");
@@ -16,7 +16,7 @@ export function createArmyBuilder({ $, onStart, onBack }) {
   }
   function check(label,{cost="",checked=false,disabled=false,onChange}={}){const l=document.createElement("label"),c=document.createElement("input");c.type="checkbox";c.checked=checked;c.disabled=disabled;c.addEventListener("change",()=>onChange(c.checked));l.append(c,document.createTextNode(label+(cost?" ("+cost+")":"")));return l;}
   function select(label,html,value,onChange){const l=document.createElement("label");l.append(document.createTextNode(label+" "));const s=document.createElement("select");s.innerHTML=html;s.value=value;s.addEventListener("change",()=>onChange(s.value));l.append(s);return l;}
-  function updateTotals(){let sum=0;list.querySelectorAll(".army-row").forEach((row,i)=>{const cost=unitPoints(army[i]);sum+=cost;row.querySelector(".army-cost").textContent=fmt(cost)+" pts";});total.textContent=fmt(sum)+" pts";addButton.disabled=army.length>=6;addButton.textContent=army.length>=6?"6 / 6 Units":"＋ Add Unit ("+army.length+"/6)";startButton.disabled=!army.length;}
+  function updateTotals(){let sum=0;list.querySelectorAll(".army-row").forEach((row,i)=>{const cost=unitPoints(army[i]);sum+=cost;row.querySelector(".army-cost").textContent=fmt(cost)+" pts";});total.textContent=fmt(sum)+" pts";addButton.disabled=army.length>=6;addButton.textContent=army.length>=6?"6 / 6 Units":"＋ Add Unit ("+army.length+"/6)";const message=validateArmy(army,faction)||"";const note=$("roster-validation");if(note){note.textContent=message||"Every selected unit is available in your collection.";note.classList.toggle("invalid",!!message);note.classList.toggle("valid",!message);}startButton.disabled=!army.length||!!message;}
   function renderRows(){
     list.replaceChildren();
     army.forEach((u,index)=>{
@@ -60,8 +60,8 @@ export function createArmyBuilder({ $, onStart, onBack }) {
     });updateTotals();
   }
   $("faction-select").addEventListener("change",()=>{faction=$("faction-select").value==="highElves"?"highElves":"empire";army.forEach(defaults);renderRows();});
-  $("menu-build").addEventListener("click",()=>{$("mainmenu").hidden=true;$("armybuilder").hidden=false;renderRows();});
+  function openBuilder(){ $("mainmenu").hidden=true;$("collection-screen").hidden=true;$("mode-screen").hidden=true;$("armybuilder").hidden=false;renderRows(); }
   $("builder-back").addEventListener("click",onBack);
   addButton.addEventListener("click",()=>{if(army.length>=6)return;const u={type:"swordsmen",models:20};defaults(u);army.push(u);renderRows();});
-  startButton.addEventListener("click",()=>{if(army.length)onStart(army.map(u=>({...u})),faction);});
+  startButton.addEventListener("click",()=>{if(army.length&&!validateArmy(army,faction))onStart(army.map(u=>({...u})),faction);});
 }
