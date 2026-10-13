@@ -1,4 +1,4 @@
-export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $ , shootingAttack }) {
+export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $ , shootingAttack, panicNearby }) {
   function showAttack(label, u, target, result, kind) {
     const extra = (kind === "shoot" ? " · " + (result.longRange ? "long range " : "") +
       (result.moved ? "moved " : "") + (result.standShoot ? "stand & shoot " : "") +
@@ -44,6 +44,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     showAttack(standShoot ? "Stand and shoot" : "Shooting", u, target, result, "shoot");
     const killed = applyDamage(target, result.wounds, true);
     say(target.name + " loses " + killed + " model" + (killed === 1 ? "" : "s") + " to shooting.");
+    if (!alive(target)) panicNearby?.(target, "a friendly unit is destroyed by shooting");
     if (!standShoot) panicTest(target);
     return true;
   }
