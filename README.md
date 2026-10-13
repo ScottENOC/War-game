@@ -67,3 +67,12 @@ Keep gameplay rules independent of drawing and input. New actions should be rout
 The hit/wound resolver uses the sixth-edition Weapon Skill comparison, Ballistic Skill target number, Strength-versus-Toughness table, and Strength-modified armour saves. Melee natural 1s miss and natural 6s hit; shooting natural 1s always miss and 7+/8+/9+ shots use the 6th-edition follow-up-roll sequence, with 10+ impossible. Wounds against targets marked too tough by the table are impossible, rather than automatically receiving a 6+ chance. Armour saves of 1+ still fail on a natural 1.
 
 Shooting modifiers are cumulative: long range −1, moving −1, Stand & Shoot −1, target charging −1, single character/skirmisher −1, soft cover −1, hard cover −2, and large target +1. Unit state exposes `largeTarget`, `singleCharacter`, `skirmisher`, and `cover` (`"soft"` or `"hard"`) for those situational rules. **The current battlefield has no terrain-placement or unit-tag controls yet**, so cover and large-target effects are rule-engine-supported but not yet selectable/automatically inferred in the UI. Character/skirmisher profiles are likewise not currently part of the army builder.
+
+
+## High Elves and shields (development)
+
+- The army builder offers the Empire and High Elves. High Elf base unit costs are set at 50% above their human equivalents (12-point spearmen, 15-point archers, 24-point cavalry, 75-point Hero and 120-point Lord), rounded to whole points. The AI uses the human opposing roster.
+- High Elves have +1 Movement, Weapon Skill, Ballistic Skill, Initiative and Leadership over their human equivalents, and Always Strikes First. Elf rider attacks receive +10 Initiative; when their Initiative before that racial bonus already exceeds the target's, missed melee hits can be rerolled. Rerolls are shown in a distinct dice lane.
+- High Elf spearmen begin with light armour, shields and spears and fight in three ranks. High Elf archers begin with light armour and 30-inch longbows. High Elf cavalry begins with light armour and chooses either a bow or spear for free. Elven heavy armour and barding do not reduce movement.
+- Shields cost 0.5 points per troop model and 1 point per character. They improve armour saves only when the attacker is in the defender's front arc; side and rear attacks receive no shield bonus. Weapon-hand restrictions are not yet simulated.
+- Rider and mount attacks now resolve in separate Initiative packets. Mounts use their own Initiative and do not inherit the rider's great-weapon penalty or racial Always Strikes First rule.
