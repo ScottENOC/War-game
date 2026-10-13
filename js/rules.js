@@ -9,6 +9,7 @@ export function createRules({ roll, units = () => [] }) {
     return base+Math.max(0,strength-3)+Math.max(0,armourPiercing)-(defender.shield?1:0)-(defender.mountStats?1:0)-(defender.barding?1:0);
   }
   function shieldFacesAttacker(defender,attacker) {
+    if(attacker?.friendlyFireShot)return false;
     if(!defender.shield||!attacker||!Number.isFinite(defender.x)||!Number.isFinite(attacker.x))return false;
     if(defender.skirmishing)return true;
     const facingUnit=defender.attachedTo?units().find(u=>u.id===defender.attachedTo)||defender:defender;
