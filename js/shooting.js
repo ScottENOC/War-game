@@ -15,11 +15,12 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     const threshold = Math.ceil(target.startModels * .25);
     if (target.shootCasualties < threshold || !alive(target)) return;
     target.panicTested = true;
-    const dice = roll(2), total = dice[0] + dice[1];
+    const dice = roll(2), total = dice[0] + dice[1], snakeEyes = dice[0] === 1 && dice[1] === 1;
     say("<b>Panic test — " + target.name + "</b>: shooting casualties " + target.shootCasualties + "/" +
       target.startModels + " (25% threshold " + threshold + "). 2D6 <span class=\"dice\">" +
       dice.join(" + ") + " = " + total + "</span>; need " + target.stats.Ld + " or less.");
-    if (total > target.stats.Ld) { target.fled = true; target.engaged = false; say(target.name + " fails its unmodified Leadership test and flees."); }
+    if (snakeEyes) say("Snake eyes! A double 1 always passes the morale test.");
+    if (!snakeEyes && total > target.stats.Ld) { target.fled = true; target.engaged = false; say(target.name + " fails its unmodified Leadership test and flees."); }
   }
   function shoot(u, target, standShoot) {
     if (!alive(u) || !alive(target) || u.kind !== "archer" || u.shot || u.engaged || target.engaged) return false;
