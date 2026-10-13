@@ -36,7 +36,8 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const effectiveI=(u,host=u,component="rider")=>{
         const chargeBonus=host.charged?10:0;
         if(component==="mount")return (u.mountStats?.I??0)+chargeBonus;
-        return u.stats.I-(u.weapon==="greatWeapon"?10:0)+chargeBonus+(u.alwaysStrikesFirst?10:0);
+        const natural=u.stats.I-(u.weapon==="greatWeapon"?10:0)+chargeBonus+(u.alwaysStrikesFirst?10:0);
+        return u.alwaysStrikesFirst?100+natural:natural;
       };
       const combatants=[];
       group.forEach(host=>{
