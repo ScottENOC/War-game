@@ -1,182 +1,89 @@
-export function createRules({ roll }) {
+export function createRules({ roll, units = () => [] }) {
   function rankBonus(u) { const width=Math.max(1,Math.floor(u.formationWidth||5)); if(width<4)return 0; const full=Math.floor(u.models/width),remainder=u.models%width; return Math.min(3,Math.max(0,full-1)+(remainder>=4?1:0)); }
-
-  // Warhammer Fantasy 6th edition close-combat Weapon Skill chart:
-  // 3+ when attacker WS is higher; 5+ only when defender WS is MORE than double.
-  function hitTarget(attacker, defender) {
-    if (attacker > defender) return 3;
-    if (defender > attacker * 2) return 5;
-    return 4;
+  function hitTarget(attacker,defender) { if(attacker>defender)return 3;if(defender>attacker*2)return 5;return 4; }
+  function woundTarget(strength,toughness) { if(strength<=0||toughness<=0)return null;if(strength>=toughness*2)return 2;if(strength>toughness)return 3;if(strength===toughness)return 4;if(strength*2>toughness)return 5;if(strength*2===toughness)return 6;return null; }
+  function saveTarget(defender,strength) {
+    const type=defender.armour||(defender.lightArmour?"light":"none");
+    if(type==="none"||!type)return null;
+    const base=type==="fullPlate"?4:type==="heavy"?5:6;
+    return base+Math.max(0,strength-3)-(defender.shield?1:0);
   }
-
-  // 6th-edition Strength-versus-Toughness chart. null means "no effect".
-  function woundTarget(strength, toughness) {
-    if (strength <= 0 || toughness <= 0) return null;
-    if (strength >= toughness * 2) return 2;
-    if (strength > toughness) return 3;
-    if (strength === toughness) return 4;
-    if (strength * 2 > toughness) return 5;
-    if (strength * 2 === toughness) return 6;
-    return null;
-  }
-
-  function saveTarget(defender, strength) {
-    const raw = defender.stats.save;
-    if (raw === "-" || raw == null) return null;
-    const target = parseInt(raw, 10);
-    return Number.isFinite(target) ? target + Math.max(0, strength - 3) : null;
-  }
-
-  // Resolve one melee attack roll. A natural 1 always misses and a natural 6
-  // always hits unless the attack is explicitly impossible (not the case here).
-  function meleeHitRolls(count, need) {
-    const rolls = roll(count);
-    return { rolls, passes: rolls.map(value => value !== 1 && (value === 6 || value >= need)) };
-  }
-
-  // BS uses a target number of 7-BS on the die, with cumulative modifiers
-  // applied to the roll. 7+ needs a 6 followed by 4+, 8+ by 5+, 9+ by 6+;
-  // 10+ is impossible. A natural 1 always misses.
-  function shootingHitRolls(count, bs, modifiers) {
-    const baseNeed = 7 - bs;
-    const modifiedNeed = baseNeed - modifiers;
-    const firstRolls = roll(count);
-    const passes = [];
-    const followUps = [];
-    firstRolls.forEach(value => {
-      if (value === 1) {
-        passes.push(false);
-        followUps.push(null);
-      } else if (modifiedNeed <= 6) {
-        passes.push(value >= modifiedNeed);
-        followUps.push(null);
-      } else if (modifiedNeed >= 10 || value !== 6) {
-        passes.push(false);
-        followUps.push(null);
-      } else {
-        const followNeed = modifiedNeed - 3;
-        const follow = roll(1)[0];
-        followUps.push(follow);
-        passes.push(follow >= followNeed);
-      }
-    });
-    return { rolls: firstRolls, passes, followUps, baseNeed, modifiedNeed };
-  }
-
-  function applyDamage(u, wounds, shooting) {
-    const before = u.models, total = (u.damage || 0) + wounds;
-    const killed = Math.floor(total / u.stats.W);
-    u.models = Math.max(0, u.models - killed);
-    u.damage = u.models ? total % u.stats.W : 0;
-    if (shooting) u.shootCasualties += before - u.models;
-    return before - u.models;
-  }
-
-  // Champions replace one rank-and-file model and retain their own attack profile.
-  function modelPools(u, mode) {
-    const hasChampion = !!(u.champion && u.champion.enabled && u.models > 0);
-    const normalModels = Math.max(0, u.models - (hasChampion ? 1 : 0));
-    const frontRank = Math.min(Math.max(1,Math.floor(u.formationWidth||5)),u.models);
-    const normalCount = mode === "melee" ? Math.max(0,Math.min(frontRank-(hasChampion?1:0),normalModels)) : normalModels;
-    const profiles = [];
-    const add = (count, stats, label) => {
-      if (!count) return;
-      const key = mode === "melee"
-        ? [stats.WS, stats.S, stats.A].join("/")
-        : [stats.BS, stats.S].join("/");
-      let pool = profiles.find(p => p.key === key);
-      if (!pool) {
-        pool = { key, stats, count: 0, labels: [] };
-        profiles.push(pool);
-      }
-      pool.count += count;
-      if (!pool.labels.includes(label)) pool.labels.push(label);
-    };
-    add(normalCount, { ...u.stats }, "Rank and file");
-    if (hasChampion) {
-      const overrides = u.champion.stats || {};
-      const championStats = { ...u.stats, ...overrides };
-      if (mode === "melee" && overrides.A == null) championStats.A = 2;
-      if (mode === "shooting" && overrides.BS == null) championStats.BS = u.stats.BS + 1;
-      add(1, championStats, "Champion");
+  function applyDamage(u,wounds,shooting,cascadePlan=null) {
+    const before=u.models;
+    if(cascadePlan) {
+      u.models=Math.max(0,u.models-(cascadePlan.rankFileLost||0));
+      u.damage=cascadePlan.rankFileDamage||0;
+      if(cascadePlan.championKilled&&u.championAlive!==false){u.championAlive=false;u.championWounds=0;u.models=Math.max(0,u.models-1);}
+      for(const item of cascadePlan.characterDamage||[]){if(item.hero){item.hero.characterWounds=Math.max(0,item.remaining);if(item.hero.characterWounds<=0)item.hero.models=0;}}
+      if(shooting)u.shootCasualties+=(before-u.models);
+      return before-u.models;
     }
+    const total=(u.damage||0)+wounds,killed=Math.floor(total/Math.max(1,u.stats.W));
+    u.models=Math.max(0,u.models-killed);u.damage=u.models?total%Math.max(1,u.stats.W):0;
+    if(shooting)u.shootCasualties+=before-u.models;
+    return before-u.models;
+  }
+  function modelPools(u,mode) {
+    const hasChampion=!!(u.champion&&u.champion.enabled&&u.championAlive!==false&&u.models>0);
+    const normalModels=Math.max(0,u.models-(hasChampion?1:0));
+    const frontRank=Math.min(Math.max(1,Math.floor(u.formationWidth||5)),u.models);
+    const normalCount=mode==="melee"?Math.max(0,Math.min(frontRank-(hasChampion?1:0),normalModels)):normalModels;
+    const profiles=[];
+    const add=(count,stats,label)=>{if(!count)return;const key=mode==="melee"?[stats.WS,stats.S,stats.A].join("/"):[stats.BS,stats.S].join("/");let pool=profiles.find(p=>p.key===key);if(!pool){pool={key,stats,count:0,labels:[]};profiles.push(pool);}pool.count+=count;if(!pool.labels.includes(label))pool.labels.push(label);};
+    add(normalCount,{...u.stats},"Rank and file");
+    if(hasChampion){const overrides=u.champion.stats||{},s={...u.stats,...overrides};if(mode==="melee"&&overrides.A==null)s.A=2;if(mode==="shooting"&&overrides.BS==null)s.BS=u.stats.BS+1;add(1,s,"Champion");}
     return profiles;
   }
-
-  function resolveWounds(hits, strength, target) {
-    const woundNeed = woundTarget(strength, target.stats.T);
-    if (woundNeed === null) {
-      return { woundNeed: null, woundRolls: [], woundsBeforeSave: 0 };
+  function newVirtual(target) {
+    const championAlive=!!(target.champion?.enabled&&target.championAlive!==false&&target.models>0);
+    const heroRefs=Object.fromEntries(units().map(h=>[h.id,h]));
+    const characters={};
+    (target.attachedCharacters||[]).forEach(id=>{const h=heroRefs[id];if(h&&h.models>0)characters[id]=h.characterWounds??h.stats.W;});
+    if(target.isCharacter)characters[target.id]=target.characterWounds??target.stats.W;
+    return {rankFiles:target.isCharacter?0:Math.max(0,target.models-(championAlive?1:0)),rankFileDamage:target.damage||0,championAlive,championWounds:target.championWounds??target.champion?.stats?.W??target.stats.W,characters,heroRefs,rankFileLost:0,championKilled:false,characterDamage:[]};
+  }
+  function targetTiers(target,v) {
+    if(target.isCharacter)return [{kind:"character",id:target.id,hero:target,label:target.name,stats:target.stats,remaining:v.characters[target.id]??0,armour:target.armour,shield:target.shield,wardSave:target.wardSave}];
+    const tiers=[];
+    if(v.rankFiles>0)tiers.push({kind:"rankFile",label:"Rank and file",stats:target.stats,remaining:v.rankFiles,armour:target.armour,shield:target.shield,wardSave:target.wardSave});
+    if(v.championAlive)tiers.push({kind:"champion",label:"Champion",stats:{...target.stats,...(target.champion?.stats||{})},remaining:v.championWounds,armour:target.armour,shield:target.shield,wardSave:target.wardSave});
+    for(const id of (target.attachedCharacters||[])){const hero=v.heroRefs[id];if(hero&&hero.models>0&&v.characters[id]>0)tiers.push({kind:"character",id,hero,label:hero.name,stats:hero.stats,remaining:v.characters[id],armour:hero.armour,shield:hero.shield,wardSave:hero.wardSave});}
+    return tiers;
+  }
+  function rollPool(attackerPool,target,mode,context,v) {
+    const attackCount=attackerPool.count*(mode==="melee"?attackerPool.stats.A:1),groups=new Map();
+    const groupFor=tier=>{const key=tier.kind+":"+tier.id;let g=groups.get(key);if(!g){g={label:attackerPool.labels.join(" / "),targetLabel:tier.label,attacks:0,hitNeed:7,hitRolls:[],hitPasses:[],hitFollowUps:[],hitFollowUpPasses:[],hits:0,woundNeed:null,woundRolls:[],woundsBeforeSave:0,saveNeed:null,saveRolls:[],saved:0,wardNeed:null,wardRolls:[],wardSaved:0,wounds:0,WS:attackerPool.stats.WS,S:attackerPool.stats.S,A:attackerPool.stats.A,BS:attackerPool.stats.BS};groups.set(key,g);}return g;};
+    for(let i=0;i<attackCount;i++){
+      const tiers=targetTiers(target,v);if(!tiers.length)break;
+      const tier=tiers[0],g=groupFor(tier);g.attacks++;
+      let hitNeed;
+      if(mode==="melee")hitNeed=hitTarget(attackerPool.stats.WS,tier.stats.WS);
+      else {const mods=(context.longRange?-1:0)+(context.moved?-1:0)+(context.standShoot?-1:0)+(context.targetCharging?-1:0)+((context.singleCharacter||context.skirmisher)?-1:0)+(context.cover==="soft"?-1:context.cover==="hard"?-2:0)+(context.largeTarget?1:0);hitNeed=7-attackerPool.stats.BS-mods;}
+      g.hitNeed=hitNeed;const hit=roll(1)[0];g.hitRolls.push(hit);
+      let hitPass=false,follow=null;
+      if(mode==="melee")hitPass=hit!==1&&(hit===6||hit>=hitNeed);
+      else if(hit!==1){if(hitNeed<=6)hitPass=hit>=hitNeed;else if(hitNeed<10&&hit===6){follow=roll(1)[0];hitPass=follow>=hitNeed-3;}}
+      if(follow!==null){g.hitFollowUps.push(follow);g.hitFollowUpPasses.push(hitPass);}
+      g.hitPasses.push(hitPass);if(!hitPass)continue;g.hits++;
+      const woundNeed=woundTarget(attackerPool.stats.S,tier.stats.T);g.woundNeed=woundNeed;if(woundNeed===null)continue;
+      const wr=roll(1)[0];g.woundRolls.push(wr);if(wr<woundNeed)continue;g.woundsBeforeSave++;
+      const saveNeed=saveTarget(tier,attackerPool.stats.S);g.saveNeed=saveNeed;let saved=false;
+      if(saveNeed!==null&&saveNeed<=6){const sr=roll(1)[0];g.saveRolls.push(sr);saved=sr!==1&&sr>=saveNeed;}
+      if(!saved&&tier.wardSave){const wn=parseInt(tier.wardSave,10);g.wardNeed=wn;if(Number.isFinite(wn)){const wrd=roll(1)[0];g.wardRolls.push(wrd);if(wrd!==1&&wrd>=wn){g.wardSaved++;saved=true;}}}
+      if(saved){g.saved++;continue;}g.wounds++;
+      if(tier.kind==="rankFile"){v.rankFileDamage++;if(v.rankFileDamage>=Math.max(1,tier.stats.W)){v.rankFileDamage=0;v.rankFiles--;v.rankFileLost++;}}
+      else if(tier.kind==="champion"){v.championWounds--;if(v.championWounds<=0){v.championAlive=false;v.championKilled=true;}}
+      else {v.characters[tier.id]--;const old=v.characterDamage.find(x=>x.id===tier.id);if(old){old.remaining=v.characters[tier.id];old.wounds++;}else v.characterDamage.push({id:tier.id,hero:tier.hero,remaining:v.characters[tier.id],wounds:1});}
     }
-    const woundRolls = roll(hits);
-    return { woundNeed, woundRolls, woundsBeforeSave: woundRolls.filter(value => value >= woundNeed).length };
+    return [...groups.values()];
   }
-
-  function resolveSaves(woundsBeforeSave, target, strength) {
-    const saveNeed = saveTarget(target, strength);
-    if (saveNeed === null || saveNeed > 6) {
-      return { saveNeed, saveRolls: [], saved: 0 };
-    }
-    const saveRolls = roll(woundsBeforeSave);
-    return { saveNeed, saveRolls, saved: saveRolls.filter(value => value !== 1 && value >= saveNeed).length };
+  function attack(u,target,mode,context={}) {
+    const v=newVirtual(target),pools=[];
+    for(const attackerPool of modelPools(u,mode))pools.push(...rollPool(attackerPool,target,mode,context,v));
+    const sum=k=>pools.reduce((n,p)=>n+(p[k]||0),0);
+    return {attacks:sum("attacks"),hitNeed:pools[0]?.hitNeed??7,hitRolls:pools.flatMap(p=>p.hitRolls),hitPasses:pools.flatMap(p=>p.hitPasses),hitFollowUps:pools.flatMap(p=>p.hitFollowUps),hitFollowUpPasses:pools.flatMap(p=>p.hitFollowUpPasses),hits:sum("hits"),woundNeed:pools[0]?.woundNeed??null,woundRolls:pools.flatMap(p=>p.woundRolls),woundsBeforeSave:sum("woundsBeforeSave"),saveNeed:pools.every(p=>p.saveNeed==null)?null:pools[0]?.saveNeed,saveRolls:pools.flatMap(p=>p.saveRolls),saved:sum("saved"),wardSaved:sum("wardSaved"),wounds:sum("wounds"),pools,cascadePlan:{rankFileLost:v.rankFileLost,rankFileDamage:v.rankFileDamage,championKilled:v.championKilled,characterDamage:v.characterDamage}};
   }
-
-  function meleeAttack(u, target) {
-    const pools = modelPools(u, "melee").map(pool => {
-      const s = pool.stats.S, attacks = pool.count * pool.stats.A;
-      const hitNeed = hitTarget(pool.stats.WS, target.stats.WS);
-      const hit = meleeHitRolls(attacks, hitNeed);
-      const hits = hit.passes.filter(Boolean).length;
-      const wound = resolveWounds(hits, s, target);
-      const save = resolveSaves(wound.woundsBeforeSave, target, s);
-      return { label: pool.labels.join(" / "), attacks, hitNeed, hitRolls: hit.rolls, hitPasses: hit.passes,
-        hitFollowUps: [], hitFollowUpPasses: [], hits, woundNeed: wound.woundNeed,
-        woundRolls: wound.woundRolls, woundsBeforeSave: wound.woundsBeforeSave, saveNeed: save.saveNeed,
-        saveRolls: save.saveRolls, saved: save.saved, wounds: Math.max(0, wound.woundsBeforeSave - save.saved),
-        WS: pool.stats.WS, S: pool.stats.S, A: pool.stats.A };
-    });
-    const sum = key => pools.reduce((total, pool) => total + pool[key], 0);
-    return {
-      attacks: sum("attacks"), hitNeed: pools[0]?.hitNeed ?? 7,
-      hitRolls: pools.flatMap(pool => pool.hitRolls), hitPasses: pools.flatMap(pool => pool.hitPasses),
-      hits: sum("hits"), woundNeed: pools[0]?.woundNeed ?? null,
-      woundRolls: pools.flatMap(pool => pool.woundRolls), woundsBeforeSave: sum("woundsBeforeSave"),
-      saveNeed: pools.every(pool => pool.saveNeed === null) ? null : pools[0]?.saveNeed,
-      saveRolls: pools.flatMap(pool => pool.saveRolls), saved: sum("saved"), wounds: sum("wounds"), pools
-    };
-  }
-
-  function shootingAttack(u, target, context = {}) {
-    const pools = modelPools(u, "shooting").map(pool => {
-      const bs = pool.stats.BS, strength = pool.stats.S;
-      const modifiers = (context.longRange ? -1 : 0) + (context.moved ? -1 : 0) +
-        (context.standShoot ? -1 : 0) + (context.targetCharging ? -1 : 0) +
-        (context.singleCharacter || context.skirmisher ? -1 : 0) +
-        (context.cover === "soft" ? -1 : context.cover === "hard" ? -2 : 0) +
-        (context.largeTarget ? 1 : 0);
-      const hit = shootingHitRolls(pool.count, bs, modifiers);
-      const hits = hit.passes.filter(Boolean).length;
-      const wound = resolveWounds(hits, strength, target);
-      const save = resolveSaves(wound.woundsBeforeSave, target, strength);
-      return { label: pool.labels.join(" / "), attacks: pool.count, hitNeed: hit.modifiedNeed,
-        hitBaseNeed: hit.baseNeed, hitModifier: modifiers, hitRolls: hit.rolls, hitPasses: hit.passes,
-        hitFollowUps: hit.followUps, hitFollowUpPasses: hit.followUps.map((value, i) =>
-          value === null ? null : hit.passes[i]), hits, woundNeed: wound.woundNeed,
-        woundRolls: wound.woundRolls, woundsBeforeSave: wound.woundsBeforeSave, saveNeed: save.saveNeed,
-        saveRolls: save.saveRolls, saved: save.saved, wounds: Math.max(0, wound.woundsBeforeSave - save.saved),
-        BS: bs, S: strength };
-    });
-    const sum = key => pools.reduce((total, pool) => total + pool[key], 0);
-    return {
-      attacks: sum("attacks"), hitNeed: pools[0]?.hitNeed ?? 7,
-      hitRolls: pools.flatMap(pool => pool.hitRolls), hitPasses: pools.flatMap(pool => pool.hitPasses),
-      hitFollowUps: pools.flatMap(pool => pool.hitFollowUps), hits: sum("hits"),
-      woundNeed: pools[0]?.woundNeed ?? null, woundRolls: pools.flatMap(pool => pool.woundRolls),
-      woundsBeforeSave: sum("woundsBeforeSave"),
-      saveNeed: pools.every(pool => pool.saveNeed === null) ? null : pools[0]?.saveNeed,
-      saveRolls: pools.flatMap(pool => pool.saveRolls), saved: sum("saved"), wounds: sum("wounds"), pools
-    };
-  }
-
-  return { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage, meleeAttack, shootingAttack };
+  function meleeAttack(u,target,context={}) { return attack(u,target,"melee",context); }
+  function shootingAttack(u,target,context={}) { return attack(u,target,"shooting",context); }
+  return {rankBonus,hitTarget,woundTarget,saveTarget,applyDamage,meleeAttack,shootingAttack};
 }
