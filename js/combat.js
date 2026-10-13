@@ -17,16 +17,9 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
   }
   function combatantAlive(u) { return !!u && u.models > 0 && !u.fled; }
   function captureFighter(u) {
-    return { models:u.models, damage:u.damage||0, championAlive:u.championAlive, championWounds:u.championWounds, characterWounds:u.characterWounds };
-  }
-  function restoreForLastAttack(u, snapshot) {
-    // A regiment is represented as one attack packet in this prototype. If wiped
-    // before its packet, let one surviving-at-the-moment-of-death fighter strike.
-    u.models = u.isCharacter ? Math.max(1, snapshot.models) : 1;
-    u.damage = snapshot.damage;
-    if (snapshot.championAlive !== undefined) u.championAlive = snapshot.championAlive;
-    if (snapshot.championWounds !== undefined) u.championWounds = snapshot.championWounds;
-    if (snapshot.characterWounds !== undefined) u.characterWounds = snapshot.characterWounds;
+    const champion = !!(u.champion?.enabled && u.championAlive !== false && u.models > 0);
+    const eligibleModels = u.isCharacter ? 1 : Math.min(Math.max(1,Math.floor(u.formationWidth||5)),u.models);
+    return { models:u.models, damage:u.damage||0, championAlive:u.championAlive, championWounds:u.championWounds, characterWounds:u.characterWounds, eligibleModels, eligibleChampion:champion };
   }
   function resolveCombat(){
     const groups=groupsOfCombat();
@@ -38,7 +31,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const startRanks=new Map(group.map(u=>[u.id,rankBonus(u)]));
       const wounds=new Map(group.map(u=>[u.id,0]));
       const attachedCombatants=group.flatMap(host=>(host.attachedCharacters||[]).map(id=>({u:S.units[id],host})).filter(x=>x.u&&alive(x.u)&&!x.u.fled));
-      const effectiveI=(u,host=u)=>u.stats.I+((host.charged)?10:0);
+      const effectiveI=(u,host=u)=>u.stats.I-(u.isCharacter&&u.weapon==="greatWeapon"?10:0)+((host.charged)?10:0);
       const levels=[...new Set([...group.map(u=>effectiveI(u,u)),...attachedCombatants.map(x=>effectiveI(x.u,x.host))])].sort((a,b)=>b-a);
       levels.forEach(initiative=>{
         const attackers=[];
@@ -52,9 +45,9 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
         const pending = new Map(attackers.map(({u})=>[u.id,{snapshot:captureFighter(u),attacked:false}]));
         attackers.forEach(({u,host})=>{
           const entitlement=pending.get(u.id);
-          if(!entitlement||entitlement.attacked||u.fled||!alive(host)||!combatantAlive(u)&&!u.delayedDeath)return;
-          if(u.delayedDeath)restoreForLastAttack(u,u.delayedDeathSnapshot||entitlement.snapshot);
-          if(!combatantAlive(u)){u.delayedDeath=false;return;}
+          if(!entitlement||entitlement.attacked||u.fled||(!alive(host)&&!u.delayedDeath)||(!combatantAlive(u)&&!u.delayedDeath))return;
+          const strikeState=u.delayedDeath?(u.delayedDeathSnapshot||entitlement.snapshot):entitlement.snapshot;
+          if(!combatantAlive(u)&&!u.delayedDeath)return;
           const targets=linked(host).filter(v=>alive(v)&&!v.fled&&!v.delayedDeath);
           if(!targets.length){
             if(u.delayedDeath){u.models=0;u.characterWounds=0;u.delayedDeath=false;u.delayedDeathSnapshot=null;}
@@ -62,7 +55,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           }
           const target=targets.sort((a,b)=>dist(host,a)-dist(host,b))[0];
           const before=new Map(attackers.filter(a=>!pending.get(a.u.id)?.attacked).map(a=>[a.u.id,{u:a.u,wasAlive:combatantAlive(a.u),snapshot:captureFighter(a.u)}]));
-          const result=meleeAttack(u,target);
+          const result=meleeAttack(u,target,{attackingModels:strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion});
           say('<b>Melee dice — '+u.name+' attacks '+target.name+'</b>'+diceStack(u,result));
           wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
           applyDamage(target,result.wounds,false,result.cascadePlan);
@@ -71,7 +64,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
             if(wasAlive&&!combatantAlive(potential)&&pending.has(potential.id)&&!pending.get(potential.id).attacked){
               potential.delayedDeath=true;
               potential.delayedDeathSnapshot=snapshot;
-              say(potential.name+' suffers a fatal wound, but will strike before dying at Initiative '+initiative+'.');
+              say(potential.name+' suffers a fatal wound; '+(potential.isCharacter?'they':'up to '+snapshot.eligibleModels+' front-rank fighters')+' will strike before dying at Initiative '+initiative+'.');
             }
           });
           if(u.delayedDeath){u.models=0;u.damage=0;u.characterWounds=0;u.championAlive=false;u.delayedDeath=false;u.delayedDeathSnapshot=null;say(u.name+' succumbs after making its attack.');}
