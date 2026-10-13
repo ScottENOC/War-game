@@ -5,7 +5,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(result.moved)extras.push(result.elvenArchery?"moved (Elven Archery applies)":"moved (−1)");
     if(result.standShoot)extras.push("stand & shoot (−1)");
     if(result.targetCharging)extras.push("target charging (−1)");
-    if(result.overUnitPenalty)extras.push("firing over friendly unit (−"+result.overUnitPenalty+")");
+    if(result.overUnitPenalty)extras.push("firing over intervening unit(s) (−"+result.overUnitPenalty+")");
     if(result.hitModifier)extras.push("hit modifier "+(result.hitModifier>0?"+":"")+result.hitModifier);
     const extra=kind==="shoot"&&extras.length?" · "+extras.join(", "):"";
     const distText=Number.isFinite(result.distance)?" · "+result.distance.toFixed(1)+'"':"";
@@ -72,7 +72,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
           const poly=block.u._losPolygon;
           if(!poly)continue;
           if(lineCrossesUnit(shooter,aim,block.u)){
-            if(block.u.side!==u.side||!Number.isFinite(u.overUnitPenalty)){blocked=true;break;}
+            if(block.u.side===u.side&&u.rangedWeapon==="firearm"){blocked=true;break;}
             over++;
           }
         }
@@ -85,20 +85,20 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
   }
   function shoot(u,target,standShoot) {
     const host=u.attachedTo?S.units[u.attachedTo]:null;
-    if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged||target.engaged)return false;
+    if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged)return false;
     const distance=dist(u,target),range=u.range||BOW_RANGE;
-    if(distance>range||(standShoot&&distance<=4))return false;
+    if(distance>range){say(u.name+" cannot shoot "+target.name+": out of range ("+distance.toFixed(1)+"″; maximum "+range+"″).");return false;}if(standShoot&&distance<=4){say("Stand and Shoot is unavailable at 4″ or closer.");return false;}
     // Build the actual rectangular unit footprints used for obstruction checks.
     const all=units().filter(v=>!v.attachedTo&&alive(v)&&v.deployed!==false);
     for(const v of all)v._losPolygon=unitFootprint(v);
     const rankLimit=Math.max(1,u.ranksToShoot||1);
     const visibility=getShotVisibility(u,target,rankLimit);
     all.forEach(v=>{delete v._losPolygon;delete v._losCorners;});
-    if(!visibility.visibleModels){say(u.name+" cannot shoot "+target.name+": no eligible models have line of sight.");return false;}
+    if(!visibility.visibleModels){say(u.name+" cannot shoot "+target.name+": no eligible models have line of sight; the target may be behind an intervening unit or obstacle.");return false;}
     const context={
       longRange:distance>range/2,moved:!!u.moved,elvenArchery:!!u.elvenArchery,standShoot,distance,
       targetCharging:!!target.charged,largeTarget:!!target.largeTarget,
-      singleCharacter:!!target.isCharacter||!!target.singleCharacter||(target.models<=0&&(target.attachedCharacters||[]).some(id=>S.units[id]&&S.units[id].models>0)),
+      singleCharacter:!!target.isCharacter||!!target.singleCharacter||target.models===1,
       skirmisher:!!target.skirmisher,cover:target.cover==="soft"||target.cover==="hard"?target.cover:null,
       overUnitPenalty:visibility.overUnitPenalty,longRangePenalty:u.rangedWeapon==="firearm"?2:1,
       armourPiercing:u.armourPiercing||0,attackingModels:visibility.visibleModels,attackingChampion:visibility.visibleChampion
