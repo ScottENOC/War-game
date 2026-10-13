@@ -44,7 +44,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
  const modelLabel=m=>(m.faction==="empire"?"Empire ":"High Elf ")+title(m.type)+" · "+title(m.weapon)+(m.shield?" + Shield":"")+(m.mounted?" · Mounted":"");
  const canUseBit=(m,id)=>{
    const b=bitDefs.find(x=>x.id===id);if(!b)return false;
-   if(b.kind==="shield")return !m.shield;
+   if(b.kind==="shield")return !m.shield&&!["greatWeapon","halberd","bow"].includes(m.weapon);
    if(b.kind==="mount")return (m.type==="captain"||m.type==="lord"||m.type==="cavalry")&&!m.mounted&&m.weapon!=="halberd";
    if(b.kind==="right")return m.weapon==="none"&&m.type!=="archers"&&m.type!=="swordsmen";
    if(b.kind==="twohand")return m.weapon==="none"&&(b.weapon!=="halberd"||!m.mounted);
