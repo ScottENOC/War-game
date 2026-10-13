@@ -22,6 +22,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     return { models:u.models, damage:u.damage||0, championAlive:u.championAlive, championWounds:u.championWounds, characterWounds:u.characterWounds, eligibleModels, eligibleChampion:champion };
   }
   function resolveCombat(){
+    S.combatResolved=false;
     const groups=groupsOfCombat();
     if(!groups.length){say("No units are in melee.");endTurn();return;}
     S.combatRound++;
@@ -93,7 +94,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     if(units().filter(alive).filter(u=>u.side==="player").length===0){finishBattle("Opponent wins the battle!");return;}
     if(units().filter(alive).filter(u=>u.side==="ai").length===0){finishBattle("Player wins the battle!");return;}
     if(tests.length){S.breakTests=tests.sort((a,b)=>b.diff-a.diff);nextBreakTest();}
-    else{say("Combat drawn; engaged units hold.");reformCombatPairs?.();endTurn();}
+    else{say("Combat drawn; engaged units hold.");reformCombatPairs?.();S.combatResolved=true;render();}
   }
   function nextBreakTest(){while(S.breakTests&&S.breakTests.length){const next=S.breakTests.shift();if(alive(next.loser)&&next.loser.engaged){S.loser=next.loser;S.crDiff=next.diff;S.phase="break";render();return true;}}S.loser=null;return false;}
   function resolveBreak(){
@@ -113,7 +114,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     if(units().filter(alive).every(v=>v.fled)||units().filter(v=>v.side==="player"&&alive(v)).length===0||units().filter(v=>v.side==="ai"&&alive(v)).length===0){finishBattle(units().some(v=>v.side==="player"&&alive(v)&&!v.fled)?"Player wins the battle!":"Opponent wins the battle!");return;}
     if(nextBreakTest())return;
     if(holds)reformCombatPairs?.();
-    endTurn();
+    S.phase="combat";S.combatResolved=true;render();
   }
   return { resolveCombat, resolveBreak };
 }
