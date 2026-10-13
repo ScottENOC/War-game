@@ -61,7 +61,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     // Unit footprints are oriented rectangles, computed from the same formation geometry used by movement.
     blockers.forEach(v=>{v._losPolygon=unitFootprint(v);});
     const candidates=blockers.map(v=>({u:v}));
-    const visible=[];
+    const visible=[],friendlyBlockers=new Set();
     let anyOver=false,visibleChampion=false;
     for(const shooter of shooters){
       let best=null;
@@ -72,7 +72,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
           const poly=block.u._losPolygon;
           if(!poly)continue;
           if(lineCrossesUnit(shooter,aim,block.u)){
-            if(block.u.side===u.side&&u.rangedWeapon==="firearm"){blocked=true;break;}
+            if(block.u.side===u.side){friendlyBlockers.add(block.u);if(u.rangedWeapon==="firearm"){blocked=true;break;}}
             over++;
           }
         }
@@ -81,7 +81,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       }
       if(best){visible.push(shooter);if(shooter.champion)visibleChampion=true;if(best.over>0)anyOver=true;}
     }
-    return {visibleModels:visible.length,visibleChampion,overUnitPenalty:anyOver?(u.overUnitPenalty||0):0};
+    return {visibleModels:visible.length,visibleChampion,overUnitPenalty:anyOver?(u.overUnitPenalty||0):0,friendlyBlockers:[...friendlyBlockers]};
   }
   function shoot(u,target,standShoot) {
     const host=u.attachedTo?S.units[u.attachedTo]:null;
