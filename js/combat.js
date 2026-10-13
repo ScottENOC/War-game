@@ -1,9 +1,90 @@
 export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render, endTurn, finishBattle, reformCombatPairs, pursueAfterBreak, panicNearby }) {
-  function resolveCombat(){const pairs=[];units().filter(u=>u.engaged&&alive(u)).forEach(u=>{const target=u.engagedWith?S.units[u.engagedWith]:units().find(v=>v.engaged&&v.side!==u.side&&alive(v)&&dist(u,v)<4);if(target&&alive(target)&&!pairs.some(p=>p.includes(u)||p.includes(target)))pairs.push([u,target]);});if(!pairs.length){say("No units are in melee.");endTurn();return;}S.combatRound++;let tests=[];
- pairs.forEach(pair=>{let p=pair[0],a=pair[1];if(p.side==="ai"){const tmp=p;p=a;a=tmp;}const pStartModels=p.models,aStartModels=a.models,pStartRank=rankBonus(p),aStartRank=rankBonus(a);const pInitiative=p.stats.I+(p.charged&&!a.charged?10:0),aInitiative=a.stats.I+(a.charged&&!p.charged?10:0);let pFirst=pInitiative>aInitiative,aFirst=aInitiative>pInitiative;if(pInitiative===aInitiative){let pd=roll(1)[0],ad=roll(1)[0];while(pd===ad){pd=roll(1)[0];ad=roll(1)[0];}pFirst=pd>ad;aFirst=ad>pd;say('Initiative tie ('+pInitiative+'): '+p.name+' rolls '+pd+', '+a.name+' rolls '+ad+'. '+(pFirst?p.name:a.name)+' strikes first.');}let pr=null,ar=null;if(pFirst){pr=meleeAttack(p,a);applyDamage(a,pr.wounds,false);if(alive(a)){ar=meleeAttack(a,p);applyDamage(p,ar.wounds,false);}}else if(aFirst){ar=meleeAttack(a,p);applyDamage(p,ar.wounds,false);if(alive(p)){pr=meleeAttack(p,a);applyDamage(a,pr.wounds,false);}}else{pr=meleeAttack(p,a);ar=meleeAttack(a,p);applyDamage(a,pr.wounds,false);applyDamage(p,ar.wounds,false);}
- if(!pFirst&&!aFirst&&pr&&ar)say('<b>Simultaneous melee dice</b><div class="dice-duel"><div class="dice-side"><h3>'+p.name+' attacks '+a.name+'</h3>'+diceStack(p,pr)+'</div><div class="dice-side"><h3>'+a.name+' attacks '+p.name+'</h3>'+diceStack(a,ar)+'</div></div>');else{if(pr)say('<b>Melee dice — '+p.name+' attacks '+a.name+'</b>'+diceStack(p,pr));if(ar)say('<b>Melee dice — '+a.name+' attacks '+p.name+'</b>'+diceStack(a,ar));}if(!alive(p)||!alive(a))return;const crP=pr?pr.wounds:0,crA=ar?ar.wounds:0,pRank=(['left','right','rear'].includes(p.attackedFromSide)&&p.flankedBy===a.id&&aStartModels>=5)?0:pStartRank,aRank=(['left','right','rear'].includes(a.attackedFromSide)&&a.flankedBy===p.id&&pStartModels>=5)?0:aStartRank,pFlank=p.models>=5?(p.chargedSide==='rear'?2:['left','right'].includes(p.chargedSide)?1:0):0,aFlank=a.models>=5?(a.chargedSide==='rear'?2:['left','right'].includes(a.chargedSide)?1:0):0,pOut=p.models>a.models?1:0,aOut=a.models>p.models?1:0,scoreP=crP+pRank+pFlank+pOut,scoreA=crA+aRank+aFlank+aOut,diff=scoreP-scoreA;say('Combat resolution: '+p.name+' '+scoreP+' (wounds '+crP+' + ranks '+pRank+' + flank/rear '+pFlank+' + outnumber '+pOut+') vs '+a.name+' '+scoreA+' (wounds '+crA+' + ranks '+aRank+' + flank/rear '+aFlank+' + outnumber '+aOut+').');if(diff!==0)tests.push({loser:diff>0?a:p,diff:Math.abs(diff)});});
- if(units().filter(alive).filter(u=>u.side==="player").length===0){finishBattle("Opponent wins the battle!");return;}if(units().filter(alive).filter(u=>u.side==="ai").length===0){finishBattle("Player wins the battle!");return;}if(tests.length){S.breakTests=tests.sort((a,b)=>b.diff-a.diff);nextBreakTest();}else{say("Combat drawn; engaged units hold.");reformCombatPairs?.();endTurn();}}
-function nextBreakTest(){while(S.breakTests&&S.breakTests.length){const next=S.breakTests.shift();if(alive(next.loser)&&next.loser.engaged){S.loser=next.loser;S.crDiff=next.diff;S.phase="break";render();return true;}}S.loser=null;return false;}
-function resolveBreak(){const u=S.loser;if(!u||!alive(u)){endTurn();return;}const dice=roll(2),total=dice[0]+dice[1],snakeEyes= dice[0]===1&&dice[1]===1,needed=u.stats.Ld-S.crDiff;const holds=snakeEyes||total+S.crDiff<=u.stats.Ld;say('<b>Break test — '+u.name+'</b>: 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; Leadership '+u.stats.Ld+' − combat result '+S.crDiff+' (modified total '+(total+S.crDiff)+').');if(snakeEyes)say('Snake eyes! A double 1 always holds, regardless of the combat result.');if(!holds){const pursuer=units().find(v=>v.engagedWith===u.id&&alive(v)&&!v.fled);u.fled=true;u.engaged=false;say(u.name+' fails its break test and flees.');if(pursuer)pursueAfterBreak?.(pursuer,u);else panicNearby?.(u,"a friendly unit flees from combat");}else say(u.name+' holds.');if(units().filter(alive).every(v=>v.fled)||units().filter(v=>v.side==="player"&&alive(v)).length===0||units().filter(v=>v.side==="ai"&&alive(v)).length===0){finishBattle(units().some(v=>v.side==="player"&&alive(v)&&!v.fled)?"Player wins the battle!":"Opponent wins the battle!");return;}if(nextBreakTest())return;if(holds)reformCombatPairs?.();endTurn();}
+  const linked = u => {
+    const ids = Array.isArray(u.engagedWithIds) ? u.engagedWithIds : (u.engagedWith ? [u.engagedWith] : []);
+    return [...new Set(ids)].map(id => S.units[id]).filter(v => v && v !== u && alive(v) && v.engaged && !v.fled);
+  };
+  const addLink = (u,v) => {
+    u.engagedWithIds = [...new Set([...(u.engagedWithIds || (u.engagedWith ? [u.engagedWith] : [])), v.id])];
+    v.engagedWithIds = [...new Set([...(v.engagedWithIds || (v.engagedWith ? [v.engagedWith] : [])), u.id])];
+    u.engagedWith = u.engagedWithIds[0] || null;
+    v.engagedWith = v.engagedWithIds[0] || null;
+    u.engaged = v.engaged = true;
+  };
+  function groupsOfCombat() {
+    const engaged=units().filter(u=>u.engaged&&alive(u)&&!u.fled),seen=new Set(),groups=[];
+    engaged.forEach(start=>{if(seen.has(start.id))return;const group=[],stack=[start];seen.add(start.id);while(stack.length){const u=stack.pop();group.push(u);linked(u).forEach(v=>{if(!seen.has(v.id)){seen.add(v.id);stack.push(v);}});}if(group.some(u=>linked(u).length))groups.push(group);});
+    return groups;
+  }
+  function resolveCombat(){
+    const groups=groupsOfCombat();
+    if(!groups.length){say("No units are in melee.");endTurn();return;}
+    S.combatRound++;
+    const tests=[];
+    groups.forEach(group=>{
+      const startModels=new Map(group.map(u=>[u.id,u.models]));
+      const startRanks=new Map(group.map(u=>[u.id,rankBonus(u)]));
+      const wounds=new Map(group.map(u=>[u.id,0]));
+      const effectiveI=u=>u.stats.I+(u.charged?10:0);
+      const levels=[...new Set(group.map(effectiveI))].sort((a,b)=>b-a);
+      levels.forEach(initiative=>{
+        const attackers=group.filter(u=>alive(u)&&!u.fled&&effectiveI(u)===initiative);
+        const strikes=attackers.map(u=>{
+          const targets=linked(u).filter(v=>alive(v)&&!v.fled);
+          if(!targets.length)return null;
+          // Allocate each unit's attacks to one enemy it is actually engaged with.
+          const target=targets.sort((a,b)=>dist(u,a)-dist(u,b))[0];
+          const result=meleeAttack(u,target);
+          return {u,target,result};
+        }).filter(Boolean);
+        // Units at the same Initiative strike simultaneously: apply damage only after all rolls.
+        strikes.forEach(({u,target,result})=>say('<b>Melee dice — '+u.name+' attacks '+target.name+'</b>'+diceStack(u,result)));
+        strikes.forEach(({u,target,result})=>{wounds.set(u.id,(wounds.get(u.id)||0)+result.wounds);});
+        strikes.forEach(({target,result})=>applyDamage(target,result.wounds,false));
+      });
+      const sideUnits={player:group.filter(u=>u.side==="player"&&alive(u)),ai:group.filter(u=>u.side==="ai"&&alive(u))};
+      if(!sideUnits.player.length||!sideUnits.ai.length)return;
+      const sideScore={player:0,ai:0},detail={player:[],ai:[]};
+      ["player","ai"].forEach(side=>{
+        const own=group.filter(u=>u.side===side),enemy=group.filter(u=>u.side!==side);
+        const woundScore=own.reduce((sum,u)=>sum+(wounds.get(u.id)||0),0);
+        const rankScore=Math.max(0,...own.map(u=>{
+          const suppressed=enemy.some(v=>["left","right","rear"].includes(u.attackedFromSide)&&u.flankedBy===v.id&&(startModels.get(v.id)||0)>=5);
+          return suppressed?0:(startRanks.get(u.id)||0);
+        }));
+        const flankScore=Math.max(0,...own.map(u=>(startModels.get(u.id)||0)>=5?(u.chargedSide==="rear"?2:["left","right"].includes(u.chargedSide)?1:0):0));
+        const ownStrength=own.reduce((sum,u)=>sum+(startModels.get(u.id)||0),0),enemyStrength=enemy.reduce((sum,u)=>sum+(startModels.get(u.id)||0),0);
+        const outnumber=ownStrength>enemyStrength?1:0;
+        sideScore[side]=woundScore+rankScore+flankScore+outnumber;
+        detail[side]=[{label:"wounds",value:woundScore},{label:"best rank bonus",value:rankScore},{label:"flank/rear",value:flankScore},{label:"outnumber",value:outnumber}];
+      });
+      const diff=sideScore.player-sideScore.ai;
+      say("Combat resolution (combined melee): Player "+sideScore.player+" (wounds "+detail.player[0].value+", best ranks "+detail.player[1].value+", flank/rear "+detail.player[2].value+", outnumber "+detail.player[3].value+") vs Opponent "+sideScore.ai+" (wounds "+detail.ai[0].value+", best ranks "+detail.ai[1].value+", flank/rear "+detail.ai[2].value+", outnumber "+detail.ai[3].value+").");
+      if(diff!==0){const losingSide=diff>0?"ai":"player";group.filter(u=>u.side===losingSide&&alive(u)&&linked(u).length).forEach(loser=>tests.push({loser,diff:Math.abs(diff)}));}
+    });
+    if(units().filter(alive).filter(u=>u.side==="player").length===0){finishBattle("Opponent wins the battle!");return;}
+    if(units().filter(alive).filter(u=>u.side==="ai").length===0){finishBattle("Player wins the battle!");return;}
+    if(tests.length){S.breakTests=tests.sort((a,b)=>b.diff-a.diff);nextBreakTest();}
+    else{say("Combat drawn; engaged units hold.");reformCombatPairs?.();endTurn();}
+  }
+  function nextBreakTest(){while(S.breakTests&&S.breakTests.length){const next=S.breakTests.shift();if(alive(next.loser)&&next.loser.engaged){S.loser=next.loser;S.crDiff=next.diff;S.phase="break";render();return true;}}S.loser=null;return false;}
+  function resolveBreak(){
+    const u=S.loser;if(!u||!alive(u)){endTurn();return;}
+    const dice=roll(2),total=dice[0]+dice[1],snakeEyes=dice[0]===1&&dice[1]===1;
+    const holds=snakeEyes||total+S.crDiff<=u.stats.Ld;
+    say('<b>Break test — '+u.name+'</b>: 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; Leadership '+u.stats.Ld+' − combat result '+S.crDiff+' (modified total '+(total+S.crDiff)+').');
+    if(snakeEyes)say('Snake eyes! A double 1 always holds, regardless of the combat result.');
+    if(!holds){
+      const pursuer=linked(u).find(v=>alive(v)&&!v.fled);
+      u.fled=true;u.engaged=false;
+      say(u.name+' fails its break test and flees.');
+      if(pursuer)pursueAfterBreak?.(pursuer,u);else panicNearby?.(u,"a friendly unit flees from combat");
+      (u.engagedWithIds||[]).forEach(id=>{const v=S.units[id];if(v){v.engagedWithIds=(v.engagedWithIds||[]).filter(x=>x!==u.id);v.engagedWith= v.engagedWithIds[0]||null;if(!v.engagedWithIds.length)v.engaged=false;}});
+      u.engagedWithIds=[];u.engagedWith=null;
+    }else say(u.name+' holds.');
+    if(units().filter(alive).every(v=>v.fled)||units().filter(v=>v.side==="player"&&alive(v)).length===0||units().filter(v=>v.side==="ai"&&alive(v)).length===0){finishBattle(units().some(v=>v.side==="player"&&alive(v)&&!v.fled)?"Player wins the battle!":"Opponent wins the battle!");return;}
+    if(nextBreakTest())return;
+    if(holds)reformCombatPairs?.();
+    endTurn();
+  }
   return { resolveCombat, resolveBreak };
 }
