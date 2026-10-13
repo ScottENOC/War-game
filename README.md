@@ -44,3 +44,11 @@ The browser entry point is `index.html`, which loads `js/main.js` as an ES modul
 - Deployment phase: the player places units in the left half by selecting a card and tapping a position; rotate in 15-degree increments without movement costs. The AI deploys in the right half but remains hidden until the player starts the battle. All player units must be placed before starting.
 
 Keep gameplay rules independent of drawing and input. New actions should be routed through the same rules and state changes regardless of whether the player or AI initiates them. Continue making and testing changes on `development`; promote to `main` only after review.
+
+
+## Army building
+
+- Main menu leads to an army builder before deployment.
+- Up to six units; each has 5–30 models. Swordsmen cost 8 points per model, archers 10, champions +6 per unit, and optional swordsman light armour +1 per model.
+- Army points are displayed per unit and in total; there is no points cap yet. The AI currently mirrors the selected roster as a placeholder.
+- Light armour grants a 6+ save. Strength modifies armour saves: S4 −1, S5 −2, S6 −3, continuing by −1 per Strength above 3; a modified save worse than 6+ is impossible. See the [6th-edition armour-save modifier table](https://6th.whfb.app/shooting/armour-save-modifiers).
