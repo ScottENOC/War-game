@@ -28,7 +28,7 @@ function starterData(){
  for(let i=0;i<100;i++)models.push(makeModel("starter-"+id++,"empire","swordsmen","handWeapon"));
  for(let i=0;i<50;i++)models.push(makeModel("starter-"+id++,"empire","archers","bow"));
  models.push(makeModel("starter-"+id++,"empire","captain","handWeapon",{name:"Empire Hero · Sword only"}));
- return {version:1,nextId:id,models,bits:{},bypass:false};
+ return {version:1,nextId:id,models,bits:{},bypass:false,lootboxes:0,lastDailyClaim:null};
 }
 function load(){
  try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(saved&&Array.isArray(saved.models)&&saved.bits)return {...starterData(),...saved};}catch{}
@@ -36,6 +36,8 @@ function load(){
 }
 export function createCollectionManager({$,onSkirmish,onMainMenu}){
  let data=load(),editingId=null;
+ data.lootboxes=Number.isFinite(data.lootboxes)?Math.max(0,data.lootboxes):0;
+ data.lastDailyClaim=data.lastDailyClaim||null;
  const save=()=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}catch{}};
  const title=s=>labels[s]||s;
  const bitCount=id=>data.bits[id]||0;
@@ -51,9 +53,16 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
    return false;
  };
  function screen(section,heading){const el=document.createElement(section?"section":"div");el.className="inventory-card";const h=document.createElement("h3");h.textContent=heading;el.append(h);return el;}
+ function localDayKey(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+ function canClaimDaily(){return data.lastDailyClaim!==localDayKey();}
+ function claimDailyLootbox(){
+  if(!canClaimDaily())return;
+  data.lastDailyClaim=localDayKey();data.lootboxes++;save();renderAll();
+  $("daily-lootbox-status").textContent="Daily lootbox claimed. You have "+data.lootboxes+" unopened box"+(data.lootboxes===1?"":"es")+".";
+ }
  function renderSummary(){
   const el=$("collection-summary");el.replaceChildren();
-  const stats=[["Models",data.models.length],["Loose bits",Object.values(data.bits).reduce((a,b)=>a+b,0)],["Empire models",data.models.filter(m=>m.faction==="empire").length],["Elf models",data.models.filter(m=>m.faction==="highElves").length]];
+  const stats=[["Models",data.models.length],["Loose bits",Object.values(data.bits).reduce((a,b)=>a+b,0)],["Lootboxes",data.lootboxes],["Empire models",data.models.filter(m=>m.faction==="empire").length]];
   stats.forEach(([k,v])=>{const card=document.createElement("div");card.className="collection-stat";const strong=document.createElement("strong");strong.textContent=v;const span=document.createElement("span");span.textContent=k;card.append(strong,span);el.append(card);});
  }
  function renderModels(){
@@ -143,7 +152,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
   }
   editBtn.addEventListener("click",renderEdit);buildBtn.addEventListener("click",renderBuild);renderEdit();
  }
- function renderAll(){renderSummary();renderModels();renderBits();renderWorkbench();$("bypass-model-check").checked=!!data.bypass;}
+ function renderAll(){renderSummary();renderModels();renderBits();renderWorkbench();renderDailyReward();$("bypass-model-check").checked=!!data.bypass;}
  function rarityWeightedModel(){
   const pool=[
    {faction:"empire",type:"swordsmen",weapon:"handWeapon",cost:8},
@@ -161,6 +170,11 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
   for(let i=0;i<pool.length;i++){n-=weights[i];if(n<=0)return pool[i];}return pool[0];
  }
  function openLootbox(){
+  if(data.lootboxes<1){$("lootbox-result").textContent="No unopened lootboxes. Claim today's free box or win a skirmish.";return;}
+  data.lootboxes--;
+  rollLootboxItem();
+ }
+ function rollLootboxItem(){
   const bitChance=0.72;
   if(Math.random()<bitChance){
    const valid=bitDefs.filter(b=>b.kind!=="mount"||bodyKinds.some(x=>x.kind==="cavalry"||x.kind==="captain"||x.kind==="lord"));
@@ -172,12 +186,29 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
   }
   save();renderAll();
  }
+ function grantLootbox(source="reward"){
+  data.lootboxes++;save();
+  $("lootbox-result").textContent=source==="skirmish"?"Victory reward: one lootbox added to your collection.":"One lootbox added to your collection.";
+  renderAll();
+ }
+ function openDeveloperLootbox(){rollLootboxItem();}
+ function renderDailyReward(){
+  const button=$("claim-daily-lootbox"),status=$("daily-lootbox-status");
+  const ready=canClaimDaily();
+  button.disabled=!ready;
+  button.textContent=ready?"Claim today's free lootbox":"Daily lootbox already claimed";
+  status.textContent=ready?"One free lootbox is available today.":"You've claimed today's free lootbox. Come back tomorrow.";
+  $("open-earned-lootbox").disabled=data.lootboxes<1;
+  $("open-earned-lootbox").textContent=data.lootboxes>0?"Open a lootbox ("+data.lootboxes+" available)":"No unopened lootboxes";
+ }
+ $("claim-daily-lootbox").addEventListener("click",claimDailyLootbox);
+ $("open-earned-lootbox").addEventListener("click",openLootbox);
  $("open-collection").addEventListener("click",()=>{ $("mainmenu").hidden=true;$("collection-screen").hidden=false;renderAll();});
  $("collection-back").addEventListener("click",onMainMenu);
  $("collection-skirmish").addEventListener("click",onSkirmish);
  $("open-dev").addEventListener("click",()=>{$("dev-panel").hidden=!$("dev-panel").hidden;});
  $("bypass-model-check").addEventListener("change",e=>{data.bypass=e.target.checked;save();});
- $("dev-lootbox").addEventListener("click",openLootbox);
+ $("dev-lootbox").addEventListener("click",openDeveloperLootbox);
  $("mode-collection").addEventListener("click",()=>{$("mode-screen").hidden=true;$("collection-screen").hidden=false;renderAll();});
  $("mode-back").addEventListener("click",onMainMenu);
  document.querySelectorAll("[data-mode]").forEach(btn=>btn.addEventListener("click",()=>{
@@ -191,7 +222,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
   $("mainmenu").hidden=true;$("mode-screen").hidden=false;$("mode-title").textContent=info[0];$("mode-description").textContent=info[1];
  }));
  renderAll();
- return {getInventory:()=>data.models.map(m=>({...m})),getBypass:()=>!!data.bypass,open:()=>{ $("mainmenu").hidden=true;$("collection-screen").hidden=false;renderAll();}};
+ return {getInventory:()=>data.models.map(m=>({...m})),getBypass:()=>!!data.bypass,grantLootbox,open:()=>{ $("mainmenu").hidden=true;$("collection-screen").hidden=false;renderAll();}};
 }
 export function getCollectionSnapshot(){
  try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");return d&&Array.isArray(d.models)?d:starterData();}catch{return starterData();}
