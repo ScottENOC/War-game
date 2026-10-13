@@ -14,14 +14,14 @@ Open [index.html](./index.html) in a browser, or enable GitHub Pages for the rep
 - A simple AI opponent that currently mirrors the player's army list.
 - Movement, charges, shooting, melee, morale, and visible dice results.
 - Movement activation and charge declarations.
-- Melee attack rolls, wounds, rank bonus, combat result and Leadership-based break test.
+- Melee and shooting hit rolls, Strength-versus-Toughness wounds, armour saves, rank bonus, combat result and Leadership-based break test.
 - Visible dice results and battle log.
 
 ## Prototype simplifications
 
 This is not a verbatim implementation of any published rulebook. It is a small, testable foundation with classic rank-and-flank mechanics. Alternating unit activations are deliberately borrowed as a design idea from modern digital wargames rather than matching the original sixth-edition turn sequence. Charge responses are currently simplified to Hold against the passive AI.
 
-The engine should be expanded in small steps: accurate unit footprints and facing, charge response options, proper simultaneous combat resolution, fleeing/pursuit, then more unit profiles and army rules. Keep rules logic separate from rendering as the project grows.
+The engine should be expanded in small steps: accurate unit footprints and facing, charge response options, proper simultaneous combat resolution, fleeing/pursuit, terrain interactions, then more unit profiles and army rules. Keep rules logic separate from rendering as the project grows.
 
 ## Development direction
 
@@ -54,3 +54,10 @@ Keep gameplay rules independent of drawing and input. New actions should be rout
 - Up to six units; each has 5–30 models. Swordsmen cost 8 points per model, archers 10, champions +6 per unit, and optional swordsman light armour +1 per model.
 - Army points are displayed per unit and in total; there is no points cap yet. The AI currently mirrors the selected roster as a placeholder.
 - Light armour grants a 6+ save. Strength modifies armour saves: S4 −1, S5 −2, S6 −3, continuing by −1 per Strength above 3; a modified save worse than 6+ is impossible. See the [6th-edition armour-save modifier table](https://6th.whfb.app/shooting/armour-save-modifiers).
+
+
+## Core hit and wound rules
+
+The hit/wound resolver uses the sixth-edition Weapon Skill comparison, Ballistic Skill target number, Strength-versus-Toughness table, and Strength-modified armour saves. Melee natural 1s miss and natural 6s hit; shooting natural 1s always miss and 7+/8+/9+ shots use the 6th-edition follow-up-roll sequence, with 10+ impossible. Wounds against targets marked too tough by the table are impossible, rather than automatically receiving a 6+ chance. Armour saves of 1+ still fail on a natural 1.
+
+Shooting modifiers are cumulative: long range −1, moving −1, Stand & Shoot −1, target charging −1, single character/skirmisher −1, soft cover −1, hard cover −2, and large target +1. Unit state exposes `largeTarget`, `singleCharacter`, `skirmisher`, and `cover` (`"soft"` or `"hard"`) for those situational rules. **The current battlefield has no terrain-placement or unit-tag controls yet**, so cover and large-target effects are rule-engine-supported but not yet selectable/automatically inferred in the UI. Character/skirmisher profiles are likewise not currently part of the army builder.
