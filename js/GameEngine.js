@@ -12,6 +12,7 @@ import { createUI } from "./ui.js";
 import { createPhases } from "./phases.js";
 import { createDice } from "./dice.js";
 import { createMovement } from "./movement.js";
+import { createNarrativeCampaign } from "./campaign.js";
 
 export function startGame() {
 (() => {
@@ -87,8 +88,9 @@ function finishBattle(msg){
  if(S.finished)return;
  S.finished=true;S.phase="over";
  const won=msg.toLowerCase().includes("player wins");
- if(won&&collectionManager){collectionManager.grantLootbox("skirmish");say("Skirmish victory reward: one lootbox added to your collection.");}
+ if(won&&collectionManager&&!campaignBattle){collectionManager.grantLootbox("skirmish");say("Skirmish victory reward: one lootbox added to your collection.");}
  say('<b>'+msg+'</b>');
+ if(campaignBattle){campaignBattle=false;narrativeCampaign?.onBattleFinished(won);$("battle-return").hidden=true;return;}
  $("battle-return").hidden=false;
  render();
 }
@@ -102,11 +104,20 @@ const { setPhase, declareCharge, fleeFromCharge, finishMovement, passCharges, ai
 const UI = createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
 render = UI.render;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, declareCharge, render, draw, $, say, dist });
-function startBattleWithArmy(army,faction){S.units=createUnitsFromArmy(army,faction);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();}
-function showMainMenu(){$("game").hidden=true;$("armybuilder").hidden=true;$("collection-screen").hidden=true;$("mode-screen").hidden=true;$("mainmenu").hidden=false;}
+function startBattleWithArmy(army,faction){campaignBattle=false;S.units=createUnitsFromArmy(army,faction);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();}
+function startCampaignBattle(army,enemyConfig){
+ const playerUnits=createUnitsFromArmy(army,"empire");
+ const enemyPair=createUnitsFromArmy([{type:"swordsmen",models:20,weapon:"handWeapon",champion:false}], "empire");
+ const enemy=enemyPair.a1;enemy.id="a1";enemy.side="ai";enemy.name="Enemy Human Swordsmen";enemy.x=.78;enemy.y=.5;enemy.facing=Math.PI;enemy.deployed=true;
+ S.units={...Object.fromEntries(Object.entries(playerUnits).filter(([id])=>id.startsWith("p"))),a1:enemy};
+ campaignBattle=true;$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();
+}
+function showMainMenu(){$("game").hidden=true;$("armybuilder").hidden=true;$("collection-screen").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("mainmenu").hidden=false;}
 function showCollection(){$("game").hidden=true;$("armybuilder").hidden=true;$("mode-screen").hidden=true;$("mainmenu").hidden=true;$("collection-screen").hidden=false;}
 function showSkirmishBuilder(){$("game").hidden=true;$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=false;armyBuilder?.open();}
 let collectionManager=null;
+let narrativeCampaign=null;
+let campaignBattle=false;
 function validateArmy(army,faction){
  if(collectionManager?.getBypass())return "";
  const owned=collectionManager?.getInventory()||[],used=new Set(),shortages=[];
@@ -123,7 +134,8 @@ function validateArmy(army,faction){
 }
 let armyBuilder=null;
 armyBuilder=createArmyBuilder({ $, onStart:startBattleWithArmy, onBack:showCollection, validateArmy });
-collectionManager=createCollectionManager({$,onSkirmish:showSkirmishBuilder,onMainMenu:showMainMenu});
+narrativeCampaign=createNarrativeCampaign({$,onStartBattle:startCampaignBattle,onReturnMenu:showMainMenu});
+collectionManager=createCollectionManager({$,onSkirmish:showSkirmishBuilder,onMainMenu:showMainMenu,onNarrativeCampaign:()=>narrativeCampaign.open()});
 $("battle-return").addEventListener("click",()=>{ $("battle-return").hidden=true;showCollection();collectionManager?.open();});
 })();
 }
