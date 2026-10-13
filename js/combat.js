@@ -20,7 +20,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     const champion = !!(u.champion?.enabled && u.championAlive !== false && u.models > 0);
     const rankWidth=Math.max(1,Math.floor(u.formationWidth||5));
     const eligibleModels = u.isCharacter ? 1 : Math.min(rankWidth*(u.spears?(u.spearRanks||2):1),u.models);
-    return { models:u.models, damage:u.damage||0, championAlive:u.championAlive, championWounds:u.championWounds, characterWounds:u.characterWounds, eligibleModels, eligibleChampion:champion, skirmishRound:!!u.skirmishing&&u.skirmishCombatRound===S.combatRound };
+    return { models:u.models, damage:u.damage||0, championAlive:u.championAlive, championWounds:u.championWounds, characterWounds:u.characterWounds, eligibleModels, eligibleChampion:champion, skirmishRound:u.skirmishCombatRound===S.combatRound };
   }
   function resolveCombat(){
     S.combatResolved=false;
@@ -30,7 +30,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     const tests=[];
     groups.forEach(group=>{
       const startModels=new Map(group.map(u=>[u.id,u.models]));
-      const startRanks=new Map(group.map(u=>[u.id,u.skirmishing&&u.skirmishCombatRound===S.combatRound?0:rankBonus(u)]));
+      const startRanks=new Map(group.map(u=>[u.id,u.skirmishCombatRound===S.combatRound?0:rankBonus(u)]));
       const wounds=new Map(group.map(u=>[u.id,0]));
       const attachedCombatants=group.flatMap(host=>(host.attachedCharacters||[]).map(id=>({u:S.units[id],host})).filter(x=>x.u&&alive(x.u)&&!x.u.fled));
       const effectiveI=(u,host=u,component="rider")=>{
