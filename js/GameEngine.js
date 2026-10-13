@@ -64,7 +64,6 @@ function finishBattle(msg){S.finished=true;S.phase="over";say('<b>'+msg+'</b>');
 function reset(){S.turn=1;S.phase="charges";S.selected="pSword";S.mode=null;S.chargeSide="player";S.chargePasses=0;S.declaredCharges=[];S.activationSide="player";view.zoom=1;view.x=0;view.y=0;S.finished=false;S.combatRound=0;S.loser=null;S.crDiff=0;S.log=[];units().forEach(u=>Object.assign(u,{models:u.startModels,damage:0,x:(u.id==="pSword"||u.id==="pArch") ? 0.22 : 0.78,y:(u.id==="pSword"||u.id==="aSword") ? 0.36 : 0.70,facing:u.side==="player"?0:Math.PI,engaged:false,activated:false,moved:false,shot:false,charged:false,fled:false,moveUsed:0,shootCasualties:0,panicTested:false}));$("log").replaceChildren();say("Battle deployed: 20 swordsmen and 10 archers on each side.");render();}
 const view={zoom:1,x:0,y:0};
 $("logtoggle").onclick=()=>$("logpanel").classList.add("open");$("logclose").onclick=()=>$("logpanel").classList.remove("open");$("rollclose").onclick=()=>$("rollview").classList.remove("show");
-window.addEventListener("resize",setupCanvas);
 const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_IN, BATTLEFIELD_WIDTH_IN, MODEL_BASE_IN, shape, view });
 const { setupCanvas, draw } = RENDERING;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, shoot, declareCharge, render, draw, $ });
