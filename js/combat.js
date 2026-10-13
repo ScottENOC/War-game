@@ -15,6 +15,19 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     engaged.forEach(start=>{if(seen.has(start.id))return;const group=[],stack=[start];seen.add(start.id);while(stack.length){const u=stack.pop();group.push(u);linked(u).forEach(v=>{if(!seen.has(v.id)){seen.add(v.id);stack.push(v);}});}if(group.some(u=>linked(u).length))groups.push(group);});
     return groups;
   }
+  function combatantAlive(u) { return !!u && u.models > 0 && !u.fled; }
+  function captureFighter(u) {
+    return { models:u.models, damage:u.damage||0, championAlive:u.championAlive, championWounds:u.championWounds, characterWounds:u.characterWounds };
+  }
+  function restoreForLastAttack(u, snapshot) {
+    // A regiment is represented as one attack packet in this prototype. If wiped
+    // before its packet, let one surviving-at-the-moment-of-death fighter strike.
+    u.models = u.isCharacter ? Math.max(1, snapshot.models) : 1;
+    u.damage = snapshot.damage;
+    if (snapshot.championAlive !== undefined) u.championAlive = snapshot.championAlive;
+    if (snapshot.championWounds !== undefined) u.championWounds = snapshot.championWounds;
+    if (snapshot.characterWounds !== undefined) u.characterWounds = snapshot.characterWounds;
+  }
   function resolveCombat(){
     const groups=groupsOfCombat();
     if(!groups.length){say("No units are in melee.");endTurn();return;}
@@ -33,16 +46,35 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           if(alive(host)&&!host.fled&&effectiveI(host,host)===initiative)attackers.push({u:host,host});
           (host.attachedCharacters||[]).forEach(id=>{const hero=S.units[id];if(hero&&alive(hero)&&!hero.fled&&effectiveI(hero,host)===initiative)attackers.push({u:hero,host});});
         });
-        // Resolve attack packets sequentially so casualties can expose the champion and then heroes.
+        // Each combatant is entitled to one packet at this Initiative. If a packet
+        // kills a not-yet-attacked combatant, defer that combatant's death until it
+        // has struck. Delayed-death combatants cannot be selected as targets.
+        const pending = new Map(attackers.map(({u})=>[u.id,{snapshot:captureFighter(u),attacked:false}]));
         attackers.forEach(({u,host})=>{
-          if(!alive(u)||u.fled||!alive(host))return;
-          const targets=linked(host).filter(v=>alive(v)&&!v.fled);
-          if(!targets.length)return;
+          const entitlement=pending.get(u.id);
+          if(!entitlement||entitlement.attacked||u.fled||!alive(host)||!combatantAlive(u)&&!u.delayedDeath)return;
+          if(u.delayedDeath)restoreForLastAttack(u,u.delayedDeathSnapshot||entitlement.snapshot);
+          if(!combatantAlive(u)){u.delayedDeath=false;return;}
+          const targets=linked(host).filter(v=>alive(v)&&!v.fled&&!v.delayedDeath);
+          if(!targets.length){
+            if(u.delayedDeath){u.models=0;u.characterWounds=0;u.delayedDeath=false;u.delayedDeathSnapshot=null;}
+            entitlement.attacked=true;return;
+          }
           const target=targets.sort((a,b)=>dist(host,a)-dist(host,b))[0];
+          const before=new Map(attackers.filter(a=>!pending.get(a.u.id)?.attacked).map(a=>[a.u.id,{u:a.u,wasAlive:combatantAlive(a.u),snapshot:captureFighter(a.u)}]));
           const result=meleeAttack(u,target);
           say('<b>Melee dice — '+u.name+' attacks '+target.name+'</b>'+diceStack(u,result));
           wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
           applyDamage(target,result.wounds,false,result.cascadePlan);
+          entitlement.attacked=true;
+          before.forEach(({u:potential,wasAlive,snapshot})=>{
+            if(wasAlive&&!combatantAlive(potential)&&pending.has(potential.id)&&!pending.get(potential.id).attacked){
+              potential.delayedDeath=true;
+              potential.delayedDeathSnapshot=snapshot;
+              say(potential.name+' suffers a fatal wound, but will strike before dying at Initiative '+initiative+'.');
+            }
+          });
+          if(u.delayedDeath){u.models=0;u.damage=0;u.characterWounds=0;u.championAlive=false;u.delayedDeath=false;u.delayedDeathSnapshot=null;say(u.name+' succumbs after making its attack.');}
         });
       });
       const sideUnits={player:group.filter(u=>u.side==="player"&&alive(u)),ai:group.filter(u=>u.side==="ai"&&alive(u))};
