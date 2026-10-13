@@ -82,13 +82,13 @@ export function createRules({ roll, units = () => [] }) {
         const mods=-(longRangePenalty+movePenalty+overPenalty-elfReduction)-(context.standShoot?1:0)-(context.targetCharging?1:0)-((context.singleCharacter||context.skirmisher)?1:0)-(context.cover==="soft"?1:context.cover==="hard"?2:0)+(context.largeTarget?1:0);
         hitNeed=7-bs-mods;
       }
-      g.hitNeed=hitNeed;const hit=roll(1)[0];g.hitRolls.push(hit);
-      let hitPass=false,follow=null;
-      if(mode==="melee")hitPass=hit!==1&&(hit===6||hit>=hitNeed);
-      else if(hit!==1){if(hitNeed<=6)hitPass=hit>=hitNeed;else if(hitNeed<10&&hit===6){follow=roll(1)[0];hitPass=follow>=hitNeed-3;}}
+      g.hitNeed=hitNeed;const forcedHit=mode==="shooting"&&i<(context.forcedHits||0);const hit=forcedHit?null:roll(1)[0];if(hit!==null)g.hitRolls.push(hit);
+      let hitPass=forcedHit,follow=null;
+      if(!forcedHit){if(mode==="melee")hitPass=hit!==1&&(hit===6||hit>=hitNeed);
+      else if(hit!==1){if(hitNeed<=6)hitPass=hit>=hitNeed;else if(hitNeed<10&&hit===6){follow=roll(1)[0];hitPass=follow>=hitNeed-3;}}}
       if(follow!==null){g.hitFollowUps.push(follow);g.hitFollowUpPasses.push(hitPass);}
       g.hitPasses.push(hitPass);
-      const rerollNaturalOne=hit===1&&((mode==="melee"&&context.rerollOnesMelee)||(mode==="shooting"&&context.rerollOnesShooting));
+      const rerollNaturalOne=!forcedHit&&hit===1&&((mode==="melee"&&context.rerollOnesMelee)||(mode==="shooting"&&context.rerollOnesShooting));
       if(rerollNaturalOne){const reroll=roll(1)[0];let pass=mode==="melee"?(reroll!==1&&(reroll===6||reroll>=hitNeed)):(reroll!==1&&(hitNeed<=6?reroll>=hitNeed:(hitNeed<10&&reroll===6&&roll(1)[0]>=hitNeed-3)));g.hitRerolls.push(reroll);g.hitRerollPasses.push(pass);if(pass)hitPass=true;}
       if(!hitPass&&mode==="melee"&&context.rerollMisses){const reroll=roll(1)[0],rerollPass=reroll!==1&&(reroll===6||reroll>=hitNeed);g.hitRerolls.push(reroll);g.hitRerollPasses.push(rerollPass);if(rerollPass)hitPass=true;}
       if(!hitPass)continue;g.hits++;
