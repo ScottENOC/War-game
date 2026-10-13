@@ -52,10 +52,11 @@ const view={zoom:1,x:0,y:0};
 $("logtoggle").onclick=()=>$("logpanel").classList.add("open");$("logclose").onclick=()=>$("logpanel").classList.remove("open");$("rollclose").onclick=()=>$("rollview").classList.remove("show");
 const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_IN, BATTLEFIELD_WIDTH_IN, MODEL_BASE_IN, shape, view });
 const { setupCanvas, draw } = RENDERING;
+function requestRender(){ render(); }
+const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, dist, enemies, say, shoot, render:requestRender, startActivations });
+const { setPhase, declareCharge, finishMovement, passCharges, aiChargeStep, resolveDeclaredCharges } = PHASES;
 const UI = createUI({ S, $, units, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset });
 const { render } = UI;
-const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, dist, enemies, say, shoot, render, startActivations });
-const { setPhase, declareCharge, finishMovement, passCharges, aiChargeStep, resolveDeclaredCharges } = PHASES;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, shoot, declareCharge, render, draw, $ });
 reset();setupCanvas();
 })();
