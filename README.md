@@ -9,8 +9,8 @@ Open [index.html](./index.html) in a browser, or enable GitHub Pages for the rep
 ## Current prototype
 
 - Main menu, point-based army builder and blind deployment phase.
-- Up to six player entries: swordsmen and archers (5–30 models each), plus a human Captain hero.
-- Optional unit champions and optional swordsman light armour, with per-unit and total army points. Captains start in light armour; heavy armour costs +4 points, improves the save from 6+ to 5+, and reduces Move by 1 as a house rule. A Captain may buy a great weapon for +4 points; it grants +2 Strength, applies −10 Initiative, and uses both hands. A Captain can buy a great weapon for +4 points (+2 Strength, −10 Initiative, two-handed) and switch between it and a hand weapon once melee has finished for the combat phase.
+- Up to six player entries: swordsmen and archers (5–30 models each), plus a human Captain hero. Swordsmen can buy spears for +1 point per model; spear-armed infantry fight in an extra rank.
+- Optional unit champions and optional swordsman light armour, with per-unit and total army points. Captains start in light armour; heavy armour costs +4 points, improves the save from 6+ to 5+, and reduces Move by 1 as a house rule. A Captain can buy a halberd (+1 Strength, two-handed) or great weapon (+2 Strength, −10 Initiative, two-handed) for +4 points. After melee resolves, the Captain can cycle between hand weapon, halberd and great weapon for the next combat.
 - A simple AI opponent that currently mirrors the player's army list.
 - Movement, charges, shooting, melee, morale, and visible dice results.
 - Each unit that charges or counter-charges receives +10 Initiative for that combat round, independently of other units in the fight. Units that did not charge use their normal Initiative. Within an Initiative level, attack packets resolve sequentially as a digital house rule so casualties can expose the next defender tier. A combatant killed before its own packet is entitled to a last attack, cannot be targeted while delayed, and dies immediately after striking. For rank-and-file, the game snapshots the number of models in the fighting front rank at the start of that Initiative step: those models can still contribute their attacks if killed before the regiment's packet, but rear ranks do not gain attacks they were not entitled to make.
@@ -20,7 +20,7 @@ Open [index.html](./index.html) in a browser, or enable GitHub Pages for the rep
 - Every unit can counter-charge an eligible front charge. A counter-charge brings both units into front-to-front combat; because both charged, they use actual Initiative rather than the +10 charging bonus.
 - Units can flee from a declared charge, fleeing units can attempt rally tests, and the AI attempts to rally automatically.
 - Movement activation and charge declarations.
-- Melee and shooting hit rolls, Strength-versus-Toughness wounds, equipment-derived armour saves, rank bonus, combined combat result and Leadership-based break tests. Attacks resolve sequentially through rank-and-file, then champion, then attached heroes, using each tier’s own defensive profile and wound pool; dice are displayed in grouped pools by target tier.
+- Melee and shooting hit rolls, Strength-versus-Toughness wounds, equipment-derived armour saves, rank bonus, combined combat result and Leadership-based break tests. Leadership tests use the highest Leadership of the tested unit or a living character embedded in it; that value does not transfer to other friendly units in the same combat. Attacks resolve sequentially through rank-and-file, then champion, then attached heroes, using each tier’s own defensive profile and wound pool; dice are displayed in grouped pools by target tier.
 - Visible dice results and battle log.
 
 ## Prototype simplifications
@@ -58,7 +58,7 @@ Keep gameplay rules independent of drawing and input. New actions should be rout
 
 - Main menu leads to an army builder before deployment.
 - Up to six units; each has 5–30 models. Swordsmen cost 8 points per model, archers 10, champions +6 per unit, and optional swordsman light armour +1 per model.
-- Army points are displayed per unit and in total; there is no points cap yet. The AI currently mirrors the selected roster as a placeholder.
+- Army points are displayed per unit and in total; there is no points cap yet. The AI currently mirrors the selected roster as a placeholder. Swordsmen spears cost +1 point per model; a Captain's halberd or great weapon costs +4 points.
 - Armour saves are derived from equipment: light armour 6+, heavy armour 5+, full plate 4+, with shields improving the save by 1. Strength modifies armour saves: S4 −1, S5 −2, S6 −3, continuing by −1 per Strength above 3; a modified save worse than 6+ is impossible. The Captain has 2 Wounds, and those wounds are tracked separately from the regiment. See the [6th-edition armour-save modifier table](https://6th.whfb.app/shooting/armour-save-modifiers).
 
 
