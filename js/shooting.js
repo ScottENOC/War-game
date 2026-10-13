@@ -23,7 +23,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(!snakeEyes&&total>target.stats.Ld){target.fled=true;target.engaged=false;say(target.name+" fails its unmodified Leadership test and flees.");}
   }
   function modelCentres(u, maxRanks=Infinity) {
-    if(!u||u.models<=0)return [{x:u.x*W(),y:u.y*H()}];
+    if(!u||u.models<=0)return [{x:u.x*W(),y:u.y*H(),champion:!!u.isCharacter}];
     const q=shape(u),count=Math.min(u.models,q.files*Math.max(1,Math.min(q.ranks,maxRanks)));
     const points=[];
     for(let i=0;i<count;i++){
@@ -31,7 +31,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       if(rank>=maxRanks)continue;
       const localX=q.depth/2-(rank+.5)*q.baseDepth,localY=-q.front/2+(file+.5)*q.baseWidth;
       const c=Math.cos(u.facing||0),sn=Math.sin(u.facing||0);
-      points.push({x:u.x*W()+localX*c-localY*sn,y:u.y*H()+localX*sn+localY*c});
+      points.push({x:u.x*W()+localX*c-localY*sn,y:u.y*H()+localX*sn+localY*c,champion:!!(u.champion&&u.champion.enabled&&u.championAlive!==false&&rank===0&&file===Math.floor(q.files/2))});
     }
     return points;
   }
@@ -61,7 +61,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     blockers.forEach(v=>{v._losPolygon=unitFootprint(v);});
     const candidates=blockers.map(v=>({u:v}));
     const visible=[];
-    let anyOver=false;
+    let anyOver=false,visibleChampion=false;
     for(const shooter of shooters){
       let best=null;
       for(const aim of targets){
@@ -78,9 +78,9 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
         if(!blocked&&(!best||over<best.over))best={over};
         if(best&&best.over===0)break;
       }
-      if(best){visible.push(shooter);if(best.over>0)anyOver=true;}
+      if(best){visible.push(shooter);if(shooter.champion)visibleChampion=true;if(best.over>0)anyOver=true;}
     }
-    return {visibleModels:visible.length,overUnitPenalty:anyOver?(u.overUnitPenalty||0):0};
+    return {visibleModels:visible.length,visibleChampion,overUnitPenalty:anyOver?(u.overUnitPenalty||0):0};
   }
   function shoot(u,target,standShoot) {
     const host=u.attachedTo?S.units[u.attachedTo]:null;
@@ -100,7 +100,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       singleCharacter:!!target.isCharacter||!!target.singleCharacter||(target.models<=0&&(target.attachedCharacters||[]).some(id=>S.units[id]&&S.units[id].models>0)),
       skirmisher:!!target.skirmisher,cover:target.cover==="soft"||target.cover==="hard"?target.cover:null,
       overUnitPenalty:visibility.overUnitPenalty,longRangePenalty:u.rangedWeapon==="firearm"?2:1,
-      armourPiercing:u.armourPiercing||0,attackingModels:visibility.visibleModels
+      armourPiercing:u.armourPiercing||0,attackingModels:visibility.visibleModels,attackingChampion:visibility.visibleChampion
     };
     const result=shootingAttack(u,target,context);Object.assign(result,context);
     result.hitModifier=result.pools.length?result.pools[0].hitModifier:0;
