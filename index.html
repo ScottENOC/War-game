@@ -54,15 +54,19 @@ const canvas = $("field"), ctx = canvas.getContext("2d");
 const S = {
  turn:1, phase:"charges", active:"player", selected:"player", finished:false,
  units:{
-  player:{id:"player",name:"Empire Swordsmen",side:"player",models:20,x:0.18,y:0.5,facing:0,engaged:false,activated:false,charged:false,fled:false},
-  ai:{id:"ai",name:"Opponent Swordsmen",side:"ai",models:20,x:0.82,y:0.5,facing:Math.PI,engaged:false,activated:false,charged:false,fled:false}
+  player:{id:"player",name:"Empire Swordsmen",side:"player",models:20,x:0.32,y:0.5,facing:0,engaged:false,activated:false,charged:false,fled:false,moveUsed:0},
+  ai:{id:"ai",name:"Opponent Swordsmen",side:"ai",models:20,x:0.68,y:0.5,facing:Math.PI,engaged:false,activated:false,charged:false,fled:false,moveUsed:0}
  },
  log:[], pending:[], passes:{player:false,ai:false}, combatRound:0
 };
 const W=()=>canvas.clientWidth, H=()=>canvas.clientHeight;
 const alive=u=>u.models>0;
 const BATTLEFIELD_WIDTH_IN=48;
-const dist=()=>Math.abs(S.units.player.x-S.units.ai.x)*BATTLEFIELD_WIDTH_IN;
+const MODEL_BASE_IN=0.9;
+const MOVE_ALLOWANCE=4;
+const PX_PER_IN=()=>W()/BATTLEFIELD_WIDTH_IN;
+const fieldHeightIn=()=>H()/Math.max(1,PX_PER_IN());
+const dist=()=>Math.hypot((S.units.player.x-S.units.ai.x)*BATTLEFIELD_WIDTH_IN,(S.units.player.y-S.units.ai.y)*fieldHeightIn());
 function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,45);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");}
 function roll(n=1){return Array.from({length:n},()=>1+Math.floor(Math.random()*6));}
 function d6(n=1){return roll(n).reduce((a,b)=>a+b,0);}
@@ -80,35 +84,62 @@ function draw(){
  // show move / charge range when selecting during movement
  const p=S.units.player,a=S.units.ai;
  if(S.phase==="movement"&&S.selected==="player"&&!p.engaged){
-  ctx.fillStyle="rgba(90,145,190,.14)";ctx.fillRect(p.x*w-4,0,4*w/w,h);
-  ctx.strokeStyle="rgba(160,205,230,.7)";ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(p.x*w,0);ctx.lineTo(p.x*w,h);ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle="rgba(160,205,230,.55)";ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(p.x*w,p.y*h);ctx.lineTo(p.x*w+Math.cos(p.facing)*MOVE_ALLOWANCE*PX_PER_IN(),p.y*h+Math.sin(p.facing)*MOVE_ALLOWANCE*PX_PER_IN());ctx.stroke();ctx.setLineDash([]);
  }
  drawUnit(p,w,h);drawUnit(a,w,h);
  const d=dist();ctx.fillStyle="#f3eedc";ctx.font="600 12px system-ui";ctx.textAlign="center";ctx.fillText("Gap: "+d.toFixed(1)+" inches",w/2,22);
  ctx.textAlign="left";ctx.fillStyle="rgba(255,255,255,.8)";ctx.font="11px system-ui";ctx.fillText("Your deployment",12,h-12);
  ctx.textAlign="right";ctx.fillText("AI deployment",w-12,h-12);
 }
-function drawUnit(u,w,h){
- const x=u.x*w,y=u.y*h,selected=S.selected===u.id&&!S.finished;
- const bannerW=Math.min(104,w*.23),bannerH=Math.min(98,h*.28);
- // regiment footprint based on remaining files/ranks; schematic footprint not individual miniatures
- const fw=Math.min(w*.24, Math.max(34,Math.min(5,u.models)*bannerW*.18));
- const fh=Math.min(h*.32, Math.max(22,Math.ceil(u.models/5)*bannerH*.13));
- ctx.save();ctx.translate(x,y);
- ctx.fillStyle="rgba(0,0,0,.24)";ctx.fillRect(-fw/2+4,-fh/2+5,fw,fh);
- ctx.fillStyle=u.side==="player"?"#365e7e":"#813c36";ctx.strokeStyle=selected?"#f7d98b":"#e3d6b5";ctx.lineWidth=selected?3:1.5;
- ctx.fillRect(-fw/2,-fh/2,fw,fh);ctx.strokeRect(-fw/2,-fh/2,fw,fh);
- // rank lines convey a block of five files
- ctx.strokeStyle="rgba(255,255,255,.23)";ctx.lineWidth=1;
- for(let i=1;i<Math.min(5,u.models);i++){const xx=-fw/2+fw*i/Math.min(5,u.models);ctx.beginPath();ctx.moveTo(xx,-fh/2);ctx.lineTo(xx,fh/2);ctx.stroke()}
- ctx.fillStyle="#e6d5a4";ctx.beginPath();ctx.moveTo(0,-fh/2-10);ctx.lineTo(9,-fh/2-2);ctx.lineTo(0,-fh/2+6);ctx.lineTo(-9,-fh/2-2);ctx.closePath();ctx.fill();
- ctx.fillStyle="#fff8e9";ctx.font="bold 12px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(u.side==="player"?"EMPIRE":"OPPONENT",0,0);
- ctx.font="bold 16px system-ui";ctx.fillText(String(u.models),0,fh/2+17);
- if(u.engaged){ctx.fillStyle="#f2d67d";ctx.font="bold 10px system-ui";ctx.fillText("IN MELEE",0,fh/2+31)}
- if(u.fled){ctx.fillStyle="#ffb3ad";ctx.font="bold 10px system-ui";ctx.fillText("FLEEING",0,fh/2+31)}
- ctx.restore();
+function unitCorners(u, atX=u.x, atY=u.y, atFacing=u.facing){
+ const scale=PX_PER_IN(),front=5*MODEL_BASE_IN*scale,depth=4*MODEL_BASE_IN*scale;
+ const fx=Math.cos(atFacing),fy=Math.sin(atFacing),lx=-fy,ly=fx;
+ const cx=atX*W(),cy=atY*H();
+ return [
+  {x:cx-fx*depth/2-lx*front/2,y:cy-fy*depth/2-ly*front/2},
+  {x:cx+fx*depth/2-lx*front/2,y:cy+fy*depth/2-ly*front/2},
+  {x:cx+fx*depth/2+lx*front/2,y:cy+fy*depth/2+ly*front/2},
+  {x:cx-fx*depth/2+lx*front/2,y:cy-fy*depth/2+ly*front/2}
+ ];
 }
-function setPhase(phase){S.phase=phase;S.active="player";S.passes={player:false,ai:false};S.units.player.activated=false;S.units.ai.activated=false;render();}
+function polygonOverlap(a,b){
+ for(const poly of [a,b]){
+  for(let i=0;i<poly.length;i++){
+   const p1=poly[i],p2=poly[(i+1)%poly.length],ax=-(p2.y-p1.y),ay=p2.x-p1.x;
+   const pA=a.map(p=>p.x*ax+p.y*ay),pB=b.map(p=>p.x*ax+p.y*ay);
+   if(Math.max(...pA)<Math.min(...pB)+0.01||Math.max(...pB)<Math.min(...pA)+0.01)return false;
+  }
+ }
+ return true;
+}
+function canPlace(u,x,y,facing){
+ const other=S.units[u.id==="player"?"ai":"player"];
+ return !alive(other)||!polygonOverlap(unitCorners(u,x,y,facing),unitCorners(other));
+}
+function drawUnit(u,w,h){
+ const x=u.x*w,y=u.y*h,selected=S.selected===u.id&&!S.finished,scale=w/BATTLEFIELD_WIDTH_IN;
+ const front=5*MODEL_BASE_IN*scale,depth=4*MODEL_BASE_IN*scale;
+ ctx.save();ctx.translate(x,y);ctx.rotate(u.facing);
+ ctx.fillStyle="rgba(0,0,0,.24)";ctx.fillRect(-depth/2+3,-front/2+4,depth,front);
+ ctx.fillStyle=u.side==="player"?"#365e7e":"#813c36";ctx.strokeStyle=selected?"#f7d98b":"#e3d6b5";ctx.lineWidth=selected?2.5:1.2;
+ ctx.fillRect(-depth/2,-front/2,depth,front);ctx.strokeRect(-depth/2,-front/2,depth,front);
+ ctx.strokeStyle="rgba(255,255,255,.65)";ctx.lineWidth=.8;
+ for(let col=1;col<4;col++){const xx=-depth/2+depth*col/4;ctx.beginPath();ctx.moveTo(xx,-front/2);ctx.lineTo(xx,front/2);ctx.stroke()}
+ for(let row=1;row<5;row++){const yy=-front/2+front*row/5;ctx.beginPath();ctx.moveTo(-depth/2,yy);ctx.lineTo(depth/2,yy);ctx.stroke()}
+ ctx.fillStyle="#f6e1a0";ctx.strokeStyle="#2a2a25";ctx.lineWidth=1;
+ ctx.beginPath();ctx.moveTo(depth/2+9,0);ctx.lineTo(depth/2-1,-7);ctx.lineTo(depth/2-1,7);ctx.closePath();ctx.fill();ctx.stroke();
+ if(selected&&S.phase==="movement"&&u.side==="player"&&!u.engaged&&!u.fled){
+  ctx.fillStyle="#ffe3a0";
+  for(const sign of [-1,1]){ctx.beginPath();ctx.arc(depth/2,sign*front/2,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#312b1e";ctx.stroke()}
+ }
+ ctx.restore();
+ ctx.fillStyle="#fff8e9";ctx.font="bold 12px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";
+ ctx.fillText(u.side==="player"?"EMPIRE":"OPPONENT",x,y);
+ ctx.font="bold 14px system-ui";ctx.fillText(String(u.models),x,y+front/2+14);
+ if(u.engaged){ctx.fillStyle="#f2d67d";ctx.font="bold 10px system-ui";ctx.fillText("IN MELEE",x,y+front/2+27)}
+ if(u.fled){ctx.fillStyle="#ffb3ad";ctx.font="bold 10px system-ui";ctx.fillText("FLEEING",x,y+front/2+27)}
+}
+function setPhase(phase){S.phase=phase;S.active="player";S.passes={player:false,ai:false};S.units.player.activated=false;S.units.ai.activated=false;S.units.player.moveUsed=0;S.units.ai.moveUsed=0;render();}
 function render(){
  $("turnlabel").textContent="TURN "+S.turn;
  const names={charges:"Movement — Charge declarations",movement:"Movement — Remaining moves",combat:"Melee — Attacks & combat resolution",break:"Combat resolution — Break test",over:"Battle complete"};
@@ -121,7 +152,7 @@ function render(){
 function hint(){
  if(S.finished)return "Battle ended. Start a fresh battle to play again.";
  if(S.phase==="charges")return S.active==="player"?"Declare a charge if the enemy is within 8 inches, or pass.":"AI passes on charge declarations.";
- if(S.phase==="movement")return S.active==="player"?"Select your regiment and move up to 4 inches, or finish movement.":"AI passes its movement activation.";
+ if(S.phase==="movement")return S.active==="player"?"Drag the unit forward to advance, or drag a highlighted front corner to pivot. Combine moves up to 4 inches total.":"AI passes its movement activation.";
  if(S.phase==="combat")return "Both engaged units fight. Chargers strike first; otherwise Initiative decides.";
  if(S.phase==="break")return "Resolve the losing unit's Leadership test.";
  return "";
@@ -141,8 +172,9 @@ function controls(){
  if(S.phase==="movement"){
   if(S.active==="player"){
    const p=S.units.player;
-   el.append(btn("Move 4 inches",()=>movePlayer(), "primary",p.activated||p.engaged||p.fled||!alive(p)));
    el.append(btn("Finish movement",()=>passMovement("player")));
+   const remaining=Math.max(0,MOVE_ALLOWANCE-p.moveUsed);
+   const meter=document.createElement("span");meter.className="pill";meter.textContent="Movement remaining: "+remaining.toFixed(1)+" inches";el.append(meter);
   }else el.append(btn("AI passes",()=>passMovement("ai")));
   return;
  }
@@ -171,13 +203,7 @@ function passCharge(side){
  // Both have passed, move into remaining movement.
  setPhase("movement");
 }
-function movePlayer(){
- const p=S.units.player,a=S.units.ai;if(p.activated||p.engaged||p.fled)return;
- const max=4/BATTLEFIELD_WIDTH_IN;const dir=Math.sign(a.x-p.x)||1;
- const next=p.x+dir*max;
- if(Math.abs(a.x-next)*BATTLEFIELD_WIDTH_IN<5){say("Move blocked: the regiment cannot move into contact without charging.");return}
- p.x=next;p.activated=true;say("Empire Swordsmen move up to 4 inches.");S.active="ai";render();
-}
+function movePlayer(){ /* Movement is performed directly on the battlefield by dragging. */ }
 function passMovement(side){
  if(side==="ai"){say("AI passes its movement activation.");S.passes.ai=true;S.active="player";render();return}
  if(!S.units.player.activated&&!S.units.player.engaged&&!S.units.player.fled){S.units.player.activated=true;say("Empire Swordsmen remain in position.");}
@@ -235,15 +261,77 @@ function endTurn(){
 function finishBattle(msg){S.finished=true;S.phase="over";say('<b>'+msg+'</b>');render()}
 function reset(){
  S.turn=1;S.phase="charges";S.active="player";S.selected="player";S.finished=false;S.pending=[];S.passes={player:false,ai:false};S.combatRound=0;S.loser=null;S.crDiff=0;
- Object.assign(S.units.player,{models:20,x:.18,y:.5,facing:0,engaged:false,activated:false,charged:false,fled:false});
- Object.assign(S.units.ai,{models:20,x:.82,y:.5,facing:Math.PI,engaged:false,activated:false,charged:false,fled:false});
+ Object.assign(S.units.player,{models:20,x:.32,y:.5,facing:0,engaged:false,activated:false,charged:false,fled:false,moveUsed:0});
+ Object.assign(S.units.ai,{models:20,x:.68,y:.5,facing:Math.PI,engaged:false,activated:false,charged:false,fled:false,moveUsed:0});
  S.log=[];$("log").replaceChildren();say("Battle deployed: 20 Empire Swordsmen face 20 opposing Swordsmen.");render();
 }
-canvas.addEventListener("click",e=>{
- const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width;
- const dp=Math.abs(x-S.units.player.x),da=Math.abs(x-S.units.ai.x);
- S.selected=dp<=da?"player":"ai";render();
+let drag=null;
+function pointerPoint(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
+function near(a,b,r){return Math.hypot(a.x-b.x,a.y-b.y)<=r}
+canvas.addEventListener("pointerdown",e=>{
+ if(S.finished)return;
+ const pt=pointerPoint(e),p=S.units.player,a=S.units.ai,w=W(),h=H();
+ const dp=Math.hypot(pt.x-p.x*w,pt.y-p.y*h),da=Math.hypot(pt.x-a.x*w,pt.y-a.y*h);
+ const chosen=dp<=da?p:a;S.selected=chosen.id;
+ if(S.phase==="movement"&&S.active==="player"&&chosen===p&&!p.engaged&&!p.fled&&alive(p)){
+  const front=5*MODEL_BASE_IN*PX_PER_IN(),depth=4*MODEL_BASE_IN*PX_PER_IN();
+  const fx=Math.cos(p.facing),fy=Math.sin(p.facing),lx=-fy,ly=fx,cx=p.x*w,cy=p.y*h;
+  const corners=[{x:cx+fx*depth/2+lx*front/2,y:cy+fy*depth/2+ly*front/2,sign:1},{x:cx+fx*depth/2-lx*front/2,y:cy+fy*depth/2-ly*front/2,sign:-1}];
+  const corner=corners.find(c=>near(pt,c,16));
+  drag={kind:corner?"pivot":"move",start:pt,origin:{x:p.x,y:p.y,facing:p.facing,used:p.moveUsed},pivot:corner?.sign??0,changed:false};
+  if(corner){
+   const sign=corner.sign,anchor={x:cx+fx*depth/2-lx*front/2*sign,y:cy+fy*depth/2-ly*front/2*sign};
+   drag.anchor=anchor;
+   const actual={x:cx+fx*depth/2+lx*front/2*sign,y:cy+fy*depth/2+ly*front/2*sign};
+   drag.startAngle=Math.atan2(actual.y-anchor.y,actual.x-anchor.x);
+  }
+  canvas.setPointerCapture(e.pointerId);canvas.style.cursor="grabbing";e.preventDefault();
+ }else render();
 });
+canvas.addEventListener("pointermove",e=>{
+ if(!drag)return;
+ const p=S.units.player,pt=pointerPoint(e),w=W(),h=H(),scale=PX_PER_IN();
+ const remaining=Math.max(0,MOVE_ALLOWANCE-drag.origin.used);
+ if(drag.kind==="move"){
+  const dx=(pt.x-drag.start.x)/scale,dy=(pt.y-drag.start.y)/scale;
+  const along=dx*Math.cos(drag.origin.facing)+dy*Math.sin(drag.origin.facing);
+  const advance=Math.max(0,Math.min(remaining,along));
+  const steps=Math.max(1,Math.ceil(advance/0.1));let best=0;
+  for(let i=1;i<=steps;i++){
+   const amount=advance*i/steps,x=drag.origin.x+Math.cos(drag.origin.facing)*amount/BATTLEFIELD_WIDTH_IN;
+   const y=drag.origin.y+Math.sin(drag.origin.facing)*amount/BATTLEFIELD_WIDTH_IN;
+   if(!canPlace(p,x,y,drag.origin.facing))break;best=amount;
+  }
+  p.x=drag.origin.x+Math.cos(drag.origin.facing)*best/BATTLEFIELD_WIDTH_IN;
+  p.y=drag.origin.y+Math.sin(drag.origin.facing)*best/BATTLEFIELD_WIDTH_IN;
+  p.facing=drag.origin.facing;p.moveUsed=drag.origin.used+best;drag.changed=best>0;
+ }else{
+  const anchor=drag.anchor,angle=Math.atan2(pt.y-anchor.y,pt.x-anchor.x);
+  let delta=angle-drag.startAngle;while(delta>Math.PI)delta-=Math.PI*2;while(delta< -Math.PI)delta+=Math.PI*2;
+  const front=5*MODEL_BASE_IN*scale,depth=4*MODEL_BASE_IN*scale;
+  const maxAngle=remaining/Math.max(0.01,5*MODEL_BASE_IN);
+  delta=Math.max(-maxAngle,Math.min(maxAngle,delta));
+  const steps=Math.max(1,Math.ceil(Math.abs(delta)/0.025));let best=0;
+  for(let i=1;i<=steps;i++){
+   const d=delta*i/steps,newFacing=drag.origin.facing+d,sign=drag.pivot;
+   const ax=anchor.x/w,ay=anchor.y/h,fx=Math.cos(newFacing),fy=Math.sin(newFacing),lx=-fy,ly=fx;
+   const cx=anchor.x-fx*depth/2+lx*front/2*sign,cy=anchor.y-fy*depth/2+ly*front/2*sign;
+   if(!canPlace(p,cx/w,cy/h,newFacing))break;best=d;
+  }
+  const facing=drag.origin.facing+best,fx=Math.cos(facing),fy=Math.sin(facing),lx=-fy,ly=fx,sign=drag.pivot;
+  const cx=anchor.x-fx*depth/2+lx*front/2*sign,cy=anchor.y-fy*depth/2+ly*front/2*sign;
+  p.x=cx/w;p.y=cy/h;p.facing=facing;p.moveUsed=drag.origin.used+Math.abs(best)*5*MODEL_BASE_IN;drag.changed=Math.abs(best)>0.001;
+ }
+ draw();controls();
+});
+function finishDrag(){
+ if(!drag)return;
+ const p=S.units.player,changed=drag.changed,kind=drag.kind;
+ if(changed)say(kind==="move"?"Empire Swordsmen advance "+(p.moveUsed-drag.origin.used).toFixed(1)+" inches.":"Empire Swordsmen pivot; movement spent "+(p.moveUsed-drag.origin.used).toFixed(1)+" inches.");
+ drag=null;canvas.style.cursor="grab";render();
+}
+canvas.addEventListener("pointerup",finishDrag);
+canvas.addEventListener("pointercancel",finishDrag);
 window.addEventListener("resize",setupCanvas);
 reset();setupCanvas();
 })();
