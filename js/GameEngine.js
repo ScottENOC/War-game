@@ -23,6 +23,7 @@ const W=()=>canvas.clientWidth,H=()=>canvas.clientHeight,PX_PER_IN=()=>W()/BATTL
 const enemies=u=>units().filter(v=>v.side!==u.side&&alive(v));
 const MOVEMENT = createMovement({ W, H, PX_PER_IN, MODEL_BASE_IN, BATTLEFIELD_WIDTH_IN, fieldHeightIn, units, alive });
 const { dist, shape, corners, overlap, canPlace } = MOVEMENT;
+function validDeployment(u,x,y,f){const poly=corners(u,x,y,f),w=W(),h=H();return canPlace(u,x,y,f)&&poly.every(p=>p.x>=1&&p.y>=1&&p.x<=w/2-1&&p.y<=h-1);}
 function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,80);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");if(msg.includes("dice-stack")||msg.includes("dice-duel")){$("rollcontent").innerHTML=msg;$("rollview").classList.add("show");}if($("logpanel").classList.contains("open"))$("log").scrollTop=0;}
 const DICE = createDice({ S });
 const { roll, diceStack, diceDuel } = DICE;
@@ -44,16 +45,16 @@ const COMBAT = createCombat({ S, units, alive, dist, meleeAttack, applyDamage, r
 const { resolveCombat, resolveBreak } = COMBAT;
 function endTurn(){units().forEach(u=>{u.charged=false;if(!alive(u)||!units().some(v=>v.side!==u.side&&alive(v)&&v.engaged&&dist(u,v)<4))u.engaged=false;});S.turn++;say("Turn "+S.turn+" begins.");setPhase("charges");}
 function finishBattle(msg){S.finished=true;S.phase="over";say('<b>'+msg+'</b>');render();}
-function reset(){S.turn=1;S.phase="charges";S.selected="pSword";S.mode=null;S.chargeSide="player";S.chargePasses=0;S.declaredCharges=[];S.activationSide="player";view.zoom=1;view.x=0;view.y=0;S.finished=false;S.combatRound=0;S.loser=null;S.crDiff=0;S.log=[];units().forEach(u=>Object.assign(u,{models:u.startModels,damage:0,x:(u.id==="pSword"||u.id==="pArch") ? 0.22 : 0.78,y:(u.id==="pSword"||u.id==="aSword") ? 0.36 : 0.70,facing:u.side==="player"?0:Math.PI,engaged:false,activated:false,moved:false,shot:false,charged:false,fled:false,moveUsed:0,shootCasualties:0,panicTested:false}));$("log").replaceChildren();say("Battle deployed: 20 swordsmen and 10 archers on each side.");render();}
+function reset(){S.turn=1;S.phase="deployment";S.selected="pSword";S.mode=null;S.chargeSide="player";S.chargePasses=0;S.declaredCharges=[];S.activationSide="player";view.zoom=1;view.x=0;view.y=0;S.finished=false;S.combatRound=0;S.loser=null;S.crDiff=0;S.log=[];units().forEach(u=>Object.assign(u,{models:u.startModels,damage:0,x:(u.id==="pSword"||u.id==="pArch") ? 0.22 : 0.78,y:(u.id==="pSword"||u.id==="aSword") ? 0.36 : 0.70,facing:u.side==="player"?0:Math.PI,deployed:u.side==="ai",engaged:false,activated:false,moved:false,shot:false,charged:false,fled:false,moveUsed:0,shootCasualties:0,panicTested:false}));$("log").replaceChildren();say("Deployment: select a unit card, tap your half of the field to place it, and rotate as needed. The opponent's deployment is hidden until you are ready.");render();}
 const view={zoom:1,x:0,y:0};
 const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_IN, BATTLEFIELD_WIDTH_IN, MODEL_BASE_IN, shape, view });
 const { setupCanvas, draw } = RENDERING;
 function requestRender(){ render(); }
 const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, dist, enemies, say, shoot, render:requestRender, startActivations });
 const { setPhase, declareCharge, finishMovement, passCharges, aiChargeStep, resolveDeclaredCharges } = PHASES;
-const UI = createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset });
+const UI = createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
 render = UI.render;
-const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, shoot, declareCharge, render, draw, $ });
+const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, declareCharge, render, draw, $, say });
 reset();setupCanvas();
 })();
 }
