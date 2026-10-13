@@ -4,8 +4,8 @@ export function createRules({ roll, units = () => [] }) {
   function woundTarget(strength,toughness) { if(strength<=0||toughness<=0)return null;if(strength>=toughness*2)return 2;if(strength>toughness)return 3;if(strength===toughness)return 4;if(strength*2>toughness)return 5;if(strength*2===toughness)return 6;return null; }
   function saveTarget(defender,strength) {
     const type=defender.armour||(defender.lightArmour?"light":"none");
-    if(type==="none"||!type)return null;
-    const base=type==="fullPlate"?4:type==="heavy"?5:6;
+    const base=type==="fullPlate"?4:type==="heavy"?5:type==="light"?6:(defender.shield?7:0);
+    if(!base)return null;
     return base+Math.max(0,strength-3)-(defender.shield?1:0)-(defender.mountStats?1:0)-(defender.barding?1:0);
   }
   function shieldFacesAttacker(defender,attacker) {
