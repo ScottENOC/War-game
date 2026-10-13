@@ -55,7 +55,9 @@ const { setPhase, declareCharge, finishMovement, passCharges, aiChargeStep, reso
 const UI = createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
 render = UI.render;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, declareCharge, render, draw, $, say });
-reset();setupCanvas();
+function startBattleWithArmy(army){S.units=createUnitsFromArmy(army);$("mainmenu").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();}
+function showMainMenu(){$("game").hidden=true;$("armybuilder").hidden=true;$("mainmenu").hidden=false;}
+createArmyBuilder({ $, onStart:startBattleWithArmy, onBack:showMainMenu });
 })();
 }
 ;
