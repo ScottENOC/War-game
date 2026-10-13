@@ -109,7 +109,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     let friendlyFireCount=0;
     const ffMargin=u.rangedWeapon==="bow"?1:u.rangedWeapon==="crossbow"?2:0;
     if(ffMargin&&visibility.friendlyBlockers?.length){
-      result.pools.forEach(pool=>{pool.friendlyFireMisses=(pool.hitRolls||[]).map((die,i)=>{const missBy=(pool.hitNeed||7)-die,eligible=!(pool.hitPasses||[])[i]&&pool.hitNeed<=6&&missBy>=1&&missBy<=ffMargin;if(eligible)friendlyFireCount++;return eligible;});});
+      result.pools.forEach(pool=>{let followIndex=0;pool.friendlyFireMisses=(pool.hitRolls||[]).map((die,i)=>{let missBy=(pool.hitNeed||7)-die,nearMiss=pool.hitNeed<=6&&missBy>=1&&missBy<=ffMargin;if(pool.hitNeed>=7&&pool.hitNeed<10&&die===6){const follow=pool.hitFollowUps?.[followIndex++];missBy=(pool.hitNeed-3)-(follow??0);nearMiss=follow!=null&&missBy>=1&&missBy<=ffMargin;}const eligible=!(pool.hitPasses||[])[i]&&nearMiss;if(eligible)friendlyFireCount++;return eligible;});});
     }
     result.friendlyFireCount=friendlyFireCount;
     result.hitModifier=result.pools.length?result.pools[0].hitModifier:0;
