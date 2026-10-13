@@ -97,7 +97,7 @@ const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_I
 function startBattleWithArmy(army,faction){S.units=createUnitsFromArmy(army,faction);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();}
 function showMainMenu(){$("game").hidden=true;$("armybuilder").hidden=true;$("collection-screen").hidden=true;$("mode-screen").hidden=true;$("mainmenu").hidden=false;}
 function showCollection(){$("game").hidden=true;$("armybuilder").hidden=true;$("mode-screen").hidden=true;$("mainmenu").hidden=true;$("collection-screen").hidden=false;}
-function showSkirmishBuilder(){$("game").hidden=true;$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=false;}
+function showSkirmishBuilder(){$("game").hidden=true;$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=false;armyBuilder?.open();}
 let collectionManager=null;
 function validateArmy(army,faction){
  if(collectionManager?.getBypass())return "";
@@ -113,7 +113,8 @@ function validateArmy(army,faction){
  }
  return shortages.length?"Not enough matching miniatures: "+shortages.join("; ")+". Add models or components in your Collection, or enable the developer bypass.":"";
 }
-createArmyBuilder({ $, onStart:startBattleWithArmy, onBack:showCollection, validateArmy });
+let armyBuilder=null;
+armyBuilder=createArmyBuilder({ $, onStart:startBattleWithArmy, onBack:showCollection, validateArmy });
 collectionManager=createCollectionManager({$,onSkirmish:showSkirmishBuilder,onMainMenu:showMainMenu});
 })();
 }
