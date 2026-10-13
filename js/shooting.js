@@ -1,4 +1,4 @@
-export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, W, H }) {
+export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H }) {
   function showAttack(label, u, target, result, kind) {
     const extras=[];
     if(result.longRange)extras.push("long range");
@@ -43,7 +43,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     return (Math.abs(o1)<.01&&onSegment(a,b,c))||(Math.abs(o2)<.01&&onSegment(a,b,d))||(Math.abs(o3)<.01&&onSegment(c,d,a))||(Math.abs(o4)<.01&&onSegment(c,d,b));
   }
   function lineCrossesUnit(a,b,u){
-    const poly=shape&&u?u._losCorners:null;
+    const poly=u?u._losPolygon:null;
     if(!poly)return false;
     for(let i=0;i<poly.length;i++)if(segmentsIntersect(a,b,poly[i],poly[(i+1)%poly.length]))return true;
     return false;
@@ -51,9 +51,9 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
   function getShotVisibility(u,target,rankLimit) {
     const shooters=modelCentres(u,rankLimit),targets=modelCentres(target);
     const blockers=units().filter(v=>v!==u&&v!==target&&!v.attachedTo&&alive(v)&&!v.fled&&v.deployed!==false);
-    blockers.forEach(v=>{v._losCorners=shape&&typeof v.x==="number"?null:null;});
     // Unit footprints are oriented rectangles, computed from the same formation geometry used by movement.
-    const candidates=blockers.map(v=>({u:v,poly:shape&&v?null:null}));
+    blockers.forEach(v=>{v._losPolygon=corners(v);});
+    const candidates=blockers.map(v=>({u:v}));
     const visible=[];
     let anyOver=false;
     for(const shooter of shooters){
@@ -82,10 +82,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(distance>range||(standShoot&&distance<=4))return false;
     // Build the actual rectangular unit footprints used for obstruction checks.
     const all=units().filter(v=>!v.attachedTo&&alive(v)&&v.deployed!==false);
-    for(const v of all){
-      if(typeof v._getLosCorners==="function")v._losPolygon=v._getLosCorners();
-      else v._losPolygon=null;
-    }
+    for(const v of all)v._losPolygon=corners(v);
     const rankLimit=Math.max(1,u.ranksToShoot||1);
     const visibility=getShotVisibility(u,target,rankLimit);
     all.forEach(v=>{delete v._losPolygon;delete v._losCorners;});
