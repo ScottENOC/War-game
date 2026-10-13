@@ -1,11 +1,11 @@
 export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   let faction="empire";
-  let army=[{type:"swordsmen",models:20,champion:false,lightArmour:false,heavyArmour:false,weapon:"handWeapon",spears:false,bow:false,barding:false,mounted:false,shield:false,freeCavalryOption:"bow"}];
+  let army=[{type:"swordsmen",models:20,champion:false,championBonus:"A",upgrades:{},lightArmour:false,heavyArmour:false,weapon:"handWeapon",spears:false,bow:false,barding:false,mounted:false,shield:false,freeCavalryOption:"bow"}];
   const list=$("army-list"),total=$("army-total"),addButton=$("add-unit"),startButton=$("begin-deployment");
   const elf=()=>faction==="highElves",fmt=n=>Number.isInteger(n)?String(n):n.toFixed(1);
   function defaults(u){
     u.champion=false;u.championBonus=u.type==="archers"?"BS":"A";u.upgrades={};u.lightArmour=false;u.heavyArmour=false;u.weapon="handWeapon";u.spears=false;u.bow=false;u.barding=false;u.mounted=false;u.shield=false;u.freeCavalryOption="bow";
-    if(elf()){if(u.type==="swordsmen"){u.lightArmour=true;u.shield=true;u.spears=true;}if(u.type==="archers")u.lightArmour=true;}
+    if(elf()){if(u.type==="swordsmen"){u.lightArmour=true;u.shield=true;u.spears=true;u.weapon="spear";}if(u.type==="archers")u.lightArmour=true;}
     if(u.type==="captain"||u.type==="lord")u.models=1;else if(u.type==="cavalry")u.models=Math.min(15,Math.max(5,u.models||5));else u.models=Math.min(30,Math.max(5,u.models||10));
   }
   const statUpgrades=[
@@ -21,7 +21,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     const e=elf(),m=u.models||1;
     const character=u.type==="captain"||u.type==="lord";
     const upgradeCost=statUpgrades.reduce((sum,s)=>sum+(u.upgrades&&u.upgrades[s.key]?(character?s.character:s.unit*m):0),0);
-    if(u.type==="captain"||u.type==="lord")return (e?(u.type==="lord"?120:75):(u.type==="lord"?80:50))+(u.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(u.weapon)?4:0)+(u.mounted?8:0)+(u.mounted&&u.weapon==="spear"?2:0)+(u.mounted&&u.weapon==="lance"?4:0)+(u.mounted&&u.barding?4:0)+(u.shield&&!["halberd","greatWeapon"].includes(u.weapon)?2:0);
+    if(u.type==="captain"||u.type==="lord")return (e?(u.type==="lord"?120:75):(u.type==="lord"?80:50))+(u.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(u.weapon)?4:0)+(u.mounted?8:0)+(u.mounted&&u.weapon==="spear"?2:0)+(u.mounted&&u.weapon==="lance"?4:0)+(u.mounted&&u.barding?4:0)+(u.shield&&!["halberd","greatWeapon"].includes(u.weapon)?2:0)+upgradeCost;
     if(u.type==="cavalry"){const free=u.freeCavalryOption||"bow";return m*(e?24:16)+(u.bow&&!(e&&free==="bow")?2*m:0)+(u.heavyArmour?2*m:0)+(u.barding?2*m:0)+(u.shield&&u.weapon!=="greatWeapon"?0.5*m:0)+(u.weapon==="spear"&&!(e&&free==="spear")?m:0)+(["lance","greatWeapon"].includes(u.weapon)?2*m:0)+upgradeCost;}
     const base=m*(e?12:8);
     const weaponCost=u.type==="archers"?(e?3:2)*m:u.weapon==="spear"&&!(e&&u.type==="swordsmen")?m:u.weapon==="greatWeapon"?2*m:u.weapon==="halberd"?m:0;
