@@ -20,7 +20,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     const champion = !!(u.champion?.enabled && u.championAlive !== false && u.models > 0);
     const rankWidth=Math.max(1,Math.floor(u.formationWidth||5));
     const eligibleModels = u.isCharacter ? 1 : Math.min(rankWidth*(u.spears?(u.spearRanks||2):1),u.models);
-    return { models:u.models, damage:u.damage||0, championAlive:u.championAlive, championWounds:u.championWounds, characterWounds:u.characterWounds, eligibleModels, eligibleChampion:champion };
+    return { models:u.models, damage:u.damage||0, championAlive:u.championAlive, championWounds:u.championWounds, characterWounds:u.characterWounds, eligibleModels, eligibleChampion:champion, skirmishRound:!!u.skirmishing&&u.skirmishCombatRound===S.combatRound };
   }
   function resolveCombat(){
     S.combatResolved=false;
@@ -30,7 +30,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     const tests=[];
     groups.forEach(group=>{
       const startModels=new Map(group.map(u=>[u.id,u.models]));
-      const startRanks=new Map(group.map(u=>[u.id,rankBonus(u)]));
+      const startRanks=new Map(group.map(u=>[u.id,u.skirmishing&&u.skirmishCombatRound===S.combatRound?0:rankBonus(u)]));
       const wounds=new Map(group.map(u=>[u.id,0]));
       const attachedCombatants=group.flatMap(host=>(host.attachedCharacters||[]).map(id=>({u:S.units[id],host})).filter(x=>x.u&&alive(x.u)&&!x.u.fled));
       const effectiveI=(u,host=u,component="rider")=>{
@@ -79,7 +79,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           // Rerolls require a gap of at least 11 after all modifiers, including
           // ASF, charging and the great-weapon Initiative penalty.
           const rerollMisses=component==="rider"&&!!u.alwaysStrikesFirst&&attackerI-targetI>=11;
-          const result=meleeAttack(u,target,{attackingModels:strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged,attackComponent:component,rerollMisses});
+          const result=meleeAttack(u,target,{attackingModels:strikeState.skirmishRound?Math.min(strikeState.eligibleModels,Math.max(1,Math.floor(u.formationWidth||5))):strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged,attackComponent:component,rerollMisses});
           say('<b>Melee dice — '+u.name+(component==="mount"?" (mount)":"")+' attacks '+target.name+'</b>'+diceStack(u,result));
           wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
           applyDamage(target,result.wounds,false,result.cascadePlan);
