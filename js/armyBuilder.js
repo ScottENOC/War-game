@@ -64,4 +64,5 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   $("builder-back").addEventListener("click",onBack);
   addButton.addEventListener("click",()=>{if(army.length>=6)return;const u={type:"swordsmen",models:20};defaults(u);army.push(u);renderRows();});
   startButton.addEventListener("click",()=>{if(army.length&&!validateArmy(army,faction))onStart(army.map(u=>({...u})),faction);});
+  return {open:openBuilder,refresh:renderRows};
 }
