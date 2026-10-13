@@ -70,7 +70,7 @@ function pursueAfterBreak(winner,loser){
 
 const RULES = createRules({ roll, units });
 const { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage, meleeAttack, shootingAttack } = RULES;
-const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby });
+const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H });
 const { shoot } = SHOOTING;
 function startActivations(){S.activationSide="player";units().filter(u=>u.side==="ai"&&u.fled&&alive(u)).forEach(rallyUnit);const p=units().filter(u=>u.side==="player"&&eligibleForActivation(u));if(!p.length){runAiActivations();return;}S.selected=p[0].id;render();}
 const AI = createAI({ S, units, alive, eligibleForActivation, enemies, dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, BOW_RANGE, beginCombatPhase });
