@@ -1,10 +1,11 @@
 import { FACTIONS } from "./factions.js";
 
 function unitCost(config) {
-  if (config.type === "captain") return 50 + (config.heavyArmour ? 4 : 0) + (config.greatWeapon ? 4 : 0);
+  if (config.type === "captain") return 50 + (config.heavyArmour ? 4 : 0) + ((config.weapon && config.weapon !== "handWeapon") || config.greatWeapon ? 4 : 0);
   const base = config.type === "swordsmen" ? 8 : 10;
   return config.models * base + (config.champion ? 6 : 0) +
-    (config.type === "swordsmen" && config.lightArmour ? config.models : 0);
+    (config.type === "swordsmen" && config.lightArmour ? config.models : 0) +
+    (config.type === "swordsmen" && config.spears ? config.models : 0);
 }
 
 function buildUnit(template, config) {
@@ -14,7 +15,8 @@ function buildUnit(template, config) {
   return {
     id: config.id, name: template.name + " " + config.index, short: template.short, side: config.side,
     kind: template.kind, isCharacter: config.type === "captain", attachedTo: null, baseMove: stats.M,
-    models: config.type === "captain" ? 1 : config.models, startModels: config.type === "captain" ? 1 : config.models, points: unitCost(config), weapon: config.type === "captain" && config.greatWeapon ? "greatWeapon" : "handWeapon",
+    models: config.type === "captain" ? 1 : config.models, startModels: config.type === "captain" ? 1 : config.models, points: unitCost(config), weapon: config.type === "captain" ? (config.weapon || (config.greatWeapon ? "greatWeapon" : "handWeapon")) : "handWeapon",
+    spears: config.type === "swordsmen" && !!config.spears,
     lightArmour: !!config.lightArmour, heavyArmour: !!config.heavyArmour,
     armour: config.type === "captain" ? (config.heavyArmour ? "heavy" : "light") : (config.lightArmour ? "light" : "none"), shield: false, wardSave: null,
     // Optional rule tags consumed by shooting modifiers when a unit/profile or
