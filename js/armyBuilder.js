@@ -10,7 +10,7 @@ export function createArmyBuilder({ $, onStart, onBack }) {
   }
   function unitPoints(u){
     const e=elf(),m=u.models||1;
-    if(u.type==="captain"||u.type==="lord")return (e?(u.type==="lord"?120:75):(u.type==="lord"?80:50))+(u.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(u.weapon)?4:0)+(u.mounted?8:0)+(u.mounted&&u.weapon==="spear"?2:0)+(u.mounted&&u.weapon==="lance"?4:0)+(u.mounted&&u.barding?4:0)+(u.shield?1:0);
+    if(u.type==="captain"||u.type==="lord")return (e?(u.type==="lord"?120:75):(u.type==="lord"?80:50))+(u.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(u.weapon)?4:0)+(u.mounted?8:0)+(u.mounted&&u.weapon==="spear"?2:0)+(u.mounted&&u.weapon==="lance"?4:0)+(u.mounted&&u.barding?4:0)+(u.shield&&!["halberd","greatWeapon"].includes(u.weapon)?2:0);
     if(u.type==="cavalry"){const free=u.freeCavalryOption||"bow";return m*(e?24:16)+(u.bow&&!(e&&free==="bow")?2*m:0)+(u.heavyArmour?2*m:0)+(u.barding?2*m:0)+(u.shield?0.5*m:0)+(u.weapon==="spear"&&!(e&&free==="spear")?m:0)+(["lance","greatWeapon"].includes(u.weapon)?2*m:0);}
     return m*(e?(u.type==="swordsmen"?12:15):(u.type==="swordsmen"?8:10))+(u.champion?(e?9:6):0)+(u.lightArmour&&!e?m:0)+(u.spears&&!(e&&u.type==="swordsmen")?m:0)+(u.shield&&!(e&&u.type==="swordsmen")?0.5*m:0);
   }
@@ -28,13 +28,14 @@ export function createArmyBuilder({ $, onStart, onBack }) {
       const options=document.createElement("div");options.className="army-options";const character=u.type==="captain"||u.type==="lord",cavalry=u.type==="cavalry",infantry=u.type==="swordsmen"||u.type==="archers";
       if(!character&&!cavalry)options.append(check("Champion",{cost:"+"+(elf()?9:6)+" pts",checked:!!u.champion,onChange:v=>{u.champion=v;updateTotals();}}));
       if(character){
+        if(elf()){const rule=document.createElement("p");rule.textContent="Always Strikes First: +10 Initiative; reroll missed melee hits when natural Initiative exceeds the target’s.";options.append(rule);}
         options.append(check("Heavy armour",{cost:"+4 pts (5+ save)",checked:!!u.heavyArmour,onChange:v=>{u.heavyArmour=v;updateTotals();}}));
-        options.append(check("Shield",{cost:"+1 pt, +1 front armour save",checked:!!u.shield,disabled:["halberd","greatWeapon"].includes(u.weapon),onChange:v=>{u.shield=v;updateTotals();}}));
+        options.append(check("Shield",{cost:"+2 pts, +1 front armour save",checked:!!u.shield,disabled:["halberd","greatWeapon"].includes(u.weapon),onChange:v=>{u.shield=v;updateTotals();}}));
         options.append(select("Weapon",'<option value="handWeapon">Sword/hand weapon (included)</option><option value="halberd">Halberd (+4 pts)</option><option value="greatWeapon">Great weapon (+4 pts, +2 Strength, −10 Initiative)</option>'+(u.mounted?'<option value="spear">Spear (+2 pts, charge)</option><option value="lance">Lance (+4 pts, charge)</option>':""),u.weapon,v=>{u.weapon=v;if(["halberd","greatWeapon"].includes(v))u.shield=false;updateTotals();renderRows();}));
         options.append(check("Warhorse",{cost:"+8 pts",checked:!!u.mounted,onChange:v=>{u.mounted=v;u.barding=false;if(!v&&["spear","lance"].includes(u.weapon))u.weapon="handWeapon";renderRows();}}));
         if(u.mounted)options.append(check("Barding",{cost:"+4 pts, +1 save"+(elf()?", no Move penalty":", −1 Move"),checked:!!u.barding,onChange:v=>{u.barding=v;updateTotals();}}));
       }else if(cavalry){
-        const kit=document.createElement("p");kit.textContent=elf()?"Includes sword, light armour and horse. Choose one free: bow or spear.":"Includes sword, light armour and horse (+1 armour save).";options.append(kit);
+        const kit=document.createElement("p");kit.textContent=elf()?"Includes sword, light armour and horse. Choose one free: bow or spear. Always Strikes First.":"Includes sword, light armour and horse (+1 armour save).";options.append(kit);
         if(elf()){
           options.append(select("Free equipment",'<option value="bow">Bow (24″ range)</option><option value="spear">Spear (+1 Strength on charge)</option>',u.freeCavalryOption||"bow",v=>{u.freeCavalryOption=v;if(v==="bow")u.bow=false;if(v==="spear"&&u.weapon==="spear")u.weapon="handWeapon";updateTotals();renderRows();}));
           options.append(select("Weapon upgrade",'<option value="handWeapon">No upgrade</option><option value="lance">Lance (+2/model)</option><option value="greatWeapon">Great weapon (+2/model)</option>',["lance","greatWeapon"].includes(u.weapon)?u.weapon:"handWeapon",v=>{u.weapon=v;if(["halberd","greatWeapon"].includes(v))u.shield=false;updateTotals();renderRows();}));
