@@ -1,7 +1,7 @@
 import { FACTIONS } from "./factions.js";
 
 function unitCost(config) {
-  if (config.type === "captain") return 50;
+  if (config.type === "captain") return 50 + (config.heavyArmour ? 4 : 0);
   const base = config.type === "swordsmen" ? 8 : 10;
   return config.models * base + (config.champion ? 6 : 0) +
     (config.type === "swordsmen" && config.lightArmour ? config.models : 0);
@@ -9,12 +9,13 @@ function unitCost(config) {
 
 function buildUnit(template, config) {
   const stats = { ...template.stats };
-  if (config.type === "swordsmen" && config.lightArmour) stats.save = "6+";
+
   return {
     id: config.id, name: template.name + " " + config.index, short: template.short, side: config.side,
     kind: template.kind, isCharacter: config.type === "captain", attachedTo: null,
     models: config.type === "captain" ? 1 : config.models, startModels: config.type === "captain" ? 1 : config.models, points: unitCost(config),
-    lightArmour: !!config.lightArmour,
+    lightArmour: !!config.lightArmour, heavyArmour: !!config.heavyArmour,
+    armour: config.type === "captain" ? (config.heavyArmour ? "heavy" : "light") : (config.lightArmour ? "light" : "none"), shield: false, wardSave: null,
     // Optional rule tags consumed by shooting modifiers when a unit/profile or
     // future battlefield-terrain interaction sets them.
     largeTarget: false, singleCharacter: false, skirmisher: false, cover: null,
@@ -23,7 +24,7 @@ function buildUnit(template, config) {
     formationWidth: 5, canCounterCharge: true, fleeingCharge: false, activated: false, moved: false, shot: false, charged: false, fled: false,
     moveUsed: 0, damage: 0, shootCasualties: 0, panicTested: false,
     stats, champion: { enabled: !!config.champion && config.type !== "captain", stats: null },
-    attachedCharacters: [], characterWounds: config.type === "captain" ? template.stats.W : null, wardSave: null
+    attachedCharacters: [], characterWounds: config.type === "captain" ? template.stats.W : null, championAlive: !!config.champion, championWounds: config.champion ? template.stats.W : 0
   };
 }
 
