@@ -15,7 +15,7 @@ export function createDice({ S }) {
       if (result.pools && result.pools.length) {
         const profile = pool.WS != null ? "WS " + pool.WS + " · S " + pool.S + " · A " + pool.A :
           "BS " + pool.BS + " · S " + pool.S;
-        out += '<div class="pool-label">' + pool.label + " — " + profile + "</div>";
+        out += '<div class="pool-label">' + (pool.targetLabel ? pool.targetLabel + " · " : "") + pool.label + " — " + profile + "</div>";
       }
       const hitLabel = pool.hitNeed >= 10 ? "To hit — impossible (10+)" :
         pool.hitNeed >= 7 ? "To hit — 6, then " + (pool.hitNeed - 3) + "+" :
@@ -30,6 +30,7 @@ export function createDice({ S }) {
         out += lane("To wound — " + pool.hits + " hits; need " + pool.woundNeed + "+",
           pool.woundRolls || [], pool.woundNeed, "wound");
       }
+      if (pool.wardNeed !== null) out += lane("Ward saves — need " + pool.wardNeed + "+", pool.wardRolls || [], pool.wardNeed, "save", (pool.wardRolls || []).map(value => value !== 1 && value >= pool.wardNeed));
       if (pool.saveNeed !== null) {
         const saveLabel = pool.saveNeed > 6 ? "Armour saves — impossible (" + pool.saveNeed + "+)" :
           "Armour saves — " + pool.woundsBeforeSave + " wounds; need " + pool.saveNeed + "+";
