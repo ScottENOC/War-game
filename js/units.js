@@ -7,7 +7,7 @@ function unitCost(config, faction) {
     {key:"M",unit:2,character:5},{key:"WS",unit:2,character:5},{key:"BS",unit:2,character:5},
     {key:"S",unit:3,character:6},{key:"T",unit:4,character:8},{key:"I",unit:1,character:3},{key:"Ld",unit:1,character:3}
   ].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
-  const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
+  const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
   const rangedWeapon=config.rangedWeapon||(["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(type==="archers"?"bow":config.bow?"bow":null));
   const rangedCost=rangedWeapon==="bow"?(elf?3:2):rangedWeapon==="crossbow"?3:rangedWeapon==="firearm"?4:0;
   if(character){
@@ -48,9 +48,9 @@ function buildUnit(template,config,faction,opposing=false) {
     rangedStrength:["crossbow","firearm"].includes(rangedWeapon)?4:3,armourPiercing:rangedWeapon==="firearm"?1:0,
     bsCap:rangedWeapon==="crossbow"?4:rangedWeapon==="firearm"?3:null,
     ranksToShoot:mounted?1:rangedWeapon==="bow"?(elf?4:3):rangedWeapon==="crossbow"||rangedWeapon==="firearm"?2:0,
-    overUnitPenalty:rangedWeapon==="bow"?1:rangedWeapon==="crossbow"?2:Infinity,
+    overUnitPenalty:rangedWeapon==="bow"?1:rangedWeapon==="crossbow"?2:2,
     spears,spearRanks:elf&&spears?3:2,hasBow,range:rangedWeapon==="bow"?(elf?30:24):rangedWeapon==="crossbow"?30:rangedWeapon==="firearm"?20:(template.range||24),lightArmour,heavyArmour:!!config.heavyArmour,barding:!!config.barding,shield,
-    alwaysStrikesFirst:!!template.alwaysStrikesFirst,elvenArchery:!!elf&&!!config.elvenArchery,skills:{...(config.skills||{})},mountStats:mounted?{...(template.mountStats||{A:1,WS:3,I:3,S:3})}:null,
+    alwaysStrikesFirst:!!template.alwaysStrikesFirst,elvenArchery:!!elf&&!!config.elvenArchery,skills:{...(config.skills||{})},skirmishCapable:!!config.skills?.skirmish,skirmishing:false,skirmishCombatRound:0,faction:elf?"highElves":"empire",mountStats:mounted?{...(template.mountStats||{A:1,WS:3,I:3,S:3})}:null,
     baseWidthIn:mounted?25/25.4:20/25.4,baseDepthIn:mounted?50/25.4:20/25.4,
     armour:isCavalry||isCharacter?(config.heavyArmour?"heavy":"light"):(lightArmour?"light":"none"),wardSave:null,
     largeTarget:false,singleCharacter:false,skirmisher:false,cover:null,x:config.x,y:config.y,facing:config.facing,deployed:config.side==="ai",
