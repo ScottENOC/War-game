@@ -1,5 +1,6 @@
 import { createUnitsFromArmy } from "./units.js";
 import { createArmyBuilder } from "./armyBuilder.js";
+import { createCollectionManager } from "./collection.js";
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js";
 import { createRules } from "./rules.js";
@@ -93,9 +94,27 @@ const { setPhase, declareCharge, fleeFromCharge, finishMovement, passCharges, ai
 const UI = createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
 render = UI.render;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, declareCharge, render, draw, $, say, dist });
-function startBattleWithArmy(army,faction){S.units=createUnitsFromArmy(army,faction);$("mainmenu").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();}
-function showMainMenu(){$("game").hidden=true;$("armybuilder").hidden=true;$("mainmenu").hidden=false;}
-createArmyBuilder({ $, onStart:startBattleWithArmy, onBack:showMainMenu });
+function startBattleWithArmy(army,faction){S.units=createUnitsFromArmy(army,faction);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();}
+function showMainMenu(){$("game").hidden=true;$("armybuilder").hidden=true;$("collection-screen").hidden=true;$("mode-screen").hidden=true;$("mainmenu").hidden=false;}
+function showCollection(){$("game").hidden=true;$("armybuilder").hidden=true;$("mode-screen").hidden=true;$("mainmenu").hidden=true;$("collection-screen").hidden=false;}
+function showSkirmishBuilder(){$("game").hidden=true;$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=false;}
+let collectionManager=null;
+function validateArmy(army,faction){
+ if(collectionManager?.getBypass())return "";
+ const owned=collectionManager?.getInventory()||[],used=new Set(),shortages=[];
+ for(const entry of army){
+  const count=(entry.type==="captain"||entry.type==="lord")?1:(entry.models||1);
+  const weapon=entry.type==="archers"?"bow":entry.type==="swordsmen"?(entry.spears?"spear":"handWeapon"):(entry.weapon||"handWeapon");
+  const mounted=entry.type==="cavalry"||((entry.type==="captain"||entry.type==="lord")&&!!entry.mounted);
+  const shield=!!entry.shield;
+  const matches=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&m.type===entry.type&&m.weapon===weapon&&!!m.shield===shield&&!!m.mounted===mounted);
+  if(matches.length<count)shortages.push((entry.type==="captain"||entry.type==="lord"?1:count-matches.length)+" "+(entry.type==="captain"||entry.type==="lord"?entry.type:entry.type)+" model(s) needed with "+weapon+(shield?" + shield":"")+(mounted?" mounted":""));
+  matches.slice(0,count).forEach(m=>used.add(m.id));
+ }
+ return shortages.length?"Not enough matching miniatures: "+shortages.join("; ")+". Add models or components in your Collection, or enable the developer bypass.":"";
+}
+createArmyBuilder({ $, onStart:startBattleWithArmy, onBack:showCollection, validateArmy });
+collectionManager=createCollectionManager({$,onSkirmish:showSkirmishBuilder,onMainMenu:showMainMenu});
 })();
 }
 ;
