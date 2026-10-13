@@ -1,4 +1,4 @@
-export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, startBattle, say }) {
+export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, startBattle, say }) {
   function renderRoster() {
     for (const side of ["ai", "player"]) {
       const el = $(side === "ai" ? "enemycards" : "playercards");
@@ -34,7 +34,7 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
       else{
         const d=dist(u,target),range=u.range||BOW_RANGE,dx=target.x-u.x,dy=target.y-u.y,len2=dx*dx+dy*dy||1;
         const blockers=units().filter(v=>v!==u&&v!==target&&!v.attachedTo&&alive(v)).filter(v=>{const t=((v.x-u.x)*dx+(v.y-u.y)*dy)/len2;if(t<=.04||t>=.96)return false;const px=u.x+t*dx,py=u.y+t*dy;return Math.hypot(v.x-px,v.y-py)<.055;});
-        let arc=true;if(!u.skirmishing){let a=Math.atan2(dy,dx)-(u.facing||0);while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;arc=Math.abs(a)<=Math.PI/4;}
+        let arc=true;if(!u.skirmishing){let a=Math.atan2(dy*H(),dx*W())-(u.facing||0);while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;arc=Math.abs(a)<=Math.PI/4;}
         const friendlyBlockers=blockers.filter(v=>v.side===u.side),blocked=friendlyBlockers.length>0&&u.rangedWeapon==="firearm";
         const over=blockers.length?(u.rangedWeapon==="bow"?1:2):0;
         const long=d>range/2?(u.rangedWeapon==="firearm"?2:1):0,moved=u.moved?1:0,single=(target.isCharacter||target.models===1||target.skirmishing)?1:0,charge=target.charged?1:0,cover=target.cover==="hard"?2:target.cover==="soft"?1:0;
