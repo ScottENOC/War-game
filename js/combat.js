@@ -24,20 +24,24 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const startModels=new Map(group.map(u=>[u.id,u.models]));
       const startRanks=new Map(group.map(u=>[u.id,rankBonus(u)]));
       const wounds=new Map(group.map(u=>[u.id,0]));
-      const effectiveI=u=>u.stats.I+(u.charged?10:0);
-      const levels=[...new Set(group.map(effectiveI))].sort((a,b)=>b-a);
+      const attachedCombatants=group.flatMap(host=>(host.attachedCharacters||[]).map(id=>({u:S.units[id],host})).filter(x=>x.u&&alive(x.u)&&!x.u.fled));
+      const effectiveI=(u,host=u)=>u.stats.I+((host.charged)?10:0);
+      const levels=[...new Set([...group.map(u=>effectiveI(u,u)),...attachedCombatants.map(x=>effectiveI(x.u,x.host))])].sort((a,b)=>b-a);
       levels.forEach(initiative=>{
-        const attackers=group.filter(u=>alive(u)&&!u.fled&&effectiveI(u)===initiative);
-        // The digital house rule resolves each attack packet in sequence, allowing
-        // remaining attacks to cascade into the next surviving defender tier.
-        attackers.forEach(u=>{
-          if(!alive(u)||u.fled)return;
-          const targets=linked(u).filter(v=>alive(v)&&!v.fled);
+        const attackers=[];
+        group.forEach(host=>{
+          if(alive(host)&&!host.fled&&effectiveI(host,host)===initiative)attackers.push({u:host,host});
+          (host.attachedCharacters||[]).forEach(id=>{const hero=S.units[id];if(hero&&alive(hero)&&!hero.fled&&effectiveI(hero,host)===initiative)attackers.push({u:hero,host});});
+        });
+        // Resolve attack packets sequentially so casualties can expose the champion and then heroes.
+        attackers.forEach(({u,host})=>{
+          if(!alive(u)||u.fled||!alive(host))return;
+          const targets=linked(host).filter(v=>alive(v)&&!v.fled);
           if(!targets.length)return;
-          const target=targets.sort((a,b)=>dist(u,a)-dist(u,b))[0];
+          const target=targets.sort((a,b)=>dist(host,a)-dist(host,b))[0];
           const result=meleeAttack(u,target);
           say('<b>Melee dice — '+u.name+' attacks '+target.name+'</b>'+diceStack(u,result));
-          wounds.set(u.id,(wounds.get(u.id)||0)+result.wounds);
+          wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
           applyDamage(target,result.wounds,false,result.cascadePlan);
         });
       });
