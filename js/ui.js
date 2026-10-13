@@ -3,21 +3,22 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
     for (const side of ["ai", "player"]) {
       const el = $(side === "ai" ? "enemycards" : "playercards");
       el.innerHTML = "";
+      if(side==="ai"&&S.phase==="deployment"){el.innerHTML='<div class="roster-note">Opponent deployment hidden</div>';continue;}
       units().filter(u => u.side === side).forEach(u => {
         const b = document.createElement("button");
         b.className = "unit-card" + (u.id === S.selected ? " selected" : "") +
           (side === "player" && !u.moved && !u.shot && !u.fled ? " unmoved" : "");
-        b.setAttribute("aria-label", u.name + " " + u.models + " models" + (u.champion.enabled ? ", champion" : ""));
-        b.title = u.name + (u.champion.enabled ? " — champion included" : "");
+        b.setAttribute("aria-label", u.name + " " + u.models + " models, " + u.points + " points" + (u.champion.enabled ? ", champion" : "") + (u.lightArmour ? ", light armour" : ""));
+        b.title = u.name + " — " + u.points + " pts" + (u.champion.enabled ? ", champion included" : "") + (u.lightArmour ? ", light armour" : "");
         b.innerHTML = '<span class="sigil">' + (u.kind === "archer" ? "🏹" : "⚔") + '</span>' +
           (u.champion.enabled ? '<span class="champion-mark">♛</span>' : "") +
-          '<span class="count">' + u.models + '</span><span class="bar ' + (side === "ai" ? "ai" : "") + '"></span>';
+          '<span class="count">' + u.models + '</span><span class="points-mark">' + u.points + '</span><span class="bar ' + (side === "ai" ? "ai" : "") + '"></span>';
         b.onclick = () => { if(S.phase==="deployment"&&side==="ai")return; S.selected = u.id; S.mode = null; render(); };
         el.append(b);
       });
     }
   }
-  function render() { renderRoster(); draw(); controls(); }
+  function render() { renderRoster(); const total=units().filter(v=>v.side==="player").reduce((sum,v)=>sum+v.points,0); $("battle-points").textContent="Your army · "+total+" pts"; draw(); controls(); }
   function btn(label, icon, fn, disabled, active) {
     const b = document.createElement("button");
     b.textContent = icon; b.title = label; b.setAttribute("aria-label", label);
@@ -34,9 +35,6 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
       btn("Start battle","▶",startBattle,placed!==total);
       return;
     }
-    if (u) btn(u.champion.enabled ? "Remove champion" : "Add champion", "♛",
-      () => { u.champion.enabled = !u.champion.enabled; render(); },
-      u.models < 1, u.champion.enabled);
     if (S.phase === "charges") {
       if (S.chargeSide !== "player") { btn("Opponent declaring charges", "…", () => {}, true); return; }
       btn("Declare charge", "➜", () => { S.mode = S.mode === "charge" ? null : "charge"; render(); },
