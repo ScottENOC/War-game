@@ -67,20 +67,20 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     for(const shooter of shooters){
       let best=null;
       for(const aim of targets){
-        let over=0,blocked=false;
+        let over=0,blocked=false;const crossedFriendly=[];
         for(const block of candidates){
           // Corners are supplied by the movement system on each unit for this visibility check.
           const poly=block.u._losPolygon;
           if(!poly)continue;
           if(lineCrossesUnit(shooter,aim,block.u)){
-            if(block.u.side===u.side){friendlyBlockers.add(block.u);if(u.rangedWeapon==="firearm"){blocked=true;break;}}
+            if(block.u.side===u.side){if(u.rangedWeapon==="firearm"){blocked=true;break;}crossedFriendly.push(block.u);}
             over++;
           }
         }
-        if(!blocked&&(!best||over<best.over))best={over};
+        if(!blocked&&(!best||over<best.over))best={over,friendly:crossedFriendly};
         if(best&&best.over===0)break;
       }
-      if(best){visible.push(shooter);if(shooter.champion)visibleChampion=true;if(best.over>0)anyOver=true;}
+      if(best){visible.push(shooter);if(shooter.champion)visibleChampion=true;if(best.over>0)anyOver=true;(best.friendly||[]).forEach(v=>friendlyBlockers.add(v));}
     }
     return {visibleModels:visible.length,visibleChampion,overUnitPenalty:anyOver?(u.overUnitPenalty||0):0,friendlyBlockers:[...friendlyBlockers]};
   }
