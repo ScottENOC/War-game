@@ -6,7 +6,7 @@ export function createRules({ roll, units = () => [] }) {
     const type=defender.armour||(defender.lightArmour?"light":"none");
     if(type==="none"||!type)return null;
     const base=type==="fullPlate"?4:type==="heavy"?5:6;
-    return base+Math.max(0,strength-3)-(defender.shield?1:0);
+    return base+Math.max(0,strength-3)-(defender.shield?1:0)-(defender.mountStats?1:0)-(defender.barding?1:0);
   }
   function applyDamage(u,wounds,shooting,cascadePlan=null) {
     const before=u.models;
@@ -32,7 +32,8 @@ export function createRules({ roll, units = () => [] }) {
     const normalCount=mode==="melee"?Math.max(0,Math.min(frontRank-(hasChampion?1:0),normalModels)):normalModels;
     const profiles=[];
     const add=(count,stats,label)=>{if(!count)return;const key=mode==="melee"?[stats.WS,stats.S,stats.A].join("/"):[stats.BS,stats.S].join("/");let pool=profiles.find(p=>p.key===key);if(!pool){pool={key,stats,count:0,labels:[]};profiles.push(pool);}pool.count+=count;if(!pool.labels.includes(label))pool.labels.push(label);};
-    add(normalCount,{...u.stats},"Rank and file");
+    add(normalCount,{...u.stats},"Rider");
+    if(u.mountStats&&mode==="melee")add(attackModels,{...u.mountStats},"Mount");
     if(hasChampion){const overrides=u.champion.stats||{},s={...u.stats,...overrides};if(mode==="melee"&&overrides.A==null)s.A=2;if(mode==="shooting"&&overrides.BS==null)s.BS=u.stats.BS+1;add(1,s,"Champion");}
     return profiles;
   }
@@ -81,7 +82,8 @@ export function createRules({ roll, units = () => [] }) {
   }
   function attack(u,target,mode,context={}) {
     const v=newVirtual(target),pools=[];
-    const strengthBonus=u.isCharacter?(u.weapon==="greatWeapon"?2:u.weapon==="halberd"?1:0):0;
+    const charging=!!context.charging;
+    const strengthBonus=(u.weapon==="greatWeapon"?2:u.weapon==="halberd"?1:(charging&&u.weapon==="lance"?2:charging&&u.weapon==="spear"?1:0));
     const attacker=strengthBonus?{...u,stats:{...u.stats,S:u.stats.S+strengthBonus}}:u;
     for(const attackerPool of modelPools(attacker,mode,context))pools.push(...rollPool(attackerPool,target,mode,context,v));
     const sum=k=>pools.reduce((n,p)=>n+(p[k]||0),0);
