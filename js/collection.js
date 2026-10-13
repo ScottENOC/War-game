@@ -15,6 +15,7 @@ const bitDefs=[
  {id:"right_sword",label:"Right arm · sword",kind:"right",weapon:"handWeapon"},
  {id:"right_spear",label:"Right arm · spear",kind:"right",weapon:"spear"},
  {id:"right_lance",label:"Right arm · lance",kind:"right",weapon:"lance"},
+ {id:"left_empty_arm",label:"Left arm · empty hand",kind:"leftEmpty"},
  {id:"left_shield",label:"Left arm · shield",kind:"shield"},
  {id:"both_greatWeapon",label:"Both arms · great weapon",kind:"twohand",weapon:"greatWeapon"},
  {id:"both_halberd",label:"Both arms · halberd",kind:"twohand",weapon:"halberd"},
@@ -129,7 +130,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
     if(body.faction!==faction.value){status.textContent="Choose a main body matching the selected faction.";return;}
     if(mounted&&arms.weapon==="halberd"){status.textContent="Halberds cannot be used by mounted models.";return;}
     const addShield=shieldCheck.checked&&arms.kind==="right";if(shieldCheck.checked&&!addShield){status.textContent="Two-handed weapons use both arms and cannot take a shield.";return;}
-    const need=[body.id,arms.id];if(addShield)need.push("left_shield");if(mounted)need.push("horse");
+    const need=[body.id,arms.id];if(arms.kind==="right")need.push(addShield?"left_shield":"left_empty_arm");if(mounted)need.push("horse");
     const shortage=need.find(id=>bitCount(id)<1);if(shortage){status.textContent="Not enough bits: "+bitDefs.find(b=>b.id===shortage).label+".";return;}
     if(body.kind==="cavalry"&&!mounted){status.textContent="Cavalry bodies require a horse.";return;}
     need.forEach(consumeBit);
