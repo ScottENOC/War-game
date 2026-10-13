@@ -29,7 +29,7 @@ export function createArmyBuilder({ $, onStart, onBack }) {
       if(!character&&!cavalry)options.append(check("Champion",{cost:"+"+(elf()?9:6)+" pts",checked:!!u.champion,onChange:v=>{u.champion=v;updateTotals();}}));
       if(character){
         if(elf()){const rule=document.createElement("p");rule.textContent="Always Strikes First: +10 Initiative; reroll missed melee hits when natural Initiative exceeds the target’s.";options.append(rule);}
-        options.append(check("Heavy armour",{cost:"+4 pts (5+ save)",checked:!!u.heavyArmour,onChange:v=>{u.heavyArmour=v;updateTotals();}}));
+        options.append(check("Heavy armour",{cost:"+4 pts (5+ save"+((elf()||u.mounted)?", no Move penalty":", −1 Move")+")",checked:!!u.heavyArmour,onChange:v=>{u.heavyArmour=v;updateTotals();}}));
         options.append(check("Shield",{cost:"+2 pts, +1 front armour save",checked:!!u.shield,disabled:["halberd","greatWeapon"].includes(u.weapon),onChange:v=>{u.shield=v;updateTotals();}}));
         options.append(select("Weapon",'<option value="handWeapon">Sword/hand weapon (included)</option><option value="halberd">Halberd (+4 pts)</option><option value="greatWeapon">Great weapon (+4 pts, +2 Strength, −10 Initiative)</option>'+(u.mounted?'<option value="spear">Spear (+2 pts, charge)</option><option value="lance">Lance (+4 pts, charge)</option>':""),u.weapon,v=>{u.weapon=v;if(["halberd","greatWeapon"].includes(v))u.shield=false;updateTotals();renderRows();}));
         options.append(check("Warhorse",{cost:"+8 pts",checked:!!u.mounted,onChange:v=>{u.mounted=v;u.barding=false;if(!v&&["spear","lance"].includes(u.weapon))u.weapon="handWeapon";renderRows();}}));
