@@ -59,7 +59,7 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
     if (S.phase === "combat") {
       const activeMelee=units().some(v=>v.engaged&&alive(v));
       btn("Resolve melee", "⚔", resolveCombat, S.combatResolved||!units().some(v => v.side === "player" && v.engaged && alive(v)));
-      if(u&&u.isCharacter&&u.side==="player")btn(u.weapon==="greatWeapon"?"Switch to hand weapon":"Switch to great weapon","⚒",()=>{u.weapon=u.weapon==="greatWeapon"?"handWeapon":"greatWeapon";say(u.name+" switches to "+(u.weapon==="greatWeapon"?"a great weapon (+2 Strength, −10 Initiative)":"a hand weapon")+" for the next combat.");render();},!S.combatResolved||u.fled);
+      if(u&&u.isCharacter&&u.side==="player"){const weaponOrder=["handWeapon","halberd","greatWeapon"],weaponLabels={handWeapon:"hand weapon",halberd:"halberd (+1 Strength)",greatWeapon:"great weapon (+2 Strength, −10 Initiative)"};const nextWeapon=weaponOrder[(weaponOrder.indexOf(u.weapon)+1)%weaponOrder.length];btn("Switch to "+weaponLabels[nextWeapon],"⚒",()=>{u.weapon=nextWeapon;u.greatWeapon=nextWeapon==="greatWeapon";say(u.name+" switches to a "+weaponLabels[u.weapon]+" for the next combat.");render();},!S.combatResolved||u.fled);}
       btn("End turn", "▶", endTurn, !S.combatResolved); return;
     }
     if (S.phase === "break") btn("Break test", "🎲", resolveBreak);
