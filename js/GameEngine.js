@@ -3,6 +3,7 @@ import { createAI } from "./ai.js";
 import { createRules } from "./rules.js";
 import { createShooting } from "./shooting.js";
 import { createCombat } from "./combat.js";
+import { createRendering } from "./rendering.js";
 
 export function startGame() {
 (() => {
@@ -30,25 +31,8 @@ function diceStack(u,r){
  out+='<div class="unitmeta">Result: '+r.hits+' hits, '+r.woundsBeforeSave+' wounds, '+r.saved+' saved, <b>'+r.wounds+' unsaved</b>.</div></div>';return out;
 }
 function diceDuel(title,r1,r2){return '<div><b>'+title+'</b><div class="dice-duel">'+(r1?'<div class="dice-side"><h3>Player</h3>'+diceStack(S.units.pSword.side==='player'?S.units.pSword:S.units.pArch,r1)+'</div>':'')+(r2?'<div class="dice-side"><h3>Opponent</h3>'+diceStack(S.units.aSword.side==='ai'?S.units.aSword:S.units.aArch,r2)+'</div>':'')+'</div></div>';}
-function setupCanvas(){const r=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
-function shape(u){const files=5,ranks=Math.max(1,Math.ceil(u.models/files)),base=MODEL_BASE_IN*PX_PER_IN();return {files,ranks,base,front:files*base,depth:ranks*base};}
-function corners(u,x=u.x,y=u.y,f=u.facing){const q=shape(u),fx=Math.cos(f),fy=Math.sin(f),lx=-fy,ly=fx,cx=x*W(),cy=y*H(),front=q.front/2,depth=q.depth/2;return [{x:cx-fx*depth-lx*front,y:cy-fy*depth-ly*front},{x:cx+fx*depth-lx*front,y:cy+fy*depth-ly*front},{x:cx+fx*depth+lx*front,y:cy+fy*depth+ly*front},{x:cx-fx*depth+lx*front,y:cy-fy*depth+ly*front}];}
-function overlap(a,b){for(const poly of [a,b])for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],ax=-(q.y-p.y),ay=q.x-p.x,A=a.map(v=>v.x*ax+v.y*ay),B=b.map(v=>v.x*ax+v.y*ay);if(Math.max(...A)<Math.min(...B)+.01||Math.max(...B)<Math.min(...A)+.01)return false;}return true;}
-function canPlace(u,x,y,f){const poly=corners(u,x,y,f),w=W(),h=H();if(poly.some(p=>p.x<1||p.y<1||p.x>w-1||p.y>h-1))return false;return !units().some(v=>v!==u&&alive(v)&&overlap(poly,corners(v)));}
-function drawCone(u){if(u.side!=="player"||u.engaged||u.fled||u.charged||!alive(u)||S.phase==="combat"||S.phase==="over")return;const q=shape(u),x=u.x*W(),y=u.y*H(),f=u.facing,range=u.stats.M*2*PX_PER_IN(),half=Math.PI/4,front=q.depth/2,fy=-Math.sin(f),fx=Math.cos(f),left=-Math.sin(f),ly=Math.cos(f);const sx=x+fx*front,sy=y+fy*front;ctx.save();ctx.fillStyle="rgba(229,195,105,.13)";ctx.strokeStyle="rgba(250,220,140,.7)";ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sx+left*q.front/2,sy+ly*q.front/2);ctx.lineTo(sx+left*q.front/2+Math.cos(f-half)*range,sy+ly*q.front/2+Math.sin(f-half)*range);ctx.arc(sx,sy,range,f-half,f+half);ctx.lineTo(sx+left*q.front/2,sy+ly*q.front/2);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();}
-function drawUnit(u){if(!alive(u))return;const w=W(),h=H(),x=u.x*w,y=u.y*h,q=shape(u),selected=S.selected===u.id,base=q.base;ctx.save();ctx.translate(x,y);ctx.rotate(u.facing);
- ctx.fillStyle="rgba(0,0,0,.24)";ctx.fillRect(-q.depth/2+3,-q.front/2+4,q.depth,q.front);
- ctx.fillStyle=u.side==="player"?(u.kind==="archer"?"#4b8065":"#365e7e"):(u.kind==="archer"?"#a17b42":"#813c36");ctx.fillRect(-q.depth/2,-q.front/2,q.depth,q.front);
- let left=u.models;for(let rank=0;rank<q.ranks;rank++){const count=Math.min(q.files,left);for(let file=0;file<count;file++){const cx=q.depth/2-(rank+.5)*base,cy=-q.front/2+(file+.5)*base;ctx.fillStyle=u.side==="player"?(u.kind==="archer"?"#71aa84":"#456f91"):(u.kind==="archer"?"#c4a05f":"#a44a42");ctx.fillRect(cx-base/2+.7,cy-base/2+.7,base-1.4,base-1.4);ctx.strokeStyle="rgba(255,255,255,.8)";ctx.lineWidth=.9;ctx.strokeRect(cx-base/2+.7,cy-base/2+.7,base-1.4,base-1.4);}left-=count;}
- ctx.strokeStyle=selected?"#f7d98b":"#e3d6b5";ctx.lineWidth=selected?3:1.2;ctx.strokeRect(-q.depth/2,-q.front/2,q.depth,q.front);
- ctx.fillStyle="#f6e1a0";ctx.strokeStyle="#2a2a25";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(q.depth/2+9,0);ctx.lineTo(q.depth/2-1,-7);ctx.lineTo(q.depth/2-1,7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
- ctx.fillStyle="#fff8e9";ctx.font="bold 11px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(u.short,x,y-q.front/2-11);ctx.font="bold 14px system-ui";ctx.fillText(String(u.models),x,y+q.front/2+14);if(u.engaged){ctx.fillStyle="#f2d67d";ctx.font="bold 10px system-ui";ctx.fillText("IN MELEE",x,y+q.front/2+27)}if(u.fled){ctx.fillStyle="#ffb3ad";ctx.font="bold 10px system-ui";ctx.fillText("FLEEING",x,y+q.front/2+27);}
-}
-function draw(){const w=W(),h=H();if(!w||!h)return;ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(view.x,view.y);ctx.scale(view.zoom,view.zoom);ctx.fillStyle="#59654d";ctx.fillRect(0,0,w,h);ctx.strokeStyle="rgba(235,231,190,.12)";ctx.lineWidth=1;for(let x=0;x<w;x+=w/12){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=h/8){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}ctx.strokeStyle="rgba(240,230,185,.32)";ctx.setLineDash([5,7]);ctx.beginPath();ctx.moveTo(w/2,12);ctx.lineTo(w/2,h-12);ctx.stroke();ctx.setLineDash([]);const selected=S.units[S.selected];if(selected)drawCone(selected);units().forEach(drawUnit);ctx.restore();}
-const RULES = createRules({ roll });
-const { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage, meleeAttack } = RULES;
-const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $ });
-const shoot = SHOOTING.shoot;
+const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_IN, BATTLEFIELD_WIDTH_IN, MODEL_BASE_IN, shape, view });
+const { setupCanvas, draw } = RENDERING;
 function closestEnemy(u){return enemies(u).sort((a,b)=>dist(u,a)-dist(u,b))[0]||null;}
 function selectedTarget(u){const list=enemies(u);return list.find(v=>v.id===S.targetId)||closestEnemy(u);}
 function renderRoster(){for(const side of ["ai","player"]){const el=$(side==="ai"?"enemycards":"playercards");el.innerHTML="";units().filter(u=>u.side===side).forEach(u=>{const b=document.createElement("button");b.className="unit-card"+(u.id===S.selected?" selected":"")+(side==="player"&&!u.moved&&!u.shot&&!u.fled?" unmoved":"");b.setAttribute("aria-label",u.name+" "+u.models+" models");b.title=u.name;b.innerHTML='<span class="sigil">'+(u.kind==="archer"?"🏹":"⚔")+'</span><span class="count">'+u.models+'</span><span class="bar '+(side==="ai"?"ai":"")+'"></span>';b.onclick=()=>{S.selected=u.id;S.mode=null;render();};el.append(b);});}}
