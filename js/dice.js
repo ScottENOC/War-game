@@ -24,6 +24,7 @@ export function createDice({ S }) {
       const followUps = (pool.hitFollowUps || []).filter(value => value !== null);
       if (followUps.length) out += lane("Follow-up roll", followUps, 4, "hit",
         (pool.hitFollowUpPasses || []).filter(value => value !== null));
+      if ((pool.hitRerolls || []).length) out += lane("Elven rerolls of missed hits", pool.hitRerolls, pool.hitNeed, "hit", pool.hitRerollPasses);
       if (pool.woundNeed === null) {
         out += '<div class="dice-lane"><span class="lane-label">To wound — impossible (no effect)</span></div>';
       } else {
