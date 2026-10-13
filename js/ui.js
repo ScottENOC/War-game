@@ -1,4 +1,4 @@
-export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, startBattle }) {
+export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, startBattle }) {
   function renderRoster() {
     for (const side of ["ai", "player"]) {
       const el = $(side === "ai" ? "enemycards" : "playercards");
@@ -37,17 +37,19 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
     }
     if (S.phase === "charges") {
       if (S.chargeSide !== "player") { btn("Opponent declaring charges", "…", () => {}, true); return; }
-      btn("Declare charge", "➜", () => { S.mode = S.mode === "charge" ? null : "charge"; render(); },
+      btn("Flee from charge", "↗", () => fleeFromCharge(u), !u||u.side!=="player"||u.engaged||u.fled||!S.declaredCharges.some(c=>c.targetId===u.id&&!c.counterCharge&&!c.flee));
+      btn(u&&u.canCounterCharge&&target&&target.charged?"Counter-charge":"Declare charge", "➜", () => { S.mode = S.mode === "charge" ? null : "charge"; render(); },
         !u || u.side !== "player" || u.engaged || u.fled || u.charged || !target || target.engaged || dist(u, target) > u.stats.M * 2, S.mode === "charge");
       btn("Pass charges", "Ⅱ", passCharges); return;
     }
+    if (S.phase === "movement" && u && u.fled) { btn("Rally", "⚑", () => rallyUnit(u), u.side!=="player"); return; }
     if (S.phase === "movement") {
       btn("Move", "↔", () => { S.mode = S.mode === "move" ? null : "move"; render(); },
-        !u || u.side !== "player" || u.activated || u.engaged || u.fled || u.shot || u.moveUsed >= u.stats.M, S.mode === "move");
+        !u || u.side !== "player" || u.activated || u.engaged || u.fled || u.charged || u.shot || u.moveUsed >= u.stats.M, S.mode === "move");
       btn("Widen formation", "＋", () => {if(u&&u.formationWidth<Math.max(1,u.models)&&u.moveUsed+u.stats.M/2<=u.stats.M){u.formationWidth++;if(canPlace(u,u.x,u.y,u.facing)){u.moveUsed+=u.stats.M/2;u.moved=true;}else{u.formationWidth--;}render();}},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.shot||u.formationWidth>=u.models||u.moveUsed+u.stats.M/2>u.stats.M);
       btn("Narrow formation", "－", () => {if(u&&u.formationWidth>1&&u.moveUsed+u.stats.M/2<=u.stats.M){u.formationWidth--;if(canPlace(u,u.x,u.y,u.facing)){u.moveUsed+=u.stats.M/2;u.moved=true;}else{u.formationWidth++;}render();}},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.shot||u.formationWidth<=1||u.moveUsed+u.stats.M/2>u.stats.M);
       btn("Shoot", "◎", () => { S.mode = S.mode === "shoot" ? null : "shoot"; render(); },
-        !u || u.side !== "player" || u.activated || u.kind !== "archer" || u.shot || u.engaged, S.mode === "shoot");
+        !u || u.side !== "player" || u.activated || u.kind !== "archer" || u.shot || u.engaged || u.charged, S.mode === "shoot");
       btn("End activation", "✓", finishActivation, !u || u.side !== "player" || u.activated || u.engaged || u.fled); return;
     }
     if (S.phase === "combat") {
