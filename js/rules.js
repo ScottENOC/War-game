@@ -80,7 +80,7 @@ export function createRules({ roll, units = () => [] }) {
         const overPenalty=Math.max(0,context.overUnitPenalty||0);
         const reducible=longRangePenalty+movePenalty+overPenalty;
         const elfReduction=context.elvenArchery?Math.min(2,reducible):0;
-        const mods=-(longRangePenalty+movePenalty+overPenalty-elfReduction)-(context.standShoot?1:0)-(context.targetCharging?1:0)-((context.singleCharacter||context.skirmisher)?1:0)-(context.cover==="soft"?1:context.cover==="hard"?2:0)+(context.largeTarget?1:0);
+        const mods=-(longRangePenalty+movePenalty+overPenalty-elfReduction)-(context.standShoot?1:0)-(context.targetCharging?1:0)-((context.singleCharacter||context.skirmisher)?1:0)-(context.targetInMelee&&!context.overUnitPenalty?1:0)-(context.cover==="soft"?1:context.cover==="hard"?2:0)+(context.largeTarget?1:0);
         hitNeed=7-bs-mods;
       }
       g.hitNeed=hitNeed;const forcedHit=mode==="shooting"&&i<(context.forcedHits||0);const hit=forcedHit?null:roll(1)[0];if(hit!==null)g.hitRolls.push(hit);
