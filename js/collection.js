@@ -98,7 +98,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
    const bit=field("Add component permanently",possible.map(b=>({value:b.id,label:b.label+" · "+bitCount(b.id)+" owned"})),possible[0].id);
    const add=document.createElement("button");add.className="primary-button";add.textContent="Glue component onto model";
    add.addEventListener("click",()=>{const def=bitDefs.find(b=>b.id===bit.value);if(!def||!consumeBit(def.id))return;
-    if(def.kind==="shield"){model.shield=true;model.components.push("shield");}
+    if(def.kind==="shield"){model.shield=true;model.components.push("left_shield");}
     if(def.kind==="mount"){model.mounted=true;model.components.push("horse");}
     if(def.kind==="right"||def.kind==="twohand"){model.weapon=def.weapon;model.components.push(def.id);}
     model.name=modelLabel(model);save();renderAll();editingId=model.id;renderWorkbench();
@@ -136,6 +136,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
     need.forEach(consumeBit);
     const type=body.kind==="infantry"?(arms.weapon==="bow"?"archers":"swordsmen"):body.kind;
     const model=makeModel("assembled-"+data.nextId++,body.faction,type,arms.weapon,{mounted,shield:addShield,name:(body.faction==="empire"?"Empire ":"High Elf ")+title(type)+" · "+title(arms.weapon)+(addShield?" + Shield":"")+(mounted?" · Mounted":"")});
+    model.components=[body.id,arms.id,...(arms.kind==="right"?[addShield?"left_shield":"left_empty_arm"]:[]),...(mounted?["horse"]:[])];
     data.models.push(model);save();renderAll();status.textContent="Model assembled and added to your collection.";
    });panel.append(assemble);
    const status=document.createElement("p");status.className="workbench-status";panel.append(status);
