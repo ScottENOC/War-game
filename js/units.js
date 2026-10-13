@@ -40,6 +40,14 @@ export function createUnitsFromArmy(army) {
       ...entry, id: "a" + n, index: n, side: "ai", x: 0.78, y, facing: Math.PI
     });
   });
+  // The AI automatically embeds its heroes in the first available regiment.
+  Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter).forEach(hero=>{
+    const host=Object.values(units).find(u=>u.side==="ai"&&!u.isCharacter&&u.models>0);
+    if(!host)return;
+    hero.attachedTo=host.id;hero.x=host.x;hero.y=host.y;
+    host.attachedCharacters=[...new Set([...(host.attachedCharacters||[]),hero.id])];
+    host.stats.M=Math.min(host.baseMove??host.stats.M,hero.stats.M);
+  });
   return units;
 }
 
