@@ -4,11 +4,11 @@ function unitCost(config, faction) {
   const elf=faction==="highElves",type=config.type,models=config.models||1;
   if(type==="captain"||type==="lord"){
     const base=elf?(type==="lord"?120:75):(type==="lord"?80:50);
-    return base+(config.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(config.weapon)?4:0)+(config.mounted?8:0)+(config.mounted&&config.weapon==="spear"?2:0)+(config.mounted&&config.weapon==="lance"?4:0)+(config.mounted&&config.barding?4:0)+(config.shield?1:0);
+    return base+(config.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(config.weapon)?4:0)+(config.mounted?8:0)+(config.mounted&&config.weapon==="spear"?2:0)+(config.mounted&&config.weapon==="lance"?4:0)+(config.mounted&&config.barding?4:0)+(config.shield&&!["halberd","greatWeapon"].includes(config.weapon)?1:0);
   }
   if(type==="cavalry"){
     const free=config.freeCavalryOption||"bow";
-    return models*(elf?24:16)+(config.bow&&!(elf&&free==="bow")?2*models:0)+(config.heavyArmour?2*models:0)+(config.barding?2*models:0)+(config.shield?0.5*models:0)+(config.weapon==="spear"&&!(elf&&free==="spear")?models:0)+(["lance","greatWeapon"].includes(config.weapon)?2*models:0);
+    return models*(elf?24:16)+(config.bow&&!(elf&&free==="bow")?2*models:0)+(config.heavyArmour?2*models:0)+(config.barding?2*models:0)+(config.shield&&config.weapon!=="greatWeapon"?0.5*models:0)+(config.weapon==="spear"&&!(elf&&free==="spear")?models:0)+(["lance","greatWeapon"].includes(config.weapon)?2*models:0);
   }
   const base=elf?(type==="swordsmen"?12:15):(type==="swordsmen"?8:10);
   return models*base+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.spears&&!(elf&&type==="swordsmen")?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0);
@@ -18,8 +18,9 @@ function buildUnit(template,config,faction,opposing=false) {
   const isCharacter=config.type==="captain"||config.type==="lord",isCavalry=config.type==="cavalry",mounted=isCavalry||(isCharacter&&!!config.mounted);
   if(mounted)stats.M=elf?9:8;
   if(mounted&&config.barding&&!elf)stats.M=7;
+  if(isCharacter&&!mounted&&config.heavyArmour&&!elf)stats.M=Math.max(1,stats.M-1);
   const lightArmour=isCavalry||isCharacter?(!config.heavyArmour):(elf||!!config.lightArmour);
-  const spears=config.type==="swordsmen"&&(elf||!!config.spears),shield=!!config.shield||(elf&&config.type==="swordsmen");
+  const spears=config.type==="swordsmen"&&(elf||!!config.spears),shield=(!!config.shield&&!["halberd","greatWeapon"].includes(config.weapon))||(elf&&config.type==="swordsmen");
   const hasBow=isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"));
   let weapon=(isCharacter||isCavalry)?(config.weapon||"handWeapon"):"handWeapon";
   if(isCavalry&&elf&&(config.freeCavalryOption||"bow")==="spear"&&weapon==="handWeapon")weapon="spear";
