@@ -263,8 +263,8 @@ function resolveCombat(){
   if(pr)applyDamage(a,pr.wounds);
  }else{
   pr=attack(p,a);ar=attack(a,p);
-  a.models=Math.max(0,a.models-pr.wounds);
-  p.models=Math.max(0,p.models-ar.wounds);
+  applyDamage(a,pr.wounds);
+  applyDamage(p,ar.wounds);
  }
  say('<b>Melee round '+S.combatRound+'</b> — Empire: '+(pr?pr.hits+'/'+pr.attacks+' hits, '+pr.wounds+' unsaved wounds':'no attacks (destroyed before striking)')+'. AI: '+(ar?ar.hits+'/'+ar.attacks+' hits, '+ar.wounds+' unsaved wounds':'no attacks (destroyed before striking)')+'.');
  draw();
