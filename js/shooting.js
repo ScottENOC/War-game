@@ -23,7 +23,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(!snakeEyes&&total>target.stats.Ld){target.fled=true;target.engaged=false;say(target.name+" fails its unmodified Leadership test and flees.");}
   }
   function modelCentres(u, maxRanks=Infinity) {
-    if(!u||u.models<=0)return [{x:u.x*W(),y:u.y*H(),champion:!!u.isCharacter}];
+    if(!u||u.models<=0)return [{x:u.x*W(),y:u.y*H(),champion:false}];
     const q=shape(u),count=Math.min(u.models,q.files*Math.max(1,Math.min(q.ranks,maxRanks)));
     const points=[];
     for(let i=0;i<count;i++){
