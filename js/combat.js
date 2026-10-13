@@ -19,7 +19,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
   function captureFighter(u) {
     const champion = !!(u.champion?.enabled && u.championAlive !== false && u.models > 0);
     const rankWidth=Math.max(1,Math.floor(u.formationWidth||5));
-    const eligibleModels = u.isCharacter ? 1 : Math.min(rankWidth*(u.spears?2:1),u.models);
+    const eligibleModels = u.isCharacter ? 1 : Math.min(rankWidth*(u.spears?(u.spearRanks||2):1),u.models);
     return { models:u.models, damage:u.damage||0, championAlive:u.championAlive, championWounds:u.championWounds, characterWounds:u.characterWounds, eligibleModels, eligibleChampion:champion };
   }
   function resolveCombat(){
@@ -33,43 +33,50 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const startRanks=new Map(group.map(u=>[u.id,rankBonus(u)]));
       const wounds=new Map(group.map(u=>[u.id,0]));
       const attachedCombatants=group.flatMap(host=>(host.attachedCharacters||[]).map(id=>({u:S.units[id],host})).filter(x=>x.u&&alive(x.u)&&!x.u.fled));
-      const effectiveI=(u,host=u)=>u.stats.I-(u.weapon==="greatWeapon"?10:0)+((host.charged)?10:0);
-      const levels=[...new Set([...group.map(u=>effectiveI(u,u)),...attachedCombatants.map(x=>effectiveI(x.u,x.host))])].sort((a,b)=>b-a);
+      const effectiveI=(u,host=u,component="rider")=>{
+        const chargeBonus=host.charged?10:0;
+        if(component==="mount")return (u.mountStats?.I??0)+chargeBonus;
+        return u.stats.I-(u.weapon==="greatWeapon"?10:0)+chargeBonus+(u.alwaysStrikesFirst?10:0);
+      };
+      const combatants=[];
+      group.forEach(host=>{
+        if(alive(host)&&!host.fled){combatants.push({u:host,host,component:"rider"});if(host.mountStats)combatants.push({u:host,host,component:"mount"});}
+        (host.attachedCharacters||[]).forEach(id=>{const hero=S.units[id];if(hero&&alive(hero)&&!hero.fled){combatants.push({u:hero,host,component:"rider"});if(hero.mountStats)combatants.push({u:hero,host,component:"mount"});}});
+      });
+      const levels=[...new Set(combatants.map(c=>effectiveI(c.u,c.host,c.component)))].sort((a,b)=>b-a);
       levels.forEach(initiative=>{
-        const attackers=[];
-        group.forEach(host=>{
-          if(alive(host)&&!host.fled&&effectiveI(host,host)===initiative)attackers.push({u:host,host});
-          (host.attachedCharacters||[]).forEach(id=>{const hero=S.units[id];if(hero&&alive(hero)&&!hero.fled&&effectiveI(hero,host)===initiative)attackers.push({u:hero,host});});
-        });
-        // Each combatant is entitled to one packet at this Initiative. If a packet
-        // kills a not-yet-attacked combatant, defer that combatant's death until it
-        // has struck. Delayed-death combatants cannot be selected as targets.
-        const pending = new Map(attackers.map(({u})=>[u.id,{snapshot:captureFighter(u),attacked:false}]));
-        attackers.forEach(({u,host})=>{
-          const entitlement=pending.get(u.id);
+        const attackers=combatants.filter(c=>alive(c.host)&&!c.host.fled&&effectiveI(c.u,c.host,c.component)===initiative);
+        const keyOf=c=>c.u.id+":"+c.component;
+        const pending=new Map(attackers.map(c=>[keyOf(c),{snapshot:captureFighter(c.u),attacked:false}]));
+        attackers.forEach(({u,host,component})=>{
+          const key=u.id+":"+component,entitlement=pending.get(key);
           if(!entitlement||entitlement.attacked||u.fled||(!alive(host)&&!u.delayedDeath)||(!combatantAlive(u)&&!u.delayedDeath))return;
           const strikeState=u.delayedDeath?(u.delayedDeathSnapshot||entitlement.snapshot):entitlement.snapshot;
           if(!combatantAlive(u)&&!u.delayedDeath)return;
           const targets=linked(host).filter(v=>alive(v)&&!v.fled&&!v.delayedDeath);
           if(!targets.length){
-            if(u.delayedDeath){u.models=0;u.characterWounds=0;u.delayedDeath=false;u.delayedDeathSnapshot=null;}
+            if(u.delayedDeath&&component==="rider"){u.models=0;u.characterWounds=0;u.delayedDeath=false;u.delayedDeathSnapshot=null;}
             entitlement.attacked=true;return;
           }
           const target=targets.sort((a,b)=>dist(host,a)-dist(host,b))[0];
-          const before=new Map(attackers.filter(a=>!pending.get(a.u.id)?.attacked).map(a=>[a.u.id,{u:a.u,wasAlive:combatantAlive(a.u),snapshot:captureFighter(a.u)}]));
-          const result=meleeAttack(u,target,{attackingModels:strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged});
-          say('<b>Melee dice — '+u.name+' attacks '+target.name+'</b>'+diceStack(u,result));
+          const before=new Map(attackers.filter(c=>!pending.get(keyOf(c))?.attacked).map(c=>[keyOf(c),{...c,wasAlive:combatantAlive(c.u),snapshot:captureFighter(c.u)}]));
+          const naturalI=u.stats.I-(u.weapon==="greatWeapon"?10:0)+(host.charged?10:0);
+          const targetI=target.stats.I-(target.weapon==="greatWeapon"?10:0)+(target.charged?10:0);
+          const rerollMisses=component==="rider"&&!!u.alwaysStrikesFirst&&naturalI>targetI;
+          const result=meleeAttack(u,target,{attackingModels:strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged,attackComponent:component,rerollMisses});
+          say('<b>Melee dice — '+u.name+(component==="mount"?" (mount)":"")+' attacks '+target.name+'</b>'+diceStack(u,result));
           wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
           applyDamage(target,result.wounds,false,result.cascadePlan);
           entitlement.attacked=true;
-          before.forEach(({u:potential,wasAlive,snapshot})=>{
-            if(wasAlive&&!combatantAlive(potential)&&pending.has(potential.id)&&!pending.get(potential.id).attacked){
+          before.forEach(({u:potential,component:potentialComponent,wasAlive,snapshot})=>{
+            const potentialKey=potential.id+":"+potentialComponent;
+            if(wasAlive&&!combatantAlive(potential)&&pending.has(potentialKey)&&!pending.get(potentialKey).attacked){
               potential.delayedDeath=true;
-              potential.delayedDeathSnapshot=pending.get(potential.id).snapshot;
+              potential.delayedDeathSnapshot=pending.get(potentialKey).snapshot;
               say(potential.name+' suffers a fatal wound; '+(potential.isCharacter?'they':'up to '+snapshot.eligibleModels+' front-rank fighters')+' will strike before dying at Initiative '+initiative+'.');
             }
           });
-          if(u.delayedDeath){u.models=0;u.damage=0;u.characterWounds=0;u.championAlive=false;u.delayedDeath=false;u.delayedDeathSnapshot=null;say(u.name+' succumbs after making its attack.');}
+          if(u.delayedDeath&&component==="rider"){u.models=0;u.damage=0;u.characterWounds=0;u.championAlive=false;u.delayedDeath=false;u.delayedDeathSnapshot=null;say(u.name+' succumbs after making its attack.');}
         });
       });
       const sideUnits={player:group.filter(u=>u.side==="player"&&alive(u)),ai:group.filter(u=>u.side==="ai"&&alive(u))};
