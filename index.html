@@ -113,8 +113,10 @@ function polygonOverlap(a,b){
  return true;
 }
 function canPlace(u,x,y,facing){
+ const poly=unitCorners(u,x,y,facing),w=W(),h=H();
+ if(poly.some(p=>p.x<1||p.y<1||p.x>w-1||p.y>h-1))return false;
  const other=S.units[u.id==="player"?"ai":"player"];
- return !alive(other)||!polygonOverlap(unitCorners(u,x,y,facing),unitCorners(other));
+ return !alive(other)||!polygonOverlap(poly,unitCorners(other));
 }
 function drawUnit(u,w,h){
  const x=u.x*w,y=u.y*h,selected=S.selected===u.id&&!S.finished,scale=w/BATTLEFIELD_WIDTH_IN;
@@ -133,8 +135,8 @@ function drawUnit(u,w,h){
   for(const sign of [-1,1]){ctx.beginPath();ctx.arc(depth/2,sign*front/2,5,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#312b1e";ctx.stroke()}
  }
  ctx.restore();
- ctx.fillStyle="#fff8e9";ctx.font="bold 12px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";
- ctx.fillText(u.side==="player"?"EMPIRE":"OPPONENT",x,y);
+ ctx.fillStyle="#fff8e9";ctx.font="bold 11px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";
+ ctx.fillText(u.side==="player"?"EMPIRE":"OPPONENT",x,y-front/2-11);
  ctx.font="bold 14px system-ui";ctx.fillText(String(u.models),x,y+front/2+14);
  if(u.engaged){ctx.fillStyle="#f2d67d";ctx.font="bold 10px system-ui";ctx.fillText("IN MELEE",x,y+front/2+27)}
  if(u.fled){ctx.fillStyle="#ffb3ad";ctx.font="bold 10px system-ui";ctx.fillText("FLEEING",x,y+front/2+27)}
