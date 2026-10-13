@@ -47,7 +47,7 @@ function buildUnit(template,config,faction,opposing=false) {
     models:isCharacter?1:config.models,startModels:isCharacter?1:config.models,points:unitCost(config,costFaction),weapon,rangedWeapon,hasRangedWeapon:!!rangedWeapon,
     rangedStrength:["crossbow","firearm"].includes(rangedWeapon)?4:3,armourPiercing:rangedWeapon==="firearm"?1:0,
     bsCap:rangedWeapon==="crossbow"?4:rangedWeapon==="firearm"?3:null,
-    ranksToShoot:isCavalry?1:rangedWeapon==="bow"?(elf?4:3):rangedWeapon==="crossbow"||rangedWeapon==="firearm"?2:0,
+    ranksToShoot:mounted?1:rangedWeapon==="bow"?(elf?4:3):rangedWeapon==="crossbow"||rangedWeapon==="firearm"?2:0,
     overUnitPenalty:rangedWeapon==="bow"?1:rangedWeapon==="crossbow"?2:Infinity,
     spears,spearRanks:elf&&spears?3:2,hasBow,range:rangedWeapon==="bow"?(elf?30:24):rangedWeapon==="crossbow"?30:rangedWeapon==="firearm"?20:(template.range||24),lightArmour,heavyArmour:!!config.heavyArmour,barding:!!config.barding,shield,
     alwaysStrikesFirst:!!template.alwaysStrikesFirst,elvenArchery:!!elf&&!!config.elvenArchery,skills:{...(config.skills||{})},mountStats:mounted?{...(template.mountStats||{A:1,WS:3,I:3,S:3})}:null,
