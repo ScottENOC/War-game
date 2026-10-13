@@ -10,10 +10,6 @@ function drawUnit(u){if(!alive(u))return;const w=W(),h=H(),x=u.x*w,y=u.y*h,q=sha
  ctx.fillStyle="#fff8e9";ctx.font="bold 11px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(u.short,x,y-q.front/2-11);ctx.font="bold 14px system-ui";ctx.fillText(String(u.models),x,y+q.front/2+14);if(u.engaged){ctx.fillStyle="#f2d67d";ctx.font="bold 10px system-ui";ctx.fillText("IN MELEE",x,y+q.front/2+27)}if(u.fled){ctx.fillStyle="#ffb3ad";ctx.font="bold 10px system-ui";ctx.fillText("FLEEING",x,y+q.front/2+27);}
 }
 function draw(){const w=W(),h=H();if(!w||!h)return;ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(view.x,view.y);ctx.scale(view.zoom,view.zoom);ctx.fillStyle="#59654d";ctx.fillRect(0,0,w,h);ctx.strokeStyle="rgba(235,231,190,.12)";ctx.lineWidth=1;for(let x=0;x<w;x+=w/12){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=h/8){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}ctx.strokeStyle="rgba(240,230,185,.32)";ctx.setLineDash([5,7]);ctx.beginPath();ctx.moveTo(w/2,12);ctx.lineTo(w/2,h-12);ctx.stroke();ctx.setLineDash([]);const selected=S.units[S.selected];if(selected)drawCone(selected);units().forEach(drawUnit);ctx.restore();}
-const RULES = createRules({ roll });
-const { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage, meleeAttack } = RULES;
-const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $ });
-const shoot = SHOOTING.shoot;
   window.addEventListener("resize", setupCanvas);
   return { setupCanvas, draw };
 }
