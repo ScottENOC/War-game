@@ -30,6 +30,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     const context = {
       longRange: distance > range / 2,
       moved: u.moved,
+      elvenArchery: !!u.elvenArchery,
       standShoot,
       distance,
       targetCharging: !!target.charged,
