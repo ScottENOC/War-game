@@ -43,11 +43,11 @@ export function createRules({ roll, units = () => [] }) {
     return {rankFiles:target.isCharacter?0:Math.max(0,target.models-(championAlive?1:0)),rankFileDamage:target.damage||0,championAlive,championWounds:target.championWounds??target.champion?.stats?.W??target.stats.W,characters,heroRefs,rankFileLost:0,championKilled:false,characterDamage:[]};
   }
   function targetTiers(target,v) {
-    if(target.isCharacter)return [{kind:"character",id:target.id,hero:target,label:target.name,stats:target.stats,remaining:v.characters[target.id]??0,armour:target.armour,shield:target.shield,wardSave:target.wardSave}];
+    if(target.isCharacter)return target.delayedDeath?[]:[{kind:"character",id:target.id,hero:target,label:target.name,stats:target.stats,remaining:v.characters[target.id]??0,armour:target.armour,shield:target.shield,wardSave:target.wardSave}];
     const tiers=[];
-    if(v.rankFiles>0)tiers.push({kind:"rankFile",label:"Rank and file",stats:target.stats,remaining:v.rankFiles,armour:target.armour,shield:target.shield,wardSave:target.wardSave});
-    if(v.championAlive)tiers.push({kind:"champion",label:"Champion",stats:{...target.stats,...(target.champion?.stats||{})},remaining:v.championWounds,armour:target.armour,shield:target.shield,wardSave:target.wardSave});
-    for(const id of (target.attachedCharacters||[])){const hero=v.heroRefs[id];if(hero&&hero.models>0&&v.characters[id]>0)tiers.push({kind:"character",id,hero,label:hero.name,stats:hero.stats,remaining:v.characters[id],armour:hero.armour,shield:hero.shield,wardSave:hero.wardSave});}
+    if(!target.delayedDeath&&v.rankFiles>0)tiers.push({kind:"rankFile",label:"Rank and file",stats:target.stats,remaining:v.rankFiles,armour:target.armour,shield:target.shield,wardSave:target.wardSave});
+    if(!target.delayedDeath&&v.championAlive)tiers.push({kind:"champion",label:"Champion",stats:{...target.stats,...(target.champion?.stats||{})},remaining:v.championWounds,armour:target.armour,shield:target.shield,wardSave:target.wardSave});
+    for(const id of (target.attachedCharacters||[])){const hero=v.heroRefs[id];if(hero&&!hero.delayedDeath&&hero.models>0&&v.characters[id]>0)tiers.push({kind:"character",id,hero,label:hero.name,stats:hero.stats,remaining:v.characters[id],armour:hero.armour,shield:hero.shield,wardSave:hero.wardSave});}
     return tiers;
   }
   function rollPool(attackerPool,target,mode,context,v) {
