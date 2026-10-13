@@ -34,7 +34,7 @@ function load(){
  try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(saved&&Array.isArray(saved.models)&&saved.bits)return {...starterData(),...saved};}catch{}
  return starterData();
 }
-export function createCollectionManager({$,onSkirmish,onMainMenu}){
+export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCampaign=()=>{}}){
  let data=load(),editingId=null;
  data.lootboxes=Number.isFinite(data.lootboxes)?Math.max(0,data.lootboxes):0;
  data.lastDailyClaim=data.lastDailyClaim||null;
