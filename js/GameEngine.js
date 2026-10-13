@@ -32,7 +32,9 @@ function closestEnemy(u){return enemies(u).sort((a,b)=>dist(u,a)-dist(u,b))[0]||
 function leadership(u){
   if(!u)return 0;
   const embedded=(u.attachedCharacters||[]).map(id=>S.units[id]).filter(h=>h&&h.models>0&&!h.fled);
-  return Math.max(u.stats.Ld,...embedded.map(h=>h.stats.Ld));
+  const general=units().find(h=>h.isGeneral&&h.models>0&&!h.fled&&h.side===u.side);
+  const generalLd=general&&general.id!==u.id&&dist(u,general)<=12?general.stats.Ld:0;
+  return Math.max(u.stats.Ld,...embedded.map(h=>h.stats.Ld),generalLd);
 }
 function panicNearby(source,reason="a nearby friendly unit is lost"){
   if(!source)return;
