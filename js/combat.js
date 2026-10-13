@@ -33,7 +33,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const startRanks=new Map(group.map(u=>[u.id,rankBonus(u)]));
       const wounds=new Map(group.map(u=>[u.id,0]));
       const attachedCombatants=group.flatMap(host=>(host.attachedCharacters||[]).map(id=>({u:S.units[id],host})).filter(x=>x.u&&alive(x.u)&&!x.u.fled));
-      const effectiveI=(u,host=u)=>u.stats.I-(u.isCharacter&&u.weapon==="greatWeapon"?10:0)+((host.charged)?10:0);
+      const effectiveI=(u,host=u)=>u.stats.I-(u.weapon==="greatWeapon"?10:0)+((host.charged)?10:0);
       const levels=[...new Set([...group.map(u=>effectiveI(u,u)),...attachedCombatants.map(x=>effectiveI(x.u,x.host))])].sort((a,b)=>b-a);
       levels.forEach(initiative=>{
         const attackers=[];
@@ -57,7 +57,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           }
           const target=targets.sort((a,b)=>dist(host,a)-dist(host,b))[0];
           const before=new Map(attackers.filter(a=>!pending.get(a.u.id)?.attacked).map(a=>[a.u.id,{u:a.u,wasAlive:combatantAlive(a.u),snapshot:captureFighter(a.u)}]));
-          const result=meleeAttack(u,target,{attackingModels:strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion});
+          const result=meleeAttack(u,target,{attackingModels:strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged});
           say('<b>Melee dice — '+u.name+' attacks '+target.name+'</b>'+diceStack(u,result));
           wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
           applyDamage(target,result.wounds,false,result.cascadePlan);
