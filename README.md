@@ -13,7 +13,7 @@ Open [index.html](./index.html) in a browser, or enable GitHub Pages for the rep
 - Optional unit champions and optional swordsman light armour, with per-unit and total army points. Captains start in light armour; heavy armour costs +4 points, improves the save from 6+ to 5+, and reduces Move by 1 as a house rule.
 - A simple AI opponent that currently mirrors the player's army list.
 - Movement, charges, shooting, melee, morale, and visible dice results.
-- Each unit that charges or counter-charges receives +10 Initiative for that combat round, independently of other units in the fight. Units that did not charge use their normal Initiative; equal Initiative strikes simultaneously.
+- Each unit that charges or counter-charges receives +10 Initiative for that combat round, independently of other units in the fight. Units that did not charge use their normal Initiative. Within an Initiative level, attack packets resolve sequentially as a digital house rule so casualties can expose the next defender tier.
 - Formation width can be changed during movement at a half-Move cost per file.
 - Flank/rear charges record the engagement side, suppress the defender’s rank bonus when the attacker has Unit Strength 5+, and add the relevant combat-resolution bonus.
 - In a one-on-one combat, surviving units turn to face each other between rounds; a flank-charged unit reforms one file wider, capped by the opponent’s frontage.
