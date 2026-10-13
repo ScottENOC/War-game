@@ -27,9 +27,11 @@ export function createDice({ S }) {
     return out;
   }
   function diceDuel(title, r1, r2) {
+    const player = Object.values(S.units).find(u => u.side === "player");
+    const opponent = Object.values(S.units).find(u => u.side === "ai");
     return "<div><b>" + title + '</b><div class="dice-duel">' +
-      (r1 ? '<div class="dice-side"><h3>Player</h3>' + diceStack(S.units.pSword.side === "player" ? S.units.pSword : S.units.pArch, r1) + "</div>" : "") +
-      (r2 ? '<div class="dice-side"><h3>Opponent</h3>' + diceStack(S.units.aSword.side === "ai" ? S.units.aSword : S.units.aArch, r2) + "</div>" : "") +
+      (r1 && player ? '<div class="dice-side"><h3>Player</h3>' + diceStack(player, r1) + "</div>" : "") +
+      (r2 && opponent ? '<div class="dice-side"><h3>Opponent</h3>' + diceStack(opponent, r2) + "</div>" : "") +
       "</div></div>";
   }
   return { roll, diceStack, diceDuel };
