@@ -31,8 +31,6 @@ function diceStack(u,r){
  out+='<div class="unitmeta">Result: '+r.hits+' hits, '+r.woundsBeforeSave+' wounds, '+r.saved+' saved, <b>'+r.wounds+' unsaved</b>.</div></div>';return out;
 }
 function diceDuel(title,r1,r2){return '<div><b>'+title+'</b><div class="dice-duel">'+(r1?'<div class="dice-side"><h3>Player</h3>'+diceStack(S.units.pSword.side==='player'?S.units.pSword:S.units.pArch,r1)+'</div>':'')+(r2?'<div class="dice-side"><h3>Opponent</h3>'+diceStack(S.units.aSword.side==='ai'?S.units.aSword:S.units.aArch,r2)+'</div>':'')+'</div></div>';}
-const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_IN, BATTLEFIELD_WIDTH_IN, MODEL_BASE_IN, shape, view });
-const { setupCanvas, draw } = RENDERING;
 function closestEnemy(u){return enemies(u).sort((a,b)=>dist(u,a)-dist(u,b))[0]||null;}
 function selectedTarget(u){const list=enemies(u);return list.find(v=>v.id===S.targetId)||closestEnemy(u);}
 function renderRoster(){for(const side of ["ai","player"]){const el=$(side==="ai"?"enemycards":"playercards");el.innerHTML="";units().filter(u=>u.side===side).forEach(u=>{const b=document.createElement("button");b.className="unit-card"+(u.id===S.selected?" selected":"")+(side==="player"&&!u.moved&&!u.shot&&!u.fled?" unmoved":"");b.setAttribute("aria-label",u.name+" "+u.models+" models");b.title=u.name;b.innerHTML='<span class="sigil">'+(u.kind==="archer"?"🏹":"⚔")+'</span><span class="count">'+u.models+'</span><span class="bar '+(side==="ai"?"ai":"")+'"></span>';b.onclick=()=>{S.selected=u.id;S.mode=null;render();};el.append(b);});}}
@@ -75,6 +73,8 @@ canvas.addEventListener("pointerdown",pointerDown);canvas.addEventListener("poin
 canvas.addEventListener("wheel",e=>{e.preventDefault();const p=screenPoint(e),before={x:(p.x-view.x)/view.zoom,y:(p.y-view.y)/view.zoom};view.zoom=Math.max(.55,Math.min(2.7,view.zoom*(e.deltaY<0?1.12:.89)));view.x=p.x-before.x*view.zoom;view.y=p.y-before.y*view.zoom;draw();},{passive:false});
 $("logtoggle").onclick=()=>$("logpanel").classList.add("open");$("logclose").onclick=()=>$("logpanel").classList.remove("open");$("rollclose").onclick=()=>$("rollview").classList.remove("show");
 window.addEventListener("resize",setupCanvas);
+const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_IN, BATTLEFIELD_WIDTH_IN, MODEL_BASE_IN, shape, view });
+const { setupCanvas, draw } = RENDERING;
 reset();setupCanvas();
 })();
 }
