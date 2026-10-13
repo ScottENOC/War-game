@@ -27,7 +27,7 @@ function buildUnit(template,config,faction,opposing=false) {
   if(isCharacter&&!mounted&&config.heavyArmour&&!elf)stats.M=Math.max(1,stats.M-1);
   const lightArmour=isCavalry||isCharacter?(!config.heavyArmour):(elf||!!config.lightArmour);
   const spears=config.type==="swordsmen"&&(config.weapon==="spear"||(elf&&!["bow","greatWeapon","halberd"].includes(config.weapon))),shield=(!!config.shield&&!["halberd","greatWeapon"].includes(config.weapon))||(elf&&config.type==="swordsmen"&&!["bow","greatWeapon","halberd"].includes(config.weapon));
-  const hasBow=config.type==="archers"||(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"));
+  const hasBow=config.type==="archers"||(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow")));
   let weapon=(isCharacter||isCavalry||config.type==="swordsmen")?(config.weapon||"handWeapon"):"handWeapon";
   for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.upgrades&&config.upgrades[key])stats[key]+=1;
   // Halberds are infantry weapons; prevent stale or malformed mounted loadouts.
