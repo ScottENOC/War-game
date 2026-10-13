@@ -24,3 +24,21 @@ The engine should be expanded in small steps: accurate unit footprints and facin
 ## Development direction
 
 Prioritise meaningful unit roles, positioning, flanks, ranks, and morale. Avoid making weak attacks universally effective against heavily armoured or very tough targets merely through volume of attacks.
+
+
+## Code structure
+
+The browser entry point is `index.html`, which loads `js/main.js` as an ES module and links `css/style.css`. No bundler is required for GitHub Pages.
+
+- `GameEngine.js` — initialises the battle and connects the systems.
+- `gameState.js` — creates the initial battle-state object.
+- `factions.js` and `units.js` — faction profiles and starting unit instances.
+- `movement.js` — unit footprints, distances, overlap checks and legal placement.
+- `phases.js` — charge declarations and phase transitions.
+- `ai.js` — AI activation priorities, target selection and movement decisions.
+- `rules.js`, `shooting.js`, `combat.js` and `dice.js` — rules resolution and dice results.
+- `rendering.js` — battlefield canvas drawing.
+- `input.js` — pointer, touch, drag, pivot, pan and zoom handling.
+- `ui.js` — unit cards, action controls and log/dice overlay controls.
+
+Keep gameplay rules independent of drawing and input. New actions should be routed through the same rules and state changes regardless of whether the player or AI initiates them. Continue making and testing changes on `development`; promote to `main` only after review.
