@@ -8,17 +8,20 @@ function unitCost(config, faction) {
     {key:"S",unit:3,character:6},{key:"T",unit:4,character:8},{key:"I",unit:1,character:3},{key:"Ld",unit:1,character:3}
   ].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
   const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
+  const rangedWeapon=config.rangedWeapon||(["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(type==="archers"?"bow":config.bow?"bow":null));
+  const rangedCost=rangedWeapon==="bow"?(elf?3:2):rangedWeapon==="crossbow"?3:rangedWeapon==="firearm"?4:0;
   if(character){
     const base=elf?(type==="lord"?120:75):(type==="lord"?80:50);
-    return base+(config.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(config.weapon)?4:0)+(config.mounted?8:0)+(config.mounted&&config.weapon==="spear"?2:0)+(config.mounted&&config.weapon==="lance"?4:0)+(config.mounted&&config.barding?4:0)+(config.shield&&!["halberd","greatWeapon"].includes(config.weapon)?2:0)+upgrades+skillCost;
+    return base+(config.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(config.weapon)?4:0)+(config.mounted?8:0)+(config.mounted&&config.weapon==="spear"?2:0)+(config.mounted&&config.weapon==="lance"?4:0)+(config.mounted&&config.barding?4:0)+(config.shield&&!["halberd","greatWeapon"].includes(config.weapon)?2:0)+rangedCost+upgrades+skillCost;
   }
   if(type==="cavalry"){
     const free=config.freeCavalryOption||"bow";
-    return models*(elf?24:16)+(config.elvenArchery&&elf&&(config.bow||(free==="bow"))?2*models:0)+(config.bow&&!(elf&&free==="bow")?2*models:0)+(config.heavyArmour?2*models:0)+(config.barding?2*models:0)+(config.shield&&config.weapon!=="greatWeapon"?0.5*models:0)+(config.weapon==="spear"&&!(elf&&free==="spear")?models:0)+(["lance","greatWeapon"].includes(config.weapon)?2*models:0)+upgrades+skillCost;
+    return models*(elf?24:16)+(config.elvenArchery&&elf&&(config.rangedWeapon==="bow"||config.bow||(free==="bow"))?2*models:0)+(config.bow&&!(elf&&free==="bow")?2*models:0)+(config.rangedWeapon==="crossbow"?3*models:config.rangedWeapon==="firearm"?4*models:0)+(config.heavyArmour?2*models:0)+(config.barding?2*models:0)+(config.shield&&config.weapon!=="greatWeapon"?0.5*models:0)+(config.weapon==="spear"&&!(elf&&free==="spear")?models:0)+(["lance","greatWeapon"].includes(config.weapon)?2*models:0)+upgrades+skillCost;
   }
   const base=models*(elf?12:8);
-  const weaponCost=type==="archers"?(elf?3:2)*models:config.weapon==="spear"&&!(elf&&type==="swordsmen")?models:config.weapon==="greatWeapon"?2*models:config.weapon==="halberd"?models:0;
-  return base+weaponCost+(config.elvenArchery&&elf&&type==="archers"?2*models:0)+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0)+upgrades+skillCost;
+  const ranged=["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(type==="archers"?"bow":null);
+  const weaponCost=ranged?(ranged==="bow"?(elf?3:2):ranged==="crossbow"?3:4)*models:config.weapon==="spear"&&!(elf&&type==="swordsmen")?models:config.weapon==="greatWeapon"?2*models:config.weapon==="halberd"?models:0;
+  return base+weaponCost+(config.elvenArchery&&elf&&ranged==="bow"?2*models:0)+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0)+upgrades+skillCost;
 }
 function buildUnit(template,config,faction,opposing=false) {
   const elf=faction==="highElves"&&!opposing,stats={...template.stats};
@@ -28,8 +31,9 @@ function buildUnit(template,config,faction,opposing=false) {
   if(isCharacter&&!mounted&&config.heavyArmour&&!elf)stats.M=Math.max(1,stats.M-1);
   const lightArmour=isCavalry||isCharacter?(!config.heavyArmour):(elf||!!config.lightArmour);
   const spears=config.type==="swordsmen"&&(config.weapon==="spear"||(!config.weapon&&elf&&!!config.spears)),shield=(!!config.shield&&!["halberd","greatWeapon"].includes(config.weapon));
-  const hasBow=config.type==="archers"||(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow")));
-  let weapon=(isCharacter||isCavalry||config.type==="swordsmen")?(config.weapon||"handWeapon"):"handWeapon";
+  const rangedWeapon=config.rangedWeapon||(["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(config.type==="archers"?"bow":(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"))?"bow":null)));
+  const hasBow=rangedWeapon==="bow";
+  let weapon=(isCharacter||isCavalry||config.type==="swordsmen")?(["bow","crossbow","firearm"].includes(config.weapon)?"handWeapon":(config.weapon||"handWeapon")):"handWeapon";
   for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.upgrades&&config.upgrades[key])stats[key]+=1;
   const campaignStats=config.campaignStats||{};
   for(const key of ["WS","BS","S","T","Ld"])stats[key]+=Math.max(0,campaignStats[key]||0);
@@ -40,8 +44,12 @@ function buildUnit(template,config,faction,opposing=false) {
   const costFaction=opposing?"empire":faction;
   return {id:config.id,name:template.name+" "+config.index,short:template.short,side:config.side,kind:template.kind,
     isCharacter,isCavalry,mounted,isGeneral:false,attachedTo:null,baseMove:stats.M,
-    models:isCharacter?1:config.models,startModels:isCharacter?1:config.models,points:unitCost(config,costFaction),weapon,
-    spears,spearRanks:elf&&spears?3:2,hasBow,range:template.range||24,lightArmour,heavyArmour:!!config.heavyArmour,barding:!!config.barding,shield,
+    models:isCharacter?1:config.models,startModels:isCharacter?1:config.models,points:unitCost(config,costFaction),weapon,rangedWeapon,hasRangedWeapon:!!rangedWeapon,
+    rangedStrength:["crossbow","firearm"].includes(rangedWeapon)?4:3,armourPiercing:rangedWeapon==="firearm"?1:0,
+    bsCap:rangedWeapon==="crossbow"?4:rangedWeapon==="firearm"?3:null,
+    ranksToShoot:rangedWeapon==="bow"?(elf?4:3):rangedWeapon==="crossbow"?2:rangedWeapon==="firearm"?1:0,
+    overUnitPenalty:rangedWeapon==="bow"?1:rangedWeapon==="crossbow"?2:Infinity,
+    spears,spearRanks:elf&&spears?3:2,hasBow,range:rangedWeapon==="bow"?(elf?30:24):rangedWeapon==="crossbow"?30:rangedWeapon==="firearm"?20:(template.range||24),lightArmour,heavyArmour:!!config.heavyArmour,barding:!!config.barding,shield,
     alwaysStrikesFirst:!!template.alwaysStrikesFirst,elvenArchery:!!elf&&!!config.elvenArchery,skills:{...(config.skills||{})},mountStats:mounted?{...(template.mountStats||{A:1,WS:3,I:3,S:3})}:null,
     baseWidthIn:mounted?25/25.4:20/25.4,baseDepthIn:mounted?50/25.4:20/25.4,
     armour:isCavalry||isCharacter?(config.heavyArmour?"heavy":"light"):(lightArmour?"light":"none"),wardSave:null,
