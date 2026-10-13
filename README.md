@@ -13,6 +13,7 @@ Open [index.html](./index.html) in a browser, or enable GitHub Pages for the rep
 - Optional unit champions and optional swordsman light armour, with per-unit and total army points.
 - A simple AI opponent that currently mirrors the player's army list.
 - Movement, charges, shooting, melee, morale, and visible dice results.
+- A unit that alone charges in a combat receives +10 Initiative for that round; if both sides charged, they use actual Initiative and a dice-off for ties.
 - Formation width can be changed during movement at a half-Move cost per file.
 - Flank/rear charges record the engagement side, suppress the defender’s rank bonus when the attacker has Unit Strength 5+, and add the relevant combat-resolution bonus.
 - In a one-on-one combat, surviving units turn to face each other between rounds; a flank-charged unit reforms one file wider, capped by the opponent’s frontage.
@@ -24,9 +25,9 @@ Open [index.html](./index.html) in a browser, or enable GitHub Pages for the rep
 
 ## Prototype simplifications
 
-This is not a verbatim implementation of any published rulebook. It is a small, testable foundation with classic rank-and-flank mechanics. Alternating unit activations are deliberately borrowed as a design idea from modern digital wargames rather than matching the original sixth-edition turn sequence. Charge response coverage is still incomplete: the player can flee from a declared charge, but the AI does not yet choose reactions strategically. Charge arc and line-of-sight checks use simplified unit-footprint obstruction; this is an approximation rather than full tabletop wheel-and-align geometry. Fleeing/rally movement, pursuit choices, multi-unit combats, terrain and panic triggers still need more complete coverage.
+This is not a verbatim implementation of any published rulebook. It is a small, testable foundation with classic rank-and-flank mechanics. Alternating unit activations are deliberately borrowed as a design idea from modern digital wargames rather than matching the original sixth-edition turn sequence. Charge response coverage is still incomplete: the player can flee from a declared charge, but the AI does not yet choose reactions strategically. Charge arc and line-of-sight checks use simplified unit-footprint obstruction; this is an approximation rather than full tabletop wheel-and-align geometry. Basic pursuit/catching and nearby panic tests are implemented, but pursuit/overrun choices and exact flee movement still need work. Multi-unit combats, terrain and more complete morale rules remain outstanding.
 
-Remaining work: full wheel-and-align charge geometry, pursuit choices and movement after break tests, more complete flee/rally movement and panic triggers, multi-unit combats, terrain interactions, and more unit profiles and army rules. The between-round one-on-one facing/reform rule is an intentional house rule, not 6th-edition RAW. Keep rules logic separate from rendering as the project grows.
+Remaining work: full wheel-and-align charge geometry, pursuit/overrun choices and exact flee/rally movement, broader panic triggers, multi-unit combats, terrain interactions, and more unit profiles and army rules. The between-round one-on-one facing/reform rule is an intentional house rule, not 6th-edition RAW. Keep rules logic separate from rendering as the project grows.
 
 ## Development direction
 
