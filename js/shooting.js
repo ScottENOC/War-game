@@ -1,9 +1,10 @@
 export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H }) {
   function showAttack(label, u, target, result, kind) {
     const extras=[];
-    if(result.longRange)extras.push("long range");
-    if(result.moved)extras.push("moved");
-    if(result.standShoot)extras.push("stand & shoot");
+    if(result.longRange)extras.push("long range (−"+(result.longRangePenalty||1)+")");
+    if(result.moved)extras.push(result.elvenArchery?"moved (Elven Archery applies)":"moved (−1)");
+    if(result.standShoot)extras.push("stand & shoot (−1)");
+    if(result.targetCharging)extras.push("target charging (−1)");
     if(result.overUnitPenalty)extras.push("firing over friendly unit (−"+result.overUnitPenalty+")");
     if(result.hitModifier)extras.push("hit modifier "+(result.hitModifier>0?"+":"")+result.hitModifier);
     const extra=kind==="shoot"&&extras.length?" · "+extras.join(", "):"";
