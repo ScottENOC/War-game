@@ -4,7 +4,7 @@ function buildUnit(template, config) {
   return {
     id: config.id, name: template.name, short: template.short, side: config.side,
     kind: template.kind, models: template.models, startModels: template.models,
-    x: config.x, y: config.y, facing: config.facing,
+    x: config.x, y: config.y, facing: config.facing, deployed: config.side === "ai",
     engaged: false, activated: false, moved: false, shot: false, charged: false, fled: false,
     moveUsed: 0, damage: 0, shootCasualties: 0, panicTested: false,
     stats: { ...template.stats }, champion: { enabled: false, stats: null }
