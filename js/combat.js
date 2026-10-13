@@ -35,21 +35,26 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const attachedCombatants=group.flatMap(host=>(host.attachedCharacters||[]).map(id=>({u:S.units[id],host})).filter(x=>x.u&&alive(x.u)&&!x.u.fled));
       const effectiveI=(u,host=u,component="rider")=>{
         const chargeBonus=host.charged?10:0;
+        // Rider and mount are separate combatants: only the rider uses their
+        // weapon and racial Initiative modifiers.
         if(component==="mount")return (u.mountStats?.I??0)+chargeBonus;
-        const natural=u.stats.I-(u.weapon==="greatWeapon"?10:0)+chargeBonus+(u.alwaysStrikesFirst?10:0);
-        return u.alwaysStrikesFirst?100+natural:natural;
+        return u.stats.I-(u.weapon==="greatWeapon"?10:0)+chargeBonus+(u.alwaysStrikesFirst?10:0);
       };
       const combatants=[];
       group.forEach(host=>{
         if(alive(host)&&!host.fled){combatants.push({u:host,host,component:"rider"});if(host.mountStats)combatants.push({u:host,host,component:"mount"});}
         (host.attachedCharacters||[]).forEach(id=>{const hero=S.units[id];if(hero&&alive(hero)&&!hero.fled){combatants.push({u:hero,host,component:"rider"});if(hero.mountStats)combatants.push({u:hero,host,component:"mount"});}});
       });
+      const keyOf=c=>c.u.id+":"+c.component;
+      const snapshots=new Map(combatants.map(c=>[keyOf(c),captureFighter(c.u)]));
+      const attackedPackets=new Set();
       const levels=[...new Set(combatants.map(c=>effectiveI(c.u,c.host,c.component)))].sort((a,b)=>b-a);
       levels.forEach(initiative=>{
-        const shownInitiative=initiative>=100?initiative-100:initiative;
+        const shownInitiative=initiative;
         const attackers=combatants.filter(c=>alive(c.host)&&!c.host.fled&&effectiveI(c.u,c.host,c.component)===initiative);
-        const keyOf=c=>c.u.id+":"+c.component;
-        const pending=new Map(attackers.map(c=>[keyOf(c),{snapshot:captureFighter(c.u),attacked:false}]));
+        // Entitlements and snapshots span every Initiative level. A rider dying
+        // before their mount acts must not erase the mount's separate attack.
+        const pending=new Map(attackers.map(c=>[keyOf(c),{snapshot:snapshots.get(keyOf(c)),attacked:attackedPackets.has(keyOf(c))}]));
         attackers.forEach(({u,host,component})=>{
           const key=u.id+":"+component,entitlement=pending.get(key);
           if(!entitlement||entitlement.attacked||u.fled||(!alive(host)&&!u.delayedDeath)||(!combatantAlive(u)&&!u.delayedDeath))return;
@@ -69,7 +74,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           say('<b>Melee dice — '+u.name+(component==="mount"?" (mount)":"")+' attacks '+target.name+'</b>'+diceStack(u,result));
           wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
           applyDamage(target,result.wounds,false,result.cascadePlan);
-          entitlement.attacked=true;
+          entitlement.attacked=true;attackedPackets.add(key);
           before.forEach(({u:potential,component:potentialComponent,wasAlive,snapshot})=>{
             const potentialKey=potential.id+":"+potentialComponent;
             if(wasAlive&&!combatantAlive(potential)&&pending.has(potentialKey)&&!pending.get(potentialKey).attacked){
@@ -78,8 +83,8 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
               say(potential.name+' suffers a fatal wound; '+(potential.isCharacter?'they':'up to '+snapshot.eligibleModels+' front-rank fighters')+' will strike before dying at Initiative '+shownInitiative+'.');
             }
           });
-          const hasLaterPacket=attackers.some(c=>c.u===u&&!pending.get(keyOf(c))?.attacked);
-          if(u.delayedDeath&&!hasLaterPacket){u.models=0;u.damage=0;u.characterWounds=0;u.championAlive=false;u.delayedDeath=false;u.delayedDeathSnapshot=null;say(u.name+' succumbs after making its attack.');}
+          const hasUnresolvedPacket=combatants.some(c=>c.u===u&&!attackedPackets.has(keyOf(c)));
+          if(u.delayedDeath&&!hasUnresolvedPacket){u.models=0;u.damage=0;u.characterWounds=0;u.championAlive=false;u.delayedDeath=false;u.delayedDeathSnapshot=null;say(u.name+' succumbs after making its final attack.');}
         });
       });
       const sideUnits={player:group.filter(u=>u.side==="player"&&alive(u)),ai:group.filter(u=>u.side==="ai"&&alive(u))};
