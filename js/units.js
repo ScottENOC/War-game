@@ -7,9 +7,10 @@ function unitCost(config, faction) {
     {key:"M",unit:2,character:5},{key:"WS",unit:2,character:5},{key:"BS",unit:2,character:5},
     {key:"S",unit:3,character:6},{key:"T",unit:4,character:8},{key:"I",unit:1,character:3},{key:"Ld",unit:1,character:3}
   ].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
+  const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
   if(character){
     const base=elf?(type==="lord"?120:75):(type==="lord"?80:50);
-    return base+(config.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(config.weapon)?4:0)+(config.mounted?8:0)+(config.mounted&&config.weapon==="spear"?2:0)+(config.mounted&&config.weapon==="lance"?4:0)+(config.mounted&&config.barding?4:0)+(config.shield&&!["halberd","greatWeapon"].includes(config.weapon)?2:0)+upgrades;
+    return base+(config.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(config.weapon)?4:0)+(config.mounted?8:0)+(config.mounted&&config.weapon==="spear"?2:0)+(config.mounted&&config.weapon==="lance"?4:0)+(config.mounted&&config.barding?4:0)+(config.shield&&!["halberd","greatWeapon"].includes(config.weapon)?2:0)+upgrades+skillCost;
   }
   if(type==="cavalry"){
     const free=config.freeCavalryOption||"bow";
