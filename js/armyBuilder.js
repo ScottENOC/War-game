@@ -6,7 +6,7 @@ export function createArmyBuilder({ $, onStart, onBack }) {
   const list = $("army-list"), total = $("army-total"), addButton = $("add-unit"), startButton = $("begin-deployment");
 
   function unitPoints(unit) {
-    if (unit.type === "captain") return 50 + (unit.heavyArmour ? 4 : 0);
+    if (unit.type === "captain") return 50 + (unit.heavyArmour ? 4 : 0) + (unit.greatWeapon ? 4 : 0);
     return unit.models * (unit.type === "swordsmen" ? 8 : 10) +
       (unit.champion ? 6 : 0) +
       (unit.type === "swordsmen" && unit.lightArmour ? unit.models : 0);
@@ -37,7 +37,7 @@ export function createArmyBuilder({ $, onStart, onBack }) {
       type.addEventListener("change", () => {
         unit.type = type.value;
         if (unit.type !== "swordsmen") unit.lightArmour = false;
-        if (unit.type === "captain") { unit.models = 1; unit.champion = false; unit.lightArmour = false; unit.heavyArmour = false; }
+        if (unit.type === "captain") { unit.models = 1; unit.champion = false; unit.lightArmour = false; unit.heavyArmour = false; unit.greatWeapon = false; }
         else if (unit.models < 5) unit.models = 5;
         renderRows();
       });
@@ -64,6 +64,7 @@ export function createArmyBuilder({ $, onStart, onBack }) {
       options.append(championLabel);
       if (unit.type === "captain") {
         const armourLabel=document.createElement("label"); const armour=document.createElement("input"); armour.type="checkbox"; armour.checked=!!unit.heavyArmour; armour.addEventListener("change",()=>{unit.heavyArmour=armour.checked;updateTotals();}); armourLabel.append(armour,document.createTextNode("Heavy armour (+4 pts, 5+ save, −1 Move)")); options.append(armourLabel);
+        const weaponLabel=document.createElement("label"); const weapon=document.createElement("input"); weapon.type="checkbox"; weapon.checked=!!unit.greatWeapon; weapon.addEventListener("change",()=>{unit.greatWeapon=weapon.checked;updateTotals();}); weaponLabel.append(weapon,document.createTextNode("Great weapon (+4 pts, +2 Strength, −10 Initiative, two-handed)")); options.append(weaponLabel);
       }
       if (unit.type === "swordsmen") {
         const armourLabel = document.createElement("label");
@@ -96,7 +97,7 @@ export function createArmyBuilder({ $, onStart, onBack }) {
   $("builder-back").addEventListener("click", onBack);
   addButton.addEventListener("click", () => {
     if (army.length >= 6) return;
-    army.push({ type: "swordsmen", models: 20, champion: false, lightArmour: false, heavyArmour: false });
+    army.push({ type: "swordsmen", models: 20, champion: false, lightArmour: false, heavyArmour: false, greatWeapon: false });
     renderRows();
   });
   startButton.addEventListener("click", () => {
