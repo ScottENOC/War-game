@@ -6,6 +6,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(result.standShoot)extras.push("stand & shoot (−1)");
     if(result.targetCharging)extras.push("target charging (−1)");
     if(result.overUnitPenalty)extras.push("firing over intervening unit(s) (−"+result.overUnitPenalty+")");
+    if(result.friendlyFireCount)extras.push("<b>FRIENDLY FIRE: "+result.friendlyFireCount+" near-miss shot(s)</b>");
     if(result.hitModifier)extras.push("hit modifier "+(result.hitModifier>0?"+":"")+result.hitModifier);
     const extra=kind==="shoot"&&extras.length?" · "+extras.join(", "):"";
     const distText=Number.isFinite(result.distance)?" · "+result.distance.toFixed(1)+'"':"";
@@ -104,10 +105,27 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       armourPiercing:u.armourPiercing||0,attackingModels:visibility.visibleModels,attackingChampion:visibility.visibleChampion
     };
     const result=shootingAttack(u,target,context);Object.assign(result,context);
+    let friendlyFireCount=0;
+    const ffMargin=u.rangedWeapon==="bow"?1:u.rangedWeapon==="crossbow"?2:0;
+    if(ffMargin&&visibility.friendlyBlockers?.length){
+      result.pools.forEach(pool=>{pool.friendlyFireMisses=(pool.hitRolls||[]).map((die,i)=>{const missBy=(pool.hitNeed||7)-die,eligible=!(pool.hitPasses||[])[i]&&pool.hitNeed<=6&&missBy>=1&&missBy<=ffMargin;if(eligible)friendlyFireCount++;return eligible;});});
+    }
+    result.friendlyFireCount=friendlyFireCount;
     result.hitModifier=result.pools.length?result.pools[0].hitModifier:0;
     u.shot=true;showAttack(standShoot?"Stand and shoot":"Shooting",u,target,result,"shoot");
     const killed=applyDamage(target,result.wounds,true,result.cascadePlan);
     say(target.name+" loses "+killed+" model"+(killed===1?"":"s")+" to shooting.");
+    if(friendlyFireCount){
+      const friend=visibility.friendlyBlockers.slice().sort((a,b)=>dist(u,a)-dist(u,b))[0];
+      if(friend&&alive(friend)){
+        const ffResult=shootingAttack(u,friend,{...context,forcedHits:friendlyFireCount,attackingModels:friendlyFireCount,attackingChampion:false,overUnitPenalty:0,singleCharacter:false,skirmisher:false,cover:null,targetCharging:false});
+        const friendlyKilled=applyDamage(friend,ffResult.wounds,true,ffResult.cascadePlan);
+        say('<div class="friendly-fire"><b>FRIENDLY FIRE — '+friendlyFireCount+' shot(s) hit '+friend.name+' in the back.</b></div>'+diceStack(friend,ffResult));
+        say(friend.name+" loses "+friendlyKilled+" model"+(friendlyKilled===1?"":"s")+" to friendly fire.");
+        if(!alive(friend))panicNearby?.(friend,"a friendly unit is destroyed by friendly fire");
+        panicTest(friend);
+      }
+    }
     if(!alive(target))panicNearby?.(target,"a friendly unit is destroyed by shooting");
     if(!standShoot)panicTest(target);
     return true;
