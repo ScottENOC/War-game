@@ -14,11 +14,11 @@ function unitCost(config, faction) {
   }
   if(type==="cavalry"){
     const free=config.freeCavalryOption||"bow";
-    return models*(elf?24:16)+(config.elvenArchery&&elf&&(config.bow||(free==="bow"))?2*models:0)+(config.bow&&!(elf&&free==="bow")?2*models:0)+(config.heavyArmour?2*models:0)+(config.barding?2*models:0)+(config.shield&&config.weapon!=="greatWeapon"?0.5*models:0)+(config.weapon==="spear"&&!(elf&&free==="spear")?models:0)+(["lance","greatWeapon"].includes(config.weapon)?2*models:0)+upgrades;
+    return models*(elf?24:16)+(config.elvenArchery&&elf&&(config.bow||(free==="bow"))?2*models:0)+(config.bow&&!(elf&&free==="bow")?2*models:0)+(config.heavyArmour?2*models:0)+(config.barding?2*models:0)+(config.shield&&config.weapon!=="greatWeapon"?0.5*models:0)+(config.weapon==="spear"&&!(elf&&free==="spear")?models:0)+(["lance","greatWeapon"].includes(config.weapon)?2*models:0)+upgrades+skillCost;
   }
   const base=models*(elf?12:8);
   const weaponCost=type==="archers"?(elf?3:2)*models:config.weapon==="spear"&&!(elf&&type==="swordsmen")?models:config.weapon==="greatWeapon"?2*models:config.weapon==="halberd"?models:0;
-  return base+weaponCost+(config.elvenArchery&&elf&&type==="archers"?2*models:0)+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0)+upgrades;
+  return base+weaponCost+(config.elvenArchery&&elf&&type==="archers"?2*models:0)+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0)+upgrades+skillCost;
 }
 function buildUnit(template,config,faction,opposing=false) {
   const elf=faction==="highElves"&&!opposing,stats={...template.stats};
