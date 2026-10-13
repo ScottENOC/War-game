@@ -8,7 +8,7 @@ export function createUI({ S, $, units, alive, draw, BOW_RANGE, selectedTarget, 
         const b = document.createElement("button");
         b.className = "unit-card" + (u.id === S.selected ? " selected" : "") +
           (side === "player" && !u.moved && !u.shot && !u.fled ? " unmoved" : "");
-        b.setAttribute("aria-label", u.name + " " + u.models + " models, " + u.points + " points" + (u.champion.enabled ? ", champion" : "") + (u.lightArmour ? ", light armour" : ""));
+        b.setAttribute("aria-label", u.name + " " + u.models + " models, " + u.points + " points" + (u.champion.enabled ? ", champion" : "") + (u.lightArmour ? ", light armour" : "") + (u.alwaysStrikesFirst ? ", Always Strikes First" : ""));
         b.title = u.name + " — " + u.points + " pts" + (u.champion.enabled ? ", champion included" : "") + (u.lightArmour ? ", light armour" : "");
         b.innerHTML = '<span class="sigil">' + (u.kind === "archer" || u.hasBow ? "🏹" : u.kind === "cavalry" ? "🐎" : "⚔") + '</span>' +
           (u.champion.enabled ? '<span class="champion-mark">♛</span>' : "") +
