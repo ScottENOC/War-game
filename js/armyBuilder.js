@@ -40,7 +40,7 @@ export function createArmyBuilder({ $, onStart, onBack }) {
         unit.type = type.value;
         if (unit.type !== "swordsmen") unit.lightArmour = false;
         if (unit.type === "captain" || unit.type === "lord") { unit.models = 1; unit.champion = false; unit.lightArmour = false; unit.heavyArmour = false; unit.greatWeapon = false; unit.weapon = "handWeapon"; unit.spears = false; unit.bow=false; unit.barding=false; unit.mounted=false; }
-        else { if (unit.models < 5) unit.models = 5; if (unit.type !== "swordsmen") unit.spears = false; if(unit.type!=="cavalry"){unit.bow=false;unit.barding=false;unit.heavyArmour=false;unit.weapon="handWeapon";} }
+        else { if (unit.type === "cavalry") unit.models = Math.min(15,Math.max(5,unit.models)); else if (unit.models < 5) unit.models = 5; if (unit.type !== "swordsmen") unit.spears = false; if(unit.type!=="cavalry"){unit.bow=false;unit.barding=false;unit.heavyArmour=false;unit.weapon="handWeapon";} }
         renderRows();
       });
       const modelLabel = document.createElement("label");
