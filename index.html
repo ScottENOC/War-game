@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#171c20">
+<title>War-game — Core Battle Prototype</title>
+<style>
+:root{color-scheme:dark;--bg:#14191d;--panel:#20282d;--panel2:#293238;--line:#414c52;--text:#f0eee5;--muted:#aab4b8;--gold:#d5b66d;--red:#b9514b;--blue:#527ca2;--green:#7eaa83}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button{font:inherit;cursor:pointer;border:1px solid #657078;background:#344148;color:var(--text);border-radius:8px;padding:10px 13px;min-height:42px}button:hover:not(:disabled){background:#46575f;border-color:var(--gold)}button:disabled{opacity:.38;cursor:not-allowed}.primary{background:#876e38;border-color:#b99b59;color:#fff8e5}.danger{background:#713c3a;border-color:#a45b55}.quiet{background:transparent}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px clamp(14px,3vw,30px);border-bottom:1px solid var(--line);background:#1a2024}
+h1{font-size:18px;letter-spacing:.04em;margin:0}h1 span{color:var(--gold)}.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:10px;color:var(--gold);font-weight:750}
+main{max-width:1280px;margin:auto;padding:18px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px}.battle{min-width:0}.statusbar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}.phase{font-weight:750;font-size:17px}.hint{color:var(--muted);font-size:13px}
+#field{width:100%;display:block;aspect-ratio:1.45;background:#555f4b;border:1px solid #78816d;border-radius:12px;touch-action:manipulation}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.controls button{flex:1 1 135px}
+.side{display:flex;flex-direction:column;gap:12px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}.panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin:0 0 10px}
+.unitrow{display:flex;gap:10px;align-items:center}.shield{width:36px;height:42px;border:2px solid #d6c9a1;border-radius:9px 9px 14px 14px;display:grid;place-items:center;font-weight:900;font-size:12px}.shield.player{background:#3d6586}.shield.ai{background:#8b3935}.unitname{font-weight:750}.unitmeta{font-size:12px;color:var(--muted)}.numbers{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}.stat{background:var(--panel2);padding:7px 4px;text-align:center;border-radius:7px}.stat b{display:block;font-size:16px}.stat span{font-size:10px;color:var(--muted);text-transform:uppercase}
+#log{max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:8px;font-size:12px;color:#d6dcda}.logentry{padding-bottom:7px;border-bottom:1px solid #343e43}.logentry:last-child{border:0}.dice{color:var(--gold);font-weight:750}.pill{display:inline-block;border:1px solid var(--line);border-radius:20px;padding:3px 8px;color:var(--muted);font-size:11px}
+footer{max-width:1280px;margin:0 auto;padding:0 18px 24px;color:var(--muted);font-size:12px}.rules{display:grid;grid-template-columns:1fr 1fr;gap:8px}.rules div{background:var(--panel2);padding:8px;border-radius:7px;font-size:12px}
+@media(max-width:850px){main{grid-template-columns:1fr;padding:12px}.side{display:grid;grid-template-columns:1fr 1fr}.side .logpanel{grid-column:1/-1}#field{aspect-ratio:1.15}.statusbar{align-items:flex-start;flex-direction:column}header{padding:12px 14px}}
+@media(max-width:500px){.side{grid-template-columns:1fr}.side .logpanel{grid-column:auto}.rules{grid-template-columns:1fr 1fr}#field{aspect-ratio:.95}.hint{font-size:12px}}
+</style>
+</head>
+<body>
+<header><div><div class="eyebrow">Rank & flank · Prototype 0.1</div><h1>WAR-GAME <span>/ Core battle engine</span></h1></div><span class="pill">Sixth-edition-inspired</span></header>
+<main>
+<section class="battle">
+ <div class="statusbar"><div><div class="eyebrow" id="turnlabel">TURN 1</div><div class="phase" id="phaselabel">Movement — Charge declarations</div></div><div class="hint" id="instruction">Select your regiment, then declare a charge or move.</div></div>
+ <canvas id="field" aria-label="Battlefield showing two regiment banners"></canvas>
+ <div class="controls" id="controls"></div>
+</section>
+<aside class="side">
+ <section class="panel">
+  <h2>Player · Empire</h2><div class="unitrow"><div class="shield player">✦</div><div><div class="unitname">Swordsmen</div><div class="unitmeta" id="playerstatus">20 models · Hand weapon</div></div></div>
+  <div class="numbers"><div class="stat"><b>3</b><span>WS</span></div><div class="stat"><b>3</b><span>S</span></div><div class="stat"><b>3</b><span>T</span></div><div class="stat"><b>7</b><span>Ld</span></div></div>
+  <div class="unitmeta" style="margin-top:8px">Formation: 5 wide · No armour or upgrades</div>
+ </section>
+ <section class="panel">
+  <h2>Opponent · AI</h2><div class="unitrow"><div class="shield ai">✦</div><div><div class="unitname">Swordsmen</div><div class="unitmeta" id="aistatus">20 models · Hand weapon</div></div></div>
+  <div class="numbers"><div class="stat"><b>3</b><span>WS</span></div><div class="stat"><b>3</b><span>S</span></div><div class="stat"><b>3</b><span>T</span></div><div class="stat"><b>7</b><span>Ld</span></div></div>
+  <div class="unitmeta" style="margin-top:8px">AI policy: pass voluntary choices; hold when charged.</div>
+ </section>
+ <section class="panel"><h2>Combat reference</h2><div class="rules"><div><b>Move</b><br>4 inches</div><div><b>Charge</b><br>Up to 8 inches</div><div><b>Hit</b><br>WS 3 vs WS 3: 4+</div><div><b>Wound</b><br>S3 vs T3: 4+</div><div><b>Armour</b><br>None</div><div><b>Leadership</b><br>Test 2D6 ≤ 7</div></div></section>
+ <section class="panel logpanel"><h2>Battle log</h2><div id="log" aria-live="polite"></div></section>
+</aside>
+</main>
+<footer>Prototype rules note: the battle flow takes inspiration from classic rank-and-flank wargames. Alternating movement activations are a deliberate house rule; the tabletop sixth-edition turn sequence is not identical. Charge distance and dice results are shown openly for testing.</footer>
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const canvas = $("field"), ctx = canvas.getContext("2d");
+const S = {
+ turn:1, phase:"charges", active:"player", selected:"player", finished:false,
+ units:{
+  player:{id:"player",name:"Empire Swordsmen",side:"player",models:20,x:0.18,y:0.5,facing:0,engaged:false,activated:false,charged:false,fled:false},
+  ai:{id:"ai",name:"Opponent Swordsmen",side:"ai",models:20,x:0.82,y:0.5,facing:Math.PI,engaged:false,activated:false,charged:false,fled:false}
+ },
+ log:[], pending:[], passes:{player:false,ai:false}, combatRound:0
+};
+const W=()=>canvas.clientWidth, H=()=>canvas.clientHeight;
+const alive=u=>u.models>0;
+const dist=()=>Math.abs(S.units.player.x-S.units.ai.x)*W();
+function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,45);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");}
+function roll(n=1){return Array.from({length:n},()=>1+Math.floor(Math.random()*6));}
+function d6(n=1){return roll(n).reduce((a,b)=>a+b,0);}
+function setupCanvas(){const r=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
+function draw(){
+ const w=W(),h=H();if(!w||!h)return;
+ ctx.clearRect(0,0,w,h);
+ // textured-looking field and subtle terrain-free deployment grid
+ ctx.fillStyle="#59654d";ctx.fillRect(0,0,w,h);
+ ctx.strokeStyle="rgba(235,231,190,.12)";ctx.lineWidth=1;
+ for(let x=0;x<w;x+=w/12){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}
+ for(let y=0;y<h;y+=h/8){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+ // central ground line
+ ctx.strokeStyle="rgba(240,230,185,.32)";ctx.setLineDash([5,7]);ctx.beginPath();ctx.moveTo(w/2,12);ctx.lineTo(w/2,h-12);ctx.stroke();ctx.setLineDash([]);
+ // show move / charge range when selecting during movement
+ const p=S.units.player,a=S.units.ai;
+ if(S.phase==="movement"&&S.selected==="player"&&!p.engaged){
+  ctx.fillStyle="rgba(90,145,190,.14)";ctx.fillRect(p.x*w-4,0,4*w/w,h);
+  ctx.strokeStyle="rgba(160,205,230,.7)";ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(p.x*w,0);ctx.lineTo(p.x*w,h);ctx.stroke();ctx.setLineDash([]);
+ }
+ drawUnit(p,w,h);drawUnit(a,w,h);
+ const d=Math.round(dist());ctx.fillStyle="#f3eedc";ctx.font="600 12px system-ui";ctx.textAlign="center";ctx.fillText("Gap: "+d+" px",w/2,22);
+ ctx.textAlign="left";ctx.fillStyle="rgba(255,255,255,.8)";ctx.font="11px system-ui";ctx.fillText("Your deployment",12,h-12);
+ ctx.textAlign="right";ctx.fillText("AI deployment",w-12,h-12);
+}
+function drawUnit(u,w,h){
+ const x=u.x*w,y=u.y*h,selected=S.selected===u.id&&!S.finished;
+ const bannerW=Math.min(104,w*.23),bannerH=Math.min(98,h*.28);
+ // regiment footprint based on remaining files/ranks; schematic footprint not individual miniatures
+ const fw=Math.min(w*.24, Math.max(34,Math.min(5,u.models)*bannerW*.18));
+ const fh=Math.min(h*.32, Math.max(22,Math.ceil(u.models/5)*bannerH*.13));
+ ctx.save();ctx.translate(x,y);
+ ctx.fillStyle="rgba(0,0,0,.24)";ctx.fillRect(-fw/2+4,-fh/2+5,fw,fh);
+ ctx.fillStyle=u.side==="player"?"#365e7e":"#813c36";ctx.strokeStyle=selected?"#f7d98b":"#e3d6b5";ctx.lineWidth=selected?3:1.5;
+ ctx.fillRect(-fw/2,-fh/2,fw,fh);ctx.strokeRect(-fw/2,-fh/2,fw,fh);
+ // rank lines convey a block of five files
+ ctx.strokeStyle="rgba(255,255,255,.23)";ctx.lineWidth=1;
+ for(let i=1;i<Math.min(5,u.models);i++){const xx=-fw/2+fw*i/Math.min(5,u.models);ctx.beginPath();ctx.moveTo(xx,-fh/2);ctx.lineTo(xx,fh/2);ctx.stroke()}
+ ctx.fillStyle="#e6d5a4";ctx.beginPath();ctx.moveTo(0,-fh/2-10);ctx.lineTo(9,-fh/2-2);ctx.lineTo(0,-fh/2+6);ctx.lineTo(-9,-fh/2-2);ctx.closePath();ctx.fill();
+ ctx.fillStyle="#fff8e9";ctx.font="bold 12px system-ui";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(u.side==="player"?"EMPIRE":"OPPONENT",0,0);
+ ctx.font="bold 16px system-ui";ctx.fillText(String(u.models),0,fh/2+17);
+ if(u.engaged){ctx.fillStyle="#f2d67d";ctx.font="bold 10px system-ui";ctx.fillText("IN MELEE",0,fh/2+31)}
+ if(u.fled){ctx.fillStyle="#ffb3ad";ctx.font="bold 10px system-ui";ctx.fillText("FLEEING",0,fh/2+31)}
+ ctx.restore();
+}
+function setPhase(phase){S.phase=phase;S.active="player";S.passes={player:false,ai:false};S.units.player.activated=false;S.units.ai.activated=false;render();}
+function render(){
+ $("turnlabel").textContent="TURN "+S.turn;
+ const names={charges:"Movement — Charge declarations",movement:"Movement — Remaining moves",combat:"Melee — Attacks & combat resolution",break:"Combat resolution — Break test",over:"Battle complete"};
+ $("phaselabel").textContent=names[S.phase]||S.phase;
+ $("playerstatus").textContent=S.units.player.models+" models · "+(S.units.player.engaged?"In melee":S.units.player.fled?"Fleeing":"Hand weapon");
+ $("aistatus").textContent=S.units.ai.models+" models · "+(S.units.ai.engaged?"In melee":S.units.ai.fled?"Fleeing":"Hand weapon");
+ $("instruction").textContent=hint();
+ draw();controls();
+}
+function hint(){
+ if(S.finished)return "Battle ended. Start a fresh battle to play again.";
+ if(S.phase==="charges")return S.active==="player"?"Declare a charge if the enemy is within 8 inches, or pass.":"AI passes on charge declarations.";
+ if(S.phase==="movement")return S.active==="player"?"Select your regiment and move up to 4 inches, or finish movement.":"AI passes its movement activation.";
+ if(S.phase==="combat")return "Both engaged units fight. Chargers strike first; otherwise Initiative decides.";
+ if(S.phase==="break")return "Resolve the losing unit's Leadership test.";
+ return "";
+}
+function btn(label,fn,cls="",disabled=false){const b=document.createElement("button");b.textContent=label;b.className=cls;b.disabled=disabled;b.onclick=fn;return b}
+function controls(){
+ const el=$("controls");el.replaceChildren();
+ if(S.finished||S.phase==="over"){el.append(btn("New battle",reset,"primary"));return}
+ if(S.phase==="charges"){
+  if(S.active==="player"){
+   const p=S.units.player,a=S.units.ai;
+   el.append(btn("Declare charge",()=>declareCharge(), "primary",p.engaged||p.fled||p.charged||!alive(a)||dist()>8));
+   el.append(btn("Pass charges",()=>passCharge("player")));
+  }else el.append(btn("AI passes",()=>passCharge("ai"),"",false));
+  return;
+ }
+ if(S.phase==="movement"){
+  if(S.active==="player"){
+   const p=S.units.player;
+   el.append(btn("Move 4 inches",()=>movePlayer(), "primary",p.activated||p.engaged||p.fled||!alive(p)));
+   el.append(btn("Finish movement",()=>passMovement("player")));
+  }else el.append(btn("AI passes",()=>passMovement("ai")));
+  return;
+ }
+ if(S.phase==="combat"){
+  el.append(btn("Resolve melee combat",resolveCombat,"primary",!S.units.player.engaged||!S.units.ai.engaged));
+  el.append(btn("Skip combat (no melee)",()=>endTurn(),"",S.units.player.engaged&&S.units.ai.engaged));
+  return;
+ }
+ if(S.phase==="break")el.append(btn("Roll break test",resolveBreak,"primary"));
+}
+function declareCharge(){
+ const p=S.units.player,a=S.units.ai;
+ if(!alive(p)||!alive(a)||dist()>8||p.engaged||p.fled)return;
+ S.pending.push({from:"player",to:"ai",response:"hold"});
+ say('<b>Empire Swordsmen</b> declare a charge. The AI chooses <b>Hold</b>.');
+ // In a one-unit prototype the response is automatic; resolve charge immediately after declaration window.
+ p.charged=true;p.activated=true;
+ const gap=dist();
+ if(gap<=8){p.x=a.x-(Math.sign(a.x-p.x)||1)*0.105;p.y=a.y;p.engaged=true;a.engaged=true;say('Charge succeeds — both regiments are now engaged.');}
+ else say('Charge fails; the unit advances its normal move.');
+ S.active="player";setPhase("movement");
+}
+function passCharge(side){
+ if(side==="ai"){say("AI passes on declaring a charge.");S.passes.ai=true;S.active="player";render();return}
+ say("You pass on further charge declarations.");S.passes.player=true;
+ // Both have passed, move into remaining movement.
+ setPhase("movement");
+}
+function movePlayer(){
+ const p=S.units.player,a=S.units.ai;if(p.activated||p.engaged||p.fled)return;
+ const max=4/W();const dir=Math.sign(a.x-p.x)||1;
+ const next=p.x+dir*max;
+ if(Math.abs(a.x-next)*W()<24){say("Move blocked: the regiment cannot move into contact without charging.");return}
+ p.x=next;p.activated=true;say("Empire Swordsmen move up to 4 inches.");S.active="ai";render();
+}
+function passMovement(side){
+ if(side==="ai"){say("AI passes its movement activation.");S.passes.ai=true;S.active="player";render();return}
+ if(!S.units.player.activated&&!S.units.player.engaged&&!S.units.player.fled){S.units.player.activated=true;say("Empire Swordsmen remain in position.");}
+ S.passes.player=true;
+ if(S.units.player.engaged&&S.units.ai.engaged)setPhase("combat");else {setPhase("charges");S.turn++;say("Turn "+S.turn+" begins.");}
+}
+function resolveCombat(){
+ const p=S.units.player,a=S.units.ai;
+ if(!p.engaged||!a.engaged){endTurn();return}
+ S.combatRound++;
+ // Five models in the front rank fight. WS3 vs WS3 hits on 4+, S3 vs T3 wounds on 4+.
+ function attack(u,target){
+  const attacks=Math.min(5,u.models),hit=roll(attacks),hits=hit.filter(x=>x>=4).length,woundsRoll=roll(hits),wounds=woundsRoll.filter(x=>x>=4).length;
+  target.models=Math.max(0,target.models-wounds);
+  return {attacks,hit,hits,woundsRoll,wounds};
+ }
+ // Charging side strikes first. On subsequent rounds both sides attack; equal Initiative is simultaneous.
+ const pFirst=p.charged&&!a.charged;
+ let pr,ar;
+ if(pFirst){pr=attack(p,a);if(alive(a))ar=attack(a,p)}
+ else {pr=attack(p,a);ar=attack(a,p)}
+ say('<b>Melee round '+S.combatRound+'</b> — Empire: '+pr.hits+'/'+pr.attacks+' hits, '+pr.wounds+' wounds. AI: '+(ar?ar.hits+'/'+ar.attacks+' hits, '+ar.wounds+' wounds':'no attacks (destroyed before striking)')+'.');
+ draw();
+ if(!alive(p)||!alive(a)){finishBattle(!alive(a)?"Empire wins the battle!":"AI wins the battle!");return}
+ const crP=pr.wounds+rankBonus(p)+0;const crA=(ar?ar.wounds:0)+rankBonus(a)+0;
+ const diff=crP-crA;
+ say('Combat result — Empire '+crP+' (wounds '+pr.wounds+' + ranks '+rankBonus(p)+'), AI '+crA+' (wounds '+(ar?ar.wounds:0)+' + ranks '+rankBonus(a)+').');
+ if(diff===0){say('Combat drawn; both units hold.');endTurn();return}
+ S.loser=diff>0?"ai":"player";S.crDiff=Math.abs(diff);S.phase="break";render();
+}
+function rankBonus(u){return Math.min(3,Math.max(0,Math.floor((u.models-1)/5)));}
+function resolveBreak(){
+ const loser=S.units[S.loser];if(!loser||!alive(loser)){endTurn();return}
+ const dice=roll(2),total=dice[0]+dice[1],ld=7-S.crDiff;
+ say((loser.side==="player"?"Empire":"AI")+" break test: 2D6 = <span class='dice'>"+dice.join(" + ")+" = "+total+"</span>; modified Leadership "+Math.max(2,ld)+".");
+ if(total>Math.max(2,ld)){
+  loser.fled=true;loser.engaged=false;S.units[loser.side==="player"?"ai":"player"].engaged=false;
+  say((loser.side==="player"?"Empire":"AI")+" fails the break test and flees. The opposing unit holds the field.");
+  finishBattle((loser.side==="player"?"AI wins the battle!":"Empire wins the battle!"));
+ }else{say((loser.side==="player"?"Empire":"AI")+" holds despite losing combat.");endTurn()}
+}
+function endTurn(){
+ S.units.player.charged=false;S.units.ai.charged=false;
+ S.units.player.engaged=alive(S.units.player)&&alive(S.units.ai)&&S.units.player.engaged;
+ S.units.ai.engaged=S.units.player.engaged;
+ S.turn++;S.units.player.activated=false;S.units.ai.activated=false;S.pending=[];
+ if(S.units.player.engaged&&S.units.ai.engaged)setPhase("combat");else setPhase("charges");
+}
+function finishBattle(msg){S.finished=true;S.phase="over";say('<b>'+msg+'</b>');render()}
+function reset(){
+ S.turn=1;S.phase="charges";S.active="player";S.selected="player";S.finished=false;S.pending=[];S.passes={player:false,ai:false};S.combatRound=0;S.loser=null;S.crDiff=0;
+ Object.assign(S.units.player,{models:20,x:.18,y:.5,facing:0,engaged:false,activated:false,charged:false,fled:false});
+ Object.assign(S.units.ai,{models:20,x:.82,y:.5,facing:Math.PI,engaged:false,activated:false,charged:false,fled:false});
+ S.log=[];$("log").replaceChildren();say("Battle deployed: 20 Empire Swordsmen face 20 opposing Swordsmen.");render();
+}
+canvas.addEventListener("click",e=>{
+ const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width;
+ const dp=Math.abs(x-S.units.player.x),da=Math.abs(x-S.units.ai.x);
+ S.selected=dp<=da?"player":"ai";render();
+});
+window.addEventListener("resize",setupCanvas);
+reset();setupCanvas();
+})();
+</script>
+</body>
+</html>
