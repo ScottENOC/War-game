@@ -125,7 +125,7 @@ function drawUnit(u,w,h){
  // Casualties are removed from the rear; surviving models stay in the front ranks.
  let remaining=u.models;
  for(let rank=0;rank<ranks;rank++){
-  const count=Math.min(files,remaining),start=-front/2+(files-count)*base/2;
+  const count=Math.min(files,remaining),start=-front/2;
   for(let file=0;file<count;file++){
    const cx=depth/2-(rank+.5)*base,cy=start+file*base+base/2;
    ctx.fillStyle=u.side==="player"?"#456f91":"#a44a42";
