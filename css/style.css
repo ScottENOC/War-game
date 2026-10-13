@@ -15,6 +15,8 @@ button:active{transform:scale(.96)}button:disabled{opacity:.3}
 #actions{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 70px);transform:translateX(-50%);display:flex;justify-content:center;gap:7px;pointer-events:auto;flex-wrap:wrap;max-width:100vw}
 #actions button{width:48px;height:48px;padding:0}
 #actions button.active{outline:2px solid var(--gold);background:rgba(100,83,43,.8)}
+#actions button{min-width:48px}
+.unit-card:disabled{opacity:.65;cursor:default}
 #logtoggle{position:fixed;right:10px;top:calc(env(safe-area-inset-top) + 10px);pointer-events:auto;width:42px;height:42px;min-width:42px;min-height:42px;font-size:20px}
 #logpanel{position:fixed;z-index:8;inset:8% 7% 8%;display:none;pointer-events:auto;background:rgba(17,23,26,.88);border:1px solid var(--line);border-radius:16px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);padding:12px;overflow:hidden;flex-direction:column}
 #logpanel.open{display:flex}
