@@ -38,10 +38,9 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
         // Rider and mount are separate combatants: only the rider uses their
         // weapon and racial Initiative modifiers.
         if(component==="mount")return (u.mountStats?.I??0)+chargeBonus;
-        const initiative=u.stats.I-(u.weapon==="greatWeapon"?10:0)+chargeBonus+(u.alwaysStrikesFirst?10:0);
-        // Always Strikes First is a priority rule as well as a +10 Initiative
-        // modifier; the 100 offset is ordering-only and is removed for display.
-        return u.alwaysStrikesFirst?100+initiative:initiative;
+        // Always Strikes First contributes +10 Initiative, but does not override
+        // the final modified Initiative (for example, a charging enemy can act first).
+        return u.stats.I-(u.weapon==="greatWeapon"?10:0)+chargeBonus+(u.alwaysStrikesFirst?10:0);
       };
       const combatants=[];
       group.forEach(host=>{
@@ -53,7 +52,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const attackedPackets=new Set();
       const levels=[...new Set(combatants.map(c=>effectiveI(c.u,c.host,c.component)))].sort((a,b)=>b-a);
       levels.forEach(initiative=>{
-        const shownInitiative=initiative>=100?initiative-100:initiative;
+        const shownInitiative=initiative;
         const attackers=combatants.filter(c=>(alive(c.host)||c.host.delayedDeath)&&!c.host.fled&&effectiveI(c.u,c.host,c.component)===initiative);
         // Entitlements and snapshots span every Initiative level. A rider dying
         // before their mount acts must not erase the mount's separate attack.
@@ -72,9 +71,14 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           }
           const target=targets.sort((a,b)=>dist(host,a)-dist(host,b))[0];
           const before=new Map(combatants.filter(c=>!attackedPackets.has(keyOf(c))).map(c=>[keyOf(c),{...c,wasAlive:combatantAlive(c.u),snapshot:snapshots.get(keyOf(c))}]));
-          const naturalI=u.stats.I-(u.weapon==="greatWeapon"?10:0)+(host.charged?10:0);
-          const targetI=target.stats.I-(target.weapon==="greatWeapon"?10:0)+(target.charged?10:0);
-          const rerollMisses=component==="rider"&&!!u.alwaysStrikesFirst&&naturalI>targetI;
+          const attackerI=effectiveI(u,host,component);
+          const targetCombatant=combatants.find(c=>c.u===target&&c.component==="rider");
+          const targetI=targetCombatant
+            ?effectiveI(targetCombatant.u,targetCombatant.host,targetCombatant.component)
+            :effectiveI(target);
+          // Rerolls require a gap of at least 11 after all modifiers, including
+          // ASF, charging and the great-weapon Initiative penalty.
+          const rerollMisses=component==="rider"&&!!u.alwaysStrikesFirst&&attackerI-targetI>=11;
           const result=meleeAttack(u,target,{attackingModels:strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged,attackComponent:component,rerollMisses});
           say('<b>Melee dice — '+u.name+(component==="mount"?" (mount)":"")+' attacks '+target.name+'</b>'+diceStack(u,result));
           wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
