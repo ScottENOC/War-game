@@ -26,7 +26,7 @@ Open [index.html](./index.html) in a browser, or enable GitHub Pages for the rep
 
 This is not a verbatim implementation of any published rulebook. It is a small, testable foundation with classic rank-and-flank mechanics. Alternating unit activations are deliberately borrowed as a design idea from modern digital wargames rather than matching the original sixth-edition turn sequence. Charge response coverage is still incomplete: the player can flee from a declared charge, but the AI does not yet choose reactions strategically. Charge arc and line-of-sight checks use simplified unit-footprint obstruction; this is an approximation rather than full tabletop wheel-and-align geometry. Fleeing/rally movement, pursuit choices, multi-unit combats, terrain and panic triggers still need more complete coverage.
 
-Remaining work: full wheel-and-align charge geometry, pursuit choices and movement after break tests, robust flee/rally movement and panic triggers, multi-unit combats, terrain interactions, and more unit profiles and army rules. The between-round one-on-one facing/reform rule is an intentional house rule, not 6th-edition RAW. Keep rules logic separate from rendering as the project grows.
+Remaining work: full wheel-and-align charge geometry, pursuit choices and movement after break tests, more complete flee/rally movement and panic triggers, multi-unit combats, terrain interactions, and more unit profiles and army rules. The between-round one-on-one facing/reform rule is an intentional house rule, not 6th-edition RAW. Keep rules logic separate from rendering as the project grows.
 
 ## Development direction
 
