@@ -43,7 +43,7 @@ export function createRules({ roll, units = () => [] }) {
     const add=(count,stats,label)=>{if(!count)return;const key=mode==="melee"?[stats.WS,stats.S,stats.A].join("/"):[stats.BS,stats.S].join("/");let pool=profiles.find(p=>p.key===key);if(!pool){pool={key,stats,count:0,labels:[]};profiles.push(pool);}pool.count+=count;if(!pool.labels.includes(label))pool.labels.push(label);};
     if(context.attackComponent!=="mount")add(normalCount,{...u.stats},"Rider");
     if(u.mountStats&&mode==="melee"&&context.attackComponent!=="rider")add(attackModels,{...u.mountStats},"Mount");
-    if(context.attackComponent!=="mount"&&hasChampion){const overrides=u.champion.stats||{},s={...u.stats,...overrides};if(mode==="melee"&&overrides.A==null)s.A=2;if(mode==="shooting"&&overrides.BS==null)s.BS=u.stats.BS+1;add(1,s,"Champion");}
+    if(context.attackComponent!=="mount"&&hasChampion){const overrides=u.champion.stats||{},s={...u.stats,...overrides};if(mode==="melee"&&overrides.A==null)s.A=u.stats.A+((u.champion?.bonus||(u.kind==="archer"?"BS":"A"))==="A"?1:0);if(mode==="shooting"&&overrides.BS==null)s.BS=u.stats.BS+((u.champion?.bonus||(u.kind==="archer"?"BS":"A"))==="BS"?1:0);add(1,s,"Champion");}
     return profiles;
   }
   function newVirtual(target) {
@@ -71,7 +71,7 @@ export function createRules({ roll, units = () => [] }) {
       const tier=tiers[0],g=groupFor(tier);g.attacks++;
       let hitNeed;
       if(mode==="melee")hitNeed=hitTarget(attackerPool.stats.WS,tier.stats.WS);
-      else {const mods=(context.longRange?-1:0)+(context.moved?-1:0)+(context.standShoot?-1:0)+(context.targetCharging?-1:0)+((context.singleCharacter||context.skirmisher)?-1:0)+(context.cover==="soft"?-1:context.cover==="hard"?-2:0)+(context.largeTarget?1:0);hitNeed=7-attackerPool.stats.BS-mods;}
+      else {const mods=(context.longRange&&!context.elvenArchery?-1:0)+(context.moved&&!context.elvenArchery?-1:0)+(context.standShoot?-1:0)+(context.targetCharging?-1:0)+((context.singleCharacter||context.skirmisher)?-1:0)+(context.cover==="soft"?-1:context.cover==="hard"?-2:0)+(context.largeTarget?1:0);hitNeed=7-attackerPool.stats.BS-mods;}
       g.hitNeed=hitNeed;const hit=roll(1)[0];g.hitRolls.push(hit);
       let hitPass=false,follow=null;
       if(mode==="melee")hitPass=hit!==1&&(hit===6||hit>=hitNeed);
