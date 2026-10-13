@@ -4,22 +4,50 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#171c20">
-<title>War-game — Core Battle Prototype</title>
+<title>War-game — Battle Prototype</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<canvas id="field" aria-label="Full-screen battlefield"></canvas>
-<div id="hud">
- <div class="cards" id="enemycards" aria-label="Opponent units"></div>
- <div id="actions" aria-label="Battle actions"></div>
- <div class="cards" id="playercards" aria-label="Your units"></div>
-</div>
-<button id="logtoggle" aria-label="Battle log" title="Battle log">▤</button>
-<section id="logpanel" aria-label="Battle log">
- <div id="loghead"><button id="logclose" aria-label="Close log">×</button></div>
- <div id="log"></div>
+<section id="mainmenu" class="screen menu-screen">
+  <div class="menu-panel">
+    <div class="eyebrow">A rank-and-flank battle game</div>
+    <h1>WAR-GAME</h1>
+    <p>Build your force, deploy your regiments, and fight for the field.</p>
+    <button id="menu-build" class="primary-button">Build Army</button>
+    <p class="subtle">Prototype rules · no army points limit</p>
+  </div>
 </section>
-<section id="rollview" aria-live="polite"><button id="rollclose" aria-label="Close dice">×</button><div id="rollcontent"></div></section>
+<section id="armybuilder" class="screen builder-screen" hidden>
+  <div class="builder-panel">
+    <header class="builder-header">
+      <div><div class="eyebrow">Before the battle</div><h1>Army Builder</h1></div>
+      <button id="builder-back" class="secondary-button">Main Menu</button>
+    </header>
+    <p class="builder-intro">Build up to six units. Points are shown per unit and for the whole army; there is currently no points cap.</p>
+    <div id="army-list"></div>
+    <div class="builder-footer">
+      <button id="add-unit" class="secondary-button">＋ Add Unit</button>
+      <div class="army-total"><span>Total army</span><strong id="army-total">0 pts</strong></div>
+      <button id="begin-deployment" class="primary-button">Deploy Army →</button>
+    </div>
+    <p class="subtle">For now, the AI opponent mirrors your army list. Its deployment and unit cards remain hidden until the battle starts.</p>
+  </div>
+</section>
+<div id="game" hidden>
+  <canvas id="field" aria-label="Full-screen battlefield"></canvas>
+  <div id="hud">
+    <div class="cards" id="enemycards" aria-label="Opponent units"></div>
+    <div id="battle-points" aria-live="polite"></div>
+    <div id="actions" aria-label="Battle actions"></div>
+    <div class="cards" id="playercards" aria-label="Your units"></div>
+  </div>
+  <button id="logtoggle" aria-label="Battle log" title="Battle log">▤</button>
+  <section id="logpanel" aria-label="Battle log">
+    <div id="loghead"><button id="logclose" aria-label="Close log">×</button></div>
+    <div id="log"></div>
+  </section>
+  <section id="rollview" aria-live="polite"><button id="rollclose" aria-label="Close dice">×</button><div id="rollcontent"></div></section>
+</div>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
