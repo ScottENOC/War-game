@@ -61,7 +61,8 @@ const S = {
 };
 const W=()=>canvas.clientWidth, H=()=>canvas.clientHeight;
 const alive=u=>u.models>0;
-const BATTLEFIELD_WIDTH_IN=48;\nconst dist=()=>Math.abs(S.units.player.x-S.units.ai.x)*BATTLEFIELD_WIDTH_IN;
+const BATTLEFIELD_WIDTH_IN=48;
+const dist=()=>Math.abs(S.units.player.x-S.units.ai.x)*BATTLEFIELD_WIDTH_IN;
 function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,45);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");}
 function roll(n=1){return Array.from({length:n},()=>1+Math.floor(Math.random()*6));}
 function d6(n=1){return roll(n).reduce((a,b)=>a+b,0);}
