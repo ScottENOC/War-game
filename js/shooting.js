@@ -1,8 +1,38 @@
-export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $ }) {
-  function bsTarget(u,target,longRange,moved,standShoot){let need=u.stats.BS>=5?2:u.stats.BS===4?3:u.stats.BS===3?4:u.stats.BS===2?5:6;if(longRange)need++;if(moved)need++;if(standShoot)need++;return Math.min(7,need);}
-function shootAttack(u,target,standShoot){const d=dist(u,target),longRange=d>BOW_RANGE/2,hitNeed=bsTarget(u,target,longRange,u.moved,standShoot),shots=Math.min(10,u.models),hitRolls=roll(shots),hits=hitRolls.filter(x=>x>=hitNeed).length,woundNeed=woundTarget(u.stats.S,target.stats.T),woundRolls=roll(hits),woundsBeforeSave=woundRolls.filter(x=>x>=woundNeed).length,saveNeed=saveTarget(target,u.stats.S),saveRolls=saveNeed===null?[]:roll(woundsBeforeSave),saved=saveNeed===null?0:saveRolls.filter(x=>x>=saveNeed).length;return {attacks:shots,hitNeed,hitRolls,hits,woundNeed,woundRolls,woundsBeforeSave,saveNeed,saveRolls,saved,wounds:Math.max(0,woundsBeforeSave-saved),longRange,moved:u.moved,standShoot,distance:d};}
-function showAttack(label,u,target,r,kind){const extra=(kind==="shoot"?' · '+(r.longRange?'long range ':'')+(r.moved?'moved ':'')+(r.standShoot?'stand & shoot':''):'');const distText=Number.isFinite(r.distance)?' · '+r.distance.toFixed(1)+'"':'';const stack=diceStack(u,r);say('<b>'+label+': '+u.name+' → '+target.name+'</b><div class="rollsummary">'+r.attacks+(kind==="shoot"?" shots":" attacks")+distText+extra+'</div>'+stack);$("rollcontent").innerHTML=stack;$("rollview").classList.add("show");}
-function panicTest(target){if(target.panicTested)return;const threshold=Math.ceil(target.startModels*.25);if(target.shootCasualties<threshold||!alive(target))return;target.panicTested=true;const dice=roll(2),total=dice[0]+dice[1];say('<b>Panic test — '+target.name+'</b>: shooting casualties '+target.shootCasualties+'/'+target.startModels+' (25% threshold '+threshold+'). 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; need '+target.stats.Ld+' or less.');if(total>target.stats.Ld){target.fled=true;target.engaged=false;say(target.name+' fails its unmodified Leadership test and flees.');}}
-function shoot(u,target,standShoot){if(!alive(u)||!alive(target)||u.kind!=="archer"||u.shot||u.engaged||target.engaged)return false;const d=dist(u,target);if(d>BOW_RANGE)return false;if(standShoot&&d<=4)return false;const r=shootAttack(u,target,standShoot);u.shot=true;showAttack(standShoot?"Stand and shoot":"Shooting",u,target,r,"shoot");const killed=applyDamage(target,r.wounds,true);say(target.name+' loses '+killed+' model'+(killed===1?'':'s')+' to shooting.');if(!standShoot)panicTest(target);return true;}
+export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $ , shootingAttack }) {
+  function showAttack(label, u, target, result, kind) {
+    const extra = (kind === "shoot" ? " · " + (result.longRange ? "long range " : "") +
+      (result.moved ? "moved " : "") + (result.standShoot ? "stand & shoot" : "") : "");
+    const distText = Number.isFinite(result.distance) ? " · " + result.distance.toFixed(1) + '"' : "";
+    const stack = diceStack(u, result);
+    say("<b>" + label + ": " + u.name + " → " + target.name + "</b><div class=\"rollsummary\">" +
+      result.attacks + (kind === "shoot" ? " shots" : " attacks") + distText + extra + "</div>" + stack);
+    $("rollcontent").innerHTML = stack;
+    $("rollview").classList.add("show");
+  }
+  function panicTest(target) {
+    if (target.panicTested) return;
+    const threshold = Math.ceil(target.startModels * .25);
+    if (target.shootCasualties < threshold || !alive(target)) return;
+    target.panicTested = true;
+    const dice = roll(2), total = dice[0] + dice[1];
+    say("<b>Panic test — " + target.name + "</b>: shooting casualties " + target.shootCasualties + "/" +
+      target.startModels + " (25% threshold " + threshold + "). 2D6 <span class=\"dice\">" +
+      dice.join(" + ") + " = " + total + "</span>; need " + target.stats.Ld + " or less.");
+    if (total > target.stats.Ld) { target.fled = true; target.engaged = false; say(target.name + " fails its unmodified Leadership test and flees."); }
+  }
+  function shoot(u, target, standShoot) {
+    if (!alive(u) || !alive(target) || u.kind !== "archer" || u.shot || u.engaged || target.engaged) return false;
+    const distance = dist(u, target);
+    if (distance > BOW_RANGE || (standShoot && distance <= 4)) return false;
+    const context = { longRange: distance > BOW_RANGE / 2, moved: u.moved, standShoot, distance };
+    const result = shootingAttack(u, target, context);
+    Object.assign(result, context);
+    u.shot = true;
+    showAttack(standShoot ? "Stand and shoot" : "Shooting", u, target, result, "shoot");
+    const killed = applyDamage(target, result.wounds, true);
+    say(target.name + " loses " + killed + " model" + (killed === 1 ? "" : "s") + " to shooting.");
+    if (!standShoot) panicTest(target);
+    return true;
+  }
   return { shoot };
 }
