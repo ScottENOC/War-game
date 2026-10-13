@@ -64,7 +64,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           before.forEach(({u:potential,wasAlive,snapshot})=>{
             if(wasAlive&&!combatantAlive(potential)&&pending.has(potential.id)&&!pending.get(potential.id).attacked){
               potential.delayedDeath=true;
-              potential.delayedDeathSnapshot=snapshot;
+              potential.delayedDeathSnapshot=pending.get(potential.id).snapshot;
               say(potential.name+' suffers a fatal wound; '+(potential.isCharacter?'they':'up to '+snapshot.eligibleModels+' front-rank fighters')+' will strike before dying at Initiative '+initiative+'.');
             }
           });
