@@ -114,7 +114,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu}){
    const refresh=()=>{
     const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=body.kind==="cavalry";const hero=body.kind==="captain"||body.kind==="lord";
     [...weapon.options].forEach(o=>o.remove());
-    const arms=cavalry?["right_sword","right_spear","right_lance","both_greatWeapon"]:(hero?(horseWrap.value==="yes"?["right_sword","right_spear","right_lance","both_greatWeapon"]:["right_sword","right_spear","right_lance","both_greatWeapon","both_halberd"]):["right_sword","right_spear","both_bow"]);
+    const arms=cavalry?["right_sword","right_spear","right_lance","both_greatWeapon"]:(hero?(horseWrap.value==="yes"?["right_sword","right_spear","right_lance","both_greatWeapon"]:["right_sword","right_spear","both_greatWeapon","both_halberd"]):["right_sword","right_spear","both_bow"]);
     
     arms.forEach(id=>{const d=bitDefs.find(b=>b.id===id);const o=document.createElement("option");o.value=id;o.textContent=d.label+" ("+bitCount(id)+" owned)";weapon.append(o);});
     horseWrap.parentElement.hidden=!cavalry&&!hero;
