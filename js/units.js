@@ -13,11 +13,11 @@ function unitCost(config, faction) {
   }
   if(type==="cavalry"){
     const free=config.freeCavalryOption||"bow";
-    return models*(elf?24:16)+(config.bow&&!(elf&&free==="bow")?2*models:0)+(config.heavyArmour?2*models:0)+(config.barding?2*models:0)+(config.shield&&config.weapon!=="greatWeapon"?0.5*models:0)+(config.weapon==="spear"&&!(elf&&free==="spear")?models:0)+(["lance","greatWeapon"].includes(config.weapon)?2*models:0)+upgrades;
+    return models*(elf?24:16)+(config.elvenArchery&&elf&&(config.bow||(free==="bow"))?2*models:0)+(config.bow&&!(elf&&free==="bow")?2*models:0)+(config.heavyArmour?2*models:0)+(config.barding?2*models:0)+(config.shield&&config.weapon!=="greatWeapon"?0.5*models:0)+(config.weapon==="spear"&&!(elf&&free==="spear")?models:0)+(["lance","greatWeapon"].includes(config.weapon)?2*models:0)+upgrades;
   }
   const base=models*(elf?12:8);
   const weaponCost=type==="archers"?(elf?3:2)*models:config.weapon==="spear"&&!(elf&&type==="swordsmen")?models:config.weapon==="greatWeapon"?2*models:config.weapon==="halberd"?models:0;
-  return base+weaponCost+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0)+upgrades;
+  return base+weaponCost+(config.elvenArchery&&elf&&type==="archers"?2*models:0)+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0)+upgrades;
 }
 function buildUnit(template,config,faction,opposing=false) {
   const elf=faction==="highElves"&&!opposing,stats={...template.stats};
@@ -30,6 +30,9 @@ function buildUnit(template,config,faction,opposing=false) {
   const hasBow=config.type==="archers"||(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow")));
   let weapon=(isCharacter||isCavalry||config.type==="swordsmen")?(config.weapon||"handWeapon"):"handWeapon";
   for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.upgrades&&config.upgrades[key])stats[key]+=1;
+  const campaignStats=config.campaignStats||{};
+  for(const key of ["WS","BS","S","T","Ld"])stats[key]+=Math.max(0,campaignStats[key]||0);
+  if(campaignStats.MI){stats.M+=campaignStats.MI;stats.I+=campaignStats.MI;}
   // Halberds are infantry weapons; prevent stale or malformed mounted loadouts.
   if(mounted&&weapon==="halberd")weapon="handWeapon";
   if(isCavalry&&elf&&(config.freeCavalryOption||"bow")==="spear"&&weapon==="handWeapon")weapon="spear";
@@ -38,7 +41,7 @@ function buildUnit(template,config,faction,opposing=false) {
     isCharacter,isCavalry,mounted,isGeneral:false,attachedTo:null,baseMove:stats.M,
     models:isCharacter?1:config.models,startModels:isCharacter?1:config.models,points:unitCost(config,costFaction),weapon,
     spears,spearRanks:elf&&spears?3:2,hasBow,range:template.range||24,lightArmour,heavyArmour:!!config.heavyArmour,barding:!!config.barding,shield,
-    alwaysStrikesFirst:!!template.alwaysStrikesFirst,elvenArchery:!!elf,mountStats:mounted?{...(template.mountStats||{A:1,WS:3,I:3,S:3})}:null,
+    alwaysStrikesFirst:!!template.alwaysStrikesFirst,elvenArchery:!!elf&&!!config.elvenArchery,skills:{...(config.skills||{})},mountStats:mounted?{...(template.mountStats||{A:1,WS:3,I:3,S:3})}:null,
     baseWidthIn:mounted?25/25.4:20/25.4,baseDepthIn:mounted?50/25.4:20/25.4,
     armour:isCavalry||isCharacter?(config.heavyArmour?"heavy":"light"):(lightArmour?"light":"none"),wardSave:null,
     largeTarget:false,singleCharacter:false,skirmisher:false,cover:null,x:config.x,y:config.y,facing:config.facing,deployed:config.side==="ai",
