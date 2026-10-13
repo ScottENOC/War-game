@@ -24,7 +24,7 @@ function buildUnit(template, config) {
     spears: config.type === "swordsmen" && !!config.spears, hasBow: isCavalry && !!config.bow,
     lightArmour: isCavalry || isCharacter ? !config.heavyArmour : !!config.lightArmour, heavyArmour: !!config.heavyArmour, barding: !!config.barding,
     mountStats: mounted ? { ...(template.mountStats || {A:1,WS:3,I:3,S:3}) } : null,
-    baseWidthIn: mounted ? 25/25.4 : 0.9, baseDepthIn: mounted ? 50/25.4 : 0.9,
+    baseWidthIn: mounted ? 25/25.4 : 20/25.4, baseDepthIn: mounted ? 50/25.4 : 20/25.4,
     armour: isCavalry || isCharacter ? (config.heavyArmour ? "heavy" : "light") : (config.lightArmour ? "light" : "none"), shield: false, wardSave: null,
     // Optional rule tags consumed by shooting modifiers when a unit/profile or
     // future battlefield-terrain interaction sets them.
