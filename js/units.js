@@ -119,12 +119,12 @@ export function buildOpponentArmy(playerArmy, playerFaction = "empire") {
     if (total > target * 1.10) penalty += (total - target * 1.10) * 4;
     return penalty;
   };
+  const cloneRoster = roster => roster.map(u => ({ ...u, meleeWeapons: u.meleeWeapons ? [...u.meleeWeapons] : undefined }));
   const tune = source => {
-    const roster = source.map(u => ({ ...u, meleeWeapons: u.meleeWeapons ? [...u.meleeWeapons] : undefined }));
-    // Adjust model counts to use the budget efficiently without changing the army's role.
+    const roster = cloneRoster(source);
+    // First tune unit sizes without changing the composition.
     for (let pass = 0; pass < 2; pass++) {
-      for (let i = 0; i < roster.length; i++) {
-        const unit = roster[i];
+      for (const unit of roster) {
         if (!["swordsmen", "archers", "cavalry"].includes(unit.type)) continue;
         const max = unit.type === "cavalry" ? 15 : 30;
         let bestModels = unit.models, bestGap = Math.abs(costOf(roster) - target);
@@ -136,6 +136,74 @@ export function buildOpponentArmy(playerArmy, playerFaction = "empire") {
         unit.models = bestModels;
       }
     }
+
+    // Then make small, sensible purchases or cuts. Stop as soon as we are within 10%.
+    for (let step = 0; step < 80; step++) {
+      const total = costOf(roster), gap = Math.abs(total - target);
+      if (gap <= target * 0.10) return roster;
+      const under = total < target;
+      let bestMove = null, bestGap = gap;
+      const consider = (next, description) => {
+        const nextTotal = costOf(next), nextGap = Math.abs(nextTotal - target);
+        // When over budget, only accept a cut; when under, only accept a purchase.
+        if (under ? nextTotal <= total : nextTotal >= total) return;
+        if (nextGap < bestGap) { bestGap = nextGap; bestMove = { next, description }; }
+      };
+      for (let i = 0; i < roster.length; i++) {
+        const unit = roster[i];
+        if (["swordsmen", "archers", "cavalry"].includes(unit.type)) {
+          const max = unit.type === "cavalry" ? 15 : 30;
+          if (under && unit.models < max) {
+            const next = cloneRoster(roster); next[i].models++;
+            consider(next, "add model");
+          }
+          if (!under && unit.models > 5) {
+            const next = cloneRoster(roster); next[i].models--;
+            consider(next, "remove model");
+          }
+        }
+        // Magical equipment is a useful points sink for characters.
+        if (["captain", "lord"].includes(unit.type)) {
+          if (under && unit.weapon !== "magicSword") {
+            const next = cloneRoster(roster); next[i].weapon = "magicSword";
+            next[i].meleeWeapons = [...new Set([...(next[i].meleeWeapons || []), "magicSword"])];
+            consider(next, "buy magic sword");
+          }
+          if (under && !unit.magicArmour) {
+            const next = cloneRoster(roster); next[i].magicArmour = true;
+            consider(next, "buy magic armour");
+          }
+          if (!under && unit.weapon === "magicSword") {
+            const next = cloneRoster(roster); next[i].weapon = "handWeapon";
+            next[i].meleeWeapons = (next[i].meleeWeapons || []).filter(w => w !== "magicSword");
+            consider(next, "remove magic sword");
+          }
+          if (!under && unit.magicArmour) {
+            const next = cloneRoster(roster); next[i].magicArmour = false;
+            consider(next, "remove magic armour");
+          }
+        }
+        // Drop costly equipment before sacrificing a whole unit.
+        if (!under) {
+          if (["greatWeapon", "halberd", "lance"].includes(unit.weapon)) {
+            const next = cloneRoster(roster); next[i].weapon = "handWeapon";
+            next[i].meleeWeapons = (next[i].meleeWeapons || []).filter(w => !["greatWeapon", "halberd", "lance"].includes(w));
+            consider(next, "downgrade weapon");
+          }
+          if (unit.rangedWeapon === "firearm" || unit.rangedWeapon === "crossbow") {
+            const next = cloneRoster(roster); next[i].rangedWeapon = unit.type === "archers" ? "bow" : null;
+            consider(next, "downgrade ranged weapon");
+          }
+          if (unit.heavyArmour) {
+            const next = cloneRoster(roster); next[i].heavyArmour = false;
+            consider(next, "remove heavy armour");
+          }
+        }
+      }
+      if (!bestMove) return roster;
+      // Keep the best local improvement; next iteration reassesses the remaining gap.
+      roster.splice(0, roster.length, ...bestMove.next);
+    }
     return roster;
   };
 
@@ -145,14 +213,13 @@ export function buildOpponentArmy(playerArmy, playerFaction = "empire") {
     const roster = [makeUnit("swordsmen")];
     const desired = target < 100 ? 1 : target < 220 ? randInt(2, 3) : randInt(3, 5);
     while (roster.length < desired && roster.length < 6) {
-      let choices = types.filter(type => {
+      const choices = types.filter(type => {
         if ((type === "captain" || type === "lord") && roster.filter(u => ["captain", "lord"].includes(u.type)).length >= (target >= 360 ? 2 : 1)) return false;
         if (type === "lord" && target < 180) return false;
         if (type === "cavalry" && target < 100) return false;
         return true;
       });
       if (!choices.length) break;
-      // Bias toward mixed arms; avoid simply recreating the player's list.
       const weights = choices.map(type => type === "archers" ? 1.35 : type === "cavalry" ? (target >= 240 ? 1.2 : 0.8) : type === "swordsmen" ? 1 : type === "captain" ? (target >= 160 ? 0.8 : 0.25) : 0.45);
       let roll = Math.random() * weights.reduce((a, b) => a + b, 0), picked = choices[0];
       for (let i = 0; i < choices.length; i++) { roll -= weights[i]; if (roll <= 0) { picked = choices[i]; break; } }
@@ -160,17 +227,13 @@ export function buildOpponentArmy(playerArmy, playerFaction = "empire") {
     }
     const candidate = tune(roster);
     const total = costOf(candidate);
-    if (total < target * 0.90 || total > target * 1.10) {
-      // Keep searching; this roster may still be the closest fallback.
-    }
+    const withinTolerance = Math.abs(total - target) <= target * 0.10;
+    const sensible = !(candidate.length === 1 && target >= 120) &&
+      (target < 180 || candidate.some(u => u.type === "archers" || u.rangedWeapon));
     const candidateScore = score(candidate);
     if (candidateScore < bestScore) { best = candidate; bestScore = candidateScore; }
-    if (Math.abs(total - target) <= Math.max(10, target * 0.04) &&
-        !(candidate.length === 1 && target >= 120) &&
-        (target < 180 || candidate.some(u => u.type === "archers" || u.rangedWeapon))) {
-      best = candidate;
-      break;
-    }
+    // Accept the first sensible roster within tolerance; no need to optimise further.
+    if (withinTolerance && sensible) return candidate;
   }
   return best || [{ type: "swordsmen", models: Math.max(5, Math.min(30, Math.round(target / 8))), weapon: "handWeapon" }];
 }
