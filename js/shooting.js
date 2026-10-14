@@ -64,26 +64,40 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     blockers.forEach(v=>{v._losPolygon=unitFootprint(v);});
     const candidates=blockers.map(v=>({u:v}));
     const visible=[],friendlyBlockers=new Set();
-    let anyOver=false,visibleChampion=false,friendlyShotCount=0;
+    let visibleChampion=false,friendlyShotCount=0;
     for(const shooter of shooters){
       let best=null;
       for(const aim of targets){
-        let over=0,blocked=false;const crossedFriendly=[];
+        const crossed=[];let blocked=false;
         for(const block of candidates){
-          // Corners are supplied by the movement system on each unit for this visibility check.
+          // Firearms cannot shoot through any intervening unit, friend or foe.
+          // The intended target is excluded from candidates, so a clear shot at
+          // the enemy unit in front remains legal.
           const poly=block.u._losPolygon;
           if(!poly)continue;
           if(lineCrossesUnit(shooter,aim,block.u)){
-            if(block.u.side===u.side){if(u.rangedWeapon==="firearm"){blocked=true;break;}crossedFriendly.push(block.u);}
-            over++;
+            if(u.rangedWeapon==="firearm"){blocked=true;break;}
+            crossed.push(block.u);
           }
         }
-        if(!blocked&&(!best||over<best.over))best={over,friendly:crossedFriendly};
-        if(best&&best.over===0)break;
+        if(blocked)continue;
+        const basePenalty=crossed.length?(u.overUnitPenalty||0):0;
+        const infantryBlockers=crossed.filter(v=>!v.isCavalry&&!v.mounted);
+        const cavalryBlockers=crossed.filter(v=>v.isCavalry||v.mounted);
+        let penalty=basePenalty;
+        // Mounted shooters can see over infantry more readily. Conversely,
+        // cavalry's taller profile obstructs infantry shooting behind it.
+        if(crossed.length&& (u.isCavalry||u.mounted) && infantryBlockers.length===crossed.length) penalty--;
+        if(crossed.length&& !(u.isCavalry||u.mounted) && cavalryBlockers.length) penalty++;
+        // A mounted target remains more visible above intervening infantry.
+        if(crossed.length&& (target.isCavalry||target.mounted) && infantryBlockers.length===crossed.length) penalty--;
+        penalty=Math.max(0,penalty);
+        if(!best||penalty<best.penalty)best={over:crossed.length,penalty,friendly:crossed.filter(v=>v.side===u.side)};
+        if(best&&best.penalty===0)break;
       }
-      if(best){visible.push(shooter);if(shooter.champion)visibleChampion=true;if(best.over>0)anyOver=true;if(best.friendly?.length)friendlyShotCount++;(best.friendly||[]).forEach(v=>friendlyBlockers.add(v));}
+      if(best){visible.push(shooter);if(shooter.champion)visibleChampion=true;if(best.over>0&&best.friendly?.length)friendlyShotCount++;(best.friendly||[]).forEach(v=>friendlyBlockers.add(v));}
     }
-    return {visibleModels:visible.length,visibleChampion,overUnitPenalty:anyOver?(u.overUnitPenalty||0):0,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
+    return {visibleModels:visible.length,visibleChampion,overUnitPenalty:visible.reduce((max,shooter)=>{const targetPoints=modelCentres(target);let bestPenalty=Infinity;for(const aim of targetPoints){const blockers=units().filter(v=>v!==u&&v.id!==u.attachedTo&&v!==target&&!v.attachedTo&&alive(v)&&!v.fled&&v.deployed!==false);const crossed=blockers.filter(v=>v._losPolygon&&lineCrossesUnit(shooter,aim,v));if(u.rangedWeapon==="firearm"&&crossed.length)continue;const infantry=crossed.filter(v=>!v.isCavalry&&!v.mounted),cavalry=crossed.filter(v=>v.isCavalry||v.mounted);let penalty=crossed.length?(u.overUnitPenalty||0):0;if(crossed.length&&(u.isCavalry||u.mounted)&&infantry.length===crossed.length)penalty--;if(crossed.length&&!(u.isCavalry||u.mounted)&&cavalry.length)penalty++;if(crossed.length&&(target.isCavalry||target.mounted)&&infantry.length===crossed.length)penalty--;penalty=Math.max(0,penalty);bestPenalty=Math.min(bestPenalty,penalty);}if(bestPenalty===Infinity)return max;return Math.max(max,bestPenalty);},0),friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
   }
   function shoot(u,target,standShoot) {
     const host=u.attachedTo?S.units[u.attachedTo]:null;
