@@ -54,7 +54,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
       const options=document.createElement("div");options.className="army-options";const character=u.type==="captain"||u.type==="lord",cavalry=u.type==="cavalry",infantry=u.type==="swordsmen"||u.type==="archers";
       if(!character&&!cavalry){
         options.append(check("Champion",{cost:"+"+(elf()?9:6)+" pts",checked:!!u.champion,onChange:v=>{u.champion=v;renderRows();}}));
-        if(u.champion)options.append(select("Champion bonus",u.weapon==="firearm"?'<option value="A">+1 Attack</option>':'<option value="A">+1 Attack</option><option value="BS">+1 Ballistic Skill</option>',u.championBonus||(u.type==="archers"?"BS":"A"),v=>{u.championBonus=v;updateTotals();}));
+        if(u.champion)options.append(select("Champion bonus",u.rangedWeapon==="firearm"?'<option value="A">+1 Attack</option>':'<option value="A">+1 Attack</option><option value="BS">+1 Ballistic Skill</option>',u.championBonus||(u.type==="archers"?"BS":"A"),v=>{u.championBonus=v;updateTotals();}));
       }
       if(character){
         if(elf()){const rule=document.createElement("p");rule.textContent="Always Strikes First: +10 Initiative; reroll missed melee hits when your final modified Initiative is at least 11 higher than the target’s.";options.append(rule);}
@@ -103,7 +103,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
       {
         const upgradeBox=document.createElement("div");upgradeBox.className="stat-upgrades";
         const heading=document.createElement("p");heading.className="stat-upgrades-heading";heading.textContent="Stat upgrades · +1 each, once per stat";upgradeBox.append(heading);
-        statUpgrades.forEach(s=>upgradeBox.append(check("+"+s.key+" "+s.label,{cost:"+"+(character?s.character:s.unit*(u.models||1))+" pts",checked:!!u.upgrades?.[s.key],disabled:u.weapon==="firearm"&&s.key==="BS",onChange:v=>{u.upgrades={...(u.upgrades||{}),[s.key]:v};updateTotals();}})));
+        statUpgrades.forEach(s=>upgradeBox.append(check("+"+s.key+" "+s.label,{cost:"+"+(character?s.character:s.unit*(u.models||1))+" pts",checked:!!u.upgrades?.[s.key],disabled:u.rangedWeapon==="firearm"&&s.key==="BS",onChange:v=>{u.upgrades={...(u.upgrades||{}),[s.key]:v};updateTotals();}})));
         options.append(upgradeBox);
       }
       main.append(type,ml,options);const cost=document.createElement("strong");cost.className="army-cost";const remove=document.createElement("button");remove.className="remove-unit secondary-button";remove.textContent="×";remove.title="Remove unit "+(index+1);remove.setAttribute("aria-label","Remove unit "+(index+1));remove.addEventListener("click",()=>{army.splice(index,1);renderRows();});row.append(main,cost,remove);list.append(row);
