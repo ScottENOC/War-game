@@ -116,7 +116,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         options.append(skillBox);
       }
       {
-        const upgradeBox=document.createElement("div");upgradeBox.className="stat-upgrades";
+        if(u.type!=="pegasusChampion"){const upgradeBox=document.createElement("div");upgradeBox.className="stat-upgrades";
         const heading=document.createElement("p");heading.className="stat-upgrades-heading";heading.textContent="Stat upgrades · +1 each, once per stat";upgradeBox.append(heading);
         statUpgrades.forEach(s=>upgradeBox.append(check("+"+s.key+" "+s.label,{cost:"+"+(character?s.character:s.unit*(u.models||1))+" pts",checked:!!u.upgrades?.[s.key],disabled:u.rangedWeapon==="firearm"&&s.key==="BS",onChange:v=>{u.upgrades={...(u.upgrades||{}),[s.key]:v};updateTotals();}})));
         options.append(upgradeBox);
