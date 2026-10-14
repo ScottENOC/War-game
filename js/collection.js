@@ -84,10 +84,10 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
   const groups=[...counts.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
   if(!groups.length){root.textContent="No assembled models yet.";return;}
   groups.forEach(([key,count])=>{
-   const [faction,type,weapon,shield,mounted,offhand,backWeaponsKey]=key.split("|");
+   const [faction,type,weapon,shield,mounted,offhand,backWeaponsKey]=key.split("|");const backWeapons=JSON.parse(backWeaponsKey||"[]");
    const card=document.createElement("article");card.className="inventory-model";
    const strong=document.createElement("strong");strong.textContent=type==="legendaryLord"?"Lord-Marshal Edric Voss":type==="shadowElf"?"Lethariel Starweaver":(faction==="empire"?"Empire ":"High Elf ")+title(type);
-   const meta=document.createElement("span");meta.textContent=title(weapon)+(offhand==="true"?" · Off-hand sword":"")+(shield==="true"?" · Shield":"")+((model.backWeapons||[]).length?" · Back: "+model.backWeapons.map(title).join(", "):"")+(mounted==="true"?" · Mounted":"");
+   const meta=document.createElement("span");meta.textContent=title(weapon)+(offhand==="true"?" · Off-hand sword":"")+(shield==="true"?" · Shield":"")+(backWeapons.length?" · Back: "+backWeapons.map(title).join(", "):"")+(mounted==="true"?" · Mounted":"");
    const qty=document.createElement("b");qty.textContent="×"+count;card.append(strong,meta,qty);
    const edit=document.createElement("button");edit.className="secondary-button";edit.textContent="Add component";
    const model=data.models.find(m=>[m.faction,m.type,m.weapon,String(m.shield),String(m.mounted),String(!!m.offhandWeapon),JSON.stringify(m.backWeapons||[])].join("|")===key);
