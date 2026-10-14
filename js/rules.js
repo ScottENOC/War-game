@@ -80,7 +80,8 @@ export function createRules({ roll, units = () => [] }) {
         const overPenalty=Math.max(0,context.overUnitPenalty||0);
         const reducible=longRangePenalty+movePenalty+overPenalty;
         const elfReduction=context.elvenArchery?Math.min(2,reducible):0;
-        const mods=-(longRangePenalty+movePenalty+overPenalty-elfReduction)-(context.wallPenalty||0)-(context.standShoot?1:0)-(context.targetCharging?1:0)-((context.singleCharacter||context.skirmisher)?1:0)-(context.targetInMelee&&!context.overUnitPenalty?1:0)-(context.cover==="soft"?1:context.cover==="hard"?2:0)+(context.largeTarget?1:0);
+        const coverPenalty=(context.cover==="soft"?1:context.cover==="hard"?2:0)+(context.cover?(context.coverHitPenaltyBonus||0):0);
+        const mods=-(longRangePenalty+movePenalty+overPenalty-elfReduction)-(context.wallPenalty||0)-(context.standShoot?1:0)-(context.targetCharging?1:0)-((context.singleCharacter||context.skirmisher)?1:0)-(context.targetInMelee&&!context.overUnitPenalty?1:0)-coverPenalty+(context.largeTarget?1:0);
         hitNeed=7-bs-mods;
       }
       g.hitNeed=hitNeed;const forcedHit=mode==="shooting"&&i<(context.forcedHits||0);const hit=forcedHit?null:roll(1)[0];if(hit!==null)g.hitRolls.push(hit);
@@ -95,7 +96,7 @@ export function createRules({ roll, units = () => [] }) {
       if(!hitPass)continue;g.hits++;
       const woundNeed=woundTarget(attackerPool.stats.S,tier.stats.T);g.woundNeed=woundNeed;if(woundNeed===null)continue;
       const wr=roll(1)[0];g.woundRolls.push(wr);if(wr<woundNeed)continue;g.woundsBeforeSave++;
-      const saveNeed=saveTarget(tier,attackerPool.stats.S,mode==="shooting"?(context.armourPiercing||0):0);g.saveNeed=saveNeed;let saved=false;
+      const saveNeed=mode==="melee"&&context.attackComponent!=="mount"&&context.attacker?.ignoreArmourSaves?null:saveTarget(tier,attackerPool.stats.S,mode==="shooting"?(context.armourPiercing||0):0);g.saveNeed=saveNeed;let saved=false;
       if(saveNeed!==null&&saveNeed<=6){const sr=roll(1)[0];g.saveRolls.push(sr);saved=sr!==1&&sr>=saveNeed;}
       if(!saved&&tier.wardSave){const wn=parseInt(tier.wardSave,10);g.wardNeed=wn;if(Number.isFinite(wn)){const wrd=roll(1)[0];g.wardRolls.push(wrd);if(wrd!==1&&wrd>=wn){g.wardSaved++;saved=true;}}}
       if(saved){g.saved++;continue;}g.wounds++;
