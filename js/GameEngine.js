@@ -134,8 +134,8 @@ function validateArmy(army,faction){
   if(entry.type==="cannon"||entry.type==="boltThrower"){if(entry.type==="cannon"&&faction==="highElves")shortages.push("Cannons are only available to the Empire.");if(entry.type==="boltThrower"&&faction!=="highElves")shortages.push("Bolt throwers are only available to the High Elves.");continue;}
   const character=["captain","lord","legendaryLord","shadowElf"].includes(entry.type),collectionType=["legendaryLord","shadowElf"].includes(entry.type)?"lord":entry.type;
   const count=character?1:(entry.models||1);
-  const mounted=entry.type==="cavalry"||(character&&!!entry.mounted);
-  const matches=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&(m.type===collectionType||(["swordsmen","archers"].includes(entry.type)&&["swordsmen","archers"].includes(m.type)))&&!!m.mounted===mounted);
+  const mounted=entry.type==="cavalry"||(character&&!!entry.mounted),expectedMount=mounted?(entry.mountType||(entry.type==="cavalry"?"horse":"horse")):"none";
+  const matches=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&(m.type===collectionType||(["swordsmen","archers"].includes(entry.type)&&["swordsmen","archers"].includes(m.type)))&&!!m.mounted===mounted&&(m.mountType||(m.mounted?"horse":"none"))===expectedMount);
   if(matches.length<count)shortages.push((count-matches.length)+" "+entry.type+" model(s) needed"+(mounted?" mounted":""));
   matches.slice(0,count).forEach(m=>used.add(m.id));
  }
