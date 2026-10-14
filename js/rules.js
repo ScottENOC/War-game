@@ -11,7 +11,7 @@ export function createRules({ roll, units = () => [] }) {
   function shieldFacesAttacker(defender,attacker) {
     if(attacker?.friendlyFireShot)return false;
     if(!defender.shield||!attacker||!Number.isFinite(defender.x)||!Number.isFinite(attacker.x))return false;
-    if(defender.skirmishing)return true;
+    if(defender.skirmishing||(defender.attachedTo&&units().some(u=>u.id===defender.attachedTo&&u.skirmishing)))return true;
     const facingUnit=defender.attachedTo?units().find(u=>u.id===defender.attachedTo)||defender:defender;
     const bearing=Math.atan2(attacker.y-facingUnit.y,attacker.x-facingUnit.x);
     let delta=bearing-(facingUnit.facing||0);
