@@ -61,7 +61,9 @@ function canCharge(u,target){
   const length=Math.hypot(dx,dy);if(length<1)return false;
   return !units().some(v=>v!==u&&v!==target&&alive(v)&&!v.fled&&(()=>{const vx=(v.x-u.x)*W(),vy=(v.y-u.y)*H(),t=Math.max(0,Math.min(1,(vx*dx+vy*dy)/(length*length))),px=t*dx,py=t*dy,clear=Math.hypot(vx-px,vy-py),radius=Math.max(shape(v).front,shape(v).depth)*0.45;return t>0.03&&t<0.97&&clear<radius;})());
 }
-function pursueAfterBreak(winner,loser){
+function pursueAfterBreak(winner,loser,choice=null){
+  if(winner.side==="player"&&!choice){S.pendingPursuit={winnerId:winner.id,loserId:loser.id};say(winner.name+" has broken "+loser.name+". Choose whether to pursue or hold position.");return true;}
+  if(choice==="hold"){say(winner.name+" holds position instead of pursuing.");return false;}
   const fleeDice=roll(2),pursuitDice=roll(2),fleeDistance=fleeDice[0]+fleeDice[1],pursuitDistance=pursuitDice[0]+pursuitDice[1];
   const dx=(loser.x-winner.x)*W(),dy=(loser.y-winner.y)*H(),len=Math.max(1,Math.hypot(dx,dy)),nx=dx/len,ny=dy/len;
   const clearPair=u=>{u.engaged=false;u.engagedWith=null;u.engagedWithIds=[];u.engagementSides={};u.engagedSide=null;u.chargedSide=null;u.attackedFromSide=null;u.flankedBy=null;};
@@ -75,6 +77,7 @@ const RULES = createRules({ roll, units });
 const { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage, meleeAttack, shootingAttack } = RULES;
 const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H, terrain:()=>S.terrain, BATTLEFIELD_WIDTH_IN });
 const { shoot } = SHOOTING;
+function resolvePursuit(choice){const pending=S.pendingPursuit;if(!pending)return;S.pendingPursuit=null;const winner=S.units[pending.winnerId],loser=S.units[pending.loserId];if(winner&&loser)pursueAfterBreak(winner,loser,choice);S.phase="combat";S.combatResolved=true;render();}
 function startActivations(){S.activationSide="player";units().filter(u=>u.side==="ai"&&u.fled&&alive(u)).forEach(rallyUnit);const p=units().filter(u=>u.side==="player"&&eligibleForActivation(u));if(!p.length){runAiActivations();return;}S.selected=p[0].id;render();}
 const AI = createAI({ S, units, alive, eligibleForActivation, enemies, dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, BOW_RANGE, beginCombatPhase, terrain:()=>S.terrain });
 const runAiActivation = AI.runAiActivation;
@@ -104,7 +107,7 @@ const { setupCanvas, draw } = RENDERING;
 function requestRender(){ render(); }
 const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, PX_PER_IN, BOW_RANGE, roll, dist, enemies, say, shoot, render:requestRender, startActivations, canPlace, canCharge });
 const { setPhase, declareCharge, fleeFromCharge, finishMovement, passCharges, aiChargeStep, resolveDeclaredCharges } = PHASES;
-const UI = createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, say, equipMeleeWeapon, setRangedMode, shape, PX_PER_IN, terrain:()=>S.terrain, BATTLEFIELD_WIDTH_IN, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
+const UI = createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, resolvePursuit, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, say, equipMeleeWeapon, setRangedMode, shape, PX_PER_IN, terrain:()=>S.terrain, BATTLEFIELD_WIDTH_IN, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
 render = UI.render;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, declareCharge, render, draw, $, say, dist, terrain:()=>S.terrain });
 document.querySelectorAll("[data-terrain]").forEach(button=>button.addEventListener("click",()=>{S.terrainTool=button.dataset.terrain;S.terrainDraft=null;S.mode=null;S.selectedWall=null;document.querySelectorAll("[data-terrain]").forEach(b=>b.classList.toggle("active",b===button));say(S.terrainTool==="off"?"Terrain placement disabled.":S.terrainTool==="erase"?"Tap a terrain feature to remove it.":"Terrain tool: "+button.textContent+". Drag on the battlefield to place it.");render();}));
