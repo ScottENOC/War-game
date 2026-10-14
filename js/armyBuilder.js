@@ -27,14 +27,14 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     const rangedCost=ranged==="bow"?(eagleKit?0:e&&u.type==="cavalry"&&(u.freeCavalryOption||"bow")==="bow"?0:(e?3:2)*(character?1:m)):ranged==="crossbow"?3*(character?1:m):ranged==="firearm"?4*(character?1:m):0;
     if(character){
       const meleeCost=weapons.reduce((sum,w)=>sum+(["halberd","greatWeapon"].includes(w)?4:w==="spear"&&u.mounted?(eagleKit?0:2):w==="lance"&&u.mounted?(eagleKit?2:4):0),0);
-      return (u.type==="legendaryLord"?160:u.type==="shadowElf"?165:(e?(u.type==="lord"?120:75):(u.type==="lord"?80:50)))+(u.heavyArmour&&!["legendaryLord","shadowElf"].includes(u.type)?4:0)+(u.magicArmour?10:0)+(u.weapon==="magicSword"?10:0)+meleeCost+(u.mounted?8:0)+(u.mounted&&u.barding?4:0)+(u.shield&&u.type!=="legendaryLord"?2:0)+rangedCost+upgradeCost+skillCost;
+      return (u.type==="legendaryLord"?160:u.type==="shadowElf"?165:(e?(u.type==="lord"?120:75):(u.type==="lord"?80:50)))+(u.heavyArmour&&!eagleKit&&!["legendaryLord","shadowElf"].includes(u.type)?4:0)+(u.magicArmour&&!eagleKit?10:0)+(u.weapon==="magicSword"?10:0)+meleeCost+(u.mounted?8:0)+(u.mounted&&u.barding&&!eagleKit?4:0)+(u.shield&&u.type!=="legendaryLord"?2:0)+rangedCost+upgradeCost+skillCost;
     }
     if(u.type==="cavalry"){
       const free=u.freeCavalryOption||"bow";
       const meleeCost=weapons.reduce((sum,w)=>sum+(w==="spear"&&!(e&&free==="spear")?m:["lance","greatWeapon"].includes(w)?2*m:0),0);
       const bowCost=(u.bow&&!(e&&free==="bow")&&!eagleKit?2*m:0)+(ranged==="bow"&&!(e&&free==="bow")&&!u.bow&&!eagleKit?2*m:0);
       const otherRangedCost=ranged==="crossbow"?3*m:ranged==="firearm"?4*m:0;
-      return m*(e?24:16)+(u.elvenArchery&&e&&(ranged==="bow"||u.bow||free==="bow")?2*m:0)+bowCost+otherRangedCost+(u.heavyArmour?2*m:0)+(u.barding?2*m:0)+(u.shield?0.5*m:0)+meleeCost+upgradeCost+skillCost;
+      return m*(e?24:16)+(u.elvenArchery&&e&&(ranged==="bow"||u.bow||free==="bow")?2*m:0)+bowCost+otherRangedCost+(u.heavyArmour&&!eagleKit?2*m:0)+(u.barding&&!eagleKit?2*m:0)+(u.shield?0.5*m:0)+meleeCost+upgradeCost+skillCost;
     }
     const meleeCost=weapons.reduce((sum,w)=>sum+(w==="spear"&&!(e&&u.type==="swordsmen")?m:w==="greatWeapon"?2*m:w==="halberd"?m:0),0);
     return m*(e?12:8)+meleeCost+rangedCost+(u.elvenArchery&&e&&ranged==="bow"?2*m:0)+(u.champion?(e?9:6):0)+(u.lightArmour&&!e?m:0)+(u.shield&&!(e&&u.type==="swordsmen")?0.5*m:0)+upgradeCost+skillCost;
