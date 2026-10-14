@@ -35,7 +35,7 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
       else{
         const d=dist(u,target),range=u.range||BOW_RANGE,wx=W(),hy=H(),dx=(target.x-u.x)*wx,dy=(target.y-u.y)*hy,len2=dx*dx+dy*dy||1;
         const blockers=units().filter(v=>v!==u&&v!==target&&!v.attachedTo&&alive(v)).filter(v=>{const vx=(v.x-u.x)*wx,vy=(v.y-u.y)*hy,t=(vx*dx+vy*dy)/len2;if(t<=.04||t>=.96)return false;const px=u.x*wx+t*dx,py=u.y*hy+t*dy;return Math.hypot(v.x*wx-px,v.y*hy-py)<Math.max(wx,hy)/48*.8;});
-        let arc=true;if(!u.skirmishing){let a=Math.atan2(dy*H(),dx*W())-(u.facing||0);while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;arc=Math.abs(a)<=Math.PI/4;}
+        let arc=true;if(!u.skirmishing){let a=Math.atan2(dy,dx)-(u.facing||0);while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;arc=Math.abs(a)<=Math.PI/4;}
         const friendlyBlockers=blockers.filter(v=>v.side===u.side),blocked=friendlyBlockers.length>0&&u.rangedWeapon==="firearm";
         const over=blockers.length?(u.rangedWeapon==="bow"?1:2):0;
         const long=d>range/2?(u.rangedWeapon==="firearm"?2:1):0,moved=u.moved?1:0,single=(target.isCharacter||target.models===1||target.skirmishing)?1:0,charge=target.charged?1:0,cover=target.cover==="hard"?2:target.cover==="soft"?1:0;
@@ -80,7 +80,7 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
     if (S.phase === "combat") {
       const activeMelee=units().some(v=>v.engaged&&alive(v));
       btn("Resolve melee", "⚔", resolveCombat, S.combatResolved||!units().some(v => v.side === "player" && v.engaged && alive(v)));
-      if(u&&u.side==="player"&&(u.engaged||(u.attachedTo&&S.units[u.attachedTo]?.engaged))){const labels={handWeapon:"hand weapon",spear:"spear (+1 Strength on charge; shield auto-equipped)",halberd:"halberd (+1 Strength)",greatWeapon:"great weapon (+2 Strength, −10 Initiative)",lance:"lance (+2 Strength on charge)"};(u.meleeWeapons||["handWeapon"]).filter(w=>w==="handWeapon"||w!=="bow").forEach(w=>btn("Use "+(labels[w]||w),"⚒",()=>{if(equipMeleeWeapon(u,w)){say(u.name+" equips "+(labels[w]||w)+(u.shield?" with shield":"")+".");render();}},S.combatResolved||u.fled,u.weapon===w));}
+      if(u&&u.side==="player"&&(u.engaged||(u.attachedTo&&S.units[u.attachedTo]?.engaged))){const labels={handWeapon:"hand weapon",spear:"spear (+1 Strength on charge; shield auto-equipped)",halberd:"halberd (+1 Strength)",greatWeapon:"great weapon (+2 Strength, −10 Initiative)",lance:"lance (+2 Strength on charge)"};(u.meleeWeapons||["handWeapon"]).filter(w=>["handWeapon","spear","halberd","greatWeapon","lance"].includes(w)).forEach(w=>btn("Use "+(labels[w]||w),"⚒",()=>{if(equipMeleeWeapon(u,w)){say(u.name+" equips "+(labels[w]||w)+(u.shield?" with shield":"")+".");render();}},S.combatResolved||u.fled,u.weapon===w));}
       btn("End turn", "▶", endTurn, !S.combatResolved); return;
     }
     if (S.phase === "break") btn("Break test", "🎲", resolveBreak);
