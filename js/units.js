@@ -27,6 +27,7 @@ function buildUnit(template,config,faction,opposing=false) {
   const isCannon=config.type==="cannon",isBoltThrower=config.type==="boltThrower",isSiegeEngine=isCannon||isBoltThrower;
   const isCharacter=["captain","lord","legendaryLord","shadowElf"].includes(config.type),isCavalry=config.type==="cavalry",mountType=config.mountType||(config.mounted?"horse":"none"),mounted=isCavalry||(isCharacter&&mountType!=="none"),isEagleMounted=elf&&mountType==="eagle"&&(isCharacter||isCavalry),hasHeavyArmour=!!config.heavyArmour&&!isEagleMounted,hasMagicArmour=!!config.magicArmour&&!isEagleMounted,hasBarding=!!config.barding&&!isEagleMounted;
   if(mounted)stats.M=isEagleMounted?12:elf?9:8;
+  const crewMovementCharacteristic=isCannon?4:isBoltThrower?(elf?5:4):null;
   if(isCannon)stats.M=2;
   if(isBoltThrower)stats.M=elf?2.5:2;
   if(mounted&&hasBarding&&!elf)stats.M=7;
@@ -38,20 +39,20 @@ function buildUnit(template,config,faction,opposing=false) {
   let weapon=(isCharacter||isCavalry||config.type==="swordsmen")?(["bow","crossbow","firearm"].includes(config.weapon)?"handWeapon":(config.weapon||"handWeapon")):"handWeapon";
   const factionName=faction==="highElves"&&!opposing?"High Elf":opposing?"Opposing":faction==="highElves"?"High Elf":"Empire";
   const primaryMelee=weapon==="greatWeapon"||(meleeWeapons||[]).includes("greatWeapon")?"greatWeapon":weapon==="halberd"||(meleeWeapons||[]).includes("halberd")?"halberd":weapon==="spear"||(meleeWeapons||[]).includes("spear")?"spear":weapon;
-  const unitName=isSiegeEngine?template.name:isCharacter?template.name+(isEagleMounted?" (Great Eagle)":""):isCavalry?template.name+(isEagleMounted?" (Great Eagle)":""):rangedWeapon==="bow"?factionName+" Archers":rangedWeapon==="crossbow"?factionName+" Crossbowmen":rangedWeapon==="firearm"?factionName+" Handgunners":primaryMelee==="greatWeapon"?(factionName==="High Elf"?"High Elf Swordmasters":factionName+" Greatswords"):primaryMelee==="halberd"?factionName+" Halberdiers":primaryMelee==="spear"?factionName+" Spearmen":factionName+" Swordsmen";
+  const unitName=isSiegeEngine?template.name:isCharacter?template.name+(isEagleMounted?" (Pegasus)":""):isCavalry?template.name+(isEagleMounted?" (Pegasus)":""):rangedWeapon==="bow"?factionName+" Archers":rangedWeapon==="crossbow"?factionName+" Crossbowmen":rangedWeapon==="firearm"?factionName+" Handgunners":primaryMelee==="greatWeapon"?(factionName==="High Elf"?"High Elf Swordmasters":factionName+" Greatswords"):primaryMelee==="halberd"?factionName+" Halberdiers":primaryMelee==="spear"?factionName+" Spearmen":factionName+" Swordsmen";
   const unitShort=isSiegeEngine?template.short:isCharacter?template.short:isCavalry?template.short:rangedWeapon==="bow"?"Archers":rangedWeapon==="crossbow"?"Crossbows":rangedWeapon==="firearm"?"Handguns":primaryMelee==="greatWeapon"?"Greatswords":primaryMelee==="halberd"?"Halberds":primaryMelee==="spear"?"Spearmen":"Swordsmen";
   const shield=ownsShield&&(weapon==="spear"||(!["greatWeapon","halberd"].includes(weapon)&&(!rangedWeapon||config.rangedMode!=="bow")));
-  for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.upgrades&&config.upgrades[key])stats[key]+=1;
+  for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.upgrades&&config.upgrades[key])stats[key]+=(isSiegeEngine&&key==="M"?0.5:1);
   
   const campaignStats=config.campaignStats||{};
   for(const key of ["WS","BS","S","T","Ld"])stats[key]+=Math.max(0,campaignStats[key]||0);
-  if(campaignStats.MI){stats.M+=campaignStats.MI;stats.I+=campaignStats.MI;}
+  if(campaignStats.MI){stats.M+=isSiegeEngine?campaignStats.MI*0.5:campaignStats.MI;stats.I+=campaignStats.MI;}
   // Halberds are infantry weapons; prevent stale or malformed mounted loadouts.
   if(mounted&&weapon==="halberd")weapon="handWeapon";
   if(isCavalry&&elf&&(config.freeCavalryOption||"bow")==="spear"){if(!meleeWeapons.includes("spear"))meleeWeapons.push("spear");if(weapon==="handWeapon")weapon="spear";}
   const costFaction=opposing?"empire":faction;
   return {id:config.id,name:isSiegeEngine?unitName:(template.namedCharacter?unitName:unitName+" "+config.index),short:unitShort,side:config.side,kind:template.kind,
-    isCharacter,isCavalry,mounted,isCannon,isBoltThrower,isSiegeEngine,isSiege:isSiegeEngine,crewModels:isCannon?3:isBoltThrower?2:0,artilleryWounds:isCannon?3:isBoltThrower?2:0,artilleryStartWounds:isCannon?3:isBoltThrower?2:0,artilleryToughness:isSiegeEngine?7:0,artilleryStrength:isCannon?10:isBoltThrower?7:0,artilleryArmourPiercing:isCannon?1:0,moveAndFire:!!config.campaignStats?.moveAndFire,artilleryRange:isCannon?60+(config.campaignStats?.range||0):isBoltThrower?48+(config.campaignStats?.range||0):0,baseMove:isCannon?2:isBoltThrower?(elf?2.5:2):stats.M,
+    isCharacter,isCavalry,mounted,isCannon,isBoltThrower,isSiegeEngine,isSiege:isSiegeEngine,crewModels:isCannon?3:isBoltThrower?2:0,artilleryWounds:isCannon?3:isBoltThrower?2:0,artilleryStartWounds:isCannon?3:isBoltThrower?2:0,artilleryToughness:isSiegeEngine?7:0,crewMovementCharacteristic:isSiegeEngine?crewMovementCharacteristic+(config.upgrades?.M?1:0)+(campaignStats.MI||0):null,artilleryStrength:isCannon?10:isBoltThrower?7:0,artilleryArmourPiercing:isCannon?1:0,moveAndFire:!!config.campaignStats?.moveAndFire,artilleryRange:isCannon?60+(config.campaignStats?.range||0):isBoltThrower?48+(config.campaignStats?.range||0):0,baseMove:isCannon?2:isBoltThrower?(elf?2.5:2):stats.M,
     models:isCharacter?1:(config.models??template.models),startModels:isCharacter?1:(config.models??template.models),points:unitCost(config,costFaction),weapon,meleeWeapons,hasSpear:meleeWeapons.includes("spear"),hasGreatWeapon:meleeWeapons.includes("greatWeapon"),hasHalberd:meleeWeapons.includes("halberd"),ownsShield,shield:ownsShield&&(!["greatWeapon","halberd"].includes(weapon)),rangedWeapon,hasRangedWeapon:!!rangedWeapon,rangedMode:ownsShield&&rangedWeapon?"shield":rangedWeapon?"bow":"shield",
     rangedStrength:isBoltThrower?5:rangedWeapon==="magicBow"?stats.S:["crossbow","firearm"].includes(rangedWeapon)?4:3,rangedUsesUserStats:rangedWeapon==="magicBow",armourPiercing:rangedWeapon==="firearm"?1:0,
     bsCap:rangedWeapon==="crossbow"?4:rangedWeapon==="firearm"?3:null,
