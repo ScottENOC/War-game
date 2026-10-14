@@ -46,11 +46,11 @@
 </div></section>
 <section id="armybuilder" class="screen builder-screen" hidden><div class="builder-panel">
 <header class="builder-header"><div><div class="eyebrow">Skirmish preparation</div><h1>Battle Roster</h1></div><button id="builder-back" class="secondary-button">Collection</button></header>
-<p class="builder-intro">Choose up to six units from your collection. The selected models must match the weapons and components you intend to field.</p>
+<p class="builder-intro">Choose up to six units from your collection. The opponent builds a different army with a similar points total.</p>
 <label class="faction-choice">Army faction <select id="faction-select"><option value="empire">Empire</option><option value="highElves">High Elves</option></select></label>
 <div id="roster-validation" class="roster-note">Checking your collection…</div><div id="army-list"></div>
 <div class="builder-footer"><button id="add-unit" class="secondary-button">＋ Add Unit</button><div class="army-total"><span>Total army</span><strong id="army-total">0 pts</strong></div><button id="begin-deployment" class="primary-button">Deploy Army →</button></div>
-<p class="subtle">The opponent mirrors your roster for now. Battle mode and collection ownership are being developed together.</p>
+<p class="subtle">Your opponent builds its own mixed-arms roster and aims to stay within 10% of your army’s points.</p>
 </div></section>
 <div id="game" hidden><canvas id="field" aria-label="Full-screen battlefield"></canvas><button id="battle-return" class="primary-button" hidden>Return to Collection</button><div id="hud"><div class="cards" id="enemycards" aria-label="Opponent units"></div><div id="battle-points" aria-live="polite"></div><div id="actions" aria-label="Battle actions"></div><div class="cards" id="playercards" aria-label="Your units"></div></div><button id="logtoggle" aria-label="Battle log" title="Battle log">▤</button><section id="logpanel" aria-label="Battle log"><div id="loghead"><button id="logclose" aria-label="Close log">×</button></div><div id="log"></div></section><section id="rollview" aria-label="Melee combat dice log" aria-live="polite"><button id="rollclose" aria-label="Close dice log">×</button><div id="rollcontent"></div></section></div>
 <script type="module" src="js/main.js"></script>
