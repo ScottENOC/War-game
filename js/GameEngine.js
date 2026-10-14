@@ -50,6 +50,8 @@ function panicNearby(source,reason="a nearby friendly unit is lost"){
 }
 
 function selectedTarget(u){const list=enemies(u);if(S.mode==="shoot"&&S.targetId===null)return null;return list.find(v=>v.id===S.targetId)||closestEnemy(u);}
+function equipMeleeWeapon(u,weapon){if(!u||!(u.meleeWeapons||["handWeapon"]).includes(weapon))return false;u.weapon=weapon;u.spears=weapon==="spear"&&!!u.hasSpear;u.greatWeapon=weapon==="greatWeapon";u.shield=!!u.ownsShield&&(weapon==="spear"||(!["greatWeapon","halberd"].includes(weapon)&&(!u.hasRangedWeapon||u.rangedMode==="shield")));return true;}
+function setRangedMode(u,mode){if(!u||!u.hasRangedWeapon||!u.ownsShield||u.shot||!["bow","shield"].includes(mode))return false;u.rangedMode=mode;u.shield=mode==="shield";if(["greatWeapon","halberd"].includes(u.weapon))u.shield=false;return true;}
 function eligibleForActivation(u){return alive(u)&&!u.attachedTo&&!u.fled&&!u.engaged&&!u.activated;}
 function canCharge(u,target){
   const dx=(target.x-u.x)*W(),dy=(target.y-u.y)*H(),bearing=Math.atan2(dy,dx);
@@ -101,7 +103,7 @@ const { setupCanvas, draw } = RENDERING;
 function requestRender(){ render(); }
 const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, PX_PER_IN, BOW_RANGE, roll, dist, enemies, say, shoot, render:requestRender, startActivations, canPlace, canCharge });
 const { setPhase, declareCharge, fleeFromCharge, finishMovement, passCharges, aiChargeStep, resolveDeclaredCharges } = PHASES;
-const UI = createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, say, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
+const UI = createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, say, equipMeleeWeapon, setRangedMode, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
 render = UI.render;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, declareCharge, render, draw, $, say, dist });
 function startBattleWithArmy(army,faction){campaignBattle=false;S.units=createUnitsFromArmy(army,faction);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();}
@@ -126,7 +128,7 @@ function validateArmy(army,faction){
   const weapon=entry.rangedWeapon|| (entry.type==="archers"?"bow":entry.type==="swordsmen"?(entry.weapon||(entry.spears?"spear":"handWeapon")):entry.type==="cavalry"&&faction==="highElves"&&(entry.freeCavalryOption||"bow")==="spear"&&(entry.weapon||"handWeapon")==="handWeapon"?"spear":(entry.weapon||"handWeapon"));
   const mounted=entry.type==="cavalry"||((entry.type==="captain"||entry.type==="lord")&&!!entry.mounted);
   const shield=!!entry.shield;
-  const matches=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&m.type===entry.type&&m.weapon===weapon&&!!m.shield===shield&&!!m.mounted===mounted);
+  const matches=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&(m.type===entry.type||(["swordsmen","archers"].includes(entry.type)&&["swordsmen","archers"].includes(m.type)))&&!!m.mounted===mounted);
   if(matches.length<count)shortages.push((entry.type==="captain"||entry.type==="lord"?1:count-matches.length)+" "+(entry.type==="captain"||entry.type==="lord"?entry.type:entry.type)+" model(s) needed with "+weapon+(shield?" + shield":"")+(mounted?" mounted":""));
   matches.slice(0,count).forEach(m=>used.add(m.id));
  }
