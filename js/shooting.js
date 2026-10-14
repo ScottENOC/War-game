@@ -32,7 +32,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     for(let i=0;i<count;i++){
       const rank=Math.floor(i/q.files),file=i%q.files;
       if(rank>=maxRanks)continue;
-      const localX=q.depth/2-(rank+.5)*q.baseDepth,localY=-q.front/2+(file+.5)*q.baseWidth;
+      const localX=q.depth/2-(rank+.5)*q.baseDepth,localY=-q.front/2+(file+.5)*q.baseWidth+((u.wallDefence&&rank%2===1)?q.baseDepth*.22:0);
       const c=Math.cos(u.facing||0),sn=Math.sin(u.facing||0);
       points.push({x:u.x*W()+localX*c-localY*sn,y:u.y*H()+localX*sn+localY*c,champion:!!(u.champion&&u.champion.enabled&&u.championAlive!==false&&rank===0&&file===Math.floor(q.files/2))});
     }
