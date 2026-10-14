@@ -100,7 +100,7 @@ export function buildOpponentArmy(playerArmy, playerFaction = "empire") {
     if (type === "archers") return { type, models: randInt(5, 30), weapon: "handWeapon", rangedWeapon: "bow" };
     if (type === "cavalry") {
       const weapon = ["handWeapon", "handWeapon", "spear", "lance"][randInt(0, 3)];
-      return { type, models: randInt(5, 15), weapon, meleeWeapons: ["handWeapon", weapon] };
+      return { type, models: randInt(5, 15), weapon, meleeWeapons: ["handWeapon", weapon], freeCavalryOption: "spear" };
     }
     if (type === "captain") {
       const rangedWeapon = Math.random() < 0.28 ? (Math.random() < 0.5 ? "crossbow" : "firearm") : null;
