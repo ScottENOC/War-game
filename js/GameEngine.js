@@ -1,4 +1,4 @@
-import { createUnitsFromArmy } from "./units.js";
+import { createUnitsFromArmy, buildOpponentArmy } from "./units.js";
 import { createArmyBuilder } from "./armyBuilder.js";
 import { createCollectionManager } from "./collection.js";
 import { createGameState } from "./gameState.js";
@@ -112,7 +112,7 @@ const UI = createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget,
 render = UI.render;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, declareCharge, render, draw, $, say, dist, terrain:()=>S.terrain });
 
-function startBattleWithArmy(army,faction){campaignBattle=false;S.autoTerrain=true;S.terrainSeed=Date.now();S.units=createUnitsFromArmy(army,faction);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();}
+function startBattleWithArmy(army,faction){campaignBattle=false;S.autoTerrain=true;S.terrainSeed=Date.now();const playerForce=createUnitsFromArmy(army,faction),aiRoster=buildOpponentArmy(army,faction),aiForce=createUnitsFromArmy(aiRoster,faction);S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};const playerPoints=units().filter(u=>u.side==="player").reduce((sum,u)=>sum+(u.points||0),0),aiPoints=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);say("Skirmish forces: your army "+playerPoints+" pts; opponent "+aiPoints+" pts ("+(aiPoints>=playerPoints?"+"+(aiPoints-playerPoints):"−"+(playerPoints-aiPoints))+" pts).");$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();}
 function startCampaignBattle(army,enemyConfig){
  S.autoTerrain=true;S.terrainSeed=Date.now();const playerUnits=createUnitsFromArmy(army,"empire");
  const enemyPair=createUnitsFromArmy([{type:"swordsmen",models:20,weapon:"handWeapon",champion:false}], "empire");
