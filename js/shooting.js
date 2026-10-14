@@ -130,7 +130,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       killed=applyDamage(target,result.wounds,true,result.cascadePlan);
       say("The shot is directed at the crew (2/6 chance).");
     }else killed=applyDamage(target,result.wounds,true,result.cascadePlan);
-    say(target.name+" loses "+killed+" model"+(killed===1?"":"s")+" to shooting.");
+    if(!target.isCannon||!cannonBodyHit)say(target.name+" loses "+killed+" model"+(killed===1?"":"s")+" to shooting.");
     if(friendlyFireCount){
       const friend=visibility.friendlyBlockers.slice().sort((a,b)=>dist(u,a)-dist(u,b))[0];
       if(friend&&alive(friend)){
@@ -154,6 +154,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(range<0.5){say("Choose a target at least half an inch from the cannon.");return false;}
     if(range>48){say("Cannon target is beyond its 48-inch range.");return false;}
     const dice=roll(2),raw=dice[0]+dice[1],bs=Math.max(0,cannon.stats.BS||0),deviation=Math.max(0,raw-bs),side=roll(1)[0]%2===0?-1:1;
+    const aimElevation=terrainElevationAt(terrain(),tx,ty,W(),H())+(aimedUnit?(aimedUnit.heightIn||1.7)*.75:0),muzzleElevation=terrainElevationAt(terrain(),ox,oy,W(),H())+(cannon.heightIn||1.7)*.75,elevationAngle=Math.atan2(aimElevation-muzzleElevation,Math.max(.1,range))*180/Math.PI;
     const angle=Math.atan2(dy,dx)+side*deviation*Math.PI/180,travel=range*W()/BATTLEFIELD_WIDTH_IN;
     const ex=ox+Math.cos(angle)*travel,ey=oy+Math.sin(angle)*travel,start={x:ox,y:oy},end={x:ex,y:ey};
     const candidates=[];
@@ -172,7 +173,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     }
     candidates.sort((a,b)=>a.at-b.at);
     cannon.shot=true;
-    say("<b>Cannon fire — "+cannon.name+"</b><div class=\"rollsummary\">2D6 "+dice.join(" + ")+" = "+raw+"; subtract BS "+bs+"; scatter "+deviation+"° "+(side<0?"left":"right")+".</div>");
+    say("<b>Cannon fire — "+cannon.name+"</b><div class=\"rollsummary\">Aim elevation "+aimElevation.toFixed(1)+"″ (vertical angle "+elevationAngle.toFixed(1)+"°). 2D6 "+dice.join(" + ")+" = "+raw+"; subtract BS "+bs+"; scatter "+deviation+"° "+(side<0?"left":"right")+".</div>");
     let strength=10,impacts=0;
     for(const item of candidates){
       if(strength<=0)break;
