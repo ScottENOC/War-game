@@ -1,6 +1,6 @@
 import { FACTIONS } from "./factions.js";
 
-function unitCost(config, faction) {
+export function unitCost(config, faction) {
   const elf=faction==="highElves",type=config.type,models=config.models||1,character=["captain","lord","legendaryLord","shadowElf"].includes(type);
   const upgrades=[{key:"M",unit:2,character:5},{key:"WS",unit:2,character:5},{key:"BS",unit:2,character:5},{key:"S",unit:3,character:6},{key:"T",unit:4,character:8},{key:"I",unit:1,character:3},{key:"Ld",unit:1,character:3}].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
   const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
@@ -83,3 +83,94 @@ export function createUnitsFromArmy(army,faction="empire") {
   return units;
 }
 export function createStartingUnits(){return createUnitsFromArmy([{type:"swordsmen",models:20,champion:false,lightArmour:false}]);}
+
+// Build an independent Empire opponent roster for Skirmish. The opponent targets
+// the player's points total, but uses its own composition rather than copying units.
+export function buildOpponentArmy(playerArmy, playerFaction = "empire") {
+  const target = playerArmy.reduce((sum, unit) => sum + unitCost(unit, playerFaction), 0);
+  if (target <= 0) return [{ type: "swordsmen", models: 5, weapon: "handWeapon" }];
+
+  const costOf = roster => roster.reduce((sum, unit) => sum + unitCost(unit, "empire"), 0);
+  const randInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+  const makeUnit = type => {
+    if (type === "swordsmen") {
+      const weapon = ["handWeapon", "handWeapon", "greatWeapon", "halberd"][randInt(0, 3)];
+      return { type, models: randInt(5, 30), weapon, meleeWeapons: ["handWeapon", weapon] };
+    }
+    if (type === "archers") return { type, models: randInt(5, 30), weapon: "handWeapon", rangedWeapon: "bow" };
+    if (type === "cavalry") {
+      const weapon = ["handWeapon", "handWeapon", "spear", "lance"][randInt(0, 3)];
+      return { type, models: randInt(5, 15), weapon, meleeWeapons: ["handWeapon", weapon] };
+    }
+    if (type === "captain") {
+      const rangedWeapon = Math.random() < 0.28 ? (Math.random() < 0.5 ? "crossbow" : "firearm") : null;
+      return { type, models: 1, weapon: "handWeapon", rangedWeapon, mounted: false, heavyArmour: Math.random() < 0.35 };
+    }
+    return { type: "lord", models: 1, weapon: "handWeapon", mounted: false, heavyArmour: Math.random() < 0.35 };
+  };
+  const score = roster => {
+    const total = costOf(roster), ranged = roster.some(u => u.type === "archers" || u.rangedWeapon);
+    const cavalry = roster.some(u => u.type === "cavalry");
+    let penalty = Math.abs(total - target);
+    if (roster.length === 1 && target >= 120) penalty += target * 0.10;
+    if (!ranged && target >= 180) penalty += target * 0.08;
+    if (!cavalry && target >= 320) penalty += target * 0.025;
+    if (roster.length > 5) penalty += target * 0.015;
+    if (total > target * 1.10) penalty += (total - target * 1.10) * 4;
+    return penalty;
+  };
+  const tune = source => {
+    const roster = source.map(u => ({ ...u, meleeWeapons: u.meleeWeapons ? [...u.meleeWeapons] : undefined }));
+    // Adjust model counts to use the budget efficiently without changing the army's role.
+    for (let pass = 0; pass < 2; pass++) {
+      for (let i = 0; i < roster.length; i++) {
+        const unit = roster[i];
+        if (!["swordsmen", "archers", "cavalry"].includes(unit.type)) continue;
+        const max = unit.type === "cavalry" ? 15 : 30;
+        let bestModels = unit.models, bestGap = Math.abs(costOf(roster) - target);
+        for (let n = 5; n <= max; n++) {
+          unit.models = n;
+          const gap = Math.abs(costOf(roster) - target);
+          if (gap < bestGap) { bestGap = gap; bestModels = n; }
+        }
+        unit.models = bestModels;
+      }
+    }
+    return roster;
+  };
+
+  let best = null, bestScore = Infinity;
+  const types = ["swordsmen", "archers", "cavalry", "captain", "lord"];
+  for (let attempt = 0; attempt < 2400; attempt++) {
+    const roster = [makeUnit("swordsmen")];
+    const desired = target < 100 ? 1 : target < 220 ? randInt(2, 3) : randInt(3, 5);
+    while (roster.length < desired && roster.length < 6) {
+      let choices = types.filter(type => {
+        if ((type === "captain" || type === "lord") && roster.filter(u => ["captain", "lord"].includes(u.type)).length >= (target >= 360 ? 2 : 1)) return false;
+        if (type === "lord" && target < 180) return false;
+        if (type === "cavalry" && target < 100) return false;
+        return true;
+      });
+      if (!choices.length) break;
+      // Bias toward mixed arms; avoid simply recreating the player's list.
+      const weights = choices.map(type => type === "archers" ? 1.35 : type === "cavalry" ? (target >= 240 ? 1.2 : 0.8) : type === "swordsmen" ? 1 : type === "captain" ? (target >= 160 ? 0.8 : 0.25) : 0.45);
+      let roll = Math.random() * weights.reduce((a, b) => a + b, 0), picked = choices[0];
+      for (let i = 0; i < choices.length; i++) { roll -= weights[i]; if (roll <= 0) { picked = choices[i]; break; } }
+      roster.push(makeUnit(picked));
+    }
+    const candidate = tune(roster);
+    const total = costOf(candidate);
+    if (total < target * 0.90 || total > target * 1.10) {
+      // Keep searching; this roster may still be the closest fallback.
+    }
+    const candidateScore = score(candidate);
+    if (candidateScore < bestScore) { best = candidate; bestScore = candidateScore; }
+    if (Math.abs(total - target) <= Math.max(10, target * 0.04) &&
+        !(candidate.length === 1 && target >= 120) &&
+        (target < 180 || candidate.some(u => u.type === "archers" || u.rangedWeapon))) {
+      best = candidate;
+      break;
+    }
+  }
+  return best || [{ type: "swordsmen", models: Math.max(5, Math.min(30, Math.round(target / 8))), weapon: "handWeapon" }];
+}
