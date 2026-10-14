@@ -27,7 +27,7 @@ const W=()=>canvas.clientWidth,H=()=>canvas.clientHeight,PX_PER_IN=()=>W()/BATTL
 const enemies=u=>units().filter(v=>v.side!==u.side&&alive(v)&&!v.attachedTo);
 const MOVEMENT = createMovement({ W, H, PX_PER_IN, MODEL_BASE_IN, BATTLEFIELD_WIDTH_IN, fieldHeightIn, units, alive, terrain:()=>S.terrain });
 const { dist, shape, corners, overlap, canPlace } = MOVEMENT;
-function validDeployment(u,x,y,f){const poly=corners(u,x,y,f),w=W(),h=H(),scout=!!u.canDeployAnywhere||(u.attachedCharacters||[]).some(id=>S.units[id]?.canDeployAnywhere),maxX=scout?w-1:w/2-1;return canPlace(u,x,y,f)&&poly.every(p=>p.x>=1&&p.y>=1&&p.x<=maxX&&p.y<=h-1);}
+function validDeployment(u,x,y,f){const poly=corners(u,x,y,f),w=W(),h=H(),scout=!!u.canDeployAnywhere||(u.attachedCharacters||[]).some(id=>S.units[id]?.models>0&&!S.units[id]?.fled&&S.units[id]?.canDeployAnywhere),maxX=scout?w-1:w/2-1;return canPlace(u,x,y,f)&&poly.every(p=>p.x>=1&&p.y>=1&&p.x<=maxX&&p.y<=h-1);}
 function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,80);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");if(msg.includes("dice-stack")||msg.includes("dice-duel")){$("rollcontent").innerHTML=msg;$("rollview").classList.add("show");}if($("logpanel").classList.contains("open"))$("log").scrollTop=0;}
 const DICE = createDice({ S });
 const { roll, diceStack, diceDuel } = DICE;
