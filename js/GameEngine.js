@@ -20,11 +20,11 @@ export function startGame() {
 const $ = id => document.getElementById(id);
 const canvas = $("field"), ctx = canvas.getContext("2d");
 const BATTLEFIELD_WIDTH_IN=48, MODEL_BASE_IN=.9, BOW_RANGE=24;
-const S=createGameState({});
+const S=createGameState({});S.terrain=[];S.terrainTool="off";
 const units=()=>Object.values(S.units), alive=u=>!!u&&(u.models>0||(u.attachedCharacters||[]).some(id=>S.units[id]&&S.units[id].models>0));
 const W=()=>canvas.clientWidth,H=()=>canvas.clientHeight,PX_PER_IN=()=>W()/BATTLEFIELD_WIDTH_IN,fieldHeightIn=()=>H()/Math.max(1,PX_PER_IN());
 const enemies=u=>units().filter(v=>v.side!==u.side&&alive(v)&&!v.attachedTo);
-const MOVEMENT = createMovement({ W, H, PX_PER_IN, MODEL_BASE_IN, BATTLEFIELD_WIDTH_IN, fieldHeightIn, units, alive });
+const MOVEMENT = createMovement({ W, H, PX_PER_IN, MODEL_BASE_IN, BATTLEFIELD_WIDTH_IN, fieldHeightIn, units, alive, terrain:()=>S.terrain });
 const { dist, shape, corners, overlap, canPlace } = MOVEMENT;
 function validDeployment(u,x,y,f){const poly=corners(u,x,y,f),w=W(),h=H();return canPlace(u,x,y,f)&&poly.every(p=>p.x>=1&&p.y>=1&&p.x<=w/2-1&&p.y<=h-1);}
 function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,80);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");if(msg.includes("dice-stack")||msg.includes("dice-duel")){$("rollcontent").innerHTML=msg;$("rollview").classList.add("show");}if($("logpanel").classList.contains("open"))$("log").scrollTop=0;}
@@ -72,7 +72,7 @@ function pursueAfterBreak(winner,loser){
 
 const RULES = createRules({ roll, units });
 const { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage, meleeAttack, shootingAttack } = RULES;
-const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H });
+const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H, terrain:()=>S.terrain, BATTLEFIELD_WIDTH_IN });
 const { shoot } = SHOOTING;
 function startActivations(){S.activationSide="player";units().filter(u=>u.side==="ai"&&u.fled&&alive(u)).forEach(rallyUnit);const p=units().filter(u=>u.side==="player"&&eligibleForActivation(u));if(!p.length){runAiActivations();return;}S.selected=p[0].id;render();}
 const AI = createAI({ S, units, alive, eligibleForActivation, enemies, dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, BOW_RANGE, beginCombatPhase });
@@ -96,7 +96,7 @@ function finishBattle(msg){
  $("battle-return").hidden=false;
  render();
 }
-function reset(){S.turn=1;S.phase="deployment";S.mode=null;S.chargeSide="player";S.chargePasses=0;S.declaredCharges=[];S.activationSide="player";view.zoom=1;view.x=0;view.y=0;S.finished=false;S.combatRound=0;S.loser=null;S.crDiff=0;S.breakTests=[];S.log=[];const all=units();S.selected=all.find(u=>u.side==="player")?.id||null;all.forEach(u=>{const sideUnits=all.filter(v=>v.side===u.side),index=sideUnits.indexOf(u);Object.assign(u,{models:u.startModels,damage:0,x:u.side==="player"?.22:.78,y:(index+1)/(sideUnits.length+1),facing:u.side==="player"?0:Math.PI,deployed:u.side==="ai",engaged:false,engagedWith:null,engagedWithIds:[],engagementSides:{},engagedSide:null,chargedSide:null,attackedFromSide:null,flankedBy:null,formationWidth:5,skirmishing:false,skirmishCombatRound:0,fleeingCharge:false,activated:false,moved:false,shot:false,charged:false,fled:false,moveUsed:0,shootCasualties:0,panicTested:false,delayedDeath:false,delayedDeathSnapshot:null});u.stats.M=u.baseMove??u.stats.M;u.characterWounds=u.isCharacter?u.stats.W:null;u.delayedDeath=false;u.delayedDeathSnapshot=null;u.championAlive=!!u.champion?.enabled;u.championWounds=u.championAlive?u.stats.W:0;});all.filter(u=>!u.isCharacter).forEach(host=>{host.stats.M=host.baseMove??host.stats.M;(host.attachedCharacters||[]).forEach(id=>{const hero=S.units[id];if(hero&&hero.models>0)host.stats.M=Math.min(host.stats.M,hero.stats.M);});});$("log").replaceChildren();$("logpanel").classList.remove("open");$("rollview").classList.remove("show");say("Deployment: select a unit card, tap your half of the field to place it, and rotate as needed. The opponent's deployment is hidden until you are ready.");render();}
+function reset(){S.terrain=[];S.terrainDraft=null;S.terrainTool="off";document.querySelectorAll("[data-terrain]").forEach(b=>b.classList.toggle("active",b.dataset.terrain==="off"));S.turn=1;S.phase="deployment";S.mode=null;S.chargeSide="player";S.chargePasses=0;S.declaredCharges=[];S.activationSide="player";view.zoom=1;view.x=0;view.y=0;S.finished=false;S.combatRound=0;S.loser=null;S.crDiff=0;S.breakTests=[];S.log=[];const all=units();S.selected=all.find(u=>u.side==="player")?.id||null;all.forEach(u=>{const sideUnits=all.filter(v=>v.side===u.side),index=sideUnits.indexOf(u);Object.assign(u,{models:u.startModels,damage:0,x:u.side==="player"?.22:.78,y:(index+1)/(sideUnits.length+1),facing:u.side==="player"?0:Math.PI,deployed:u.side==="ai",engaged:false,engagedWith:null,engagedWithIds:[],engagementSides:{},engagedSide:null,chargedSide:null,attackedFromSide:null,flankedBy:null,formationWidth:5,skirmishing:false,skirmishCombatRound:0,fleeingCharge:false,activated:false,moved:false,shot:false,charged:false,fled:false,moveUsed:0,shootCasualties:0,panicTested:false,delayedDeath:false,delayedDeathSnapshot:null});u.stats.M=u.baseMove??u.stats.M;u.characterWounds=u.isCharacter?u.stats.W:null;u.delayedDeath=false;u.delayedDeathSnapshot=null;u.championAlive=!!u.champion?.enabled;u.championWounds=u.championAlive?u.stats.W:0;});all.filter(u=>!u.isCharacter).forEach(host=>{host.stats.M=host.baseMove??host.stats.M;(host.attachedCharacters||[]).forEach(id=>{const hero=S.units[id];if(hero&&hero.models>0)host.stats.M=Math.min(host.stats.M,hero.stats.M);});});$("log").replaceChildren();$("logpanel").classList.remove("open");$("rollview").classList.remove("show");say("Deployment: select a unit card, tap your half of the field to place it, and rotate as needed. The opponent's deployment is hidden until you are ready.");render();}
 const view={zoom:1,x:0,y:0};
 const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_IN, BATTLEFIELD_WIDTH_IN, MODEL_BASE_IN, shape, view });
 const { setupCanvas, draw } = RENDERING;
@@ -105,7 +105,8 @@ const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fiel
 const { setPhase, declareCharge, fleeFromCharge, finishMovement, passCharges, aiChargeStep, resolveDeclaredCharges } = PHASES;
 const UI = createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, say, equipMeleeWeapon, setRangedMode, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
 render = UI.render;
-const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, declareCharge, render, draw, $, say, dist });
+const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, declareCharge, render, draw, $, say, dist, terrain:()=>S.terrain });
+document.querySelectorAll("[data-terrain]").forEach(button=>button.addEventListener("click",()=>{S.terrainTool=button.dataset.terrain;S.terrainDraft=null;document.querySelectorAll("[data-terrain]").forEach(b=>b.classList.toggle("active",b===button));say(S.terrainTool==="off"?"Terrain placement disabled.":S.terrainTool==="erase"?"Tap a terrain feature to remove it.":"Terrain tool: "+button.textContent+". Drag on the battlefield to place it.");render();}));
 function startBattleWithArmy(army,faction){campaignBattle=false;S.units=createUnitsFromArmy(army,faction);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();}
 function startCampaignBattle(army,enemyConfig){
  const playerUnits=createUnitsFromArmy(army,"empire");
