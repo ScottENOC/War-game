@@ -114,13 +114,13 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         skillBox.append(check("Steadfast",{cost:"+3 pts · ignore combat-result penalty on break tests",checked:!!u.skills?.steadfast,onChange:v=>{u.skills={...(u.skills||{}),steadfast:v};updateTotals();}}));
         skillBox.append(check("Skirmish",{cost:"+3 pts · free pivot, 360° shooting and shields",checked:!!u.skills?.skirmish,onChange:v=>{u.skills={...(u.skills||{}),skirmish:v};updateTotals();}}));
         options.append(skillBox);
-      }
+      }}
       {
         if(u.type!=="pegasusChampion"){const upgradeBox=document.createElement("div");upgradeBox.className="stat-upgrades";
         const heading=document.createElement("p");heading.className="stat-upgrades-heading";heading.textContent="Stat upgrades · +1 each, once per stat";upgradeBox.append(heading);
         statUpgrades.forEach(s=>upgradeBox.append(check("+"+s.key+" "+s.label,{cost:"+"+(character?s.character:s.unit*(u.models||1))+" pts",checked:!!u.upgrades?.[s.key],disabled:u.rangedWeapon==="firearm"&&s.key==="BS",onChange:v=>{u.upgrades={...(u.upgrades||{}),[s.key]:v};updateTotals();}})));
         options.append(upgradeBox);
-      }
+      }}
       main.append(type,ml,options);const cost=document.createElement("strong");cost.className="army-cost";const remove=document.createElement("button");remove.className="remove-unit secondary-button";remove.textContent="×";remove.title="Remove unit "+(index+1);remove.setAttribute("aria-label","Remove unit "+(index+1));remove.addEventListener("click",()=>{army.splice(index,1);renderRows();});row.append(main,cost,remove);list.append(row);
     });updateTotals();
   }
