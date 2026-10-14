@@ -9,6 +9,7 @@ const statChoices=[
 ];
 const warMachineChoices=[
  {key:"BS",label:"+1 Ballistic Skill (crew)",description:"The crew gain +1 BS, improving both multi-shot accuracy and single-shot scatter."},
+ {key:"MI",label:"+1 Movement and Initiative",description:"Improves the crew's Movement characteristic by 1 (so the machine moves +0.5 inches) and Initiative by 1."},
  {key:"range",label:"+6 inches range",description:"Adds 6 inches to both firing modes."},
  {key:"moveAndFire",label:"Move and Fire",description:"The bolt thrower may move up to 2.5 inches and fire in the same activation. Multi-shot suffers the normal −1 moving penalty; single-shot scatter increases by 1°."}
 ];
@@ -63,7 +64,7 @@ export function createNarrativeCampaign({ $, onStartBattle, onReturnMenu }) {
  }
  function availableFor(unit){
   const stats=unit.campaignStats||{},skills=unit.skills||{};
-  if(unit.type==="cannon"||unit.type==="boltThrower")return warMachineChoices.filter(x=>x.key==="BS"?(stats.BS||0)<99:x.key==="range"?(stats.range||0)<18:unit.type==="boltThrower"&&!stats.moveAndFire);
+  if(unit.type==="cannon"||unit.type==="boltThrower")return warMachineChoices.filter(x=>x.key==="BS"?(stats.BS||0)<99:x.key==="MI"?(stats.MI||0)<3:x.key==="range"?(stats.range||0)<18:x.key==="moveAndFire"?unit.type==="boltThrower"&&!stats.moveAndFire:false);
   return [...statChoices,...skillChoices.filter(x=>(stats[x.requires]||0)>0&&!skills[x.key])];
  }
  function renderUpgradeChoices(){
