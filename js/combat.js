@@ -144,5 +144,5 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     if(holds)reformCombatPairs?.();
     S.phase="combat";S.combatResolved=true;render();
   }
-  return { resolveCombat, resolveBreak };
+  return { resolveCombat, resolveBreak, continueBreakTests: nextBreakTest };
 }
