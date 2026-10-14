@@ -86,7 +86,8 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     return {visibleModels:visible.length,visibleModelsList:visible,visibleChampion,overUnitPenalty:visiblePenalties.length?Math.max(...visiblePenalties):0,arcShot:visibleArcShot,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
   }
   function shoot(u,target,standShoot) {
-    if(u?.isCannon)return fireCannon(u,target.x,target.y,target);\n    if(u?.isSiegeEngine&&u.moved&&!u.moveAndFire){say(u.name+" cannot fire after moving without the Move and Fire upgrade.");return false;}
+    if(u?.isCannon)return fireCannon(u,target.x,target.y,target);
+    if(u?.isSiegeEngine&&u.moved&&!u.moveAndFire){say(u.name+" cannot fire after moving without the Move and Fire upgrade.");return false;}
     const host=u.attachedTo?S.units[u.attachedTo]:null;
     if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged)return false;if(u.wallDefence?.posture==="hunker"){say(u.name+" is hunkered behind the wall and cannot shoot until it adopts an active posture.");return false;}if(u.ownsShield&&u.rangedMode!=="bow"){say(u.name+" has its shield ready; switch to bow before shooting.");return false;}
     const distance=dist(u,target),baseRange=u.range||BOW_RANGE,elevationRange=terrainRangeModifier(terrain(),u,target,W(),H()),range=Math.max(1,baseRange+elevationRange);
