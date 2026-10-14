@@ -120,7 +120,7 @@ export function createRules({ roll, units = () => [] }) {
       const weapon=plan.weapon;
       const strengthBonus=context.attackComponent==="mount"?0:(weapon==="greatWeapon"?2:weapon==="halberd"?1:(charging&&weapon==="lance"?2:charging&&weapon==="spear"?1:0));
       const magicSword=weapon==="magicSword"&&isRider;
-      const attacker={...u,weapon,stats:{...u.stats,S:u.stats.S+strengthBonus+(magicSword?1:0),A:u.stats.A+(magicSword?1:0)+dualBonus}};
+      const attacker={...u,weapon,stats:{...u.stats,WS:u.stats.WS+(charging&&u.magicalLance&&weapon==="lance"?1:0),S:u.stats.S+strengthBonus+(magicSword?1:0),A:u.stats.A+(magicSword?1:0)+dualBonus}};
       const attackContext={...context,attacker,attacksPerModel:plan.attacksPerModel,rerollOnesMelee:!!u.skills?.rerollOnesMelee,rerollOnesShooting:!!u.skills?.rerollOnesShooting};
       for(const attackerPool of modelPools(attacker,mode,attackContext))pools.push(...rollPool(attackerPool,target,mode,attackContext,v));
     }
