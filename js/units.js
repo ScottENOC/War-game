@@ -43,7 +43,7 @@ function buildUnit(template,config,faction,opposing=false) {
   const unitName=isSiegeEngine?template.name:isCharacter?template.name+(isEagleMounted?" (Pegasus)":""):isCavalry?template.name+(isEagleMounted?" (Pegasus)":""):rangedWeapon==="bow"?factionName+" Archers":rangedWeapon==="crossbow"?factionName+" Crossbowmen":rangedWeapon==="firearm"?factionName+" Handgunners":primaryMelee==="greatWeapon"?(factionName==="High Elf"?"High Elf Swordmasters":factionName+" Greatswords"):primaryMelee==="halberd"?factionName+" Halberdiers":primaryMelee==="spear"?factionName+" Spearmen":factionName+" Swordsmen";
   const unitShort=isSiegeEngine?template.short:isCharacter?template.short:isCavalry?template.short:rangedWeapon==="bow"?"Archers":rangedWeapon==="crossbow"?"Crossbows":rangedWeapon==="firearm"?"Handguns":primaryMelee==="greatWeapon"?"Greatswords":primaryMelee==="halberd"?"Halberds":primaryMelee==="spear"?"Spearmen":"Swordsmen";
   const shield=ownsShield&&(weapon==="spear"||(!["greatWeapon","halberd"].includes(weapon)&&(!rangedWeapon||config.rangedMode!=="bow")));
-  for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.upgrades&&config.upgrades[key])stats[key]+=(isSiegeEngine&&key==="M"?0.5:1);
+  for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.type!=="pegasusChampion"&&config.upgrades&&config.upgrades[key])stats[key]+=(isSiegeEngine&&key==="M"?0.5:1);
   
   const campaignStats=config.campaignStats||{};
   for(const key of ["WS","BS","S","T","Ld"])stats[key]+=Math.max(0,campaignStats[key]||0);
