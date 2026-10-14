@@ -1,4 +1,4 @@
-import { terrainShotEffect } from "./terrain.js";
+import { terrainShotEffect, terrainElevationAt } from "./terrain.js";
 export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H, terrain = () => [], BATTLEFIELD_WIDTH_IN = 48 }) {
   function showAttack(label, u, target, result, kind) {
     const extras=[];
@@ -6,7 +6,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(result.moved)extras.push(result.elvenArchery?"moved (Elven Archery applies)":"moved (−1)");
     if(result.standShoot)extras.push("stand & shoot (−1)");
     if(result.targetCharging)extras.push("target charging (−1)");
-    if(result.overUnitPenalty)extras.push("firing over intervening unit(s) (−"+result.overUnitPenalty+")");if(result.terrainWallPenalty)extras.push("stone wall (−"+result.terrainWallPenalty+")");
+    if(result.overUnitPenalty)extras.push("intervening unit(s) (−"+result.overUnitPenalty+")");if(result.terrainWallPenalty)extras.push("terrain arc (−"+result.terrainWallPenalty+")");if(result.arcShot)extras.push("parabolic shot");
     if(result.friendlyFireCount)extras.push("<b>FRIENDLY FIRE: "+result.friendlyFireCount+" near-miss shot(s)</b>");
     if(result.hitModifier)extras.push("hit modifier "+(result.hitModifier>0?"+":"")+result.hitModifier);
     const extra=kind==="shoot"&&extras.length?" · "+extras.join(", "):"";
@@ -64,47 +64,33 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     blockers.forEach(v=>{v._losPolygon=unitFootprint(v);});
     const candidates=blockers.map(v=>({u:v}));
     const visible=[],friendlyBlockers=new Set(),visiblePenalties=[];
-    let visibleChampion=false,friendlyShotCount=0;
+    let visibleChampion=false,friendlyShotCount=0,visibleArcShot=false;
     for(const shooter of shooters){
       let best=null;
       for(const aim of targets){
-        const crossed=[];let blocked=false;
-        for(const block of candidates){
-          // Firearms cannot shoot through any intervening unit, friend or foe.
-          // The intended target is excluded from candidates, so a clear shot at
-          // the enemy unit in front remains legal.
-          const poly=block.u._losPolygon;
-          if(!poly)continue;
-          if(lineCrossesUnit(shooter,aim,block.u)){
-            if(u.rangedWeapon==="firearm"){blocked=true;break;}
-            crossed.push(block.u);
-          }
-        }
+        const crossed=[];let blocked=false,arcNeeded=false;
+        const dx=aim.x-shooter.x,dy=aim.y-shooter.y,den=dx*dx+dy*dy||1;
+        const startZ=terrainElevationAt(terrain(),shooter.x,shooter.y,W(),H())+(u.heightIn||1.7)*.75;
+        const endZ=terrainElevationAt(terrain(),aim.x,aim.y,W(),H())+(target.heightIn||1.7)*.75;
+        const arcHeight=(u.rangedWeapon==="bow"?2.5:u.rangedWeapon==="crossbow"?1.25:0)*Math.min(1,Math.hypot(dx,dy)/(u.range||24));
+        for(const block of candidates){if(!block.u._losPolygon||!lineCrossesUnit(shooter,aim,block.u))continue;const bx=block.u.x*W(),by=block.u.y*H(),p=Math.max(0,Math.min(1,((bx-shooter.x)*dx+(by-shooter.y)*dy)/den)),top=terrainElevationAt(terrain(),bx,by,W(),H())+(block.u.heightIn||((block.u.isCavalry||block.u.mounted)?2.5:1.7));if(startZ+(endZ-startZ)*p<top){crossed.push(block.u);if(startZ+(endZ-startZ)*p+arcHeight*Math.sin(Math.PI*p)>=top)arcNeeded=true;else if(u.rangedWeapon==="firearm")blocked=true;}}
         if(blocked)continue;
-        const basePenalty=crossed.length?(u.overUnitPenalty||0):0;
-        const infantryBlockers=crossed.filter(v=>!v.isCavalry&&!v.mounted);
-        const cavalryBlockers=crossed.filter(v=>v.isCavalry||v.mounted);
-        let penalty=basePenalty;
-        // Mounted shooters can see over infantry more readily. Conversely,
-        // cavalry's taller profile obstructs infantry shooting behind it.
-        if(crossed.length&& (u.isCavalry||u.mounted) && infantryBlockers.length===crossed.length) penalty--;
-        if(crossed.length&& !(u.isCavalry||u.mounted) && cavalryBlockers.length) penalty++;
-        // A mounted target remains more visible above intervening infantry.
-        if(crossed.length&& (target.isCavalry||target.mounted) && infantryBlockers.length===crossed.length) penalty--;
-        penalty=Math.max(0,penalty);
-        if(!best||penalty<best.penalty)best={over:crossed.length,penalty,friendly:crossed.filter(v=>v.side===u.side)};
+        if(crossed.length&&u.rangedWeapon!=="firearm"&&arcHeight>0){const allCleared=crossed.every(v=>{const bx=v.x*W(),by=v.y*H(),p=Math.max(0,Math.min(1,((bx-shooter.x)*dx+(by-shooter.y)*dy)/den)),top=terrainElevationAt(terrain(),bx,by,W(),H())+(v.heightIn||((v.isCavalry||v.mounted)?2.5:1.7));return startZ+(endZ-startZ)*p+arcHeight*Math.sin(Math.PI*p)>=top;});if(allCleared){arcNeeded=true;crossed.length=0;}}
+        if(blocked)continue;
+        let penalty=crossed.length?(u.overUnitPenalty||0):0;
+        if(arcNeeded)penalty=Math.max(penalty,u.rangedWeapon==="crossbow"?2:1);if(!best||penalty<best.penalty)best={over:crossed.length,penalty,friendly:crossed.filter(v=>v.side===u.side),arcNeeded};
         if(best&&best.penalty===0)break;
       }
-      if(best){visible.push(shooter);visiblePenalties.push(best.penalty);if(shooter.champion)visibleChampion=true;if(best.over>0&&best.friendly?.length)friendlyShotCount++;(best.friendly||[]).forEach(v=>friendlyBlockers.add(v));}
+      if(best){visible.push(shooter);visiblePenalties.push(best.penalty);visibleArcShot=visibleArcShot||!!best.arcNeeded;if(shooter.champion)visibleChampion=true;if(best.over>0&&best.friendly?.length)friendlyShotCount++;(best.friendly||[]).forEach(v=>friendlyBlockers.add(v));}
     }
-    return {visibleModels:visible.length,visibleChampion,overUnitPenalty:visiblePenalties.length?Math.max(...visiblePenalties):0,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
+    return {visibleModels:visible.length,visibleChampion,overUnitPenalty:visiblePenalties.length?Math.max(...visiblePenalties):0,arcShot:visibleArcShot,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
   }
   function shoot(u,target,standShoot) {
     const host=u.attachedTo?S.units[u.attachedTo]:null;
     if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged)return false;if(u.ownsShield&&u.rangedMode!=="bow"){say(u.name+" has its shield ready; switch to bow before shooting.");return false;}
     const distance=dist(u,target),range=u.range||BOW_RANGE;
     if(!u.skirmishing){const bearing=Math.atan2((target.y-u.y)*H(),((target.x-u.x)*W())||0.000001);let arc=bearing-(u.facing||0);while(arc>Math.PI)arc-=Math.PI*2;while(arc< -Math.PI)arc+=Math.PI*2;if(Math.abs(arc)>Math.PI/4){say(u.name+" cannot shoot "+target.name+": target is outside its 90° firing arc.");return false;}}
-    if(distance>range){say(u.name+" cannot shoot "+target.name+": out of range ("+distance.toFixed(1)+"″; maximum "+range+"″).");return false;}const wallEffect=terrainShotEffect(terrain(),u,target,u.rangedWeapon,W(),H(),BATTLEFIELD_WIDTH_IN,H()/Math.max(1,W()/BATTLEFIELD_WIDTH_IN));if(wallEffect.blocked){say(u.name+" cannot shoot "+target.name+": a stone wall completely blocks firearm line of sight.");return false;}if(standShoot&&distance<=4){say("Stand and Shoot is unavailable at 4″ or closer.");return false;}
+    if(distance>range){say(u.name+" cannot shoot "+target.name+": out of range ("+distance.toFixed(1)+"″; maximum "+range+"″).");return false;}u.heightIn=u.heightIn||((u.isCavalry||u.mounted)?2.5:1.7);target.heightIn=target.heightIn||((target.isCavalry||target.mounted)?2.5:1.7);const arcHeight=(u.rangedWeapon==="bow"?2.5:u.rangedWeapon==="crossbow"?1.25:0)*Math.min(1,distance/(u.range||BOW_RANGE));const wallEffect=terrainShotEffect(terrain(),u,target,u.rangedWeapon,W(),H(),BATTLEFIELD_WIDTH_IN,H()/Math.max(1,W()/BATTLEFIELD_WIDTH_IN),arcHeight);if(wallEffect.blocked){say(u.name+" cannot shoot "+target.name+": terrain blocks the shot trajectory.");return false;}if(standShoot&&distance<=4){say("Stand and Shoot is unavailable at 4″ or closer.");return false;}
     // Build the actual rectangular unit footprints used for obstruction checks.
     const all=units().filter(v=>!v.attachedTo&&alive(v)&&v.deployed!==false);
     for(const v of all)v._losPolygon=unitFootprint(v);
@@ -117,7 +103,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       targetCharging:!!target.charged,targetInMelee:!!target.engaged,largeTarget:!!target.largeTarget,
       singleCharacter:!!target.isCharacter||!!target.singleCharacter||target.models===1,
       skirmisher:!!target.skirmishing||!!target.skirmisher,cover:target.cover==="soft"||target.cover==="hard"?target.cover:null,
-      overUnitPenalty:visibility.overUnitPenalty,wallPenalty:wallEffect.penalty||0,terrainWallPenalty:wallEffect.penalty||0,longRangePenalty:u.rangedWeapon==="firearm"?2:1,
+      overUnitPenalty:visibility.overUnitPenalty,wallPenalty:wallEffect.penalty||0,terrainWallPenalty:wallEffect.penalty||0,arcShot:!!(visibility.arcShot||wallEffect.arcUsed),longRangePenalty:u.rangedWeapon==="firearm"?2:1,
       armourPiercing:u.armourPiercing||0,attackingModels:visibility.visibleModels,attackingChampion:visibility.visibleChampion
     };
     const result=shootingAttack(u,target,context);Object.assign(result,context);
