@@ -37,13 +37,16 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
         const d=dist(u,target),range=u.range||BOW_RANGE,wx=W(),hy=H(),dx=(target.x-u.x)*wx,dy=(target.y-u.y)*hy,len2=dx*dx+dy*dy||1;
         const blockers=units().filter(v=>v!==u&&v!==target&&!v.attachedTo&&alive(v)).filter(v=>{const vx=(v.x-u.x)*wx,vy=(v.y-u.y)*hy,t=(vx*dx+vy*dy)/len2;if(t<=.04||t>=.96)return false;const px=u.x*wx+t*dx,py=u.y*hy+t*dy;return Math.hypot(v.x*wx-px,v.y*hy-py)<Math.max(wx,hy)/48*.8;});
         let arc=true;if(!u.skirmishing){let a=Math.atan2(dy,dx)-(u.facing||0);while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;arc=Math.abs(a)<=Math.PI/4;}
-        const friendlyBlockers=blockers.filter(v=>v.side===u.side),blocked=blockers.length>0&&u.rangedWeapon==="firearm",wallEffect=terrainShotEffect(terrain(),u,target,u.rangedWeapon,W(),H(),BATTLEFIELD_WIDTH_IN,H()/Math.max(1,W()/BATTLEFIELD_WIDTH_IN));
-        const infantryBlockers=blockers.filter(v=>!v.isCavalry&&!v.mounted),cavalryBlockers=blockers.filter(v=>v.isCavalry||v.mounted);let over=blockers.length?(u.overUnitPenalty??(u.rangedWeapon==="bow"?1:2)):0;if(blockers.length&&(u.isCavalry||u.mounted)&&infantryBlockers.length===blockers.length)over--;if(blockers.length&&!(u.isCavalry||u.mounted)&&cavalryBlockers.length)over++;if(blockers.length&&(target.isCavalry||target.mounted)&&infantryBlockers.length===blockers.length)over--;over=Math.max(0,over);
+        const friendlyBlockers=blockers.filter(v=>v.side===u.side),arcHeight=(u.rangedWeapon==="bow"?2.5:u.rangedWeapon==="crossbow"?1.25:0)*Math.min(1,d/(u.range||BOW_RANGE)),wallEffect=terrainShotEffect(terrain(),u,target,u.rangedWeapon,W(),H(),BATTLEFIELD_WIDTH_IN,H()/Math.max(1,W()/BATTLEFIELD_WIDTH_IN),arcHeight);
+        const startZ=(u.heightIn||((u.isCavalry||u.mounted)?2.5:1.7))*.75,endZ=(target.heightIn||((target.isCavalry||target.mounted)?2.5:1.7))*.75;
+        const unitBlocked=blockers.some(v=>{const vx=(v.x-u.x)*wx,vy=(v.y-u.y)*hy,t=Math.max(0,Math.min(1,(vx*dx+vy*dy)/len2)),z=startZ+(endZ-startZ)*t,top=v.heightIn||((v.isCavalry||v.mounted)?2.5:1.7);return z<top;});
+        const blocked=wallEffect.blocked||(u.rangedWeapon==="firearm"&&unitBlocked)||(unitBlocked&&u.rangedWeapon!=="bow"&&u.rangedWeapon!=="crossbow");
+        let over=unitBlocked?(u.overUnitPenalty??(u.rangedWeapon==="bow"?1:2)):0;if(unitBlocked&&(u.rangedWeapon==="bow"||u.rangedWeapon==="crossbow"))over=Math.max(over,u.rangedWeapon==="crossbow"?2:1);
         const long=d>range/2?(u.rangedWeapon==="firearm"?2:1):0,moved=u.moved?1:0,single=(target.isCharacter||target.models===1||target.skirmishing)?1:0,charge=target.charged?1:0,cover=target.cover==="hard"?2:target.cover==="soft"?1:0;
         const reducible=long+moved+over,elfReduce=u.elvenArchery?Math.min(2,reducible):0;
         const meleePenalty=target.engaged&&!over?1:0,bs=Math.min(u.stats.BS,u.bsCap||99),need=7-bs+long+moved+over+single+charge+cover+meleePenalty+(wallEffect.penalty||0)-elfReduce-(target.largeTarget?1:0);
-        let status=d>range?"OUT OF RANGE":!arc?"OUTSIDE FIRING ARC":wallEffect.blocked?"BLOCKED BY STONE WALL":blocked?"BLOCKED BY FRIENDLY UNIT": "Hit roll: "+(need>=10?"impossible (10+)":need>=7?"6, then "+(need-3)+"+":need+"+");
-        preview.textContent=target.name+" · "+d.toFixed(1)+"″ / "+range+"″ · "+status+(wallEffect.penalty?" · stone wall −"+wallEffect.penalty:"")+(friendlyBlockers.length&&u.rangedWeapon!=="firearm"?" · ! FRIENDLY FIRE POSSIBLE":"");
+        let status=d>range?"OUT OF RANGE":!arc?"OUTSIDE FIRING ARC":blocked?"BLOCKED BY TERRAIN / UNIT": "Hit roll: "+(need>=10?"impossible (10+)":need>=7?"6, then "+(need-3)+"+":need+"+");
+        preview.textContent=target.name+" · "+d.toFixed(1)+"″ / "+range+"″ · "+status+(wallEffect.penalty?" · terrain arc −"+wallEffect.penalty:"")+(friendlyBlockers.length&&u.rangedWeapon!=="firearm"?" · ! FRIENDLY FIRE POSSIBLE":"");
         if(friendlyBlockers.length&&u.rangedWeapon!=="firearm")preview.classList.add("friendly-fire");
         el.append(preview);
       }
