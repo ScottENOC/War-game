@@ -169,7 +169,15 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       const a={x:wall.x1*W(),y:wall.y1*H()},b={x:wall.x2*W(),y:wall.y2*H()};
       if(!segmentsIntersect(start,end,a,b))continue;
       const vx=ex-ox,vy=ey-oy,projection=((a.x-ox)*vx+(a.y-oy)*vy)/(vx*vx+vy*vy||1);
-      if(projection>0&&projection<=1)candidates.push({kind:"wall",wall,at:projection});
+      if(projection>0&&projection<=1){
+        const px=ox+vx*projection,py=oy+vy*projection,z=muzzleElevation+(aimElevation-muzzleElevation)*projection,wallBase=terrainElevationAt(terrain(),px,py,W(),H());
+        if(z<=wallBase+(wall.heightIn||1.5))candidates.push({kind:"wall",wall,at:projection});
+      }
+    }
+    const groundSteps=Math.max(20,Math.ceil(range*2));
+    for(let i=1;i<groundSteps;i++){
+      const projection=i/groundSteps,px=ox+(ex-ox)*projection,py=oy+(ey-oy)*projection,z=muzzleElevation+(aimElevation-muzzleElevation)*projection,ground=terrainElevationAt(terrain(),px,py,W(),H());
+      if(z<=ground+.02){candidates.push({kind:"ground",at:projection});break;}
     }
     candidates.sort((a,b)=>a.at-b.at);
     cannon.shot=true;
@@ -177,6 +185,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     let strength=10,impacts=0;
     for(const item of candidates){
       if(strength<=0)break;
+      if(item.kind==="ground"){say("Cannonball strikes the ground before reaching the aim point.");break;}
       if(item.kind==="wall"){
         const wall=item.wall,need=woundTarget(strength,wall.toughness||7),die=roll(1)[0],wounded=need!==null&&die>=need,damage=wounded?(roll(1)[0]%3+1):0;
         say("Cannonball strikes a wall (T"+(wall.toughness||7)+"): S"+strength+", wound roll "+die+" (need "+(need===null?"impossible":need)+")."+(wounded?" D3 damage: "+damage+".":" No wound."));
