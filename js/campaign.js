@@ -42,7 +42,9 @@ export function createNarrativeCampaign({ $, onStartBattle, onReturnMenu }) {
  }
  function summary(u){
   const s=u.campaignStats||{},bits=[];
-  for(const key of ["S","T","WS","BS","Ld"])if(s[key])bits.push("+"+s[key]+" "+key);\n  if(s.range)bits.push("+"+s.range+"″ range");\n  if(s.moveAndFire)bits.push("Move and Fire");
+  for(const key of ["S","T","WS","BS","Ld"])if(s[key])bits.push("+"+s[key]+" "+key);
+  if(s.range)bits.push("+"+s.range+"″ range");
+  if(s.moveAndFire)bits.push("Move and Fire");
   if(s.MI)bits.push("+"+s.MI+" M/I");
   for(const [k,v] of Object.entries(u.skills||{}))if(v)bits.push(({rerollOnesMelee:"Melee Mastery",rerollOnesShooting:"Marksman",steadfast:"Steadfast"})[k]||k);
   return bits.length?bits.join(" · "):"Untrained";
@@ -61,7 +63,8 @@ export function createNarrativeCampaign({ $, onStartBattle, onReturnMenu }) {
  }
  function availableFor(unit){
   const stats=unit.campaignStats||{},skills=unit.skills||{};
-  if(unit.type==="cannon"||unit.type==="boltThrower")return warMachineChoices.filter(x=>x.key==="BS"?(stats.BS||0)<99:x.key==="range"?(stats.range||0)<18:unit.type==="boltThrower"&&!stats.moveAndFire);\n  return [...statChoices,...skillChoices.filter(x=>(stats[x.requires]||0)>0&&!skills[x.key])];
+  if(unit.type==="cannon"||unit.type==="boltThrower")return warMachineChoices.filter(x=>x.key==="BS"?(stats.BS||0)<99:x.key==="range"?(stats.range||0)<18:unit.type==="boltThrower"&&!stats.moveAndFire);
+  return [...statChoices,...skillChoices.filter(x=>(stats[x.requires]||0)>0&&!skills[x.key])];
  }
  function renderUpgradeChoices(){
   el("campaign-title").textContent="Mission "+campaign.level+" won";
