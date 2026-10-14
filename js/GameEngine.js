@@ -27,7 +27,7 @@ const W=()=>canvas.clientWidth,H=()=>canvas.clientHeight,PX_PER_IN=()=>W()/BATTL
 const enemies=u=>units().filter(v=>v.side!==u.side&&alive(v)&&!v.attachedTo);
 const MOVEMENT = createMovement({ W, H, PX_PER_IN, MODEL_BASE_IN, BATTLEFIELD_WIDTH_IN, fieldHeightIn, units, alive, terrain:()=>S.terrain });
 const { dist, shape, corners, overlap, canPlace } = MOVEMENT;
-function validDeployment(u,x,y,f){const poly=corners(u,x,y,f),w=W(),h=H();return canPlace(u,x,y,f)&&poly.every(p=>p.x>=1&&p.y>=1&&p.x<=w/2-1&&p.y<=h-1);}
+function validDeployment(u,x,y,f){const poly=corners(u,x,y,f),w=W(),h=H(),scout=!!u.canDeployAnywhere||(u.attachedCharacters||[]).some(id=>S.units[id]?.canDeployAnywhere),maxX=scout?w-1:w/2-1;return canPlace(u,x,y,f)&&poly.every(p=>p.x>=1&&p.y>=1&&p.x<=maxX&&p.y<=h-1);}
 function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,80);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");if(msg.includes("dice-stack")||msg.includes("dice-duel")){$("rollcontent").innerHTML=msg;$("rollview").classList.add("show");}if($("logpanel").classList.contains("open"))$("log").scrollTop=0;}
 const DICE = createDice({ S });
 const { roll, diceStack, diceDuel } = DICE;
@@ -129,9 +129,10 @@ function validateArmy(army,faction){
  if(collectionManager?.getBypass())return "";
  const owned=collectionManager?.getInventory()||[],used=new Set(),shortages=[];
  for(const entry of army){
-  const count=(entry.type==="captain"||entry.type==="lord")?1:(entry.models||1);
-  const mounted=entry.type==="cavalry"||((entry.type==="captain"||entry.type==="lord")&&!!entry.mounted);
-  const matches=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&(m.type===entry.type||(["swordsmen","archers"].includes(entry.type)&&["swordsmen","archers"].includes(m.type)))&&!!m.mounted===mounted);
+  const character=["captain","lord","legendaryLord","shadowElf"].includes(entry.type),collectionType=["legendaryLord","shadowElf"].includes(entry.type)?"lord":entry.type;
+  const count=character?1:(entry.models||1);
+  const mounted=entry.type==="cavalry"||(character&&!!entry.mounted);
+  const matches=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&(m.type===collectionType||(["swordsmen","archers"].includes(entry.type)&&["swordsmen","archers"].includes(m.type)))&&!!m.mounted===mounted);
   if(matches.length<count)shortages.push((count-matches.length)+" "+entry.type+" model(s) needed"+(mounted?" mounted":""));
   matches.slice(0,count).forEach(m=>used.add(m.id));
  }
