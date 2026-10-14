@@ -1,4 +1,4 @@
-import { terrainShotEffect, terrainElevationAt } from "./terrain.js";
+import { terrainShotEffect, terrainElevationAt, terrainRangeModifier } from "./terrain.js";
 export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, startBattle, say, equipMeleeWeapon, setRangedMode, shape, PX_PER_IN, terrain = () => [], BATTLEFIELD_WIDTH_IN = 48 }) {
   function renderRoster() {
     for (const side of ["ai", "player"]) {
@@ -29,12 +29,21 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
     const el = $("actions"); el.replaceChildren();
     if (S.finished) { btn("New battle", "↻", reset, false); return; }
     const u = S.units[S.selected], target = selectedTarget(u);
+    if(S.phase==="movement"&&S.mode==="wallPosture"&&u&&S.selectedWall){
+      const wall=S.selectedWall;
+      const choosePosture=posture=>{const wx=W(),hy=H(),scale=PX_PER_IN(),ax=wall.x1*wx,ay=wall.y1*hy,bx=wall.x2*wx,by=wall.y2*hy,dx=bx-ax,dy=by-ay,len2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((u.x*wx-ax)*dx+(u.y*hy-ay)*dy)/len2)),px=ax+dx*t,py=ay+dy*t,len=Math.sqrt(len2),tx=dx/len,ty=dy/len;let nx=-ty,ny=tx;if((u.x*wx-px)*nx+(u.y*hy-py)*ny<0){nx=-nx;ny=-ny;}const q=shape(u),offset=q.depth/2+((wall.widthIn||.35)/2+.4)*scale,x=(px+nx*offset)/wx,y=(py+ny*offset)/hy,facing=Math.atan2(-ny,-nx),travel=dist(u,{x,y});if(u.activated||u.engaged||u.fled||u.shot||travel+u.moveUsed>u.stats.M+.001){say("The unit cannot reach that wall with its remaining movement.");return;}const old={x:u.x,y:u.y,facing:u.facing};u.x=x;u.y=y;u.facing=facing;if(!canPlace(u,x,y,facing)){u.x=old.x;u.y=old.y;u.facing=old.facing;say("There is not enough room to form up at that wall.");return;}u.moveUsed+=travel;u.moved=u.moved||travel>0;u.wallDefence={wall,posture,wasSkirmishing:!!u.skirmishing};u.cover=posture==="hunker"?"hard":"soft";S.mode=null;S.selectedWall=null;say(u.name+(posture==="hunker"?" hunkers down behind the wall.":" adopts an active firing posture at the wall.")+" The unit breaks formation to occupy the wall while retaining its facing and ranks.");render();};
+      const note=document.createElement("div");note.className="shoot-preview";note.textContent="Selected wall · choose posture (movement is spent reaching it).";el.append(note);
+      btn("Hunker down (hard cover; cannot shoot)","▰",()=>choosePosture("hunker"),false,u.wallDefence?.wall===wall&&u.wallDefence?.posture==="hunker");
+      btn("Active (can shoot; soft cover)","▱",()=>choosePosture("active"),false,u.wallDefence?.wall===wall&&u.wallDefence?.posture==="active");
+      btn("Cancel wall order","×",()=>{S.mode=null;S.selectedWall=null;render();});return;
+    }
+    if(S.phase==="movement"&&u?.wallDefence){const posture=u.wallDefence.posture;const state=document.createElement("div");state.className="shoot-preview";state.textContent="Defending wall · "+(posture==="hunker"?"Hunkered: hard cover, cannot shoot.":"Active: soft cover, may shoot.");el.append(state);btn("Leave wall position","↗",()=>{const wallState=u.wallDefence;u.wallDefence=null;u.cover=null;u.skirmishing=!!wallState.wasSkirmishing;S.selectedWall=null;S.mode=null;say(u.name+" leaves its defended wall position.");render();},u.engaged||u.activated);}
     if(S.phase==="movement"&&S.mode==="shoot"&&u?.hasRangedWeapon){
       const preview=document.createElement("div");preview.className="shoot-preview";
       if(u.ownsShield&&u.rangedMode!=="bow"){preview.textContent="Shield ready — switch to bow before shooting.";el.append(preview);}else
       if(!target){preview.textContent="Select an enemy target.";el.append(preview);}
       else{
-        const d=dist(u,target),range=u.range||BOW_RANGE,wx=W(),hy=H(),dx=(target.x-u.x)*wx,dy=(target.y-u.y)*hy,len2=dx*dx+dy*dy||1;
+        const d=dist(u,target),baseRange=u.range||BOW_RANGE,elevationRange=terrainRangeModifier(terrain(),u,target,W(),H()),range=Math.max(1,baseRange+elevationRange),wx=W(),hy=H(),dx=(target.x-u.x)*wx,dy=(target.y-u.y)*hy,len2=dx*dx+dy*dy||1;
         const blockers=units().filter(v=>v!==u&&v!==target&&!v.attachedTo&&alive(v)&&!v.fled&&v.deployed!==false).filter(v=>{const vx=(v.x-u.x)*wx,vy=(v.y-u.y)*hy,t=(vx*dx+vy*dy)/len2;if(t<=.04||t>=.96)return false;const px=u.x*wx+t*dx,py=u.y*hy+t*dy;return Math.hypot(v.x*wx-px,v.y*hy-py)<Math.max(wx,hy)/48*.8;});
         let arc=true;if(!u.skirmishing){let a=Math.atan2(dy,dx)-(u.facing||0);while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;arc=Math.abs(a)<=Math.PI/4;}
         const friendlyBlockers=blockers.filter(v=>v.side===u.side),arcHeight=(u.rangedWeapon==="bow"?2.5:u.rangedWeapon==="crossbow"?1.25:0)*Math.min(1,d/(u.range||BOW_RANGE)),wallEffect=terrainShotEffect(terrain(),u,target,u.rangedWeapon,W(),H(),BATTLEFIELD_WIDTH_IN,H()/Math.max(1,W()/BATTLEFIELD_WIDTH_IN),arcHeight);
@@ -45,9 +54,9 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
         let over=unitBlocked?(u.overUnitPenalty??(u.rangedWeapon==="bow"?1:2)):0;if(unitBlocked&&(u.rangedWeapon==="bow"||u.rangedWeapon==="crossbow"))over=Math.max(over,u.rangedWeapon==="crossbow"?2:1);if(wallEffect.arcUsed)over=0;
         const long=d>range/2?(u.rangedWeapon==="firearm"?2:1):0,moved=u.moved?1:0,single=(target.isCharacter||target.models===1||target.skirmishing)?1:0,charge=target.charged?1:0,cover=target.cover==="hard"?2:target.cover==="soft"?1:0;
         const reducible=long+moved+over,elfReduce=u.elvenArchery?Math.min(2,reducible):0;
-        const meleePenalty=target.engaged&&!over?1:0,bs=Math.min(u.stats.BS,u.bsCap||99),need=7-bs+long+moved+over+single+charge+cover+meleePenalty+(wallEffect.penalty||0)-elfReduce-(target.largeTarget?1:0);
+        const wallCover=target.wallDefence?.posture==="hunker"?2:target.wallDefence?.posture==="active"?1:0;const meleePenalty=target.engaged&&!over?1:0,bs=Math.min(u.stats.BS,u.bsCap||99),need=7-bs+long+moved+over+single+charge+Math.max(cover,wallCover)+meleePenalty+(wallEffect.penalty||0)-elfReduce-(target.largeTarget?1:0);
         let status=d>range?"OUT OF RANGE":!arc?"OUTSIDE FIRING ARC":blocked?"BLOCKED BY TERRAIN / UNIT": "Hit roll: "+(need>=10?"impossible (10+)":need>=7?"6, then "+(need-3)+"+":need+"+");
-        preview.textContent=target.name+" · "+d.toFixed(1)+"″ / "+range+"″ · "+status+(wallEffect.penalty?" · terrain arc −"+wallEffect.penalty:"")+(unitArcClear&&!wallEffect.arcUsed?" · parabolic arc −"+(u.rangedWeapon==="crossbow"?2:1):"")+(friendlyBlockers.length&&u.rangedWeapon!=="firearm"?" · ! FRIENDLY FIRE POSSIBLE":"");
+        preview.textContent=target.name+" · "+d.toFixed(1)+"″ / "+range+"″"+(elevationRange?(" · elevation "+(elevationRange>0?"+":"")+elevationRange+"″"):"")+" · "+status+(wallEffect.penalty?" · terrain arc −"+wallEffect.penalty:"")+(unitArcClear&&!wallEffect.arcUsed?" · parabolic arc −"+(u.rangedWeapon==="crossbow"?2:1):"")+(friendlyBlockers.length&&u.rangedWeapon!=="firearm"?" · ! FRIENDLY FIRE POSSIBLE":"");
         if(friendlyBlockers.length&&u.rangedWeapon!=="firearm")preview.classList.add("friendly-fire");
         el.append(preview);
       }
