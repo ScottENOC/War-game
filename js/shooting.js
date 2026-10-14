@@ -108,7 +108,11 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       overUnitPenalty:wallEffect.arcUsed?0:visibility.overUnitPenalty,wallPenalty:wallEffect.penalty||0,terrainWallPenalty:wallEffect.penalty||0,arcShot:!!(visibility.arcShot||wallEffect.arcUsed),longRangePenalty:u.rangedWeapon==="firearm"?2:1,
       armourPiercing:u.armourPiercing||0,attackingModels:visibility.visibleModels,attackingChampion:visibility.visibleChampion
     };
-    const result=shootingAttack(u,target,context);Object.assign(result,context);
+    const cannonSplit=target.isCannon?roll(1)[0]:null;
+    const cannonBodyHit=target.isCannon&&cannonSplit<=4;
+    const resolvedTarget=cannonBodyHit?{...target,stats:{...target.stats,T:target.artilleryToughness||7,W:1},models:1,damage:0,isCharacter:false,champion:{enabled:false},championAlive:false,attachedCharacters:[],armour:"none",lightArmour:false,shield:false,skirmishing:false,cover:null}:target;
+    const resolvedContext=cannonBodyHit?{...context,cover:null,singleCharacter:false,skirmisher:false,targetInMelee:false,coverHitPenaltyBonus:0}:context;
+    const result=shootingAttack(u,resolvedTarget,resolvedContext);Object.assign(result,context);
     let friendlyFireCount=0;
     const ffMargin=u.rangedWeapon==="bow"?1:u.rangedWeapon==="crossbow"?2:0;
     if(ffMargin&&visibility.friendlyBlockers?.length){
@@ -119,18 +123,12 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     result.hitModifier=result.pools.length?result.pools[0].hitModifier:0;
     const targetDiceStack=diceStack(u,result);u.shot=true;showAttack(standShoot?"Stand and shoot":"Shooting",u,target,result,"shoot");
     let killed=0;
-    if(target.isCannon){
-      const split=roll(1)[0];
-      if(split<=4){
-        const artilleryTarget={...target,stats:{...target.stats,T:target.artilleryToughness||7,W:1},models:1,damage:0,isCharacter:false,champion:{enabled:false},championAlive:false,attachedCharacters:[],armour:"none",lightArmour:false,shield:false,skirmishing:false,cover:null};
-        const artilleryContext={...context,cover:null,singleCharacter:false,skirmisher:false,targetInMelee:false,coverHitPenaltyBonus:0};
-        const artilleryResult=shootingAttack(u,artilleryTarget,artilleryContext);
-        target.artilleryWounds=Math.max(0,target.artilleryWounds-artilleryResult.wounds);
-        say(target.name+" is hit on the cannon (4/6 chance): "+target.artilleryWounds+"/"+target.artilleryStartWounds+" wounds remain.");
-      }else{
-        killed=applyDamage(target,result.wounds,true,result.cascadePlan);
-        say("The shot is directed at the crew (2/6 chance).");
-      }
+    if(target.isCannon&&cannonBodyHit){
+      target.artilleryWounds=Math.max(0,target.artilleryWounds-result.wounds);
+      say(target.name+" is hit on the cannon (4/6 chance): "+target.artilleryWounds+"/"+target.artilleryStartWounds+" wounds remain.");
+    }else if(target.isCannon){
+      killed=applyDamage(target,result.wounds,true,result.cascadePlan);
+      say("The shot is directed at the crew (2/6 chance).");
     }else killed=applyDamage(target,result.wounds,true,result.cascadePlan);
     say(target.name+" loses "+killed+" model"+(killed===1?"":"s")+" to shooting.");
     if(friendlyFireCount){
