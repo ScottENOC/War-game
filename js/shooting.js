@@ -1,8 +1,8 @@
-import { terrainShotEffect, terrainElevationAt } from "./terrain.js";
+import { terrainShotEffect, terrainElevationAt, terrainRangeModifier } from "./terrain.js";
 export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H, terrain = () => [], BATTLEFIELD_WIDTH_IN = 48 }) {
   function showAttack(label, u, target, result, kind) {
     const extras=[];
-    if(result.longRange)extras.push("long range (−"+(result.longRangePenalty||1)+")");
+    if(result.longRange)extras.push("long range (−"+(result.longRangePenalty||1)+")");if(result.elevationRange)extras.push("elevation range "+(result.elevationRange>0?"+":"")+result.elevationRange+"″");
     if(result.moved)extras.push(result.elvenArchery?"moved (Elven Archery applies)":"moved (−1)");
     if(result.standShoot)extras.push("stand & shoot (−1)");
     if(result.targetCharging)extras.push("target charging (−1)");
@@ -87,8 +87,8 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
   }
   function shoot(u,target,standShoot) {
     const host=u.attachedTo?S.units[u.attachedTo]:null;
-    if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged)return false;if(u.ownsShield&&u.rangedMode!=="bow"){say(u.name+" has its shield ready; switch to bow before shooting.");return false;}
-    const distance=dist(u,target),range=u.range||BOW_RANGE;
+    if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged)return false;if(u.wallDefence?.posture==="hunker"){say(u.name+" is hunkered behind the wall and cannot shoot until it adopts an active posture.");return false;}if(u.ownsShield&&u.rangedMode!=="bow"){say(u.name+" has its shield ready; switch to bow before shooting.");return false;}
+    const distance=dist(u,target),baseRange=u.range||BOW_RANGE,elevationRange=terrainRangeModifier(terrain(),u,target,W(),H()),range=Math.max(1,baseRange+elevationRange);
     if(!u.skirmishing){const bearing=Math.atan2((target.y-u.y)*H(),((target.x-u.x)*W())||0.000001);let arc=bearing-(u.facing||0);while(arc>Math.PI)arc-=Math.PI*2;while(arc< -Math.PI)arc+=Math.PI*2;if(Math.abs(arc)>Math.PI/4){say(u.name+" cannot shoot "+target.name+": target is outside its 90° firing arc.");return false;}}
     if(distance>range){say(u.name+" cannot shoot "+target.name+": out of range ("+distance.toFixed(1)+"″; maximum "+range+"″).");return false;}u.heightIn=u.heightIn||((u.isCavalry||u.mounted)?2.5:1.7);target.heightIn=target.heightIn||((target.isCavalry||target.mounted)?2.5:1.7);const arcHeight=(u.rangedWeapon==="bow"?2.5:u.rangedWeapon==="crossbow"?1.25:0)*Math.min(1,distance/(u.range||BOW_RANGE));const wallEffect=terrainShotEffect(terrain(),u,target,u.rangedWeapon,W(),H(),BATTLEFIELD_WIDTH_IN,H()/Math.max(1,W()/BATTLEFIELD_WIDTH_IN),arcHeight);if(wallEffect.blocked){say(u.name+" cannot shoot "+target.name+": terrain blocks the shot trajectory.");return false;}if(standShoot&&distance<=4){say("Stand and Shoot is unavailable at 4″ or closer.");return false;}
     // Build the actual rectangular unit footprints used for obstruction checks.
@@ -97,12 +97,12 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     const rankLimit=Math.max(1,u.ranksToShoot||1);
     const visibility=getShotVisibility(u,target,rankLimit);
     all.forEach(v=>{delete v._losPolygon;delete v._losCorners;});
-    if(!visibility.visibleModels){say(u.name+" cannot shoot "+target.name+": no eligible models have line of sight; the target may be behind an intervening unit or obstacle.");return false;}
+    if(!visibility.visibleModels){say(u.name+" cannot shoot "+target.name+": no eligible models have line of sight; the target may be behind an intervening unit or obstacle.");return false;}if(u.wallDefence?.posture==="active")visibility.visibleModels=Math.max(1,Math.ceil(visibility.visibleModels*.6));
     const context={
-      longRange:distance>range/2,moved:!!u.moved,elvenArchery:!!u.elvenArchery,standShoot,distance,
+      longRange:distance>range/2,moved:!!u.moved,elvenArchery:!!u.elvenArchery,standShoot,distance,elevationRange,
       targetCharging:!!target.charged,targetInMelee:!!target.engaged,largeTarget:!!target.largeTarget,
       singleCharacter:!!target.isCharacter||!!target.singleCharacter||target.models===1,
-      skirmisher:!!target.skirmishing||!!target.skirmisher,cover:target.cover==="soft"||target.cover==="hard"?target.cover:null,
+      skirmisher:!!target.skirmishing||!!target.skirmisher,cover:target.wallDefence?.posture==="hunker"?"hard":target.wallDefence?.posture==="active"?"soft":(target.cover==="soft"||target.cover==="hard"?target.cover:null),
       overUnitPenalty:wallEffect.arcUsed?0:visibility.overUnitPenalty,wallPenalty:wallEffect.penalty||0,terrainWallPenalty:wallEffect.penalty||0,arcShot:!!(visibility.arcShot||wallEffect.arcUsed),longRangePenalty:u.rangedWeapon==="firearm"?2:1,
       armourPiercing:u.armourPiercing||0,attackingModels:visibility.visibleModels,attackingChampion:visibility.visibleChampion
     };
