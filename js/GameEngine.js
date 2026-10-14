@@ -130,7 +130,7 @@ function validateArmy(army,faction){
  if(collectionManager?.getBypass())return "";
  const owned=collectionManager?.getInventory()||[],used=new Set(),shortages=[];
  for(const entry of army){
-  if(entry.type==="cannon"){if(faction==="highElves")shortages.push("Cannons are only available to the Empire.");continue;}
+  if(entry.type==="cannon"||entry.type==="boltThrower"){if(entry.type==="cannon"&&faction==="highElves")shortages.push("Cannons are only available to the Empire.");if(entry.type==="boltThrower"&&faction!=="highElves")shortages.push("Bolt throwers are only available to the High Elves.");continue;}
   const character=["captain","lord","legendaryLord","shadowElf"].includes(entry.type),collectionType=["legendaryLord","shadowElf"].includes(entry.type)?"lord":entry.type;
   const count=character?1:(entry.models||1);
   const mounted=entry.type==="cavalry"||(character&&!!entry.mounted);
