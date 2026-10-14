@@ -18,16 +18,25 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     {key:"Ld",label:"Leadership",unit:1,character:3}
   ];
   function unitPoints(u){
-    const e=elf(),m=u.models||1;
-    const character=u.type==="captain"||u.type==="lord";
+    const e=elf(),m=u.models||1,character=u.type==="captain"||u.type==="lord";
     const upgradeCost=statUpgrades.reduce((sum,s)=>sum+(u.upgrades&&u.upgrades[s.key]?(character?s.character:s.unit*m):0),0);
     const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3:0),0);
-    if(u.type==="captain"||u.type==="lord")return (e?(u.type==="lord"?120:75):(u.type==="lord"?80:50))+(u.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(u.weapon)?4:0)+(u.mounted?8:0)+(u.mounted&&u.weapon==="spear"?2:0)+(u.mounted&&u.weapon==="lance"?4:0)+(u.mounted&&u.barding?4:0)+(u.shield&&!["halberd","greatWeapon"].includes(u.weapon)?2:0)+(u.rangedWeapon==="bow"?(e?3:2):u.rangedWeapon==="crossbow"?3:u.rangedWeapon==="firearm"?4:0)+upgradeCost+skillCost;
-    if(u.type==="cavalry"){const free=u.freeCavalryOption||"bow";return m*(e?24:16)+(u.elvenArchery&&e&&(u.bow||free==="bow")?2*m:0)+(u.bow&&!(e&&free==="bow")?2*m:0)+(u.rangedWeapon==="crossbow"?3*m:u.rangedWeapon==="firearm"?4*m:0)+(u.heavyArmour?2*m:0)+(u.barding?2*m:0)+(u.shield&&u.weapon!=="greatWeapon"?0.5*m:0)+(u.weapon==="spear"&&!(e&&free==="spear")?m:0)+(["lance","greatWeapon"].includes(u.weapon)?2*m:0)+upgradeCost+skillCost;}
-    const base=m*(e?12:8),weapons=[...new Set([...(u.meleeWeapons||[]),u.weapon||"handWeapon"])];
-    const weaponCost=weapons.reduce((sum,w)=>sum+(w==="spear"&&!(e&&u.type==="swordsmen")?m:w==="greatWeapon"?2*m:w==="halberd"?m:0),0);
-    const ranged=u.rangedWeapon||(u.type==="archers"?"bow":null),rangedCost=ranged==="bow"?(e?3:2)*m:ranged==="crossbow"?3*m:ranged==="firearm"?4*m:0;
-    return base+weaponCost+rangedCost+(u.elvenArchery&&e&&ranged==="bow"?2*m:0)+(u.champion?(e?9:6):0)+(u.lightArmour&&!e?m:0)+(u.shield&&!(e&&u.type==="swordsmen")?0.5*m:0)+upgradeCost+skillCost;
+    const weapons=[...new Set([...(u.meleeWeapons||[]),u.weapon||"handWeapon"])];
+    const ranged=u.rangedWeapon||(u.type==="archers"?"bow":null);
+    const rangedCost=ranged==="bow"?(e&&u.type==="cavalry"&&(u.freeCavalryOption||"bow")==="bow"?0:(e?3:2)*(character?1:m)):ranged==="crossbow"?3*(character?1:m):ranged==="firearm"?4*(character?1:m):0;
+    if(character){
+      const meleeCost=weapons.reduce((sum,w)=>sum+(["halberd","greatWeapon"].includes(w)?4:w==="spear"&&u.mounted?2:w==="lance"&&u.mounted?4:0),0);
+      return (e?(u.type==="lord"?120:75):(u.type==="lord"?80:50))+(u.heavyArmour?4:0)+meleeCost+(u.mounted?8:0)+(u.mounted&&u.barding?4:0)+(u.shield?2:0)+rangedCost+upgradeCost+skillCost;
+    }
+    if(u.type==="cavalry"){
+      const free=u.freeCavalryOption||"bow";
+      const meleeCost=weapons.reduce((sum,w)=>sum+(w==="spear"&&!(e&&free==="spear")?m:["lance","greatWeapon"].includes(w)?2*m:0),0);
+      const bowCost=(u.bow&&!(e&&free==="bow")?2*m:0)+(ranged==="bow"&&!(e&&free==="bow")&&!u.bow?2*m:0);
+      const otherRangedCost=ranged==="crossbow"?3*m:ranged==="firearm"?4*m:0;
+      return m*(e?24:16)+(u.elvenArchery&&e&&(ranged==="bow"||u.bow||free==="bow")?2*m:0)+bowCost+otherRangedCost+(u.heavyArmour?2*m:0)+(u.barding?2*m:0)+(u.shield?0.5*m:0)+meleeCost+upgradeCost+skillCost;
+    }
+    const meleeCost=weapons.reduce((sum,w)=>sum+(w==="spear"&&!(e&&u.type==="swordsmen")?m:w==="greatWeapon"?2*m:w==="halberd"?m:0),0);
+    return m*(e?12:8)+meleeCost+rangedCost+(u.elvenArchery&&e&&ranged==="bow"?2*m:0)+(u.champion?(e?9:6):0)+(u.lightArmour&&!e?m:0)+(u.shield&&!(e&&u.type==="swordsmen")?0.5*m:0)+upgradeCost+skillCost;
   }
   function check(label,{cost="",checked=false,disabled=false,onChange}={}){const l=document.createElement("label"),c=document.createElement("input");c.type="checkbox";c.checked=checked;c.disabled=disabled;c.addEventListener("change",()=>onChange(c.checked));l.append(c,document.createTextNode(label+(cost?" ("+cost+")":"")));return l;}
   function select(label,html,value,onChange){const l=document.createElement("label");l.append(document.createTextNode(label+" "));const s=document.createElement("select");s.innerHTML=html;s.value=value;s.addEventListener("change",()=>onChange(s.value));l.append(s);return l;}
