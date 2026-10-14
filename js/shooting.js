@@ -1,11 +1,12 @@
-export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H }) {
+import { terrainShotEffect } from "./terrain.js";
+export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H, terrain = () => [], BATTLEFIELD_WIDTH_IN = 48 }) {
   function showAttack(label, u, target, result, kind) {
     const extras=[];
     if(result.longRange)extras.push("long range (−"+(result.longRangePenalty||1)+")");
     if(result.moved)extras.push(result.elvenArchery?"moved (Elven Archery applies)":"moved (−1)");
     if(result.standShoot)extras.push("stand & shoot (−1)");
     if(result.targetCharging)extras.push("target charging (−1)");
-    if(result.overUnitPenalty)extras.push("firing over intervening unit(s) (−"+result.overUnitPenalty+")");
+    if(result.overUnitPenalty)extras.push((result.terrainWallPenalty?"stone wall (−"+result.terrainWallPenalty+")":"firing over intervening unit(s) (−"+result.overUnitPenalty+")"));
     if(result.friendlyFireCount)extras.push("<b>FRIENDLY FIRE: "+result.friendlyFireCount+" near-miss shot(s)</b>");
     if(result.hitModifier)extras.push("hit modifier "+(result.hitModifier>0?"+":"")+result.hitModifier);
     const extra=kind==="shoot"&&extras.length?" · "+extras.join(", "):"";
@@ -89,7 +90,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged)return false;if(u.ownsShield&&u.rangedMode!=="bow"){say(u.name+" has its shield ready; switch to bow before shooting.");return false;}
     const distance=dist(u,target),range=u.range||BOW_RANGE;
     if(!u.skirmishing){const bearing=Math.atan2((target.y-u.y)*H(),((target.x-u.x)*W())||0.000001);let arc=bearing-(u.facing||0);while(arc>Math.PI)arc-=Math.PI*2;while(arc< -Math.PI)arc+=Math.PI*2;if(Math.abs(arc)>Math.PI/4){say(u.name+" cannot shoot "+target.name+": target is outside its 90° firing arc.");return false;}}
-    if(distance>range){say(u.name+" cannot shoot "+target.name+": out of range ("+distance.toFixed(1)+"″; maximum "+range+"″).");return false;}if(standShoot&&distance<=4){say("Stand and Shoot is unavailable at 4″ or closer.");return false;}
+    if(distance>range){say(u.name+" cannot shoot "+target.name+": out of range ("+distance.toFixed(1)+"″; maximum "+range+"″).");return false;}const wallEffect=terrainShotEffect(terrain(),u,target,u.rangedWeapon,W(),H(),BATTLEFIELD_WIDTH_IN,H()/Math.max(1,W()/BATTLEFIELD_WIDTH_IN));if(wallEffect.blocked){say(u.name+" cannot shoot "+target.name+": a stone wall completely blocks firearm line of sight.");return false;}if(standShoot&&distance<=4){say("Stand and Shoot is unavailable at 4″ or closer.");return false;}
     // Build the actual rectangular unit footprints used for obstruction checks.
     const all=units().filter(v=>!v.attachedTo&&alive(v)&&v.deployed!==false);
     for(const v of all)v._losPolygon=unitFootprint(v);
@@ -102,7 +103,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       targetCharging:!!target.charged,targetInMelee:!!target.engaged,largeTarget:!!target.largeTarget,
       singleCharacter:!!target.isCharacter||!!target.singleCharacter||target.models===1,
       skirmisher:!!target.skirmishing||!!target.skirmisher,cover:target.cover==="soft"||target.cover==="hard"?target.cover:null,
-      overUnitPenalty:visibility.overUnitPenalty,longRangePenalty:u.rangedWeapon==="firearm"?2:1,
+      overUnitPenalty:visibility.overUnitPenalty+(wallEffect.penalty||0),terrainWallPenalty:wallEffect.penalty||0,longRangePenalty:u.rangedWeapon==="firearm"?2:1,
       armourPiercing:u.armourPiercing||0,attackingModels:visibility.visibleModels,attackingChampion:visibility.visibleChampion
     };
     const result=shootingAttack(u,target,context);Object.assign(result,context);
