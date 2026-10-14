@@ -28,7 +28,7 @@ function buildUnit(template,config,faction,opposing=false) {
   if(mounted&&config.barding&&!elf)stats.M=7;
   if(isCharacter&&!mounted&&config.heavyArmour&&!elf)stats.M=Math.max(1,stats.M-1);
   const lightArmour=isCavalry||isCharacter?(!config.heavyArmour):(elf||!!config.lightArmour);
-  const meleeWeapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])],spears=config.type==="swordsmen"&&config.weapon==="spear"&&meleeWeapons.includes("spear"),ownsShield=!!config.shield,shield=ownsShield&&(!["halberd","greatWeapon"].includes(config.weapon)||config.weapon==="spear");
+  const meleeWeapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])].filter(w=>!["bow","crossbow","firearm"].includes(w)),ownsShield=!!config.shield;if(!meleeWeapons.includes("handWeapon"))meleeWeapons.unshift("handWeapon");const spears=config.weapon==="spear"&&meleeWeapons.includes("spear");
   const rangedWeapon=config.rangedWeapon||(["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(config.type==="archers"?"bow":(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"))?"bow":null)));
   const hasBow=rangedWeapon==="bow";
   let weapon=(isCharacter||isCavalry||config.type==="swordsmen")?(["bow","crossbow","firearm"].includes(config.weapon)?"handWeapon":(config.weapon||"handWeapon")):"handWeapon";
