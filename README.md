@@ -29,6 +29,13 @@ This is not a verbatim implementation of any published rulebook. It is a small, 
 
 Remaining work: full wheel-and-align charge geometry, pursuit/overrun choices and exact flee/rally movement, broader panic triggers, precise multi-unit frontage/contact and support rules, terrain interactions, and more unit profiles and army rules. The between-round one-on-one facing/reform rule is an intentional house rule, not 6th-edition RAW. Keep rules logic separate from rendering as the project grows.
 
+## Battlefield terrain and manoeuvring
+
+- During deployment or battle, use the Terrain toolbar and drag on the field to place blue rivers, blue lakes/ponds, or grey stone walls; Erase removes the nearest feature and Off returns to normal selection.
+- Water is passable but costs double movement for the portion of a move spent in it. This applies to player movement and AI advances.
+- Stone walls are solid movement obstacles. Units can approach a wall, move along it, and move away, but cannot pass through it. For shooting across a wall, firearms are blocked if both shooter and target are more than 1 inch from it; bows suffer −1 to hit and crossbows −2. If the shooter is within 1 inch of the wall, that wall imposes no penalty; if the target is within 1 inch, any weapon suffers −1 to hit instead of being blocked.
+- During movement, drag a unit in any direction to advance, sidestep or move backwards while keeping its facing. Turn left/right 45° controls rotate in place for movement cost based on frontage; corner-drag pivots remain available.
+
 ## Development direction
 
 Prioritise meaningful unit roles, positioning, flanks, ranks, and morale. Avoid making weak attacks universally effective against heavily armoured or very tough targets merely through volume of attacks.
