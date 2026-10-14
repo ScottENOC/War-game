@@ -148,7 +148,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     return true;
   }
   function fireCannon(cannon, aimX, aimY, aimedUnit=null) {
-    if(!cannon?.isCannon||cannon.artilleryWounds<=0||cannon.shot||cannon.models<=0){say("This cannon cannot fire: it may be disabled, crewless, or already fired this turn.");return false;}
+    if(!cannon?.isCannon||!cannon.isSiege||cannon.artilleryWounds<=0||cannon.shot||cannon.models<=0){say("This cannon cannot fire: it may be disabled, crewless, or already fired this turn.");return false;}
     const ox=cannon.x*W(),oy=cannon.y*H(),tx=aimX*W(),ty=aimY*H(),dx=tx-ox,dy=ty-oy;
     const range=Math.hypot(dx,dy)/(W()/BATTLEFIELD_WIDTH_IN);
     if(range<0.5){say("Choose a target at least half an inch from the cannon.");return false;}
