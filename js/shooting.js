@@ -86,6 +86,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     return {visibleModels:visible.length,visibleModelsList:visible,visibleChampion,overUnitPenalty:visiblePenalties.length?Math.max(...visiblePenalties):0,arcShot:visibleArcShot,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
   }
   function shoot(u,target,standShoot) {
+    if(u?.isCannon)return fireCannon(u,target.x,target.y,target);
     const host=u.attachedTo?S.units[u.attachedTo]:null;
     if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged)return false;if(u.wallDefence?.posture==="hunker"){say(u.name+" is hunkered behind the wall and cannot shoot until it adopts an active posture.");return false;}if(u.ownsShield&&u.rangedMode!=="bow"){say(u.name+" has its shield ready; switch to bow before shooting.");return false;}
     const distance=dist(u,target),baseRange=u.range||BOW_RANGE,elevationRange=terrainRangeModifier(terrain(),u,target,W(),H()),range=Math.max(1,baseRange+elevationRange);
@@ -117,7 +118,20 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     result.friendlyFireCount=friendlyFireCount;
     result.hitModifier=result.pools.length?result.pools[0].hitModifier:0;
     const targetDiceStack=diceStack(u,result);u.shot=true;showAttack(standShoot?"Stand and shoot":"Shooting",u,target,result,"shoot");
-    const killed=applyDamage(target,result.wounds,true,result.cascadePlan);
+    let killed=0;
+    if(target.isCannon){
+      const split=roll(1)[0];
+      if(split<=4){
+        const artilleryTarget={...target,stats:{...target.stats,T:target.artilleryToughness||7,W:1},models:1,damage:0,isCharacter:false,champion:{enabled:false},championAlive:false,attachedCharacters:[],armour:"none",lightArmour:false,shield:false,skirmishing:false,cover:null};
+        const artilleryContext={...context,cover:null,singleCharacter:false,skirmisher:false,targetInMelee:false,coverHitPenaltyBonus:0};
+        const artilleryResult=shootingAttack(u,artilleryTarget,artilleryContext);
+        target.artilleryWounds=Math.max(0,target.artilleryWounds-artilleryResult.wounds);
+        say(target.name+" is hit on the cannon (4/6 chance): "+target.artilleryWounds+"/"+target.artilleryStartWounds+" wounds remain.");
+      }else{
+        killed=applyDamage(target,result.wounds,true,result.cascadePlan);
+        say("The shot is directed at the crew (2/6 chance).");
+      }
+    }else killed=applyDamage(target,result.wounds,true,result.cascadePlan);
     say(target.name+" loses "+killed+" model"+(killed===1?"":"s")+" to shooting.");
     if(friendlyFireCount){
       const friend=visibility.friendlyBlockers.slice().sort((a,b)=>dist(u,a)-dist(u,b))[0];
@@ -135,5 +149,70 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(!standShoot)panicTest(target);
     return true;
   }
-  return {shoot};
+  function fireCannon(cannon, aimX, aimY, aimedUnit=null) {
+    if(!cannon?.isCannon||cannon.artilleryWounds<=0||cannon.shot||cannon.models<=0){say("This cannon cannot fire: it may be disabled, crewless, or already fired this turn.");return false;}
+    const ox=cannon.x*W(),oy=cannon.y*H(),tx=aimX*W(),ty=aimY*H(),dx=tx-ox,dy=ty-oy;
+    const range=Math.hypot(dx,dy)/(W()/BATTLEFIELD_WIDTH_IN);
+    if(range<0.5){say("Choose a target at least half an inch from the cannon.");return false;}
+    if(range>48){say("Cannon target is beyond its 48-inch range.");return false;}
+    const dice=roll(2),raw=dice[0]+dice[1],bs=Math.max(0,cannon.stats.BS||0),deviation=Math.max(0,raw-bs),side=roll(1)[0]%2===0?-1:1;
+    const angle=Math.atan2(dy,dx)+side*deviation*Math.PI/180,travel=range*W()/BATTLEFIELD_WIDTH_IN;
+    const ex=ox+Math.cos(angle)*travel,ey=oy+Math.sin(angle)*travel,start={x:ox,y:oy},end={x:ex,y:ey};
+    const candidates=[];
+    for(const unit of units().filter(v=>v!==cannon&&!v.attachedTo&&alive(v)&&v.deployed!==false)){
+      const q=shape(unit),ux=unit.x*W(),uy=unit.y*H(),vx=ex-ox,vy=ey-oy,den=vx*vx+vy*vy||1;
+      const projection=((ux-ox)*vx+(uy-oy)*vy)/den;
+      if(projection<=0||projection>1)continue;
+      const nearest={x:ox+vx*projection,y:oy+vy*projection},radius=Math.hypot(q.depth/2,q.front/2);
+      if(Math.hypot(ux-nearest.x,uy-nearest.y)<=radius)candidates.push({kind:"unit",unit,at:projection});
+    }
+    for(const wall of (terrain()||[]).filter(t=>t.type==="wall"&&(t.wounds??2)>0)){
+      const a={x:wall.x1*W(),y:wall.y1*H()},b={x:wall.x2*W(),y:wall.y2*H()};
+      if(!segmentsIntersect(start,end,a,b))continue;
+      const vx=ex-ox,vy=ey-oy,projection=((a.x-ox)*vx+(a.y-oy)*vy)/(vx*vx+vy*vy||1);
+      if(projection>0&&projection<=1)candidates.push({kind:"wall",wall,at:projection});
+    }
+    candidates.sort((a,b)=>a.at-b.at);
+    cannon.shot=true;
+    say("<b>Cannon fire — "+cannon.name+"</b><div class=\"rollsummary\">2D6 "+dice.join(" + ")+" = "+raw+"; subtract BS "+bs+"; scatter "+deviation+"° "+(side<0?"left":"right")+".</div>");
+    let strength=10,impacts=0;
+    for(const item of candidates){
+      if(strength<=0)break;
+      if(item.kind==="wall"){
+        const wall=item.wall,need=woundTarget(strength,wall.toughness||7),die=roll(1)[0],wounded=need!==null&&die>=need,damage=wounded?(roll(1)[0]%3+1):0;
+        say("Cannonball strikes a wall (T"+(wall.toughness||7)+"): S"+strength+", wound roll "+die+" (need "+(need===null?"impossible":need)+")."+(wounded?" D3 damage: "+damage+".":" No wound."));
+        if(wounded){wall.wounds=Math.max(0,(wall.wounds??2)-damage);say("Wall has "+wall.wounds+" wound"+(wall.wounds===1?"":"s")+" remaining.");}
+      }else{
+        const target=item.unit;
+        if(target.isCannon){
+          const split=roll(1)[0];
+          if(split<=4){
+            const need=woundTarget(strength,target.artilleryToughness||7),die=roll(1)[0],wounded=need!==null&&die>=need,damage=wounded?(roll(1)[0]%3+1):0;
+            if(wounded)target.artilleryWounds=Math.max(0,target.artilleryWounds-damage);
+            say("Cannonball hits "+target.name+" itself: S"+strength+", wound "+die+" (need "+(need===null?"impossible":need)+")"+(wounded?"; D3 damage "+damage+"; "+target.artilleryWounds+" cannon wounds remain.":"; no wound."));
+          }else{
+            const need=woundTarget(strength,target.stats.T),die=roll(1)[0],wounded=need!==null&&die>=need,damage=wounded?(roll(1)[0]%3+1):0;
+            if(wounded)applyDamage(target,damage,true);
+            say("Cannonball hits "+target.name+"'s crew: S"+strength+", wound "+die+" (need "+(need===null?"impossible":need)+")"+(wounded?"; D3 damage "+damage+".":"; no wound."));
+          }
+        }else{
+          const need=woundTarget(strength,target.stats.T),die=roll(1)[0],wounded=need!==null&&die>=need,save=saveTarget(target,strength,1);
+          if(!wounded){say("Cannonball hits "+target.name+" but fails to wound (S"+strength+", roll "+die+", need "+(need===null?"impossible":need)+").");}
+          else{
+            const saveDie=save!==null&&save<=6?roll(1)[0]:null,saved=saveDie!==null&&saveDie!==1&&saveDie>=save,damage=saved?0:(roll(1)[0]%3+1);
+            if(!saved){
+              if(target.isCharacter){target.characterWounds=Math.max(0,(target.characterWounds??target.stats.W)-damage);if(target.characterWounds<=0)target.models=0;}
+              else applyDamage(target,damage,true);
+              say("Cannonball wounds "+target.name+" at S"+strength+"; D3 damage "+damage+(saveDie!==null?"; armour save "+saveDie+" vs "+save:"")+".");
+            }else say(target.name+" saves the cannon hit ("+saveDie+" vs "+save+").");
+          }
+        }
+      }
+      impacts++;strength--;
+    }
+    if(!candidates.length)say("The cannonball strikes the ground at the aim point; nothing is in its path.");
+    else if(candidates.length>1)say("The cannonball penetrates through "+impacts+" objects; Strength drops by 1 after each impact.");
+    return true;
+  }
+  return {shoot,fireCannon};
 }
