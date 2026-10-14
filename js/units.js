@@ -10,7 +10,7 @@ export function unitCost(config, faction) {
   const rangedCost=ranged==="bow"?(eagleKit?0:elf&&type==="cavalry"&&(config.freeCavalryOption||"bow")==="bow"?0:(elf?3:2)*(character?1:models)):ranged==="crossbow"?3*(character?1:models):ranged==="firearm"?4*(character?1:models):0;
   if(character){
     const meleeCost=weapons.reduce((sum,w)=>sum+(["halberd","greatWeapon"].includes(w)?4:w==="spear"&&config.mounted?(eagleKit?0:2):w==="lance"&&config.mounted?(eagleKit?2:4):0),0);
-    return (type==="legendaryLord"?160:type==="shadowElf"?165:(elf?(type==="lord"?120:75):(type==="lord"?80:50)))+(config.heavyArmour&&!["legendaryLord","shadowElf"].includes(type)?4:0)+(config.magicArmour?10:0)+(config.weapon==="magicSword"?10:0)+meleeCost+(config.mounted?8:0)+(config.mounted&&config.barding?4:0)+(config.shield&&type!=="legendaryLord"?2:0)+rangedCost+upgrades+skillCost;
+    return (type==="legendaryLord"?160:type==="shadowElf"?165:(elf?(type==="lord"?120:75):(type==="lord"?80:50)))+(config.heavyArmour&&!eagleKit&&!["legendaryLord","shadowElf"].includes(type)?4:0)+(config.magicArmour&&!eagleKit?10:0)+(config.weapon==="magicSword"?10:0)+meleeCost+(config.mounted?8:0)+(config.mounted&&config.barding&&!eagleKit?4:0)+(config.shield&&type!=="legendaryLord"?2:0)+rangedCost+upgrades+skillCost;
   }
   if(type==="cavalry"){
     const free=config.freeCavalryOption||"bow";
@@ -25,13 +25,13 @@ export function unitCost(config, faction) {
 function buildUnit(template,config,faction,opposing=false) {
   const elf=faction==="highElves"&&!opposing,stats={...template.stats};
   const isCannon=config.type==="cannon",isBoltThrower=config.type==="boltThrower",isSiegeEngine=isCannon||isBoltThrower;
-  const isCharacter=["captain","lord","legendaryLord","shadowElf"].includes(config.type),isCavalry=config.type==="cavalry",mountType=config.mountType||(config.mounted?"horse":"none"),mounted=isCavalry||(isCharacter&&mountType!=="none"),isEagleMounted=elf&&mountType==="eagle"&&(isCharacter||isCavalry);
+  const isCharacter=["captain","lord","legendaryLord","shadowElf"].includes(config.type),isCavalry=config.type==="cavalry",mountType=config.mountType||(config.mounted?"horse":"none"),mounted=isCavalry||(isCharacter&&mountType!=="none"),isEagleMounted=elf&&mountType==="eagle"&&(isCharacter||isCavalry),hasHeavyArmour=!!config.heavyArmour&&!isEagleMounted,hasMagicArmour=!!config.magicArmour&&!isEagleMounted,hasBarding=!!config.barding&&!isEagleMounted;
   if(mounted)stats.M=isEagleMounted?12:elf?9:8;
   if(isCannon)stats.M=2;
   if(isBoltThrower)stats.M=elf?2.5:2;
-  if(mounted&&config.barding&&!elf)stats.M=7;
-  if(isCharacter&&!mounted&&config.heavyArmour&&!config.magicArmour&&!elf)stats.M=Math.max(1,stats.M-1);
-  const lightArmour=isBoltThrower|| (isCavalry||isCharacter?(!config.heavyArmour):(elf||!!config.lightArmour));
+  if(mounted&&hasBarding&&!elf)stats.M=7;
+  if(isCharacter&&!mounted&&hasHeavyArmour&&!hasMagicArmour&&!elf)stats.M=Math.max(1,stats.M-1);
+  const lightArmour=isBoltThrower|| (isCavalry||isCharacter?(!hasHeavyArmour):(elf||!!config.lightArmour));
   const meleeWeapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])].filter(w=>!["bow","crossbow","firearm"].includes(w)),ownsShield=!!config.shield;if(!meleeWeapons.includes("handWeapon"))meleeWeapons.unshift("handWeapon");const spears=config.weapon==="spear"&&meleeWeapons.includes("spear");
   const rangedWeapon=isCannon?null:(isBoltThrower?"bow":(config.rangedWeapon||(["bow","crossbow","firearm","magicBow"].includes(config.weapon)?config.weapon:(config.type==="archers"?"bow":(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"))?"bow":null)))));
   const hasBow=rangedWeapon==="bow"||rangedWeapon==="magicBow";
@@ -57,10 +57,10 @@ function buildUnit(template,config,faction,opposing=false) {
     bsCap:rangedWeapon==="crossbow"?4:rangedWeapon==="firearm"?3:null,
     ranksToShoot:mounted?1:rangedWeapon==="bow"?(elf?4:3):rangedWeapon==="crossbow"||rangedWeapon==="firearm"?2:0,
     overUnitPenalty:rangedWeapon==="bow"?1:rangedWeapon==="crossbow"?2:2,
-    spears:weapon==="spear"&&meleeWeapons.includes("spear")&&!mounted&&!isCharacter,spearRanks:elf?3:2,hasBow,range:isBoltThrower?48+(config.campaignStats?.range||0):rangedWeapon==="magicBow"?36:rangedWeapon==="bow"?(elf?30:24):rangedWeapon==="crossbow"?30:rangedWeapon==="firearm"?20:(template.range||24),lightArmour,heavyArmour:!!config.heavyArmour,barding:!!config.barding,
+    spears:weapon==="spear"&&meleeWeapons.includes("spear")&&!mounted&&!isCharacter,spearRanks:elf?3:2,hasBow,range:isBoltThrower?48+(config.campaignStats?.range||0):rangedWeapon==="magicBow"?36:rangedWeapon==="bow"?(elf?30:24):rangedWeapon==="crossbow"?30:rangedWeapon==="firearm"?20:(template.range||24),lightArmour,heavyArmour:hasHeavyArmour,barding:hasBarding,
     alwaysStrikesFirst:!!template.alwaysStrikesFirst,elvenArchery:!!elf&&!!config.elvenArchery,skills:{...(config.skills||{})},skirmishCapable:!!config.skills?.skirmish||!!template.grantsSkirmish,grantsSkirmish:!!template.grantsSkirmish,dualWield:!!template.dualWield||(config.meleeWeapons||[]).includes("offhandWeapon")||!!config.offhandWeapon,gender:template.gender||null,skirmishing:false,skirmishCombatRound:0,faction:elf?"highElves":"empire",mountType:mounted?(isEagleMounted?"eagle":"horse"):"none",flyingMount:!!isEagleMounted,mountStats:mounted?{...(template.mountStats||{A:1,WS:3,I:3,S:3})}:null,
     baseWidthIn:isCannon?80/25.4:isBoltThrower?60/25.4:mounted?25/25.4:20/25.4,baseDepthIn:isCannon?100/25.4:isBoltThrower?80/25.4:mounted?50/25.4:20/25.4,heightIn:config.heightIn??(mounted?2.5:1.7),flightAltitudeIn:isEagleMounted?12:0,
-    armour:isCharacter&&config.magicArmour?"fullPlate":(isCavalry||isCharacter?(config.heavyArmour?"heavy":"light"):(lightArmour?"light":"none")),magicArmour:!!config.magicArmour,ignoreArmourSaves:!!template.ignoreArmourSaves,canDeployAnywhere:!!template.canDeployAnywhere,coverHitPenaltyBonus:!!template.coverHitPenaltyBonus,wardSave:null,
+    armour:isCharacter&&hasMagicArmour?"fullPlate":(isCavalry||isCharacter?(hasHeavyArmour?"heavy":"light"):(lightArmour?"light":"none")),magicArmour:hasMagicArmour,ignoreArmourSaves:!!template.ignoreArmourSaves,canDeployAnywhere:!!template.canDeployAnywhere,coverHitPenaltyBonus:!!template.coverHitPenaltyBonus,wardSave:null,
     largeTarget:false,singleCharacter:false,skirmisher:false,cover:null,x:config.x,y:config.y,facing:config.facing,deployed:config.side==="ai",
     engaged:false,engagedWith:null,engagedSide:null,chargedSide:null,attackedFromSide:null,flankedBy:null,
     formationWidth:isSiegeEngine?3:5,canCounterCharge:!isSiegeEngine,fleeingCharge:false,activated:false,moved:false,shot:false,charged:false,fled:false,
