@@ -63,7 +63,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     blockers.forEach(v=>{v._losPolygon=unitFootprint(v);});
     const candidates=blockers.map(v=>({u:v}));
     const visible=[],friendlyBlockers=new Set();
-    let anyOver=false,visibleChampion=false;
+    let anyOver=false,visibleChampion=false,friendlyShotCount=0;
     for(const shooter of shooters){
       let best=null;
       for(const aim of targets){
@@ -80,9 +80,9 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
         if(!blocked&&(!best||over<best.over))best={over,friendly:crossedFriendly};
         if(best&&best.over===0)break;
       }
-      if(best){visible.push(shooter);if(shooter.champion)visibleChampion=true;if(best.over>0)anyOver=true;(best.friendly||[]).forEach(v=>friendlyBlockers.add(v));}
+      if(best){visible.push(shooter);if(shooter.champion)visibleChampion=true;if(best.over>0)anyOver=true;if(best.friendly?.length)friendlyShotCount++;(best.friendly||[]).forEach(v=>friendlyBlockers.add(v));}
     }
-    return {visibleModels:visible.length,visibleChampion,overUnitPenalty:anyOver?(u.overUnitPenalty||0):0,friendlyBlockers:[...friendlyBlockers]};
+    return {visibleModels:visible.length,visibleChampion,overUnitPenalty:anyOver?(u.overUnitPenalty||0):0,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
   }
   function shoot(u,target,standShoot) {
     const host=u.attachedTo?S.units[u.attachedTo]:null;
@@ -109,7 +109,8 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     let friendlyFireCount=0;
     const ffMargin=u.rangedWeapon==="bow"?1:u.rangedWeapon==="crossbow"?2:0;
     if(ffMargin&&visibility.friendlyBlockers?.length){
-      result.pools.forEach(pool=>{let followIndex=0;pool.friendlyFireMisses=(pool.hitRolls||[]).map((die,i)=>{let missBy=(pool.hitNeed||7)-die,nearMiss=pool.hitNeed<=6&&missBy>=1&&missBy<=ffMargin;if(pool.hitNeed>=7&&pool.hitNeed<10&&die===6){const follow=pool.hitFollowUps?.[followIndex++];missBy=(pool.hitNeed-3)-(follow??0);nearMiss=follow!=null&&missBy>=1&&missBy<=ffMargin;}const eligible=!(pool.hitPasses||[])[i]&&nearMiss;if(eligible)friendlyFireCount++;return eligible;});});
+      let availableFriendlyShots=visibility.friendlyShotCount||0;
+      result.pools.forEach(pool=>{let followIndex=0;pool.friendlyFireMisses=(pool.hitRolls||[]).map((die,i)=>{let missBy=(pool.hitNeed||7)-die,nearMiss=pool.hitNeed<=6&&missBy>=1&&missBy<=ffMargin;if(pool.hitNeed>=7&&pool.hitNeed<10&&die===6){const follow=pool.hitFollowUps?.[followIndex++];missBy=(pool.hitNeed-3)-(follow??0);nearMiss=follow!=null&&missBy>=1&&missBy<=ffMargin;}const candidate=!(pool.hitPasses||[])[i]&&nearMiss,eligible=candidate&&availableFriendlyShots>0;if(eligible){friendlyFireCount++;availableFriendlyShots--;}return eligible;});});
     }
     result.friendlyFireCount=friendlyFireCount;
     result.hitModifier=result.pools.length?result.pools[0].hitModifier:0;
