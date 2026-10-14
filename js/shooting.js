@@ -63,7 +63,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     // Unit footprints are oriented rectangles, computed from the same formation geometry used by movement.
     blockers.forEach(v=>{v._losPolygon=unitFootprint(v);});
     const candidates=blockers.map(v=>({u:v}));
-    const visible=[],friendlyBlockers=new Set();
+    const visible=[],friendlyBlockers=new Set(),visiblePenalties=[];
     let visibleChampion=false,friendlyShotCount=0;
     for(const shooter of shooters){
       let best=null;
@@ -95,9 +95,9 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
         if(!best||penalty<best.penalty)best={over:crossed.length,penalty,friendly:crossed.filter(v=>v.side===u.side)};
         if(best&&best.penalty===0)break;
       }
-      if(best){visible.push(shooter);if(shooter.champion)visibleChampion=true;if(best.over>0&&best.friendly?.length)friendlyShotCount++;(best.friendly||[]).forEach(v=>friendlyBlockers.add(v));}
+      if(best){visible.push(shooter);visiblePenalties.push(best.penalty);if(shooter.champion)visibleChampion=true;if(best.over>0&&best.friendly?.length)friendlyShotCount++;(best.friendly||[]).forEach(v=>friendlyBlockers.add(v));}
     }
-    return {visibleModels:visible.length,visibleChampion,overUnitPenalty:visible.reduce((max,shooter)=>{const targetPoints=modelCentres(target);let bestPenalty=Infinity;for(const aim of targetPoints){const blockers=units().filter(v=>v!==u&&v.id!==u.attachedTo&&v!==target&&!v.attachedTo&&alive(v)&&!v.fled&&v.deployed!==false);const crossed=blockers.filter(v=>v._losPolygon&&lineCrossesUnit(shooter,aim,v));if(u.rangedWeapon==="firearm"&&crossed.length)continue;const infantry=crossed.filter(v=>!v.isCavalry&&!v.mounted),cavalry=crossed.filter(v=>v.isCavalry||v.mounted);let penalty=crossed.length?(u.overUnitPenalty||0):0;if(crossed.length&&(u.isCavalry||u.mounted)&&infantry.length===crossed.length)penalty--;if(crossed.length&&!(u.isCavalry||u.mounted)&&cavalry.length)penalty++;if(crossed.length&&(target.isCavalry||target.mounted)&&infantry.length===crossed.length)penalty--;penalty=Math.max(0,penalty);bestPenalty=Math.min(bestPenalty,penalty);}if(bestPenalty===Infinity)return max;return Math.max(max,bestPenalty);},0),friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
+    return {visibleModels:visible.length,visibleChampion,overUnitPenalty:visiblePenalties.length?Math.max(...visiblePenalties):0,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
   }
   function shoot(u,target,standShoot) {
     const host=u.attachedTo?S.units[u.attachedTo]:null;
