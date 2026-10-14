@@ -139,7 +139,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(target.isCannon||target.isBoltThrower){
       target.artilleryWounds=Math.max(0,target.artilleryWounds-cannonBodyWounds);
       killed=cannonCrewWounds?applyDamage(target,cannonCrewWounds,true,crewCascadePlan):0;
-      if(cannonBodyWounds)say(target.name+" engine takes "+cannonBodyWounds+" wound"+(cannonBodyWounds===1?"":"s")+"; "+target.artilleryWounds+"/"+target.artilleryStartWounds+" wounds remain.");
+      if(cannonBodyWounds){if(target.artilleryWounds<=0&&target.crewMovementCharacteristic){target.stats.M=target.crewMovementCharacteristic;target.baseMove=target.stats.M;say(target.name+" is destroyed; surviving crew can now move at their full Movement characteristic ("+target.stats.M+" inches).");}say(target.name+" engine takes "+cannonBodyWounds+" wound"+(cannonBodyWounds===1?"":"s")+"; "+target.artilleryWounds+"/"+target.artilleryStartWounds+" wounds remain.");}
       if(cannonCrewWounds)say(target.name+" crew take "+cannonCrewWounds+" wound"+(cannonCrewWounds===1?"":"s")+" and lose "+killed+" model"+(killed===1?"":"s")+".");
     }else killed=applyDamage(target,result.wounds,true,result.cascadePlan);
     if(!target.isCannon&&!target.isBoltThrower)say(target.name+" loses "+killed+" model"+(killed===1?"":"s")+" to shooting.");
