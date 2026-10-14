@@ -83,7 +83,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       }
       if(best){visible.push(shooter);visiblePenalties.push(best.penalty);visibleArcShot=visibleArcShot||!!best.arcNeeded;if(shooter.champion)visibleChampion=true;if(best.over>0&&best.friendly?.length)friendlyShotCount++;(best.friendly||[]).forEach(v=>friendlyBlockers.add(v));}
     }
-    return {visibleModels:visible.length,visibleChampion,overUnitPenalty:visiblePenalties.length?Math.max(...visiblePenalties):0,arcShot:visibleArcShot,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
+    return {visibleModels:visible.length,visibleModelsList:visible,visibleChampion,overUnitPenalty:visiblePenalties.length?Math.max(...visiblePenalties):0,arcShot:visibleArcShot,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
   }
   function shoot(u,target,standShoot) {
     const host=u.attachedTo?S.units[u.attachedTo]:null;
@@ -97,7 +97,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     const rankLimit=Math.max(1,u.ranksToShoot||1);
     const visibility=getShotVisibility(u,target,rankLimit);
     all.forEach(v=>{delete v._losPolygon;delete v._losCorners;});
-    if(!visibility.visibleModels){say(u.name+" cannot shoot "+target.name+": no eligible models have line of sight; the target may be behind an intervening unit or obstacle.");return false;}if(u.wallDefence?.posture==="active")visibility.visibleModels=Math.max(1,Math.ceil(visibility.visibleModels*.6));
+    if(!visibility.visibleModels){say(u.name+" cannot shoot "+target.name+": no eligible models have line of sight; the target may be behind an intervening unit or obstacle.");return false;}if(u.wallDefence?.posture==="active"){const exposureRoll=roll(1)[0],fraction=.4+exposureRoll*.05,allVisible=visibility.visibleModelsList||[],exposedCount=Math.max(1,Math.ceil(allVisible.length*fraction));visibility.visibleModelsList=allVisible.map(model=>({model,roll:roll(1)[0]})).sort((a,b)=>a.roll-b.roll).slice(0,exposedCount).map(entry=>entry.model);visibility.visibleModels=visibility.visibleModelsList.length;visibility.visibleChampion=visibility.visibleModelsList.some(model=>model.champion);say(u.name+" exposes "+visibility.visibleModels+" of "+allVisible.length+" models at the wall for this volley (exposure roll "+exposureRoll+").");}
     const context={
       longRange:distance>range/2,moved:!!u.moved,elvenArchery:!!u.elvenArchery,standShoot,distance,elevationRange,
       targetCharging:!!target.charged,targetInMelee:!!target.engaged,largeTarget:!!target.largeTarget,
