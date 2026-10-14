@@ -86,7 +86,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     return {visibleModels:visible.length,visibleModelsList:visible,visibleChampion,overUnitPenalty:visiblePenalties.length?Math.max(...visiblePenalties):0,arcShot:visibleArcShot,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
   }
   function shoot(u,target,standShoot) {
-    if(u?.isCannon)return fireCannon(u,target.x,target.y,target);
+    if(u?.isCannon)return fireCannon(u,target.x,target.y,target);\n    if(u?.isSiegeEngine&&u.moved&&!u.moveAndFire){say(u.name+" cannot fire after moving without the Move and Fire upgrade.");return false;}
     const host=u.attachedTo?S.units[u.attachedTo]:null;
     if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged)return false;if(u.wallDefence?.posture==="hunker"){say(u.name+" is hunkered behind the wall and cannot shoot until it adopts an active posture.");return false;}if(u.ownsShield&&u.rangedMode!=="bow"){say(u.name+" has its shield ready; switch to bow before shooting.");return false;}
     const distance=dist(u,target),baseRange=u.range||BOW_RANGE,elevationRange=terrainRangeModifier(terrain(),u,target,W(),H()),range=Math.max(1,baseRange+elevationRange);
@@ -160,13 +160,13 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
   }
   function fireCannon(cannon, aimX, aimY, aimedUnit=null) {
     const isBoltThrower=!!cannon?.isBoltThrower,weaponLabel=isBoltThrower?"bolt thrower":"cannon",projectileLabel=isBoltThrower?"bolt":"cannonball",rangeLimit=cannon?.artilleryRange||(isBoltThrower?48:60),baseStrength=cannon?.artilleryStrength||(isBoltThrower?7:10),armourPiercing=cannon?.artilleryArmourPiercing??(isBoltThrower?0:1);
-    if(!(cannon?.isCannon||cannon?.isBoltThrower)||!cannon.isSiege||cannon.artilleryWounds<=0||cannon.shot||cannon.models<=0){say("This "+weaponLabel+" cannot fire: it may be disabled, crewless, or already fired this turn.");return false;}
+    if(!(cannon?.isCannon||cannon?.isBoltThrower)||!cannon.isSiege||cannon.artilleryWounds<=0||cannon.shot||cannon.models<=0||(cannon.moved&&!cannon.moveAndFire)){say("This "+weaponLabel+" cannot fire: it may be disabled, crewless, or already fired this turn.");return false;}
     const ox=cannon.x*W(),oy=cannon.y*H(),tx=aimX*W(),ty=aimY*H(),dx=tx-ox,dy=ty-oy;
     const range=Math.hypot(dx,dy)/(W()/BATTLEFIELD_WIDTH_IN);
     const aimElevation=terrainElevationAt(terrain(),tx,ty,W(),H())+(aimedUnit?(aimedUnit.heightIn||1.7)*.75:0),muzzleElevation=terrainElevationAt(terrain(),ox,oy,W(),H())+(cannon.heightIn||1.7)*.75,elevationDifference=aimElevation-muzzleElevation,maxRange=Math.max(1,rangeLimit-elevationDifference),elevationAngle=Math.atan2(elevationDifference,Math.max(.1,range))*180/Math.PI;
     if(range<0.5){say("Choose a target at least half an inch from the cannon.");return false;}
     if(range>maxRange){say("Target is out of range for the "+weaponLabel+": "+range.toFixed(1)+" inches away; maximum at this elevation is "+maxRange.toFixed(1)+" inches.");return false;}
-    const dice=roll(2),raw=dice[0]+dice[1],bs=Math.max(0,cannon.stats.BS||0),deviation=Math.max(0,raw-bs),side=roll(1)[0]%2===0?-1:1;
+    const dice=roll(2),raw=dice[0]+dice[1],bs=Math.max(0,cannon.stats.BS||0),deviation=Math.max(0,raw-bs)+(cannon.moved&&cannon.moveAndFire?1:0),side=roll(1)[0]%2===0?-1:1;
     const angle=Math.atan2(dy,dx)+side*deviation*Math.PI/180,pxPerIn=W()/BATTLEFIELD_WIDTH_IN,cos=Math.cos(angle),sin=Math.sin(angle);
     const edgeX=cos>0?(W()-ox)/cos:cos<0?(0-ox)/cos:Infinity,edgeY=sin>0?(H()-oy)/sin:sin<0?(0-oy)/sin:Infinity,edgeDistance=Math.max(0,Math.min(edgeX,edgeY)),travel=aimedUnit?Math.min(maxRange*pxPerIn,edgeDistance):range*pxPerIn;
     const ex=ox+cos*travel,ey=oy+sin*travel,start={x:ox,y:oy},end={x:ex,y:ey};
