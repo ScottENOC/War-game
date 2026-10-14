@@ -1,5 +1,5 @@
 import { terrainShotEffect, terrainElevationAt, terrainRangeModifier } from "./terrain.js";
-export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, startBattle, say, equipMeleeWeapon, setRangedMode, shape, PX_PER_IN, terrain = () => [], BATTLEFIELD_WIDTH_IN = 48 }) {
+export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, resolvePursuit, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, startBattle, say, equipMeleeWeapon, setRangedMode, shape, PX_PER_IN, terrain = () => [], BATTLEFIELD_WIDTH_IN = 48 }) {
   function equipmentMarks(u){const marks=[];if(u.rangedWeapon==="bow")marks.push('<span title="Bow" aria-label="Bow">🏹</span>');if(u.rangedWeapon==="crossbow")marks.push('<span title="Crossbow" aria-label="Crossbow">🎯</span>');if(u.rangedWeapon==="firearm")marks.push('<span title="Firearm" aria-label="Firearm">🔫</span>');if((u.meleeWeapons||[]).includes("greatWeapon")||u.weapon==="greatWeapon")marks.push('<span title="Great weapon" aria-label="Great weapon">⚔️</span>');if((u.meleeWeapons||[]).includes("halberd")||u.weapon==="halberd")marks.push('<span title="Halberd" aria-label="Halberd">🪓</span>');if((u.meleeWeapons||[]).includes("spear")||u.weapon==="spear")marks.push('<span title="Spear" aria-label="Spear">🔱</span>');if(u.weapon==="lance"||(u.meleeWeapons||[]).includes("lance"))marks.push('<span title="Lance" aria-label="Lance">🗡️</span>');if(u.ownsShield)marks.push('<span title="Shield" aria-label="Shield">🛡️</span>');return marks.length?'<span class="equipment-marks" aria-label="Equipment">'+marks.join("")+"</span>":"";}
   function renderRoster() {
     for (const side of ["ai", "player"]) {
@@ -102,6 +102,7 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
       btn("End turn", "▶", endTurn, !S.combatResolved); return;
     }
     if (S.phase === "break") btn("Break test", "🎲", resolveBreak);
+    if (S.phase === "pursuit") { btn("Pursue fleeing unit", "🏃", () => resolvePursuit("pursue")); btn("Hold position", "🛡️", () => resolvePursuit("hold")); }
   }
   $("logtoggle").onclick = () => $("logpanel").classList.add("open");
   $("logclose").onclick = () => $("logpanel").classList.remove("open");
