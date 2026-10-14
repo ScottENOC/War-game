@@ -114,7 +114,7 @@ const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_I
 
 function startBattleWithArmy(army,faction){campaignBattle=false;S.autoTerrain=true;S.terrainSeed=Date.now();S.units=createUnitsFromArmy(army,faction);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();}
 function startCampaignBattle(army,enemyConfig){
- S.autoTerrain=false;const playerUnits=createUnitsFromArmy(army,"empire");
+ S.autoTerrain=true;S.terrainSeed=Date.now();const playerUnits=createUnitsFromArmy(army,"empire");
  const enemyPair=createUnitsFromArmy([{type:"swordsmen",models:20,weapon:"handWeapon",champion:false}], "empire");
  const enemy=enemyPair.a1;enemy.id="a1";enemy.side="ai";enemy.name="Enemy Human Swordsmen";enemy.x=.78;enemy.y=.5;enemy.facing=Math.PI;enemy.deployed=true;
  S.units={...Object.fromEntries(Object.entries(playerUnits).filter(([id])=>id.startsWith("p"))),a1:enemy};
