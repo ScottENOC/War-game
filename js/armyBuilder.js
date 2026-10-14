@@ -18,15 +18,15 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     {key:"Ld",label:"Leadership",unit:1,character:3}
   ];
   function unitPoints(u){
-    const e=elf(),m=u.models||1,character=isCharacterType(u.type);
+    const e=elf(),m=u.models||1,character=isCharacterType(u.type),eagleKit=e&&character&&u.mountType==="eagle";
     if(u.type==="cannon")return 80;if(u.type==="boltThrower")return 60;
     const upgradeCost=statUpgrades.reduce((sum,s)=>sum+(u.upgrades&&u.upgrades[s.key]?(character?s.character:s.unit*m):0),0);
     const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3:0),0);
     const weapons=[...new Set([...(u.meleeWeapons||[]),u.weapon||"handWeapon"])];
     const ranged=u.rangedWeapon||(u.type==="archers"?"bow":null);
-    const rangedCost=ranged==="bow"?(e&&u.type==="cavalry"&&(u.freeCavalryOption||"bow")==="bow"?0:(e?3:2)*(character?1:m)):ranged==="crossbow"?3*(character?1:m):ranged==="firearm"?4*(character?1:m):0;
+    const rangedCost=ranged==="bow"?(eagleKit?0:e&&u.type==="cavalry"&&(u.freeCavalryOption||"bow")==="bow"?0:(e?3:2)*(character?1:m)):ranged==="crossbow"?3*(character?1:m):ranged==="firearm"?4*(character?1:m):0;
     if(character){
-      const meleeCost=weapons.reduce((sum,w)=>sum+(["halberd","greatWeapon"].includes(w)?4:w==="spear"&&u.mounted?2:w==="lance"&&u.mounted?4:0),0);
+      const meleeCost=weapons.reduce((sum,w)=>sum+(["halberd","greatWeapon"].includes(w)?4:w==="spear"&&u.mounted?(eagleKit?0:2):w==="lance"&&u.mounted?(eagleKit?2:4):0),0);
       return (u.type==="legendaryLord"?160:u.type==="shadowElf"?165:(e?(u.type==="lord"?120:75):(u.type==="lord"?80:50)))+(u.heavyArmour&&!["legendaryLord","shadowElf"].includes(u.type)?4:0)+(u.magicArmour?10:0)+(u.weapon==="magicSword"?10:0)+meleeCost+(u.mounted?8:0)+(u.mounted&&u.barding?4:0)+(u.shield&&u.type!=="legendaryLord"?2:0)+rangedCost+upgradeCost+skillCost;
     }
     if(u.type==="cavalry"){
