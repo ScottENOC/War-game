@@ -27,6 +27,8 @@ function buildUnit(template,config,faction,opposing=false) {
   const isCannon=config.type==="cannon",isBoltThrower=config.type==="boltThrower",isSiegeEngine=isCannon||isBoltThrower;
   const isCharacter=["captain","lord","legendaryLord","shadowElf"].includes(config.type),isCavalry=config.type==="cavalry",mountType=config.mountType||(config.mounted?"horse":"none"),mounted=isCavalry||(isCharacter&&mountType!=="none"),isEagleMounted=elf&&mountType==="eagle"&&(isCharacter||isCavalry);
   if(mounted)stats.M=isEagleMounted?12:elf?9:8;
+  if(isCannon)stats.M=2;
+  if(isBoltThrower)stats.M=elf?2.5:2;
   if(mounted&&config.barding&&!elf)stats.M=7;
   if(isCharacter&&!mounted&&config.heavyArmour&&!config.magicArmour&&!elf)stats.M=Math.max(1,stats.M-1);
   const lightArmour=isBoltThrower|| (isCavalry||isCharacter?(!config.heavyArmour):(elf||!!config.lightArmour));
