@@ -40,7 +40,7 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
         const long=d>range/2?(u.rangedWeapon==="firearm"?2:1):0,moved=u.moved?1:0,single=(target.isCharacter||target.models===1||target.skirmishing)?1:0,charge=target.charged?1:0,cover=target.cover==="hard"?2:target.cover==="soft"?1:0;
         const reducible=long+moved+over,elfReduce=u.elvenArchery?Math.min(2,reducible):0;
         const meleePenalty=target.engaged&&!over?1:0,bs=Math.min(u.stats.BS,u.bsCap||99),need=7-bs+long+moved+over+single+charge+cover+meleePenalty-elfReduce-(target.largeTarget?1:0);
-        let status=d>range?"OUT OF RANGE":!arc?"OUTSIDE FIRING ARC":blocked?"BLOCKED BY FRIENDLY UNIT": "Hit roll: "+(need>=10?"impossible (10+)":need+"+");
+        let status=d>range?"OUT OF RANGE":!arc?"OUTSIDE FIRING ARC":blocked?"BLOCKED BY FRIENDLY UNIT": "Hit roll: "+(need>=10?"impossible (10+)":need>=7?"6, then "+(need-3)+"+":need+"+");
         preview.textContent=target.name+" · "+d.toFixed(1)+"″ / "+range+"″ · "+status+(friendlyBlockers.length&&u.rangedWeapon!=="firearm"?" · ! FRIENDLY FIRE POSSIBLE":"");
         if(friendlyBlockers.length&&u.rangedWeapon!=="firearm")preview.classList.add("friendly-fire");
         el.append(preview);
