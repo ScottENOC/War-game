@@ -9,7 +9,8 @@ const bodyKinds=[
   {id:"human_lord_body",label:"Human lord body",faction:"empire",kind:"lord"},
   {id:"elf_lord_body",label:"Elf lord body",faction:"highElves",kind:"lord"},
   {id:"edric_voss_body",label:"Lord-Marshal Edric Voss (named character)",faction:"empire",kind:"legendaryLord",namedCharacter:true},
-  {id:"lethariel_starweaver_body",label:"Lethariel Starweaver (named character)",faction:"highElves",kind:"shadowElf",namedCharacter:true}
+  {id:"lethariel_starweaver_body",label:"Lethariel Starweaver (named character)",faction:"highElves",kind:"shadowElf",namedCharacter:true},
+  {id:"aelthir_dawnwing_body",label:"Aelthir, the Dawnwing (named character)",faction:"highElves",kind:"pegasusChampion",namedCharacter:true}
 ];
 const bitDefs=[
  ...bodyKinds.map(x=>({id:x.id,label:x.label,kind:"body"})),
@@ -54,7 +55,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  const bitCount=id=>data.bits[id]||0;
  const addBit=(id,n=1)=>{data.bits[id]=(data.bits[id]||0)+n;};
  const consumeBit=id=>{if(bitCount(id)<1)return false;data.bits[id]--;if(!data.bits[id])delete data.bits[id];return true;};
- const modelLabel=m=>(m.faction==="empire"?"Empire ":"High Elf ")+title(m.type)+" · "+title(m.weapon)+(m.offhandWeapon?" + Off-hand sword":"")+(m.shield?" + Shield":"")+((m.backWeapons||[]).length?" · Back: "+m.backWeapons.map(title).join(", "):"")+(m.mountType==="eagle"?" · Pegasus":m.mounted?" · Mounted":"");
+ const modelLabel=m=>(m.name==="Aelthir, the Dawnwing"?"Aelthir, the Dawnwing":(m.faction==="empire"?"Empire ":"High Elf ")+title(m.type))+" · "+title(m.weapon)+(m.offhandWeapon?" + Off-hand sword":"")+(m.shield?" + Shield":"")+((m.backWeapons||[]).length?" · Back: "+m.backWeapons.map(title).join(", "):"")+(m.mountType==="eagle"?" · Pegasus":m.mounted?" · Mounted":"");
  const canUseBit=(m,id)=>{
    const b=bitDefs.find(x=>x.id===id);if(!b)return false;
    if(b.kind==="backWeapon")return m.weapon!==b.weapon&&!(m.backWeapons||[]).includes(b.weapon);
@@ -144,7 +145,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     const rangedArms=body.faction==="empire"?["both_bow","both_crossbow","both_firearm"]:["both_bow"];
     const arms=named?["signature"]:(cavalry?(body.faction==="empire"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]):(hero?(horseWrap.value!=="no"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","both_greatWeapon","both_halberd",...rangedArms]):(body.faction==="empire"?["right_sword","right_spear","both_bow","both_crossbow","both_firearm","both_greatWeapon","both_halberd"]:["right_sword","right_spear","both_bow","both_greatWeapon","both_halberd"])));
     
-    arms.forEach(id=>{const d=bitDefs.find(b=>b.id===id);const o=document.createElement("option");o.value=id;o.textContent=named?(body.kind==="legendaryLord"?"Signature sword and shield (included)":"Magical longbow and dual swords (included)"):d.label+" ("+bitCount(id)+" owned)";weapon.append(o);});
+    arms.forEach(id=>{const d=bitDefs.find(b=>b.id===id);const o=document.createElement("option");o.value=id;o.textContent=named?(body.kind==="legendaryLord"?"Signature sword and shield (included)":body.kind==="pegasusChampion"?"Magical lance and shield (included)":"Magical longbow and dual swords (included)"):d.label+" ("+bitCount(id)+" owned)";weapon.append(o);});
     horseWrap.parentElement.hidden=named&&body.kind==="shadowElf"?!cavalry:!cavalry&&!hero;
     if(!cavalry&&!hero)horseWrap.value="no";
     if(cavalry)horseWrap.value="yes";
@@ -160,16 +161,16 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     if(body.faction!==faction.value){status.textContent="Choose a main body matching the selected faction.";return;}
     if(mounted&&arms.weapon==="halberd"){status.textContent="Halberds cannot be used by mounted models.";return;}
     if(mountType==="eagle"&&(body.faction!=="highElves"||arms.weapon==="halberd")){status.textContent="Pegasi are available to High Elves and cannot carry halberds.";return;}
-    const addShield=named?body.kind==="legendaryLord":shieldCheck.checked&&arms.kind==="right";if(!named&&shieldCheck.checked&&!addShield){status.textContent="Two-handed weapons use both arms and cannot take a shield.";return;}
+    const addShield=named?["legendaryLord","pegasusChampion"].includes(body.kind):shieldCheck.checked&&arms.kind==="right";if(!named&&shieldCheck.checked&&!addShield){status.textContent="Two-handed weapons use both arms and cannot take a shield.";return;}
     const addOffhand=named?body.kind==="shadowElf":offhandCheck.checked&&!offhandLabel.hidden;if(!named&&addOffhand&&arms.kind!=="right"){status.textContent="A left-hand sword needs a free right-hand weapon, not a two-handed weapon.";return;}if(addShield&&addOffhand){status.textContent="A model cannot hold both a shield and a sword in its left hand.";return;}
-    const need=[body.id];if(!named){need.push(arms.id);if(arms.kind==="right")need.push(addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm");}if(mounted)need.push(mountType==="eagle"?"eagle":"horse");if(mountType==="eagle")need.push("back_bow");
+    const need=[body.id];if(!named){need.push(arms.id);if(arms.kind==="right")need.push(addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm");}if(mounted)need.push(mountType==="eagle"?"eagle":"horse");if(mountType==="eagle"&&body.kind!=="pegasusChampion")need.push("back_bow");
     const shortage=need.find(id=>bitCount(id)<1);if(shortage){status.textContent="Not enough bits: "+bitDefs.find(b=>b.id===shortage).label+".";return;}
     if(body.kind==="cavalry"&&!mounted){status.textContent="Cavalry bodies require a horse.";return;}
     if(body.faction==="highElves"&&["crossbow","firearm"].includes(arms.weapon)){status.textContent="High Elves refuse crossbows and firearms.";return;}
     need.forEach(consumeBit);
     const type=body.kind==="infantry"?(arms.weapon==="bow"?"archers":"swordsmen"):body.kind;
-    const namedName=body.kind==="legendaryLord"?"Lord-Marshal Edric Voss":body.kind==="shadowElf"?"Lethariel Starweaver":null;
-    const model=makeModel("assembled-"+data.nextId++,body.faction,type,arms.weapon,{mounted,mountType,shield:addShield,backWeapons:mountType==="eagle"?["bow"]:[],name:namedName||(body.faction==="empire"?"Empire ":"High Elf ")+title(type)+" · "+title(arms.weapon)+(addShield?" + Shield":"")+(mounted?" · Mounted":"")});
+    const namedName=body.kind==="legendaryLord"?"Lord-Marshal Edric Voss":body.kind==="shadowElf"?"Lethariel Starweaver":body.kind==="pegasusChampion"?"Aelthir, the Dawnwing":null;
+    const model=makeModel("assembled-"+data.nextId++,body.faction,type,arms.weapon,{mounted,mountType,shield:addShield,backWeapons:mountType==="eagle"&&body.kind!=="pegasusChampion"?["bow"]:[],name:namedName||(body.faction==="empire"?"Empire ":"High Elf ")+title(type)+" · "+title(arms.weapon)+(addShield?" + Shield":"")+(mounted?" · Mounted":"")});
     model.components=[body.id,...(!named?[arms.id,...(arms.kind==="right"?[addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm"]:[])]:[]),...(mounted?[mountType==="eagle"?"eagle":"horse"]:[]),...(mountType==="eagle"?["back_bow"]:[])];model.offhandWeapon=addOffhand;model.namedCharacter=named;
     data.models.push(model);save();renderAll();status.textContent="Model assembled and added to your collection.";
    });panel.append(assemble);
@@ -199,7 +200,8 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    {faction:"highElves",type:"captain",weapon:"handWeapon",cost:75},
    {faction:"highElves",type:"lord",weapon:"handWeapon",cost:120},
    {faction:"empire",type:"legendaryLord",weapon:"handWeapon",cost:160,namedCharacter:true},
-   {faction:"highElves",type:"shadowElf",weapon:"magicBow",cost:165,namedCharacter:true}
+   {faction:"highElves",type:"shadowElf",weapon:"magicBow",cost:165,namedCharacter:true},
+   {faction:"highElves",type:"pegasusChampion",weapon:"lance",cost:110,mounted:true,mountType:"eagle",shield:true,namedCharacter:true}
   ];
   const weights=pool.map(p=>1/p.cost),sum=weights.reduce((a,b)=>a+b,0);let n=Math.random()*sum;
   for(let i=0;i<pool.length;i++){n-=weights[i];if(n<=0)return pool[i];}return pool[0];
@@ -216,7 +218,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const def=valid[Math.floor(Math.random()*valid.length)];addBit(def.id);
    $("lootbox-result").textContent="Lootbox: "+def.label+". Added one bit.";
   }else{
-   const p=rarityWeightedModel();const namedName=p.type==="legendaryLord"?"Lord-Marshal Edric Voss":p.type==="shadowElf"?"Lethariel Starweaver":null;const model=makeModel("loot-"+data.nextId++,p.faction,p.type,p.weapon,{mounted:!!p.mounted,mountType:p.mountType|| (p.mounted?"horse":"none"),shield:p.type==="legendaryLord",backWeapons:p.mountType==="eagle"?["bow"]:[],name:namedName||(p.faction==="empire"?"Empire ":"High Elf ")+title(p.type)+" · "+title(p.weapon)+(p.mountType==="eagle"?" · Pegasus":p.mounted?" · Mounted":"")});model.namedCharacter=!!p.namedCharacter;model.offhandWeapon=p.type==="shadowElf";model.components=p.namedCharacter?[p.type==="legendaryLord"?"edric_voss_body":"lethariel_starweaver_body"]:model.components;
+   const p=rarityWeightedModel();const namedName=p.type==="legendaryLord"?"Lord-Marshal Edric Voss":p.type==="shadowElf"?"Lethariel Starweaver":p.type==="pegasusChampion"?"Aelthir, the Dawnwing":null;const model=makeModel("loot-"+data.nextId++,p.faction,p.type,p.weapon,{mounted:!!p.mounted,mountType:p.mountType|| (p.mounted?"horse":"none"),shield:p.type==="legendaryLord",backWeapons:p.mountType==="eagle"?["bow"]:[],name:namedName||(p.faction==="empire"?"Empire ":"High Elf ")+title(p.type)+" · "+title(p.weapon)+(p.mountType==="eagle"?" · Pegasus":p.mounted?" · Mounted":"")});model.namedCharacter=!!p.namedCharacter;model.offhandWeapon=p.type==="shadowElf";model.components=p.namedCharacter?[p.type==="legendaryLord"?"edric_voss_body":"lethariel_starweaver_body"]:model.components;
    data.models.push(model);$("lootbox-result").textContent="Lootbox: "+modelLabel(model)+". Added one complete model.";
   }
   save();renderAll();
