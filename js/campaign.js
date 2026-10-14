@@ -10,7 +10,7 @@ const statChoices=[
 const warMachineChoices=[
  {key:"BS",label:"+1 Ballistic Skill (crew)",description:"The crew gain +1 BS, improving both multi-shot accuracy and single-shot scatter."},
  {key:"range",label:"+6 inches range",description:"Adds 6 inches to both firing modes."},
- {key:"moveAndFire",label:"Move and Fire",description:"The bolt thrower may move up to 3 inches and fire in the same activation. Multi-shot suffers the normal −1 moving penalty; single-shot scatter increases by 1°."}
+ {key:"moveAndFire",label:"Move and Fire",description:"The bolt thrower may move up to 2.5 inches and fire in the same activation. Multi-shot suffers the normal −1 moving penalty; single-shot scatter increases by 1°."}
 ];
 const skillChoices=[
  {key:"rerollOnesMelee",label:"Melee Mastery",requires:"WS",description:"Reroll natural 1s when making melee hit rolls."},
