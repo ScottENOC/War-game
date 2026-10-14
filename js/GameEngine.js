@@ -125,14 +125,12 @@ function validateArmy(army,faction){
  const owned=collectionManager?.getInventory()||[],used=new Set(),shortages=[];
  for(const entry of army){
   const count=(entry.type==="captain"||entry.type==="lord")?1:(entry.models||1);
-  const weapon=entry.rangedWeapon|| (entry.type==="archers"?"bow":entry.type==="swordsmen"?(entry.weapon||(entry.spears?"spear":"handWeapon")):entry.type==="cavalry"&&faction==="highElves"&&(entry.freeCavalryOption||"bow")==="spear"&&(entry.weapon||"handWeapon")==="handWeapon"?"spear":(entry.weapon||"handWeapon"));
   const mounted=entry.type==="cavalry"||((entry.type==="captain"||entry.type==="lord")&&!!entry.mounted);
-  const shield=!!entry.shield;
   const matches=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&(m.type===entry.type||(["swordsmen","archers"].includes(entry.type)&&["swordsmen","archers"].includes(m.type)))&&!!m.mounted===mounted);
-  if(matches.length<count)shortages.push((entry.type==="captain"||entry.type==="lord"?1:count-matches.length)+" "+(entry.type==="captain"||entry.type==="lord"?entry.type:entry.type)+" model(s) needed with "+weapon+(shield?" + shield":"")+(mounted?" mounted":""));
+  if(matches.length<count)shortages.push((count-matches.length)+" "+entry.type+" model(s) needed"+(mounted?" mounted":""));
   matches.slice(0,count).forEach(m=>used.add(m.id));
  }
- return shortages.length?"Not enough matching miniatures: "+shortages.join("; ")+". Add models or components in your Collection, or enable the developer bypass.":"";
+ return shortages.length?"Not enough matching miniatures: "+shortages.join("; ")+". Add models in your Collection, or enable the developer bypass.":"";
 }
 let armyBuilder=null;
 armyBuilder=createArmyBuilder({ $, onStart:startBattleWithArmy, onBack:showCollection, validateArmy });
