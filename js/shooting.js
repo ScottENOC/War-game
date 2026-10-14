@@ -6,7 +6,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(result.moved)extras.push(result.elvenArchery?"moved (Elven Archery applies)":"moved (−1)");
     if(result.standShoot)extras.push("stand & shoot (−1)");
     if(result.targetCharging)extras.push("target charging (−1)");
-    if(result.overUnitPenalty)extras.push((result.terrainWallPenalty?"stone wall (−"+result.terrainWallPenalty+")":"firing over intervening unit(s) (−"+result.overUnitPenalty+")"));
+    if(result.overUnitPenalty)extras.push("firing over intervening unit(s) (−"+result.overUnitPenalty+")");if(result.terrainWallPenalty)extras.push("stone wall (−"+result.terrainWallPenalty+")");
     if(result.friendlyFireCount)extras.push("<b>FRIENDLY FIRE: "+result.friendlyFireCount+" near-miss shot(s)</b>");
     if(result.hitModifier)extras.push("hit modifier "+(result.hitModifier>0?"+":"")+result.hitModifier);
     const extra=kind==="shoot"&&extras.length?" · "+extras.join(", "):"";
