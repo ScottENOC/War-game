@@ -14,7 +14,8 @@ export const FACTIONS = {
     captain:{name:"High Elf Hero",short:"Hero",kind:"hero",models:1,points:75,stats:{M:5,WS:6,BS:6,S:4,T:4,W:2,I:6,A:2,Ld:9},alwaysStrikesFirst:true},
     lord:{name:"High Elf Lord",short:"Lord",kind:"hero",models:1,points:120,stats:{M:5,WS:6,BS:6,S:4,T:4,W:3,I:6,A:3,Ld:10},alwaysStrikesFirst:true},
     shadowElf:{name:"Lethariel Starweaver",short:"Lethariel",kind:"hero",models:1,points:165,namedCharacter:true,gender:"female",canDeployAnywhere:true,coverHitPenaltyBonus:true,grantsSkirmish:true,dualWield:true,magicBow:true,defaultHeavyArmour:true,stats:{M:5,WS:7,BS:7,S:4,T:3,W:3,I:7,A:3,Ld:10},alwaysStrikesFirst:true},
-    cavalry:{name:"High Elf Cavalry",short:"Cavalry",kind:"cavalry",models:5,points:24,stats:{M:9,WS:4,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},mountStats:{A:1,WS:3,I:3,S:3},alwaysStrikesFirst:true,range:24}
+    cavalry:{name:"High Elf Cavalry",short:"Cavalry",kind:"cavalry",models:5,points:24,stats:{M:9,WS:4,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},mountStats:{A:1,WS:3,I:3,S:3},alwaysStrikesFirst:true,range:24},
+    boltThrower:{name:"High Elf Bolt Thrower",short:"Bolt Thrower",kind:"artillery",models:2,points:60,stats:{M:0,WS:3,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},range:48}
   }},
   opposing: { name:"Opposing Host", units:{
     swordsmen:{name:"Opposing Swordsmen",short:"Swordsmen",kind:"melee",models:20,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
