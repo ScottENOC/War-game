@@ -50,7 +50,7 @@ function buildUnit(template,config,faction,opposing=false) {
     overUnitPenalty:rangedWeapon==="bow"?1:rangedWeapon==="crossbow"?2:2,
     spears:weapon==="spear"&&meleeWeapons.includes("spear")&&!mounted&&!isCharacter,spearRanks:elf?3:2,hasBow,range:rangedWeapon==="bow"?(elf?30:24):rangedWeapon==="crossbow"?30:rangedWeapon==="firearm"?20:(template.range||24),lightArmour,heavyArmour:!!config.heavyArmour,barding:!!config.barding,
     alwaysStrikesFirst:!!template.alwaysStrikesFirst,elvenArchery:!!elf&&!!config.elvenArchery,skills:{...(config.skills||{})},skirmishCapable:!!config.skills?.skirmish,skirmishing:false,skirmishCombatRound:0,faction:elf?"highElves":"empire",mountStats:mounted?{...(template.mountStats||{A:1,WS:3,I:3,S:3})}:null,
-    baseWidthIn:mounted?25/25.4:20/25.4,baseDepthIn:mounted?50/25.4:20/25.4,heightIn:mounted?2.5:1.7,
+    baseWidthIn:mounted?25/25.4:20/25.4,baseDepthIn:mounted?50/25.4:20/25.4,heightIn:config.heightIn??(mounted?2.5:1.7),
     armour:isCavalry||isCharacter?(config.heavyArmour?"heavy":"light"):(lightArmour?"light":"none"),wardSave:null,
     largeTarget:false,singleCharacter:false,skirmisher:false,cover:null,x:config.x,y:config.y,facing:config.facing,deployed:config.side==="ai",
     engaged:false,engagedWith:null,engagedSide:null,chargedSide:null,attackedFromSide:null,flankedBy:null,
