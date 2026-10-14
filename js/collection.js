@@ -52,7 +52,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    if(b.kind==="shield")return !m.shield&&!["greatWeapon","halberd","bow"].includes(m.weapon);
    if(b.kind==="mount")return (m.type==="captain"||m.type==="lord"||m.type==="cavalry")&&!m.mounted&&m.weapon!=="halberd";
    if(b.kind==="right")return m.weapon==="none"&&m.type!=="archers"&&m.type!=="swordsmen";
-   if(b.kind==="leftSword")return !m.shield&&!m.components?.includes("left_sword")&&(m.faction==="highElves"||((m.type==="captain"||m.type==="lord")&&m.faction==="empire"));
+   if(b.kind==="leftSword")return !m.shield&&!["greatWeapon","halberd","bow","crossbow","firearm"].includes(m.weapon)&&!m.components?.includes("left_sword")&&(m.faction==="highElves"||((m.type==="captain"||m.type==="lord")&&m.faction==="empire"));
    if(b.kind==="twohand")return m.weapon==="none"&&(b.weapon!=="halberd"||!m.mounted);
    return false;
  };
