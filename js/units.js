@@ -32,6 +32,9 @@ function buildUnit(template,config,faction,opposing=false) {
   const rangedWeapon=config.rangedWeapon||(["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(config.type==="archers"?"bow":(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"))?"bow":null)));
   const hasBow=rangedWeapon==="bow";
   let weapon=(isCharacter||isCavalry||config.type==="swordsmen")?(["bow","crossbow","firearm"].includes(config.weapon)?"handWeapon":(config.weapon||"handWeapon")):"handWeapon";
+  const factionName=faction==="highElves"&&!opposing?"High Elf":opposing?"Opposing":faction==="highElves"?"High Elf":"Empire";
+  const unitName=isCharacter?template.name:isCavalry?template.name:rangedWeapon==="bow"?factionName+" Archers":rangedWeapon==="crossbow"?factionName+" Crossbowmen":rangedWeapon==="firearm"?factionName+" Handgunners":weapon==="greatWeapon"?(factionName==="High Elf"?"High Elf Swordmasters":factionName+" Greatswords"):weapon==="halberd"?factionName+" Halberdiers":weapon==="spear"?factionName+" Spearmen":factionName+" Swordsmen";
+  const unitShort=isCharacter?template.short:isCavalry?template.short:rangedWeapon==="bow"?"Archers":rangedWeapon==="crossbow"?"Crossbows":rangedWeapon==="firearm"?"Handguns":weapon==="greatWeapon"?"Greatswords":weapon==="halberd"?"Halberds":weapon==="spear"?"Spearmen":"Swordsmen";
   const shield=ownsShield&&(weapon==="spear"||(!["greatWeapon","halberd"].includes(weapon)&&(!rangedWeapon||config.rangedMode!=="bow")));
   for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.upgrades&&config.upgrades[key])stats[key]+=1;
   const campaignStats=config.campaignStats||{};
@@ -41,7 +44,7 @@ function buildUnit(template,config,faction,opposing=false) {
   if(mounted&&weapon==="halberd")weapon="handWeapon";
   if(isCavalry&&elf&&(config.freeCavalryOption||"bow")==="spear"){if(!meleeWeapons.includes("spear"))meleeWeapons.push("spear");if(weapon==="handWeapon")weapon="spear";}
   const costFaction=opposing?"empire":faction;
-  return {id:config.id,name:template.name+" "+config.index,short:template.short,side:config.side,kind:template.kind,
+  return {id:config.id,name:unitName+" "+config.index,short:unitShort,side:config.side,kind:template.kind,
     isCharacter,isCavalry,mounted,isGeneral:false,attachedTo:null,baseMove:stats.M,
     models:isCharacter?1:config.models,startModels:isCharacter?1:config.models,points:unitCost(config,costFaction),weapon,meleeWeapons,hasSpear:meleeWeapons.includes("spear"),hasGreatWeapon:meleeWeapons.includes("greatWeapon"),hasHalberd:meleeWeapons.includes("halberd"),ownsShield,shield:ownsShield&&(!["greatWeapon","halberd"].includes(weapon)),rangedWeapon,hasRangedWeapon:!!rangedWeapon,rangedMode:ownsShield&&rangedWeapon?"shield":rangedWeapon?"bow":"shield",
     rangedStrength:["crossbow","firearm"].includes(rangedWeapon)?4:3,armourPiercing:rangedWeapon==="firearm"?1:0,
