@@ -8,7 +8,7 @@ button:active{transform:scale(.96)}button:disabled{opacity:.3}
 .unit-card{width:66px;height:58px;min-width:0;min-height:0;padding:5px;display:flex;align-items:center;justify-content:center;position:relative;border-radius:12px;background:rgba(16,22,25,.57);border:1px solid rgba(255,255,255,.25)}
 .unit-card.selected{outline:2px solid #ffe39b;background:rgba(71,78,65,.8)}
 .unit-card.unmoved{box-shadow:inset 0 0 0 2px #e0c276}
-.unit-card .sigil{font-size:27px;line-height:1}
+.unit-card .sigil{font-size:24px;line-height:1}.unit-card .equipment-marks{position:absolute;left:3px;right:3px;top:2px;font-size:10px;line-height:1.05;letter-spacing:-1px;white-space:nowrap;text-align:left;pointer-events:none;overflow:hidden;max-width:100%}
 .unit-card .count{position:absolute;right:3px;bottom:2px;border-radius:6px;padding:0px 4px;font-size:11px;font-weight:800;background:#101619d9}
 .unit-card .bar{position:absolute;left:5px;right:5px;bottom:0;height:3px;border-radius:3px;background:#d0bd8a}
 .unit-card .bar.ai{background:#ba6158}
