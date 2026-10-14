@@ -2,7 +2,7 @@ import { FACTIONS } from "./factions.js";
 
 export function unitCost(config, faction) {
   const elf=faction==="highElves",type=config.type,models=config.models||1,character=["captain","lord","legendaryLord","shadowElf"].includes(type);
-  if(type==="cannon")return 80;
+  if(type==="cannon")return 80;if(type==="boltThrower")return 60;
   const upgrades=[{key:"M",unit:2,character:5},{key:"WS",unit:2,character:5},{key:"BS",unit:2,character:5},{key:"S",unit:3,character:6},{key:"T",unit:4,character:8},{key:"I",unit:1,character:3},{key:"Ld",unit:1,character:3}].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
   const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
   const weapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])];
@@ -24,20 +24,20 @@ export function unitCost(config, faction) {
 }
 function buildUnit(template,config,faction,opposing=false) {
   const elf=faction==="highElves"&&!opposing,stats={...template.stats};
-  const isCannon=config.type==="cannon";
+  const isCannon=config.type==="cannon",isBoltThrower=config.type==="boltThrower",isSiegeEngine=isCannon||isBoltThrower;
   const isCharacter=["captain","lord","legendaryLord","shadowElf"].includes(config.type),isCavalry=config.type==="cavalry",mounted=isCavalry||(isCharacter&&!!config.mounted);
   if(mounted)stats.M=elf?9:8;
   if(mounted&&config.barding&&!elf)stats.M=7;
   if(isCharacter&&!mounted&&config.heavyArmour&&!config.magicArmour&&!elf)stats.M=Math.max(1,stats.M-1);
   const lightArmour=isCavalry||isCharacter?(!config.heavyArmour):(elf||!!config.lightArmour);
   const meleeWeapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])].filter(w=>!["bow","crossbow","firearm"].includes(w)),ownsShield=!!config.shield;if(!meleeWeapons.includes("handWeapon"))meleeWeapons.unshift("handWeapon");const spears=config.weapon==="spear"&&meleeWeapons.includes("spear");
-  const rangedWeapon=isCannon?null:(config.rangedWeapon||(["bow","crossbow","firearm","magicBow"].includes(config.weapon)?config.weapon:(config.type==="archers"?"bow":(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"))?"bow":null))));
+  const rangedWeapon=isCannon?null:(isBoltThrower?"bow":(config.rangedWeapon||(["bow","crossbow","firearm","magicBow"].includes(config.weapon)?config.weapon:(config.type==="archers"?"bow":(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"))?"bow":null)))));
   const hasBow=rangedWeapon==="bow"||rangedWeapon==="magicBow";
   let weapon=(isCharacter||isCavalry||config.type==="swordsmen")?(["bow","crossbow","firearm"].includes(config.weapon)?"handWeapon":(config.weapon||"handWeapon")):"handWeapon";
   const factionName=faction==="highElves"&&!opposing?"High Elf":opposing?"Opposing":faction==="highElves"?"High Elf":"Empire";
   const primaryMelee=weapon==="greatWeapon"||(meleeWeapons||[]).includes("greatWeapon")?"greatWeapon":weapon==="halberd"||(meleeWeapons||[]).includes("halberd")?"halberd":weapon==="spear"||(meleeWeapons||[]).includes("spear")?"spear":weapon;
-  const unitName=isCannon?template.name:isCharacter?template.name:isCavalry?template.name:rangedWeapon==="bow"?factionName+" Archers":rangedWeapon==="crossbow"?factionName+" Crossbowmen":rangedWeapon==="firearm"?factionName+" Handgunners":primaryMelee==="greatWeapon"?(factionName==="High Elf"?"High Elf Swordmasters":factionName+" Greatswords"):primaryMelee==="halberd"?factionName+" Halberdiers":primaryMelee==="spear"?factionName+" Spearmen":factionName+" Swordsmen";
-  const unitShort=isCannon?template.short:isCharacter?template.short:isCavalry?template.short:rangedWeapon==="bow"?"Archers":rangedWeapon==="crossbow"?"Crossbows":rangedWeapon==="firearm"?"Handguns":primaryMelee==="greatWeapon"?"Greatswords":primaryMelee==="halberd"?"Halberds":primaryMelee==="spear"?"Spearmen":"Swordsmen";
+  const unitName=isSiegeEngine?template.name:isCharacter?template.name:isCavalry?template.name:rangedWeapon==="bow"?factionName+" Archers":rangedWeapon==="crossbow"?factionName+" Crossbowmen":rangedWeapon==="firearm"?factionName+" Handgunners":primaryMelee==="greatWeapon"?(factionName==="High Elf"?"High Elf Swordmasters":factionName+" Greatswords"):primaryMelee==="halberd"?factionName+" Halberdiers":primaryMelee==="spear"?factionName+" Spearmen":factionName+" Swordsmen";
+  const unitShort=isSiegeEngine?template.short:isCharacter?template.short:isCavalry?template.short:rangedWeapon==="bow"?"Archers":rangedWeapon==="crossbow"?"Crossbows":rangedWeapon==="firearm"?"Handguns":primaryMelee==="greatWeapon"?"Greatswords":primaryMelee==="halberd"?"Halberds":primaryMelee==="spear"?"Spearmen":"Swordsmen";
   const shield=ownsShield&&(weapon==="spear"||(!["greatWeapon","halberd"].includes(weapon)&&(!rangedWeapon||config.rangedMode!=="bow")));
   for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.upgrades&&config.upgrades[key])stats[key]+=1;
   
@@ -49,7 +49,7 @@ function buildUnit(template,config,faction,opposing=false) {
   if(isCavalry&&elf&&(config.freeCavalryOption||"bow")==="spear"){if(!meleeWeapons.includes("spear"))meleeWeapons.push("spear");if(weapon==="handWeapon")weapon="spear";}
   const costFaction=opposing?"empire":faction;
   return {id:config.id,name:isCannon?unitName:(template.namedCharacter?unitName:unitName+" "+config.index),short:unitShort,side:config.side,kind:template.kind,
-    isCharacter,isCavalry,mounted,isCannon,isSiege:isCannon,crewModels:isCannon?3:0,artilleryWounds:isCannon?3:0,artilleryStartWounds:isCannon?3:0,artilleryToughness:isCannon?7:0,artilleryStrength:isCannon?10:0,artilleryArmourPiercing:isCannon?1:0,baseMove:isCannon?0:stats.M,
+    isCharacter,isCavalry,mounted,isCannon,isBoltThrower,isSiegeEngine,isSiege:isSiegeEngine,crewModels:isCannon?3:isBoltThrower?2:0,artilleryWounds:isCannon?3:isBoltThrower?2:0,artilleryStartWounds:isCannon?3:isBoltThrower?2:0,artilleryToughness:isSiegeEngine?7:0,artilleryStrength:isCannon?10:isBoltThrower?7:0,artilleryArmourPiercing:isCannon?1:0,artilleryRange:isCannon?60:isBoltThrower?48:0,baseMove:isSiegeEngine?0:stats.M,
     models:isCharacter?1:config.models,startModels:isCharacter?1:config.models,points:unitCost(config,costFaction),weapon,meleeWeapons,hasSpear:meleeWeapons.includes("spear"),hasGreatWeapon:meleeWeapons.includes("greatWeapon"),hasHalberd:meleeWeapons.includes("halberd"),ownsShield,shield:ownsShield&&(!["greatWeapon","halberd"].includes(weapon)),rangedWeapon,hasRangedWeapon:!!rangedWeapon,rangedMode:ownsShield&&rangedWeapon?"shield":rangedWeapon?"bow":"shield",
     rangedStrength:rangedWeapon==="magicBow"?stats.S:["crossbow","firearm"].includes(rangedWeapon)?4:3,rangedUsesUserStats:rangedWeapon==="magicBow",armourPiercing:rangedWeapon==="firearm"?1:0,
     bsCap:rangedWeapon==="crossbow"?4:rangedWeapon==="firearm"?3:null,
@@ -57,12 +57,12 @@ function buildUnit(template,config,faction,opposing=false) {
     overUnitPenalty:rangedWeapon==="bow"?1:rangedWeapon==="crossbow"?2:2,
     spears:weapon==="spear"&&meleeWeapons.includes("spear")&&!mounted&&!isCharacter,spearRanks:elf?3:2,hasBow,range:rangedWeapon==="magicBow"?36:rangedWeapon==="bow"?(elf?30:24):rangedWeapon==="crossbow"?30:rangedWeapon==="firearm"?20:(template.range||24),lightArmour,heavyArmour:!!config.heavyArmour,barding:!!config.barding,
     alwaysStrikesFirst:!!template.alwaysStrikesFirst,elvenArchery:!!elf&&!!config.elvenArchery,skills:{...(config.skills||{})},skirmishCapable:!!config.skills?.skirmish||!!template.grantsSkirmish,grantsSkirmish:!!template.grantsSkirmish,dualWield:!!template.dualWield||(config.meleeWeapons||[]).includes("offhandWeapon")||!!config.offhandWeapon,gender:template.gender||null,skirmishing:false,skirmishCombatRound:0,faction:elf?"highElves":"empire",mountStats:mounted?{...(template.mountStats||{A:1,WS:3,I:3,S:3})}:null,
-    baseWidthIn:isCannon?80/25.4:mounted?25/25.4:20/25.4,baseDepthIn:isCannon?100/25.4:mounted?50/25.4:20/25.4,heightIn:config.heightIn??(mounted?2.5:1.7),
+    baseWidthIn:isCannon?80/25.4:isBoltThrower?60/25.4:mounted?25/25.4:20/25.4,baseDepthIn:isCannon?100/25.4:isBoltThrower?80/25.4:mounted?50/25.4:20/25.4,heightIn:config.heightIn??(mounted?2.5:1.7),
     armour:isCharacter&&config.magicArmour?"fullPlate":(isCavalry||isCharacter?(config.heavyArmour?"heavy":"light"):(lightArmour?"light":"none")),magicArmour:!!config.magicArmour,ignoreArmourSaves:!!template.ignoreArmourSaves,canDeployAnywhere:!!template.canDeployAnywhere,coverHitPenaltyBonus:!!template.coverHitPenaltyBonus,wardSave:null,
     largeTarget:false,singleCharacter:false,skirmisher:false,cover:null,x:config.x,y:config.y,facing:config.facing,deployed:config.side==="ai",
     engaged:false,engagedWith:null,engagedSide:null,chargedSide:null,attackedFromSide:null,flankedBy:null,
-    formationWidth:isCannon?3:5,canCounterCharge:!isCannon,fleeingCharge:false,activated:false,moved:false,shot:false,charged:false,fled:false,
-    moveUsed:0,damage:0,shootCasualties:0,panicTested:false,skirmishing:isCannon,cover:isCannon?"soft":null,stats,champion:{enabled:!!config.champion&&!isCharacter&&!isCavalry,bonus:config.championBonus||(config.type==="archers"?"BS":"A"),stats:null},attachedCharacters:[],
+    formationWidth:isSiegeEngine?3:5,canCounterCharge:!isSiegeEngine,fleeingCharge:false,activated:false,moved:false,shot:false,charged:false,fled:false,
+    moveUsed:0,damage:0,shootCasualties:0,panicTested:false,skirmishing:isSiegeEngine,cover:isSiegeEngine?"soft":null,stats,champion:{enabled:!!config.champion&&!isCharacter&&!isCavalry,bonus:config.championBonus||(config.type==="archers"?"BS":"A"),stats:null},attachedCharacters:[],
     characterWounds:isCharacter?template.stats.W:null,delayedDeath:false,delayedDeathSnapshot:null,championAlive:!!config.champion,championWounds:config.champion?template.stats.W:0};
 }
 export function createUnitsFromArmy(army,faction="empire") {
@@ -74,7 +74,7 @@ export function createUnitsFromArmy(army,faction="empire") {
       else if(!["lance","greatWeapon"].includes(aiEntry.weapon))aiEntry.weapon="spear";
     }
     units["p"+n]=buildUnit(FACTIONS[playerFaction].units[entry.type],{...playerEntry,id:"p"+n,index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
-    const opposingType=FACTIONS.opposing.units[entry.type]?entry.type:(entry.type==="cannon"?"swordsmen":(["legendaryLord","shadowElf"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
+    const opposingType=FACTIONS.opposing.units[entry.type]?entry.type:(["cannon","boltThrower"].includes(entry.type)?"swordsmen":(["legendaryLord","shadowElf"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
     units["a"+n]=buildUnit(FACTIONS.opposing.units[opposingType],{...opposingEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},"empire",true);
   });
   Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter&&!u.hasRangedWeapon).forEach(hero=>{
