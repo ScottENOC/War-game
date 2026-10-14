@@ -122,7 +122,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       const sum=key=>parts.reduce((n,p)=>n+(p[key]||0),0),flat=key=>parts.flatMap(p=>p[key]||[]);
       result={attacks:sum("attacks"),hits:sum("hits"),woundsBeforeSave:sum("woundsBeforeSave"),saved:sum("saved"),wardSaved:sum("wardSaved"),wounds:sum("wounds"),hitNeed:parts.find(p=>p.hitNeed!=null)?.hitNeed??7,woundNeed:parts.find(p=>p.woundNeed!=null)?.woundNeed??null,saveNeed:parts.find(p=>p.saveNeed!=null)?.saveNeed??null,pools:parts.flatMap(p=>p.pools||[]),hitRolls:flat("hitRolls"),hitPasses:flat("hitPasses"),hitFollowUps:flat("hitFollowUps"),hitFollowUpPasses:flat("hitFollowUpPasses"),hitRerolls:flat("hitRerolls"),hitRerollPasses:flat("hitRerollPasses"),woundRolls:flat("woundRolls"),saveRolls:flat("saveRolls"),wardRolls:flat("wardRolls"),cascadePlan:crewResult?.cascadePlan||bodyResult?.cascadePlan||null};
       cannonBodyWounds=bodyResult?.wounds||0;cannonCrewWounds=crewResult?.wounds||0;crewCascadePlan=crewResult?.cascadePlan||null;cannonSplitInfo={bodyShots,crewShots,allocationRolls};
-      say("Cannon target allocation: "+bodyShots+" shot(s) at cannon, "+crewShots+" at crew (allocation dice "+(allocationRolls.join(", ")||"none")+").");
+      say((target.isBoltThrower?"Bolt thrower":"Cannon")+" target allocation: "+bodyShots+" shot(s) at engine, "+crewShots+" at crew (allocation dice "+(allocationRolls.join(", ")||"none")+").");
     }else result=shootingAttack(u,target,context);
     Object.assign(result,context);
     let friendlyFireCount=0;
