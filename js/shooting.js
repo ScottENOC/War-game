@@ -72,10 +72,10 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
         const dx=aim.x-shooter.x,dy=aim.y-shooter.y,den=dx*dx+dy*dy||1;
         const startZ=terrainElevationAt(terrain(),shooter.x,shooter.y,W(),H())+(u.heightIn||1.7)*.75;
         const endZ=terrainElevationAt(terrain(),aim.x,aim.y,W(),H())+(target.heightIn||1.7)*.75;
-        const arcHeight=(u.rangedWeapon==="bow"?2.5:u.rangedWeapon==="crossbow"?1.25:0)*Math.min(1,Math.hypot(dx,dy)/(u.range||24));
+        const arcHeight=(u.rangedWeapon==="bow"?2.5:u.rangedWeapon==="crossbow"?1.25:0)*Math.min(1,(Math.hypot(dx,dy)/(W()/BATTLEFIELD_WIDTH_IN))/(u.range||24));
         for(const block of candidates){if(!block.u._losPolygon||!lineCrossesUnit(shooter,aim,block.u))continue;const bx=block.u.x*W(),by=block.u.y*H(),p=Math.max(0,Math.min(1,((bx-shooter.x)*dx+(by-shooter.y)*dy)/den)),top=terrainElevationAt(terrain(),bx,by,W(),H())+(block.u.heightIn||((block.u.isCavalry||block.u.mounted)?2.5:1.7));if(startZ+(endZ-startZ)*p<top){crossed.push(block.u);if(startZ+(endZ-startZ)*p+arcHeight*Math.sin(Math.PI*p)>=top)arcNeeded=true;else if(u.rangedWeapon==="firearm")blocked=true;}}
         if(blocked)continue;
-        if(crossed.length&&u.rangedWeapon!=="firearm"&&arcHeight>0){const allCleared=crossed.every(v=>{const bx=v.x*W(),by=v.y*H(),p=Math.max(0,Math.min(1,((bx-shooter.x)*dx+(by-shooter.y)*dy)/den)),top=terrainElevationAt(terrain(),bx,by,W(),H())+(v.heightIn||((v.isCavalry||v.mounted)?2.5:1.7));return startZ+(endZ-startZ)*p+arcHeight*Math.sin(Math.PI*p)>=top;});if(allCleared){arcNeeded=true;crossed.length=0;}}
+        if(crossed.length&&u.rangedWeapon!=="firearm"&&arcHeight>0){const allCleared=crossed.every(v=>{const bx=v.x*W(),by=v.y*H(),p=Math.max(0,Math.min(1,((bx-shooter.x)*dx+(by-shooter.y)*dy)/den)),top=terrainElevationAt(terrain(),bx,by,W(),H())+(v.heightIn||((v.isCavalry||v.mounted)?2.5:1.7));return startZ+(endZ-startZ)*p+arcHeight*Math.sin(Math.PI*p)>=top;});if(allCleared){arcNeeded=true;crossed.length=0;}else blocked=true;}
         if(blocked)continue;
         let penalty=crossed.length?(u.overUnitPenalty||0):0;
         if(arcNeeded)penalty=Math.max(penalty,u.rangedWeapon==="crossbow"?2:1);if(!best||penalty<best.penalty)best={over:crossed.length,penalty,friendly:crossed.filter(v=>v.side===u.side),arcNeeded};
