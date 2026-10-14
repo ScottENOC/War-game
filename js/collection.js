@@ -137,7 +137,8 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const horseWrap=field("Mount",[{value:"no",label:"No mount"},{value:"yes",label:"Add horse"},{value:"eagle",label:"Great Eagle (High Elves)"}],"no");
    const refresh=()=>{
     const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=body.kind==="cavalry";const named=!!body.namedCharacter;const hero=body.kind==="captain"||body.kind==="lord"||named;
-    horseWrap.querySelectorAll("option").forEach(o=>{if(o.value==="eagle")o.disabled=body.faction!=="highElves"||!(cavalry||hero);});\n    if(horseWrap.selectedOptions[0]?.disabled)horseWrap.value="no";
+    horseWrap.querySelectorAll("option").forEach(o=>{if(o.value==="eagle")o.disabled=body.faction!=="highElves"||!(cavalry||hero);});
+    if(horseWrap.selectedOptions[0]?.disabled)horseWrap.value="no";
     offhandLabel.hidden=!(body.faction==="highElves"||((body.kind==="captain"||body.kind==="lord")&&body.faction==="empire"));if(offhandLabel.hidden)offhandCheck.checked=false;
     [...weapon.options].forEach(o=>o.remove());
     const rangedArms=body.faction==="empire"?["both_bow","both_crossbow","both_firearm"]:["both_bow"];
