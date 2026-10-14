@@ -6,7 +6,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   function defaults(u){
     u.champion=false;u.championBonus=u.type==="archers"?"BS":"A";u.upgrades={};u.skills={};u.elvenArchery=false;u.lightArmour=false;u.heavyArmour=["legendaryLord","shadowElf"].includes(u.type);u.magicArmour=false;u.weapon="handWeapon";u.meleeWeapons=u.type==="shadowElf"?["handWeapon","offhandWeapon"]:["handWeapon"];u.extraMeleeWeapons=[];u.rangedWeapon=u.type==="shadowElf"?"magicBow":null;u.spears=false;u.bow=false;u.barding=false;u.mounted=false;u.shield=u.type==="legendaryLord";u.freeCavalryOption="bow";
     if(elf()){if(u.type==="swordsmen"){u.lightArmour=true;u.shield=true;u.spears=true;u.weapon="spear";u.meleeWeapons=["handWeapon","spear"];}if(u.type==="archers")u.lightArmour=true;}
-    if(isCharacterType(u.type))u.models=1;else if(u.type==="cavalry")u.models=Math.min(15,Math.max(5,u.models||5));else if(u.type==="cannon")u.models=3;else u.models=Math.min(30,Math.max(5,u.models||10));
+    if(isCharacterType(u.type))u.models=1;else if(u.type==="cavalry")u.models=Math.min(15,Math.max(5,u.models||5));else if(u.type==="cannon")u.models=3;else if(u.type==="boltThrower")u.models=2;else u.models=Math.min(30,Math.max(5,u.models||10));
   }
   const statUpgrades=[
     {key:"M",label:"Movement",unit:2,character:5},
@@ -19,7 +19,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   ];
   function unitPoints(u){
     const e=elf(),m=u.models||1,character=isCharacterType(u.type);
-    if(u.type==="cannon")return 80;
+    if(u.type==="cannon")return 80;if(u.type==="boltThrower")return 60;
     const upgradeCost=statUpgrades.reduce((sum,s)=>sum+(u.upgrades&&u.upgrades[s.key]?(character?s.character:s.unit*m):0),0);
     const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3:0),0);
     const weapons=[...new Set([...(u.meleeWeapons||[]),u.weapon||"handWeapon"])];
@@ -50,12 +50,12 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     army.forEach((u,index)=>{
       const row=document.createElement("article");row.className="army-row";const main=document.createElement("div");main.className="army-row-main";
       const type=document.createElement("select");type.setAttribute("aria-label","Unit "+(index+1)+" type");
-      type.innerHTML='<option value="swordsmen">Infantry · melee or ranged equipment</option>'+(!elf()?'<option value="cannon">Cannon · 80 pts</option>':'')+'<option value="captain">'+(elf()?"High Elf Hero · 75 pts":"Human Captain · 50 pts")+'</option><option value="lord">'+(elf()?"High Elf Lord · 120 pts":"Empire General (Lord) · 80 pts")+'</option>'+(elf()?'<option value="shadowElf">Lethariel Starweaver · 165 pts</option>':'<option value="legendaryLord">Lord-Marshal Edric Voss · 160 pts</option>')+'<option value="cavalry">'+(elf()?"High Elf Cavalry · 24 pts/model":"Cavalry · 16 pts/model")+'</option>';
+      type.innerHTML='<option value="swordsmen">Infantry · melee or ranged equipment</option>'+(elf()?'<option value="boltThrower">Bolt thrower · 60 pts</option>':'<option value="cannon">Cannon · 80 pts</option>')+'<option value="captain">'+(elf()?"High Elf Hero · 75 pts":"Human Captain · 50 pts")+'</option><option value="lord">'+(elf()?"High Elf Lord · 120 pts":"Empire General (Lord) · 80 pts")+'</option>'+(elf()?'<option value="shadowElf">Lethariel Starweaver · 165 pts</option>':'<option value="legendaryLord">Lord-Marshal Edric Voss · 160 pts</option>')+'<option value="cavalry">'+(elf()?"High Elf Cavalry · 24 pts/model":"Cavalry · 16 pts/model")+'</option>';
       type.value=u.type==="archers"?"swordsmen":u.type;type.addEventListener("change",()=>{u.type=type.value;defaults(u);renderRows();});
-      const ml=document.createElement("label");ml.append(document.createTextNode("Models "));const models=document.createElement("input");models.type="number";models.min="5";models.max=u.type==="cavalry"?"15":"30";models.step="1";models.value=u.models;models.inputMode="numeric";models.disabled=isCharacterType(u.type)||u.type==="cannon";models.setAttribute("aria-label","Unit "+(index+1)+" model count");models.addEventListener("change",()=>{const p=Number.parseInt(models.value,10);u.models=Number.isFinite(p)?Math.max(5,Math.min(u.type==="cavalry"?15:30,p)):5;models.value=u.models;updateTotals();});ml.append(models);
-      const options=document.createElement("div");options.className="army-options";const character=isCharacterType(u.type),cavalry=u.type==="cavalry",cannon=u.type==="cannon",infantry=u.type==="swordsmen"||u.type==="archers";
-      if(cannon){const note=document.createElement("p");note.textContent="Three skirmishing crew in soft cover operate the cannon. Cannon: T7, 3 wounds; S10, AP1, D3 wounds and penetrates at −1 Strength. Siege weapons alone can damage walls.";options.append(note);}
-      if(!character&&!cavalry&&!cannon){
+      const ml=document.createElement("label");ml.append(document.createTextNode("Models "));const models=document.createElement("input");models.type="number";models.min="5";models.max=u.type==="cavalry"?"15":"30";models.step="1";models.value=u.models;models.inputMode="numeric";models.disabled=isCharacterType(u.type)||u.type==="cannon"||u.type==="boltThrower";models.setAttribute("aria-label","Unit "+(index+1)+" model count");models.addEventListener("change",()=>{const p=Number.parseInt(models.value,10);u.models=Number.isFinite(p)?Math.max(5,Math.min(u.type==="cavalry"?15:30,p)):5;models.value=u.models;updateTotals();});ml.append(models);
+      const options=document.createElement("div");options.className="army-options";const character=isCharacterType(u.type),cavalry=u.type==="cavalry",siege=u.type==="cannon"||u.type==="boltThrower",infantry=u.type==="swordsmen"||u.type==="archers";
+      if(siege){const note=document.createElement("p");note.textContent=u.type==="cannon"?"Three skirmishing crew in soft cover operate the cannon. Cannon: T7, 3 wounds; S10, AP1, D3 wounds and penetrates at −1 Strength. Siege weapons alone can damage walls.":"Two skirmishing crew in soft cover operate the bolt thrower. Bolt thrower: T7, 2 wounds, 48-inch range. Single shot: S7, D3 wounds, penetrates at −1 Strength with no extra armour piercing. Multi-shot: six bow shots at S5. Siege weapons alone can damage walls.";options.append(note);}
+      if(!character&&!cavalry&&!siege){
         options.append(check("Champion",{cost:"+"+(elf()?9:6)+" pts",checked:!!u.champion,onChange:v=>{u.champion=v;renderRows();}}));
         if(u.champion)options.append(select("Champion bonus",u.rangedWeapon==="firearm"?'<option value="A">+1 Attack</option>':'<option value="A">+1 Attack</option><option value="BS">+1 Ballistic Skill</option>',u.championBonus||(u.type==="archers"?"BS":"A"),v=>{u.championBonus=v;updateTotals();}));
       }
