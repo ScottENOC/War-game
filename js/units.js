@@ -1,27 +1,25 @@
 import { FACTIONS } from "./factions.js";
 
 function unitCost(config, faction) {
-  const elf=faction==="highElves",type=config.type,models=config.models||1;
-  const character=type==="captain"||type==="lord";
-  const upgrades=[
-    {key:"M",unit:2,character:5},{key:"WS",unit:2,character:5},{key:"BS",unit:2,character:5},
-    {key:"S",unit:3,character:6},{key:"T",unit:4,character:8},{key:"I",unit:1,character:3},{key:"Ld",unit:1,character:3}
-  ].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
+  const elf=faction==="highElves",type=config.type,models=config.models||1,character=type==="captain"||type==="lord";
+  const upgrades=[{key:"M",unit:2,character:5},{key:"WS",unit:2,character:5},{key:"BS",unit:2,character:5},{key:"S",unit:3,character:6},{key:"T",unit:4,character:8},{key:"I",unit:1,character:3},{key:"Ld",unit:1,character:3}].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
   const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
-  const rangedWeapon=config.rangedWeapon||(["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(type==="archers"?"bow":config.bow?"bow":null));
-  const rangedCost=rangedWeapon==="bow"?(elf?3:2):rangedWeapon==="crossbow"?3:rangedWeapon==="firearm"?4:0;
+  const weapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])];
+  const ranged=config.rangedWeapon||(["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(type==="archers"?"bow":config.bow?"bow":null));
+  const rangedCost=ranged==="bow"?(elf&&type==="cavalry"&&(config.freeCavalryOption||"bow")==="bow"?0:(elf?3:2)*(character?1:models)):ranged==="crossbow"?3*(character?1:models):ranged==="firearm"?4*(character?1:models):0;
   if(character){
-    const base=elf?(type==="lord"?120:75):(type==="lord"?80:50);
-    return base+(config.heavyArmour?4:0)+(["halberd","greatWeapon"].includes(config.weapon)?4:0)+(config.mounted?8:0)+(config.mounted&&config.weapon==="spear"?2:0)+(config.mounted&&config.weapon==="lance"?4:0)+(config.mounted&&config.barding?4:0)+(config.shield&&!["halberd","greatWeapon"].includes(config.weapon)?2:0)+rangedCost+upgrades+skillCost;
+    const meleeCost=weapons.reduce((sum,w)=>sum+(["halberd","greatWeapon"].includes(w)?4:w==="spear"&&config.mounted?2:w==="lance"&&config.mounted?4:0),0);
+    return (elf?(type==="lord"?120:75):(type==="lord"?80:50))+(config.heavyArmour?4:0)+meleeCost+(config.mounted?8:0)+(config.mounted&&config.barding?4:0)+(config.shield?2:0)+rangedCost+upgrades+skillCost;
   }
   if(type==="cavalry"){
     const free=config.freeCavalryOption||"bow";
-    return models*(elf?24:16)+(config.elvenArchery&&elf&&(config.rangedWeapon==="bow"||config.bow||(free==="bow"))?2*models:0)+(config.bow&&!(elf&&free==="bow")?2*models:0)+(config.rangedWeapon==="crossbow"?3*models:config.rangedWeapon==="firearm"?4*models:0)+(config.heavyArmour?2*models:0)+(config.barding?2*models:0)+(config.shield&&config.weapon!=="greatWeapon"?0.5*models:0)+(config.weapon==="spear"&&!(elf&&free==="spear")?models:0)+(["lance","greatWeapon"].includes(config.weapon)?2*models:0)+upgrades+skillCost;
+    const meleeCost=weapons.reduce((sum,w)=>sum+(w==="spear"&&!(elf&&free==="spear")?models:["lance","greatWeapon"].includes(w)?2*models:0),0);
+    const bowCost=(config.bow&&!(elf&&free==="bow")?2*models:0)+(ranged==="bow"&&!(elf&&free==="bow")&&!config.bow?2*models:0);
+    const otherRangedCost=ranged==="crossbow"?3*models:ranged==="firearm"?4*models:0;
+    return models*(elf?24:16)+(config.elvenArchery&&elf&&(ranged==="bow"||config.bow||free==="bow")?2*models:0)+bowCost+otherRangedCost+(config.heavyArmour?2*models:0)+(config.barding?2*models:0)+(config.shield?0.5*models:0)+meleeCost+upgrades+skillCost;
   }
-  const base=models*(elf?12:8);
-  const ranged=["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(type==="archers"?"bow":null);
-  const weaponCost=ranged?(ranged==="bow"?(elf?3:2):ranged==="crossbow"?3:4)*models:config.weapon==="spear"&&!(elf&&type==="swordsmen")?models:config.weapon==="greatWeapon"?2*models:config.weapon==="halberd"?models:0;
-  return base+weaponCost+(config.elvenArchery&&elf&&ranged==="bow"?2*models:0)+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0)+upgrades+skillCost;
+  const meleeCost=weapons.reduce((sum,w)=>sum+(w==="spear"&&!(elf&&type==="swordsmen")?models:w==="greatWeapon"?2*models:w==="halberd"?models:0),0);
+  return models*(elf?12:8)+meleeCost+rangedCost+(config.elvenArchery&&elf&&ranged==="bow"?2*models:0)+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0)+upgrades+skillCost;
 }
 function buildUnit(template,config,faction,opposing=false) {
   const elf=faction==="highElves"&&!opposing,stats={...template.stats};
@@ -30,7 +28,7 @@ function buildUnit(template,config,faction,opposing=false) {
   if(mounted&&config.barding&&!elf)stats.M=7;
   if(isCharacter&&!mounted&&config.heavyArmour&&!elf)stats.M=Math.max(1,stats.M-1);
   const lightArmour=isCavalry||isCharacter?(!config.heavyArmour):(elf||!!config.lightArmour);
-  const spears=config.type==="swordsmen"&&(config.weapon==="spear"||(!config.weapon&&elf&&!!config.spears)),shield=(!!config.shield&&!["halberd","greatWeapon"].includes(config.weapon));
+  const meleeWeapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])],spears=config.type==="swordsmen"&&config.weapon==="spear"&&meleeWeapons.includes("spear"),ownsShield=!!config.shield,shield=ownsShield&&(!["halberd","greatWeapon"].includes(config.weapon)||config.weapon==="spear");
   const rangedWeapon=config.rangedWeapon||(["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(config.type==="archers"?"bow":(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"))?"bow":null)));
   const hasBow=rangedWeapon==="bow";
   let weapon=(isCharacter||isCavalry||config.type==="swordsmen")?(["bow","crossbow","firearm"].includes(config.weapon)?"handWeapon":(config.weapon||"handWeapon")):"handWeapon";
@@ -40,11 +38,11 @@ function buildUnit(template,config,faction,opposing=false) {
   if(campaignStats.MI){stats.M+=campaignStats.MI;stats.I+=campaignStats.MI;}
   // Halberds are infantry weapons; prevent stale or malformed mounted loadouts.
   if(mounted&&weapon==="halberd")weapon="handWeapon";
-  if(isCavalry&&elf&&(config.freeCavalryOption||"bow")==="spear"&&weapon==="handWeapon")weapon="spear";
+  if(isCavalry&&elf&&(config.freeCavalryOption||"bow")==="spear"&&weapon==="handWeapon"&&!meleeWeapons.includes("spear")){weapon="spear";meleeWeapons.push("spear");}
   const costFaction=opposing?"empire":faction;
   return {id:config.id,name:template.name+" "+config.index,short:template.short,side:config.side,kind:template.kind,
     isCharacter,isCavalry,mounted,isGeneral:false,attachedTo:null,baseMove:stats.M,
-    models:isCharacter?1:config.models,startModels:isCharacter?1:config.models,points:unitCost(config,costFaction),weapon,rangedWeapon,hasRangedWeapon:!!rangedWeapon,
+    models:isCharacter?1:config.models,startModels:isCharacter?1:config.models,points:unitCost(config,costFaction),weapon,meleeWeapons,hasSpear:meleeWeapons.includes("spear"),hasGreatWeapon:meleeWeapons.includes("greatWeapon"),hasHalberd:meleeWeapons.includes("halberd"),ownsShield,shield:ownsShield&&(!["greatWeapon","halberd"].includes(weapon)),rangedWeapon,hasRangedWeapon:!!rangedWeapon,rangedMode:ownsShield&&rangedWeapon?"shield":rangedWeapon?"bow":"shield",
     rangedStrength:["crossbow","firearm"].includes(rangedWeapon)?4:3,armourPiercing:rangedWeapon==="firearm"?1:0,
     bsCap:rangedWeapon==="crossbow"?4:rangedWeapon==="firearm"?3:null,
     ranksToShoot:mounted?1:rangedWeapon==="bow"?(elf?4:3):rangedWeapon==="crossbow"||rangedWeapon==="firearm"?2:0,
