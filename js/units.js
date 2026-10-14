@@ -9,7 +9,7 @@ function unitCost(config, faction) {
   const rangedCost=ranged==="bow"?(elf&&type==="cavalry"&&(config.freeCavalryOption||"bow")==="bow"?0:(elf?3:2)*(character?1:models)):ranged==="crossbow"?3*(character?1:models):ranged==="firearm"?4*(character?1:models):0;
   if(character){
     const meleeCost=weapons.reduce((sum,w)=>sum+(["halberd","greatWeapon"].includes(w)?4:w==="spear"&&config.mounted?2:w==="lance"&&config.mounted?4:0),0);
-    return (elf?(type==="lord"?120:75):(type==="lord"?80:50))+(config.heavyArmour?4:0)+meleeCost+(config.mounted?8:0)+(config.mounted&&config.barding?4:0)+(config.shield?2:0)+rangedCost+upgrades+skillCost;
+    return (elf?(type==="lord"?120:75):(type==="lord"?80:50))+(config.heavyArmour?4:0)+(config.magicArmour?10:0)+(config.weapon==="magicSword"?10:0)+meleeCost+(config.mounted?8:0)+(config.mounted&&config.barding?4:0)+(config.shield?2:0)+rangedCost+upgrades+skillCost;
   }
   if(type==="cavalry"){
     const free=config.freeCavalryOption||"bow";
@@ -26,7 +26,7 @@ function buildUnit(template,config,faction,opposing=false) {
   const isCharacter=config.type==="captain"||config.type==="lord",isCavalry=config.type==="cavalry",mounted=isCavalry||(isCharacter&&!!config.mounted);
   if(mounted)stats.M=elf?9:8;
   if(mounted&&config.barding&&!elf)stats.M=7;
-  if(isCharacter&&!mounted&&config.heavyArmour&&!elf)stats.M=Math.max(1,stats.M-1);
+  if(isCharacter&&!mounted&&config.heavyArmour&&!config.magicArmour&&!elf)stats.M=Math.max(1,stats.M-1);
   const lightArmour=isCavalry||isCharacter?(!config.heavyArmour):(elf||!!config.lightArmour);
   const meleeWeapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])].filter(w=>!["bow","crossbow","firearm"].includes(w)),ownsShield=!!config.shield;if(!meleeWeapons.includes("handWeapon"))meleeWeapons.unshift("handWeapon");const spears=config.weapon==="spear"&&meleeWeapons.includes("spear");
   const rangedWeapon=config.rangedWeapon||(["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(config.type==="archers"?"bow":(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"))?"bow":null)));
@@ -38,6 +38,7 @@ function buildUnit(template,config,faction,opposing=false) {
   const unitShort=isCharacter?template.short:isCavalry?template.short:rangedWeapon==="bow"?"Archers":rangedWeapon==="crossbow"?"Crossbows":rangedWeapon==="firearm"?"Handguns":primaryMelee==="greatWeapon"?"Greatswords":primaryMelee==="halberd"?"Halberds":primaryMelee==="spear"?"Spearmen":"Swordsmen";
   const shield=ownsShield&&(weapon==="spear"||(!["greatWeapon","halberd"].includes(weapon)&&(!rangedWeapon||config.rangedMode!=="bow")));
   for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.upgrades&&config.upgrades[key])stats[key]+=1;
+  if(isCharacter&&config.weapon==="magicSword"){stats.A+=1;stats.S+=1;}
   const campaignStats=config.campaignStats||{};
   for(const key of ["WS","BS","S","T","Ld"])stats[key]+=Math.max(0,campaignStats[key]||0);
   if(campaignStats.MI){stats.M+=campaignStats.MI;stats.I+=campaignStats.MI;}
@@ -55,7 +56,7 @@ function buildUnit(template,config,faction,opposing=false) {
     spears:weapon==="spear"&&meleeWeapons.includes("spear")&&!mounted&&!isCharacter,spearRanks:elf?3:2,hasBow,range:rangedWeapon==="bow"?(elf?30:24):rangedWeapon==="crossbow"?30:rangedWeapon==="firearm"?20:(template.range||24),lightArmour,heavyArmour:!!config.heavyArmour,barding:!!config.barding,
     alwaysStrikesFirst:!!template.alwaysStrikesFirst,elvenArchery:!!elf&&!!config.elvenArchery,skills:{...(config.skills||{})},skirmishCapable:!!config.skills?.skirmish,skirmishing:false,skirmishCombatRound:0,faction:elf?"highElves":"empire",mountStats:mounted?{...(template.mountStats||{A:1,WS:3,I:3,S:3})}:null,
     baseWidthIn:mounted?25/25.4:20/25.4,baseDepthIn:mounted?50/25.4:20/25.4,heightIn:config.heightIn??(mounted?2.5:1.7),
-    armour:isCavalry||isCharacter?(config.heavyArmour?"heavy":"light"):(lightArmour?"light":"none"),wardSave:null,
+    armour:isCharacter&&config.magicArmour?"fullPlate":(isCavalry||isCharacter?(config.heavyArmour?"heavy":"light"):(lightArmour?"light":"none")),magicArmour:!!config.magicArmour,wardSave:null,
     largeTarget:false,singleCharacter:false,skirmisher:false,cover:null,x:config.x,y:config.y,facing:config.facing,deployed:config.side==="ai",
     engaged:false,engagedWith:null,engagedSide:null,chargedSide:null,attackedFromSide:null,flankedBy:null,
     formationWidth:5,canCounterCharge:true,fleeingCharge:false,activated:false,moved:false,shot:false,charged:false,fled:false,
