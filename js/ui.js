@@ -73,9 +73,12 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
     }
     if (S.phase === "charges") {
       if (S.chargeSide !== "player") { btn("Opponent declaring charges", "…", () => {}, true); return; }
+      if (S.mode === "charge") {
+        const hint=document.createElement("div");hint.className="shoot-preview";hint.textContent="Charge order: tap an enemy unit to charge it. Legal targets must be in your unit's forward arc, within charge range, and reachable without crossing an obstruction.";el.append(hint);
+      }
       btn("Flee from charge", "↗", () => fleeFromCharge(u), !u||u.side!=="player"||u.engaged||u.fled||!S.declaredCharges.some(c=>c.targetId===u.id&&!c.counterCharge&&!c.flee));
-      btn(u&&u.canCounterCharge&&target&&target.charged?"Counter-charge":"Declare charge", "➜", () => { S.mode = S.mode === "charge" ? null : "charge"; render(); },
-        !u || u.side !== "player" || u.engaged || u.fled || u.charged || !target || target.engaged || dist(u, target) > u.stats.M * 2, S.mode === "charge");
+      btn(S.mode==="charge"?"Cancel charge selection":u&&u.canCounterCharge&&target&&target.charged?"Counter-charge":"Declare charge", "➜", () => { S.mode = S.mode === "charge" ? null : "charge"; render(); },
+        !u || u.side !== "player" || u.engaged || u.fled || u.charged, S.mode === "charge");
       btn("Pass charges", "Ⅱ", passCharges); return;
     }
     if (S.phase === "movement" && u && u.isCharacter && u.attachedTo) { const attachedHost=S.units[u.attachedTo]; if(u.hasRangedWeapon&&u.ownsShield)btn(u.rangedMode==="bow"?"Ready shield":"Ready bow",u.rangedMode==="bow"?"🛡":"🏹",()=>{if(setRangedMode(u,u.rangedMode==="bow"?"shield":"bow")){S.mode=null;render();}},u.shot||u.activated||!attachedHost||attachedHost.engaged); if(u.hasRangedWeapon)btn("Shoot","◎",()=>{S.mode=S.mode==="shoot"?null:"shoot";if(S.mode==="shoot")S.targetId=null;render();},!u.hasRangedWeapon||(u.ownsShield&&u.rangedMode!=="bow")||u.shot||u.activated||!attachedHost||attachedHost.engaged||!target||target.side===u.side,S.mode==="shoot"); btn("Detach character","↗",()=>{const host=S.units[u.attachedTo];if(host){u.x=host.x+0.025;u.y=host.y+0.025;u.deployed=true;host.attachedCharacters=(host.attachedCharacters||[]).filter(id=>id!==u.id);host.skirmishCapable=!!host.skills?.skirmish||(host.attachedCharacters||[]).some(id=>S.units[id]?.models>0&&S.units[id]?.grantsSkirmish);host.stats.M=host.baseMove??host.stats.M;(host.attachedCharacters||[]).forEach(id=>{const h=S.units[id];if(h)host.stats.M=Math.min(host.stats.M,h.stats.M);});u.attachedTo=null;S.mode=null;say(u.name+" leaves "+host.name+".");render();}},!attachedHost||attachedHost.engaged); btn("End activation","✓",finishActivation,u.activated||u.fled); return; }
