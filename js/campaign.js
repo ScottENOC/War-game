@@ -7,6 +7,11 @@ const statChoices=[
  {key:"BS",label:"+1 Ballistic Skill",description:"Improves shooting accuracy and unlocks Marksman."},
  {key:"Ld",label:"+1 Leadership",description:"Improves morale and unlocks Steadfast."}
 ];
+const warMachineChoices=[
+ {key:"BS",label:"+1 Ballistic Skill (crew)",description:"The crew gain +1 BS, improving both multi-shot accuracy and single-shot scatter."},
+ {key:"range",label:"+6 inches range",description:"Adds 6 inches to both firing modes."},
+ {key:"moveAndFire",label:"Move and Fire",description:"The bolt thrower may move up to 3 inches and fire in the same activation. Multi-shot suffers the normal −1 moving penalty; single-shot scatter increases by 1°."}
+];
 const skillChoices=[
  {key:"rerollOnesMelee",label:"Melee Mastery",requires:"WS",description:"Reroll natural 1s when making melee hit rolls."},
  {key:"rerollOnesShooting",label:"Marksman",requires:"BS",description:"Reroll natural 1s when making shooting hit rolls."},
@@ -37,7 +42,7 @@ export function createNarrativeCampaign({ $, onStartBattle, onReturnMenu }) {
  }
  function summary(u){
   const s=u.campaignStats||{},bits=[];
-  for(const key of ["S","T","WS","BS","Ld"])if(s[key])bits.push("+"+s[key]+" "+key);
+  for(const key of ["S","T","WS","BS","Ld"])if(s[key])bits.push("+"+s[key]+" "+key);\n  if(s.range)bits.push("+"+s.range+"″ range");\n  if(s.moveAndFire)bits.push("Move and Fire");
   if(s.MI)bits.push("+"+s.MI+" M/I");
   for(const [k,v] of Object.entries(u.skills||{}))if(v)bits.push(({rerollOnesMelee:"Melee Mastery",rerollOnesShooting:"Marksman",steadfast:"Steadfast"})[k]||k);
   return bits.length?bits.join(" · "):"Untrained";
@@ -56,7 +61,7 @@ export function createNarrativeCampaign({ $, onStartBattle, onReturnMenu }) {
  }
  function availableFor(unit){
   const stats=unit.campaignStats||{},skills=unit.skills||{};
-  return [...statChoices.filter(x=>x.key!=="MI"||true),...skillChoices.filter(x=>(stats[x.requires]||0)>0&&!skills[x.key])];
+  if(unit.type==="cannon"||unit.type==="boltThrower")return warMachineChoices.filter(x=>x.key==="BS"?(stats.BS||0)<99:x.key==="range"?(stats.range||0)<18:unit.type==="boltThrower"&&!stats.moveAndFire);\n  return [...statChoices,...skillChoices.filter(x=>(stats[x.requires]||0)>0&&!skills[x.key])];
  }
  function renderUpgradeChoices(){
   el("campaign-title").textContent="Mission "+campaign.level+" won";
