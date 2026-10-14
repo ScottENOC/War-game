@@ -124,7 +124,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
       main.append(type,ml,options);const cost=document.createElement("strong");cost.className="army-cost";const remove=document.createElement("button");remove.className="remove-unit secondary-button";remove.textContent="×";remove.title="Remove unit "+(index+1);remove.setAttribute("aria-label","Remove unit "+(index+1));remove.addEventListener("click",()=>{army.splice(index,1);renderRows();});row.append(main,cost,remove);list.append(row);
     });updateTotals();
   }
-  $("faction-select").addEventListener("change",()=>{faction=$("faction-select").value==="highElves"?"highElves":"empire";army.forEach(u=>{if(faction==="highElves"&&u.type==="legendaryLord")u.type="lord";if(faction==="empire"&&u.type==="shadowElf")u.type="lord";defaults(u);});renderRows();});
+  $("faction-select").addEventListener("change",()=>{faction=$("faction-select").value==="highElves"?"highElves":"empire";army.forEach(u=>{if(faction==="highElves"&&u.type==="legendaryLord")u.type="lord";if(faction==="empire"&&["shadowElf","pegasusChampion"].includes(u.type))u.type="lord";defaults(u);});renderRows();});
   function openBuilder(){ $("mainmenu").hidden=true;$("collection-screen").hidden=true;$("mode-screen").hidden=true;$("armybuilder").hidden=false;renderRows(); }
   $("builder-back").addEventListener("click",onBack);
   addButton.addEventListener("click",()=>{if(army.length>=6)return;const u={type:"swordsmen",models:20};defaults(u);army.push(u);renderRows();});
