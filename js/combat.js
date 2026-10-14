@@ -76,9 +76,11 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           const targetI=targetCombatant
             ?effectiveI(targetCombatant.u,targetCombatant.host,targetCombatant.component)
             :effectiveI(target);
-          // Rerolls require a gap of at least 11 after all modifiers, including
-          // ASF, charging and the great-weapon Initiative penalty.
-          const rerollMisses=component==="rider"&&!!u.alwaysStrikesFirst&&attackerI-targetI>=11;
+          // Always Strikes First rerolls misses whenever the rider's final
+          // modified Initiative is higher than the target's. The +10 ASF bonus
+          // is already included in effectiveI, so comparing against 11 here
+          // incorrectly suppresses rerolls for small Initiative advantages.
+          const rerollMisses=component==="rider"&&!!u.alwaysStrikesFirst&&attackerI>targetI;
           const result=meleeAttack(u,target,{attackingModels:strikeState.skirmishRound?Math.min(strikeState.eligibleModels,Math.max(1,Math.floor(u.formationWidth||5))):strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged&&!host.defendedWallCombat,attackComponent:component,rerollMisses});
           say('<b>Melee dice — '+u.name+(component==="mount"?" (mount)":"")+' attacks '+target.name+'</b>'+diceStack(u,result));
           wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
