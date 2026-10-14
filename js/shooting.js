@@ -114,7 +114,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     }
     result.friendlyFireCount=friendlyFireCount;
     result.hitModifier=result.pools.length?result.pools[0].hitModifier:0;
-    u.shot=true;showAttack(standShoot?"Stand and shoot":"Shooting",u,target,result,"shoot");
+    const targetDiceStack=diceStack(u,result);u.shot=true;showAttack(standShoot?"Stand and shoot":"Shooting",u,target,result,"shoot");
     const killed=applyDamage(target,result.wounds,true,result.cascadePlan);
     say(target.name+" loses "+killed+" model"+(killed===1?"":"s")+" to shooting.");
     if(friendlyFireCount){
@@ -123,6 +123,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
         const ffResult=shootingAttack({...u,friendlyFireShot:true},friend,{...context,forcedHits:friendlyFireCount,attackingModels:friendlyFireCount,attackingChampion:false,overUnitPenalty:0,singleCharacter:false,skirmisher:false,cover:null,targetCharging:false});
         const friendlyKilled=applyDamage(friend,ffResult.wounds,true,ffResult.cascadePlan);
         say('<div class="friendly-fire"><b>FRIENDLY FIRE — '+friendlyFireCount+' shot(s) hit '+friend.name+' in the back.</b></div>'+diceStack(friend,ffResult));
+        $("rollcontent").innerHTML=targetDiceStack+'<div class="friendly-fire"><b>Friendly-fire resolution — '+friend.name+'</b></div>'+diceStack(friend,ffResult);$("rollview").classList.add("show");
         say(friend.name+" loses "+friendlyKilled+" model"+(friendlyKilled===1?"":"s")+" to friendly fire.");
         if(!alive(friend))panicNearby?.(friend,"a friendly unit is destroyed by friendly fire");
         panicTest(friend);
