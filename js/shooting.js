@@ -103,7 +103,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       targetCharging:!!target.charged,targetInMelee:!!target.engaged,largeTarget:!!target.largeTarget,
       singleCharacter:!!target.isCharacter||!!target.singleCharacter||target.models===1,
       skirmisher:!!target.skirmishing||!!target.skirmisher,cover:target.cover==="soft"||target.cover==="hard"?target.cover:null,
-      overUnitPenalty:visibility.overUnitPenalty,wallPenalty:wallEffect.penalty||0,terrainWallPenalty:wallEffect.penalty||0,arcShot:!!(visibility.arcShot||wallEffect.arcUsed),longRangePenalty:u.rangedWeapon==="firearm"?2:1,
+      overUnitPenalty:wallEffect.arcUsed?0:visibility.overUnitPenalty,wallPenalty:wallEffect.penalty||0,terrainWallPenalty:wallEffect.penalty||0,arcShot:!!(visibility.arcShot||wallEffect.arcUsed),longRangePenalty:u.rangedWeapon==="firearm"?2:1,
       armourPiercing:u.armourPiercing||0,attackingModels:visibility.visibleModels,attackingChampion:visibility.visibleChampion
     };
     const result=shootingAttack(u,target,context);Object.assign(result,context);
