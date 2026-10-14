@@ -136,7 +136,8 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const weapon=field("Arms / weapon",[], "right_sword");
    const horseWrap=field("Mount",[{value:"no",label:"No mount"},{value:"yes",label:"Add horse"},{value:"eagle",label:"Great Eagle (High Elves)"}],"no");
    const refresh=()=>{
-    const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=body.kind==="cavalry";const named=!!body.namedCharacter;const hero=body.kind==="captain"||body.kind==="lord"||named;\n    horseWrap.querySelectorAll("option").forEach(o=>{if(o.value==="eagle")o.disabled=body.faction!=="highElves"||!(cavalry||hero);});
+    const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=body.kind==="cavalry";const named=!!body.namedCharacter;const hero=body.kind==="captain"||body.kind==="lord"||named;
+    horseWrap.querySelectorAll("option").forEach(o=>{if(o.value==="eagle")o.disabled=body.faction!=="highElves"||!(cavalry||hero);});
     offhandLabel.hidden=!(body.faction==="highElves"||((body.kind==="captain"||body.kind==="lord")&&body.faction==="empire"));if(offhandLabel.hidden)offhandCheck.checked=false;
     [...weapon.options].forEach(o=>o.remove());
     const rangedArms=body.faction==="empire"?["both_bow","both_crossbow","both_firearm"]:["both_bow"];
@@ -156,7 +157,8 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    assemble.addEventListener("click",()=>{
     const body=bodyKinds.find(b=>b.id===kind.value),named=!!body.namedCharacter,arms=named?{id:"signature",kind:"signature",weapon:body.kind==="legendaryLord"?"handWeapon":"magicBow"}:bitDefs.find(b=>b.id===weapon.value),mountType=horseWrap.value==="eagle"?"eagle":horseWrap.value==="yes"?"horse":"none",mounted=mountType!=="none"&&(body.kind==="cavalry"||body.kind==="captain"||body.kind==="lord"||body.kind==="legendaryLord");
     if(body.faction!==faction.value){status.textContent="Choose a main body matching the selected faction.";return;}
-    if(mounted&&arms.weapon==="halberd"){status.textContent="Halberds cannot be used by mounted models.";return;}\n    if(mountType==="eagle"&&(body.faction!=="highElves"||arms.weapon==="halberd")){status.textContent="Great Eagles are available to High Elves and cannot carry halberds.";return;}
+    if(mounted&&arms.weapon==="halberd"){status.textContent="Halberds cannot be used by mounted models.";return;}
+    if(mountType==="eagle"&&(body.faction!=="highElves"||arms.weapon==="halberd")){status.textContent="Great Eagles are available to High Elves and cannot carry halberds.";return;}
     const addShield=named?body.kind==="legendaryLord":shieldCheck.checked&&arms.kind==="right";if(!named&&shieldCheck.checked&&!addShield){status.textContent="Two-handed weapons use both arms and cannot take a shield.";return;}
     const addOffhand=named?body.kind==="shadowElf":offhandCheck.checked&&!offhandLabel.hidden;if(!named&&addOffhand&&arms.kind!=="right"){status.textContent="A left-hand sword needs a free right-hand weapon, not a two-handed weapon.";return;}if(addShield&&addOffhand){status.textContent="A model cannot hold both a shield and a sword in its left hand.";return;}
     const need=[body.id];if(!named){need.push(arms.id);if(arms.kind==="right")need.push(addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm");}if(mounted)need.push(mountType==="eagle"?"eagle":"horse");
@@ -190,7 +192,9 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    {faction:"empire",type:"lord",weapon:"firearm",cost:84},
    {faction:"highElves",type:"swordsmen",weapon:"handWeapon",cost:12},
    {faction:"highElves",type:"archers",weapon:"bow",cost:15},
-   {faction:"highElves",type:"cavalry",weapon:"spear",cost:32,mounted:true,mountType:"eagle"},\n   {faction:"highElves",type:"captain",weapon:"spear",cost:83,mounted:true,mountType:"eagle"},\n   {faction:"highElves",type:"lord",weapon:"spear",cost:128,mounted:true,mountType:"eagle"},
+   {faction:"highElves",type:"cavalry",weapon:"spear",cost:32,mounted:true,mountType:"eagle"},
+   {faction:"highElves",type:"captain",weapon:"spear",cost:83,mounted:true,mountType:"eagle"},
+   {faction:"highElves",type:"lord",weapon:"spear",cost:128,mounted:true,mountType:"eagle"},
    {faction:"highElves",type:"captain",weapon:"handWeapon",cost:75},
    {faction:"highElves",type:"lord",weapon:"handWeapon",cost:120},
    {faction:"empire",type:"legendaryLord",weapon:"handWeapon",cost:160,namedCharacter:true},
