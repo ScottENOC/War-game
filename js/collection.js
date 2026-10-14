@@ -7,7 +7,9 @@ const bodyKinds=[
   {id:"human_hero_body",label:"Human hero body",faction:"empire",kind:"captain"},
   {id:"elf_hero_body",label:"Elf hero body",faction:"highElves",kind:"captain"},
   {id:"human_lord_body",label:"Human lord body",faction:"empire",kind:"lord"},
-  {id:"elf_lord_body",label:"Elf lord body",faction:"highElves",kind:"lord"}
+  {id:"elf_lord_body",label:"Elf lord body",faction:"highElves",kind:"lord"},
+  {id:"edric_voss_body",label:"Lord-Marshal Edric Voss (named character)",faction:"empire",kind:"legendaryLord",namedCharacter:true},
+  {id:"lethariel_starweaver_body",label:"Lethariel Starweaver (named character)",faction:"highElves",kind:"shadowElf",namedCharacter:true}
 ];
 const bitDefs=[
  ...bodyKinds.map(x=>({id:x.id,label:x.label,kind:"body"})),
@@ -24,7 +26,7 @@ const bitDefs=[
  {id:"both_crossbow",label:"Both arms · crossbow",kind:"twohand",weapon:"crossbow"},
  {id:"both_firearm",label:"Both arms · firearm",kind:"twohand",weapon:"firearm"}
 ];
-const labels={empire:"Human / Empire",highElves:"High Elf",swordsmen:"Swordsmen",archers:"Archers",cavalry:"Cavalry",captain:"Hero",lord:"Lord",handWeapon:"Sword",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm"};
+const labels={empire:"Human / Empire",highElves:"High Elf",swordsmen:"Swordsmen",archers:"Archers",cavalry:"Cavalry",captain:"Hero",lord:"Lord",legendaryLord:"Lord-Marshal Edric Voss",shadowElf:"Lethariel Starweaver",handWeapon:"Sword",magicBow:"Magical longbow",signature:"Signature equipment",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm"};
 const makeModel=(id,faction,type,weapon,extra={})=>({id,faction,type,weapon,shield:!!extra.shield,mounted:!!extra.mounted,components:["body",weapon,...(extra.shield?["shield"]:[]),...(extra.mounted?["horse"]:[])],name:extra.name||((faction==="empire"?"Empire ":"High Elf ")+labels[type]+(type==="swordsmen"||type==="archers"||type==="cavalry"?"":"")+" · "+labels[weapon])});
 function starterData(){
  const models=[];let id=1;
@@ -77,7 +79,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
   groups.forEach(([key,count])=>{
    const [faction,type,weapon,shield,mounted,offhand]=key.split("|");
    const card=document.createElement("article");card.className="inventory-model";
-   const strong=document.createElement("strong");strong.textContent=(faction==="empire"?"Empire ":"High Elf ")+title(type);
+   const strong=document.createElement("strong");strong.textContent=type==="legendaryLord"?"Lord-Marshal Edric Voss":type==="shadowElf"?"Lethariel Starweaver":(faction==="empire"?"Empire ":"High Elf ")+title(type);
    const meta=document.createElement("span");meta.textContent=title(weapon)+(offhand==="true"?" · Off-hand sword":"")+(shield==="true"?" · Shield":"")+(mounted==="true"?" · Mounted":"");
    const qty=document.createElement("b");qty.textContent="×"+count;card.append(strong,meta,qty);
    const edit=document.createElement("button");edit.className="secondary-button";edit.textContent="Add component";
@@ -126,16 +128,17 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const weapon=field("Arms / weapon",[], "right_sword");
    const horseWrap=field("Mount",[{value:"no",label:"No horse"},{value:"yes",label:"Add horse"}],"no");
    const refresh=()=>{
-    const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=body.kind==="cavalry";const hero=body.kind==="captain"||body.kind==="lord";
+    const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=body.kind==="cavalry";const named=!!body.namedCharacter;const hero=body.kind==="captain"||body.kind==="lord"||named;
     offhandLabel.hidden=!(body.faction==="highElves"||((body.kind==="captain"||body.kind==="lord")&&body.faction==="empire"));if(offhandLabel.hidden)offhandCheck.checked=false;
     [...weapon.options].forEach(o=>o.remove());
     const rangedArms=body.faction==="empire"?["both_bow","both_crossbow","both_firearm"]:["both_bow"];
-    const arms=cavalry?(body.faction==="empire"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]):(hero?(horseWrap.value==="yes"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","both_greatWeapon","both_halberd",...rangedArms]):(body.faction==="empire"?["right_sword","right_spear","both_bow","both_crossbow","both_firearm","both_greatWeapon","both_halberd"]:["right_sword","right_spear","both_bow","both_greatWeapon","both_halberd"]));
+    const arms=named?["signature"]:(cavalry?(body.faction==="empire"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]):(hero?(horseWrap.value==="yes"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","both_greatWeapon","both_halberd",...rangedArms]):(body.faction==="empire"?["right_sword","right_spear","both_bow","both_crossbow","both_firearm","both_greatWeapon","both_halberd"]:["right_sword","right_spear","both_bow","both_greatWeapon","both_halberd"])));
     
-    arms.forEach(id=>{const d=bitDefs.find(b=>b.id===id);const o=document.createElement("option");o.value=id;o.textContent=d.label+" ("+bitCount(id)+" owned)";weapon.append(o);});
-    horseWrap.parentElement.hidden=!cavalry&&!hero;
+    arms.forEach(id=>{const d=bitDefs.find(b=>b.id===id);const o=document.createElement("option");o.value=id;o.textContent=named?(body.kind==="legendaryLord"?"Signature sword and shield (included)":"Magical longbow and dual swords (included)"):d.label+" ("+bitCount(id)+" owned)";weapon.append(o);});
+    horseWrap.parentElement.hidden=named&&body.kind==="shadowElf"?!cavalry:!cavalry&&!hero;
     if(!cavalry&&!hero)horseWrap.value="no";
     if(cavalry)horseWrap.value="yes";
+    if(named&&body.kind==="shadowElf")horseWrap.value="no";
    };
    kind.addEventListener("change",refresh);horseWrap.addEventListener("change",refresh);refresh();
    const offhandLabel=document.createElement("label");offhandLabel.className="assembly-shield";const offhandCheck=document.createElement("input");offhandCheck.type="checkbox";offhandCheck.checked=false;offhandLabel.append(offhandCheck,document.createTextNode("Add left hand holding a sword (requires a left-hand sword bit)"));panel.append(offhandLabel);
@@ -143,19 +146,20 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const p=document.createElement("p");p.className="subtle";p.textContent="A finished model consumes its main body, the selected arms, and a horse if mounted. Elf and human arms are interchangeable.";panel.append(p);
    const assemble=document.createElement("button");assemble.className="primary-button";assemble.textContent="Assemble model";
    assemble.addEventListener("click",()=>{
-    const body=bodyKinds.find(b=>b.id===kind.value),arms=bitDefs.find(b=>b.id===weapon.value),mounted=horseWrap.value==="yes"&&(body.kind==="cavalry"||body.kind==="captain"||body.kind==="lord");
+    const body=bodyKinds.find(b=>b.id===kind.value),named=!!body.namedCharacter,arms=named?{id:"signature",kind:"signature",weapon:body.kind==="legendaryLord"?"handWeapon":"magicBow"}:bitDefs.find(b=>b.id===weapon.value),mounted=horseWrap.value==="yes"&&(body.kind==="cavalry"||body.kind==="captain"||body.kind==="lord"||body.kind==="legendaryLord");
     if(body.faction!==faction.value){status.textContent="Choose a main body matching the selected faction.";return;}
     if(mounted&&arms.weapon==="halberd"){status.textContent="Halberds cannot be used by mounted models.";return;}
-    const addShield=shieldCheck.checked&&arms.kind==="right";if(shieldCheck.checked&&!addShield){status.textContent="Two-handed weapons use both arms and cannot take a shield.";return;}
-    const addOffhand=offhandCheck.checked&&!offhandLabel.hidden;if(addOffhand&&arms.kind!=="right"){status.textContent="A left-hand sword needs a free right-hand weapon, not a two-handed weapon.";return;}if(addShield&&addOffhand){status.textContent="A model cannot hold both a shield and a sword in its left hand.";return;}
-    const need=[body.id,arms.id];if(arms.kind==="right")need.push(addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm");if(mounted)need.push("horse");
+    const addShield=named?body.kind==="legendaryLord":shieldCheck.checked&&arms.kind==="right";if(!named&&shieldCheck.checked&&!addShield){status.textContent="Two-handed weapons use both arms and cannot take a shield.";return;}
+    const addOffhand=named?body.kind==="shadowElf":offhandCheck.checked&&!offhandLabel.hidden;if(!named&&addOffhand&&arms.kind!=="right"){status.textContent="A left-hand sword needs a free right-hand weapon, not a two-handed weapon.";return;}if(addShield&&addOffhand){status.textContent="A model cannot hold both a shield and a sword in its left hand.";return;}
+    const need=[body.id];if(!named){need.push(arms.id);if(arms.kind==="right")need.push(addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm");}if(mounted)need.push("horse");
     const shortage=need.find(id=>bitCount(id)<1);if(shortage){status.textContent="Not enough bits: "+bitDefs.find(b=>b.id===shortage).label+".";return;}
     if(body.kind==="cavalry"&&!mounted){status.textContent="Cavalry bodies require a horse.";return;}
     if(body.faction==="highElves"&&["crossbow","firearm"].includes(arms.weapon)){status.textContent="High Elves refuse crossbows and firearms.";return;}
     need.forEach(consumeBit);
     const type=body.kind==="infantry"?(arms.weapon==="bow"?"archers":"swordsmen"):body.kind;
-    const model=makeModel("assembled-"+data.nextId++,body.faction,type,arms.weapon,{mounted,shield:addShield,name:(body.faction==="empire"?"Empire ":"High Elf ")+title(type)+" · "+title(arms.weapon)+(addShield?" + Shield":"")+(mounted?" · Mounted":"")});
-    model.components=[body.id,arms.id,...(arms.kind==="right"?[addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm"]:[]),...(mounted?["horse"]:[])];model.offhandWeapon=addOffhand;
+    const namedName=body.kind==="legendaryLord"?"Lord-Marshal Edric Voss":body.kind==="shadowElf"?"Lethariel Starweaver":null;
+    const model=makeModel("assembled-"+data.nextId++,body.faction,type,arms.weapon,{mounted,shield:addShield,name:namedName||(body.faction==="empire"?"Empire ":"High Elf ")+title(type)+" · "+title(arms.weapon)+(addShield?" + Shield":"")+(mounted?" · Mounted":"")});
+    model.components=[body.id,...(!named?[arms.id,...(arms.kind==="right"?[addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm"]:[])]:[]),...(mounted?["horse"]:[])];model.offhandWeapon=addOffhand;model.namedCharacter=named;
     data.models.push(model);save();renderAll();status.textContent="Model assembled and added to your collection.";
    });panel.append(assemble);
    const status=document.createElement("p");status.className="workbench-status";panel.append(status);
@@ -180,7 +184,9 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    {faction:"highElves",type:"archers",weapon:"bow",cost:15},
    {faction:"highElves",type:"cavalry",weapon:"handWeapon",cost:24,mounted:true},
    {faction:"highElves",type:"captain",weapon:"handWeapon",cost:75},
-   {faction:"highElves",type:"lord",weapon:"handWeapon",cost:120}
+   {faction:"highElves",type:"lord",weapon:"handWeapon",cost:120},
+   {faction:"empire",type:"legendaryLord",weapon:"handWeapon",cost:160,namedCharacter:true},
+   {faction:"highElves",type:"shadowElf",weapon:"magicBow",cost:165,namedCharacter:true}
   ];
   const weights=pool.map(p=>1/p.cost),sum=weights.reduce((a,b)=>a+b,0);let n=Math.random()*sum;
   for(let i=0;i<pool.length;i++){n-=weights[i];if(n<=0)return pool[i];}return pool[0];
@@ -197,7 +203,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const def=valid[Math.floor(Math.random()*valid.length)];addBit(def.id);
    $("lootbox-result").textContent="Lootbox: "+def.label+". Added one bit.";
   }else{
-   const p=rarityWeightedModel();const model=makeModel("loot-"+data.nextId++,p.faction,p.type,p.weapon,{mounted:!!p.mounted,name:(p.faction==="empire"?"Empire ":"High Elf ")+title(p.type)+" · "+title(p.weapon)+(p.mounted?" · Mounted":"")});
+   const p=rarityWeightedModel();const namedName=p.type==="legendaryLord"?"Lord-Marshal Edric Voss":p.type==="shadowElf"?"Lethariel Starweaver":null;const model=makeModel("loot-"+data.nextId++,p.faction,p.type,p.weapon,{mounted:!!p.mounted,shield:p.type==="legendaryLord",name:namedName||(p.faction==="empire"?"Empire ":"High Elf ")+title(p.type)+" · "+title(p.weapon)+(p.mounted?" · Mounted":"")});model.namedCharacter=!!p.namedCharacter;model.offhandWeapon=p.type==="shadowElf";model.components=p.namedCharacter?[p.type==="legendaryLord"?"edric_voss_body":"lethariel_starweaver_body"]:model.components;
    data.models.push(model);$("lootbox-result").textContent="Lootbox: "+modelLabel(model)+". Added one complete model.";
   }
   save();renderAll();
