@@ -23,8 +23,8 @@ button:active{transform:scale(.96)}button:disabled{opacity:.3}
 #loghead{display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
 #log{overflow:auto;display:flex;flex-direction:column;gap:9px;padding:10px 4px;font-size:12px;line-height:1.4}
 .logentry{padding:0 0 8px;border-bottom:1px solid #ffffff1c}
-#rollview{position:fixed;z-index:5;left:50%;top:50%;transform:translate(-50%,-50%);width:min(94vw,620px);max-height:62dvh;overflow:auto;pointer-events:auto;background:rgba(16,22,25,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.25);border-radius:15px;padding:9px;display:none}
-#rollview.show{display:block}
+#rollview{position:fixed;z-index:5;left:8px;bottom:calc(env(safe-area-inset-bottom) + 124px);width:min(94vw,480px);max-height:34dvh;overflow:hidden;pointer-events:auto;background:rgba(16,22,25,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.25);border-radius:15px;padding:8px;display:none;box-shadow:0 5px 24px #0007}
+#rollview.show{display:flex;flex-direction:column;gap:5px}\n#rollcontent{overflow-y:auto;overscroll-behavior:contain;min-height:0;scrollbar-width:thin;scrollbar-color:#8c978c transparent}\n.combat-roll-entry{padding:5px 2px 8px}\n.combat-roll-entry+.combat-roll-entry{border-top:1px solid #ffffff26}\n.combat-roll-entry .dice-stack{margin-top:0}\n.combat-roll-entry .dice-duel{margin-top:2px}
 #rollclose{position:sticky;float:right;top:0;z-index:2;min-width:34px;min-height:34px;width:34px;height:34px;padding:0;font-size:19px}
 .dice-stack{display:grid;gap:5px;margin-top:3px;padding:7px;background:transparent;border:0;border-radius:8px}
 .dice-duel{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dice-side{min-width:0;border:1px solid #ffffff2a;border-radius:9px;padding:7px}.dice-side h3{font-size:11px;margin:0 0 5px;color:#f7e7b5}
@@ -33,7 +33,7 @@ button:active{transform:scale(.96)}button:disabled{opacity:.3}
 .die.success{background:#276847;border-color:#75d49b;color:#e9fff0}.die.fail{background:#813e3b;border-color:#e28b83;color:#fff0ed}.die.save{background:#285b7b;border-color:#86c9ed;color:#eaf8ff}
 @keyframes rollin{0%{transform:translateY(-35px) rotate(100deg) scale(.55);opacity:0}70%{transform:translateY(4px) rotate(-10deg) scale(1.08);opacity:1}100%{transform:translateY(0) rotate(0) scale(1);opacity:1}}
 .rollsummary{font-size:12px;color:#f1ead7;margin-top:5px}
-@media(max-width:520px){.unit-card{width:59px;height:52px}.unit-card .sigil{font-size:24px}#actions{gap:5px}#actions button{width:43px;height:43px;min-width:43px;min-height:43px;font-size:20px}#rollview{top:45%;max-height:55dvh}.dice-duel{grid-template-columns:1fr 1fr}.die{width:25px;height:25px}}
+@media(max-width:520px){.unit-card{width:59px;height:52px}.unit-card .sigil{font-size:24px}#actions{gap:5px}#actions button{width:43px;height:43px;min-width:43px;min-height:43px;font-size:20px}#rollview{left:6px;bottom:calc(env(safe-area-inset-bottom) + 122px);width:min(96vw,480px);max-height:32dvh}.dice-duel{grid-template-columns:1fr 1fr}.die{width:25px;height:25px}}
 
 .champion-mark{position:absolute;left:3px;top:1px;font-size:12px;line-height:1;color:#ffe39b;text-shadow:0 1px 3px #000}
 .pool-label{font-size:10px;font-weight:800;color:#ffe39b;padding-top:5px;border-top:1px solid #ffffff20}
