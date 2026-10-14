@@ -155,8 +155,10 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(range>48){say("Cannon target is beyond its 48-inch range.");return false;}
     const dice=roll(2),raw=dice[0]+dice[1],bs=Math.max(0,cannon.stats.BS||0),deviation=Math.max(0,raw-bs),side=roll(1)[0]%2===0?-1:1;
     const aimElevation=terrainElevationAt(terrain(),tx,ty,W(),H())+(aimedUnit?(aimedUnit.heightIn||1.7)*.75:0),muzzleElevation=terrainElevationAt(terrain(),ox,oy,W(),H())+(cannon.heightIn||1.7)*.75,elevationAngle=Math.atan2(aimElevation-muzzleElevation,Math.max(.1,range))*180/Math.PI;
-    const angle=Math.atan2(dy,dx)+side*deviation*Math.PI/180,travel=range*W()/BATTLEFIELD_WIDTH_IN;
-    const ex=ox+Math.cos(angle)*travel,ey=oy+Math.sin(angle)*travel,start={x:ox,y:oy},end={x:ex,y:ey};
+    const angle=Math.atan2(dy,dx)+side*deviation*Math.PI/180,pxPerIn=W()/BATTLEFIELD_WIDTH_IN,cos=Math.cos(angle),sin=Math.sin(angle);
+    const edgeX=cos>0?(W()-ox)/cos:cos<0?(0-ox)/cos:Infinity,edgeY=sin>0?(H()-oy)/sin:sin<0?(0-oy)/sin:Infinity,edgeDistance=Math.max(0,Math.min(edgeX,edgeY)),travel=aimedUnit?Math.min(48*pxPerIn,edgeDistance):range*pxPerIn;
+    const ex=ox+cos*travel,ey=oy+sin*travel,start={x:ox,y:oy},end={x:ex,y:ey};
+    const heightAt=projection=>muzzleElevation+(aimElevation-muzzleElevation)*(projection*travel/pxPerIn/range);
     const candidates=[];
     for(const unit of units().filter(v=>v!==cannon&&!v.attachedTo&&alive(v)&&v.deployed!==false)){
       const q=shape(unit),ux=unit.x*W(),uy=unit.y*H(),vx=ex-ox,vy=ey-oy,den=vx*vx+vy*vy||1;
@@ -170,13 +172,13 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       if(!segmentsIntersect(start,end,a,b))continue;
       const vx=ex-ox,vy=ey-oy,projection=((a.x-ox)*vx+(a.y-oy)*vy)/(vx*vx+vy*vy||1);
       if(projection>0&&projection<=1){
-        const px=ox+vx*projection,py=oy+vy*projection,z=muzzleElevation+(aimElevation-muzzleElevation)*projection,wallBase=terrainElevationAt(terrain(),px,py,W(),H());
+        const px=ox+vx*projection,py=oy+vy*projection,z=heightAt(projection),wallBase=terrainElevationAt(terrain(),px,py,W(),H());
         if(z<=wallBase+(wall.heightIn||1.5))candidates.push({kind:"wall",wall,at:projection});
       }
     }
     const groundSteps=Math.max(20,Math.ceil(range*2));
     for(let i=1;i<groundSteps;i++){
-      const projection=i/groundSteps,px=ox+(ex-ox)*projection,py=oy+(ey-oy)*projection,z=muzzleElevation+(aimElevation-muzzleElevation)*projection,ground=terrainElevationAt(terrain(),px,py,W(),H());
+      const projection=i/groundSteps,px=ox+(ex-ox)*projection,py=oy+(ey-oy)*projection,z=heightAt(projection),ground=terrainElevationAt(terrain(),px,py,W(),H());
       if(z<=ground+.02){candidates.push({kind:"ground",at:projection});break;}
     }
     candidates.sort((a,b)=>a.at-b.at);
@@ -219,7 +221,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       impacts++;strength--;
     }
     if(!candidates.length)say("The cannonball strikes the ground at the aim point; nothing is in its path.");
-    else if(candidates.length>1)say("The cannonball penetrates through "+impacts+" objects; Strength drops by 1 after each impact.");
+    else if(impacts>1)say("The cannonball penetrates through "+impacts+" objects; Strength drops by 1 after each impact.");
     return true;
   }
   return {shoot,fireCannon};
