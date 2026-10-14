@@ -4,7 +4,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   const list=$("army-list"),total=$("army-total"),addButton=$("add-unit"),startButton=$("begin-deployment");
   const elf=()=>faction==="highElves",isCharacterType=type=>["captain","lord","legendaryLord","shadowElf"].includes(type),fmt=n=>Number.isInteger(n)?String(n):n.toFixed(1);
   function defaults(u){
-    u.champion=false;u.championBonus=u.type==="archers"?"BS":"A";u.upgrades={};u.skills={};u.elvenArchery=false;u.lightArmour=false;u.heavyArmour=["legendaryLord","shadowElf"].includes(u.type);u.magicArmour=false;u.weapon="handWeapon";u.meleeWeapons=u.type==="shadowElf"?["handWeapon","offhandWeapon"]:["handWeapon"];u.extraMeleeWeapons=[];u.rangedWeapon=u.type==="shadowElf"?"magicBow":null;u.spears=false;u.bow=false;u.barding=false;u.mounted=false;u.mountType="none";u.shield=u.type==="legendaryLord";u.freeCavalryOption="bow";
+    u.champion=false;u.championBonus=u.type==="archers"?"BS":"A";u.upgrades={};u.skills={};u.elvenArchery=false;u.lightArmour=false;u.heavyArmour=["legendaryLord","shadowElf"].includes(u.type);u.magicArmour=false;u.weapon="handWeapon";u.meleeWeapons=u.type==="shadowElf"?["handWeapon","offhandWeapon"]:["handWeapon"];u.extraMeleeWeapons=[];u.rangedWeapon=u.type==="shadowElf"?"magicBow":null;u.spears=false;u.bow=false;u.barding=false;u.mounted=u.type==="cavalry";u.mountType=u.type==="cavalry"?"horse":"none";u.shield=u.type==="legendaryLord";u.freeCavalryOption="bow";
     if(elf()){if(u.type==="swordsmen"){u.lightArmour=true;u.shield=true;u.spears=true;u.weapon="spear";u.meleeWeapons=["handWeapon","spear"];}if(u.type==="archers")u.lightArmour=true;}
     if(isCharacterType(u.type))u.models=1;else if(u.type==="cavalry")u.models=Math.min(15,Math.max(5,u.models||5));else if(u.type==="cannon")u.models=3;else if(u.type==="boltThrower")u.models=2;else u.models=Math.min(30,Math.max(5,u.models||10));
   }
@@ -18,7 +18,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     {key:"Ld",label:"Leadership",unit:1,character:3}
   ];
   function unitPoints(u){
-    const e=elf(),m=u.models||1,character=isCharacterType(u.type),eagleKit=e&&character&&u.mountType==="eagle";
+    const e=elf(),m=u.models||1,character=isCharacterType(u.type),eagleKit=e&&(character||u.type==="cavalry")&&u.mountType==="eagle";
     if(u.type==="cannon")return 80;if(u.type==="boltThrower")return 60;
     const upgradeCost=statUpgrades.reduce((sum,s)=>sum+(u.upgrades&&u.upgrades[s.key]?(character?s.character:s.unit*m):0),0);
     const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3:0),0);
@@ -32,7 +32,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     if(u.type==="cavalry"){
       const free=u.freeCavalryOption||"bow";
       const meleeCost=weapons.reduce((sum,w)=>sum+(w==="spear"&&!(e&&free==="spear")?m:["lance","greatWeapon"].includes(w)?2*m:0),0);
-      const bowCost=(u.bow&&!(e&&free==="bow")?2*m:0)+(ranged==="bow"&&!(e&&free==="bow")&&!u.bow?2*m:0);
+      const bowCost=(u.bow&&!(e&&free==="bow")&&!eagleKit?2*m:0)+(ranged==="bow"&&!(e&&free==="bow")&&!u.bow&&!eagleKit?2*m:0);
       const otherRangedCost=ranged==="crossbow"?3*m:ranged==="firearm"?4*m:0;
       return m*(e?24:16)+(u.elvenArchery&&e&&(ranged==="bow"||u.bow||free==="bow")?2*m:0)+bowCost+otherRangedCost+(u.heavyArmour?2*m:0)+(u.barding?2*m:0)+(u.shield?0.5*m:0)+meleeCost+upgradeCost+skillCost;
     }
@@ -81,6 +81,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         if(u.mounted&&u.mountType!=="eagle")options.append(check("Barding",{cost:"+4 pts, +1 save"+(elf()?", no Move penalty":", −1 Move"),checked:!!u.barding,onChange:v=>{u.barding=v;updateTotals();}}));
       }else if(cavalry){
         const kit=document.createElement("p");kit.textContent=elf()?"Includes sword, light armour and horse. Choose one free: bow or spear. Always Strikes First.":"Includes sword, light armour and horse (+1 armour save).";options.append(kit);
+        if(elf())options.append(select("Mount",'<option value="horse">Elven horse</option><option value="eagle">Great Eagle (M12, flying cavalry)</option>',u.mountType||"horse",v=>{u.mountType=v;u.mounted=true;u.barding=false;if(v==="eagle"){u.heavyArmour=false;u.freeCavalryOption="spear";u.weapon="spear";u.bow=true;u.rangedWeapon="bow";}else{u.freeCavalryOption="bow";u.bow=false;u.weapon="handWeapon";u.rangedWeapon=null;}updateTotals();renderRows();}));
         if(elf()){
           options.append(select("Free equipment",'<option value="bow">Bow (24″ range)</option><option value="spear">Spear (+1 Strength on charge)</option>',u.freeCavalryOption||"bow",v=>{u.freeCavalryOption=v;if(v==="bow")u.bow=false;if(v==="spear"&&u.weapon==="spear")u.weapon="handWeapon";updateTotals();renderRows();}));
           options.append(select("Weapon upgrade",'<option value="handWeapon">No upgrade</option><option value="spear">Spear (+1/model, free if selected above)</option><option value="lance">Lance (+2/model)</option><option value="greatWeapon">Great weapon (+2/model)</option>',["spear","lance","greatWeapon"].includes(u.weapon)?u.weapon:"handWeapon",v=>{u.weapon=v;if(["halberd","greatWeapon"].includes(v))u.shield=false;updateTotals();renderRows();}));
@@ -91,8 +92,8 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
           const cavRangedOptions='<option value="">None</option><option value="bow">Bow (+2/model)</option><option value="crossbow">Crossbow (+3/model)</option><option value="firearm">Firearm (+4/model)</option>';const cavRangedFull=!(u.rangedWeapon||(u.bow?"bow":""))&&weaponSlotsUsed(u)>=2;options.append(select("Ranged weapon",cavRangedFull?cavRangedOptions.replace(/<option value="(bow|crossbow|firearm)"/g,'<option disabled value="$1"'):cavRangedOptions,u.rangedWeapon||(u.bow?"bow":""),v=>{if(v&&!u.rangedWeapon&&!u.bow&&weaponSlotsUsed(u)>=2){renderRows();return;}u.rangedWeapon=v||null;u.bow=v==="bow";updateTotals();renderRows();}));
           extraWeaponChecks(u,options,["spear","lance","greatWeapon"]);
         }
-        options.append(check("Heavy armour",{cost:"+2/model",checked:!!u.heavyArmour,onChange:v=>{u.heavyArmour=v;updateTotals();}}));
-        options.append(check("Barding",{cost:"+2/model, +1 save"+(elf()?", no Move penalty":", −1 Move"),checked:!!u.barding,onChange:v=>{u.barding=v;updateTotals();}}));
+        options.append(check("Heavy armour",{cost:"+2/model",checked:!!u.heavyArmour,disabled:elf()&&u.mountType==="eagle",onChange:v=>{u.heavyArmour=v;updateTotals();}}));
+        if(!(elf()&&u.mountType==="eagle"))options.append(check("Barding",{cost:"+2/model, +1 save"+(elf()?", no Move penalty":", −1 Move"),checked:!!u.barding,onChange:v=>{u.barding=v;updateTotals();}}));
         options.append(check("Shield",{cost:"+0.5/model, +1 front armour save",checked:!!u.shield,disabled:false,onChange:v=>{u.shield=v;updateTotals();}}));
       }else if(infantry){
         const meleeOptions='<option value="handWeapon">Sword / hand weapon (included)</option><option value="spear">Spear (+1 pt/model)</option><option value="greatWeapon">Great weapon (+2 pts/model)</option><option value="halberd">Halberd (+1 pt/model)</option>';
