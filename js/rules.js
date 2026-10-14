@@ -66,7 +66,7 @@ export function createRules({ roll, units = () => [] }) {
     return tiers;
   }
   function rollPool(attackerPool,target,mode,context,v) {
-    const attackCount=attackerPool.count*(mode==="melee"?attackerPool.stats.A:(context.attacker?.rangedUsesUserStats?attackerPool.stats.A:1)),groups=new Map();
+    const attackCount=attackerPool.count*(context.attacksPerModel??(mode==="melee"?attackerPool.stats.A:(context.attacker?.rangedUsesUserStats?attackerPool.stats.A:1))),groups=new Map();
     const groupFor=tier=>{const key=tier.kind+":"+tier.id;let g=groups.get(key);if(!g){g={label:attackerPool.labels.join(" / "),targetLabel:tier.label,attacks:0,hitNeed:7,hitRolls:[],hitPasses:[],hitRerolls:[],hitRerollPasses:[],hitFollowUps:[],hitFollowUpPasses:[],hits:0,woundNeed:null,woundRolls:[],woundsBeforeSave:0,saveNeed:null,saveRolls:[],saved:0,wardNeed:null,wardRolls:[],wardSaved:0,wounds:0,WS:attackerPool.stats.WS,S:attackerPool.stats.S,A:attackerPool.stats.A,BS:attackerPool.stats.BS};groups.set(key,g);}return g;};
     for(let i=0;i<attackCount;i++){
       const tiers=targetTiers(target,v,context.attacker);if(!tiers.length)break;
@@ -108,12 +108,22 @@ export function createRules({ roll, units = () => [] }) {
   }
   function attack(u,target,mode,context={}) {
     const v=newVirtual(target),pools=[];
-    const charging=!!context.charging;
-    const strengthBonus=context.attackComponent==="mount"?0:(u.weapon==="greatWeapon"?2:u.weapon==="halberd"?1:(charging&&u.weapon==="lance"?2:charging&&u.weapon==="spear"?1:0));
-    const magicSword=u.weapon==="magicSword"&&context.attackComponent!=="mount";
-    const attacker={...u,stats:{...u.stats,S:u.stats.S+strengthBonus+(magicSword?1:0),A:u.stats.A+(magicSword?1:0)+(mode==="melee"&&u.dualWield&&context.attackComponent!=="mount"?1:0)}};
-    const attackContext={...context,attacker:u,rerollOnesMelee:!!u.skills?.rerollOnesMelee,rerollOnesShooting:!!u.skills?.rerollOnesShooting};
-    for(const attackerPool of modelPools(attacker,mode,attackContext))pools.push(...rollPool(attackerPool,target,mode,attackContext,v));
+    const charging=!!context.charging, isRider=context.attackComponent!=="mount";
+    const dualBonus=mode==="melee"&&u.dualWield&&isRider?1:0;
+    const weapons=u.meleeWeapons||[u.weapon||"handWeapon"];
+    const hasMagicSword=mode==="melee"&&isRider&&(u.weapon==="magicSword"||weapons.includes("magicSword"));
+    const lesserWeapon=weapons.find(w=>w!=="magicSword"&&["handWeapon","offhandWeapon"].includes(w));
+    const plans=hasMagicSword&&lesserWeapon
+      ?[{weapon:lesserWeapon,attacksPerModel:1},{weapon:"magicSword",attacksPerModel:u.stats.A+dualBonus}]
+      :[{weapon:u.weapon||"handWeapon",attacksPerModel:null}];
+    for(const plan of plans){
+      const weapon=plan.weapon;
+      const strengthBonus=context.attackComponent==="mount"?0:(weapon==="greatWeapon"?2:weapon==="halberd"?1:(charging&&weapon==="lance"?2:charging&&weapon==="spear"?1:0));
+      const magicSword=weapon==="magicSword"&&isRider;
+      const attacker={...u,weapon,stats:{...u.stats,S:u.stats.S+strengthBonus+(magicSword?1:0),A:u.stats.A+(magicSword?1:0)+dualBonus}};
+      const attackContext={...context,attacker,attacksPerModel:plan.attacksPerModel,rerollOnesMelee:!!u.skills?.rerollOnesMelee,rerollOnesShooting:!!u.skills?.rerollOnesShooting};
+      for(const attackerPool of modelPools(attacker,mode,attackContext))pools.push(...rollPool(attackerPool,target,mode,attackContext,v));
+    }
     const sum=k=>pools.reduce((n,p)=>n+(p[k]||0),0);
     return {attacks:sum("attacks"),hitNeed:pools[0]?.hitNeed??7,hitRolls:pools.flatMap(p=>p.hitRolls),hitPasses:pools.flatMap(p=>p.hitPasses),hitFollowUps:pools.flatMap(p=>p.hitFollowUps),hitFollowUpPasses:pools.flatMap(p=>p.hitFollowUpPasses),hits:sum("hits"),woundNeed:pools[0]?.woundNeed??null,woundRolls:pools.flatMap(p=>p.woundRolls),woundsBeforeSave:sum("woundsBeforeSave"),saveNeed:pools.every(p=>p.saveNeed==null)?null:pools[0]?.saveNeed,saveRolls:pools.flatMap(p=>p.saveRolls),saved:sum("saved"),wardSaved:sum("wardSaved"),wounds:sum("wounds"),pools,cascadePlan:{rankFileLost:v.rankFileLost,rankFileDamage:v.rankFileDamage,championKilled:v.championKilled,characterDamage:v.characterDamage}};
   }
