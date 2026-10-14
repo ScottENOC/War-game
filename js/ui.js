@@ -1,4 +1,4 @@
-import { terrainShotEffect } from "./terrain.js";
+import { terrainShotEffect, terrainElevationAt } from "./terrain.js";
 export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, startBattle, say, equipMeleeWeapon, setRangedMode, shape, PX_PER_IN, terrain = () => [], BATTLEFIELD_WIDTH_IN = 48 }) {
   function renderRoster() {
     for (const side of ["ai", "player"]) {
@@ -38,9 +38,10 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
         const blockers=units().filter(v=>v!==u&&v!==target&&!v.attachedTo&&alive(v)).filter(v=>{const vx=(v.x-u.x)*wx,vy=(v.y-u.y)*hy,t=(vx*dx+vy*dy)/len2;if(t<=.04||t>=.96)return false;const px=u.x*wx+t*dx,py=u.y*hy+t*dy;return Math.hypot(v.x*wx-px,v.y*hy-py)<Math.max(wx,hy)/48*.8;});
         let arc=true;if(!u.skirmishing){let a=Math.atan2(dy,dx)-(u.facing||0);while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;arc=Math.abs(a)<=Math.PI/4;}
         const friendlyBlockers=blockers.filter(v=>v.side===u.side),arcHeight=(u.rangedWeapon==="bow"?2.5:u.rangedWeapon==="crossbow"?1.25:0)*Math.min(1,d/(u.range||BOW_RANGE)),wallEffect=terrainShotEffect(terrain(),u,target,u.rangedWeapon,W(),H(),BATTLEFIELD_WIDTH_IN,H()/Math.max(1,W()/BATTLEFIELD_WIDTH_IN),arcHeight);
-        const startZ=(u.heightIn||((u.isCavalry||u.mounted)?2.5:1.7))*.75,endZ=(target.heightIn||((target.isCavalry||target.mounted)?2.5:1.7))*.75;
-        const unitBlocked=blockers.some(v=>{const vx=(v.x-u.x)*wx,vy=(v.y-u.y)*hy,t=Math.max(0,Math.min(1,(vx*dx+vy*dy)/len2)),z=startZ+(endZ-startZ)*t,top=v.heightIn||((v.isCavalry||v.mounted)?2.5:1.7);return z<top;});
-        const blocked=wallEffect.blocked||(u.rangedWeapon==="firearm"&&unitBlocked)||(unitBlocked&&u.rangedWeapon!=="bow"&&u.rangedWeapon!=="crossbow");
+        const startZ=terrainElevationAt(terrain(),u.x*wx,u.y*hy,wx,hy)+(u.heightIn||((u.isCavalry||u.mounted)?2.5:1.7))*.75,endZ=terrainElevationAt(terrain(),target.x*wx,target.y*hy,wx,hy)+(target.heightIn||((target.isCavalry||target.mounted)?2.5:1.7))*.75;
+        const unitBlocked=blockers.some(v=>{const vx=(v.x-u.x)*wx,vy=(v.y-u.y)*hy,t=Math.max(0,Math.min(1,(vx*dx+vy*dy)/len2)),z=startZ+(endZ-startZ)*t,top=terrainElevationAt(terrain(),v.x*wx,v.y*hy,wx,hy)+(v.heightIn||((v.isCavalry||v.mounted)?2.5:1.7));return z<top;});
+        const unitArcClear=unitBlocked&&(u.rangedWeapon==="bow"||u.rangedWeapon==="crossbow")&&blockers.every(v=>{const vx=(v.x-u.x)*wx,vy=(v.y-u.y)*hy,t=Math.max(0,Math.min(1,(vx*dx+vy*dy)/len2)),top=terrainElevationAt(terrain(),v.x*wx,v.y*hy,wx,hy)+(v.heightIn||((v.isCavalry||v.mounted)?2.5:1.7));return startZ+(endZ-startZ)*t+arcHeight*Math.sin(Math.PI*t)>=top;});
+        const blocked=wallEffect.blocked||(unitBlocked&&(u.rangedWeapon==="firearm"||!unitArcClear));
         let over=unitBlocked?(u.overUnitPenalty??(u.rangedWeapon==="bow"?1:2)):0;if(unitBlocked&&(u.rangedWeapon==="bow"||u.rangedWeapon==="crossbow"))over=Math.max(over,u.rangedWeapon==="crossbow"?2:1);
         const long=d>range/2?(u.rangedWeapon==="firearm"?2:1):0,moved=u.moved?1:0,single=(target.isCharacter||target.models===1||target.skirmishing)?1:0,charge=target.charged?1:0,cover=target.cover==="hard"?2:target.cover==="soft"?1:0;
         const reducible=long+moved+over,elfReduce=u.elvenArchery?Math.min(2,reducible):0;
