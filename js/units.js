@@ -1,15 +1,15 @@
 import { FACTIONS } from "./factions.js";
 
 export function unitCost(config, faction) {
-  const elf=faction==="highElves",type=config.type,models=config.models||1,character=["captain","lord","legendaryLord","shadowElf"].includes(type);
+  const elf=faction==="highElves",type=config.type,models=config.models||1,character=["captain","lord","legendaryLord","shadowElf"].includes(type),eagleKit=elf&&character&&config.mountType==="eagle";
   if(type==="cannon")return 80;if(type==="boltThrower")return 60;
   const upgrades=[{key:"M",unit:2,character:5},{key:"WS",unit:2,character:5},{key:"BS",unit:2,character:5},{key:"S",unit:3,character:6},{key:"T",unit:4,character:8},{key:"I",unit:1,character:3},{key:"Ld",unit:1,character:3}].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
   const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
   const weapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])];
   const ranged=config.rangedWeapon||(["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(type==="archers"?"bow":config.bow?"bow":null));
-  const rangedCost=ranged==="bow"?(elf&&type==="cavalry"&&(config.freeCavalryOption||"bow")==="bow"?0:(elf?3:2)*(character?1:models)):ranged==="crossbow"?3*(character?1:models):ranged==="firearm"?4*(character?1:models):0;
+  const rangedCost=ranged==="bow"?(eagleKit?0:elf&&type==="cavalry"&&(config.freeCavalryOption||"bow")==="bow"?0:(elf?3:2)*(character?1:models)):ranged==="crossbow"?3*(character?1:models):ranged==="firearm"?4*(character?1:models):0;
   if(character){
-    const meleeCost=weapons.reduce((sum,w)=>sum+(["halberd","greatWeapon"].includes(w)?4:w==="spear"&&config.mounted?2:w==="lance"&&config.mounted?4:0),0);
+    const meleeCost=weapons.reduce((sum,w)=>sum+(["halberd","greatWeapon"].includes(w)?4:w==="spear"&&config.mounted?(eagleKit?0:2):w==="lance"&&config.mounted?(eagleKit?2:4):0),0);
     return (type==="legendaryLord"?160:type==="shadowElf"?165:(elf?(type==="lord"?120:75):(type==="lord"?80:50)))+(config.heavyArmour&&!["legendaryLord","shadowElf"].includes(type)?4:0)+(config.magicArmour?10:0)+(config.weapon==="magicSword"?10:0)+meleeCost+(config.mounted?8:0)+(config.mounted&&config.barding?4:0)+(config.shield&&type!=="legendaryLord"?2:0)+rangedCost+upgrades+skillCost;
   }
   if(type==="cavalry"){
