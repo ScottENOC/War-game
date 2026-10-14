@@ -80,7 +80,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         }
         if(u.mounted&&u.mountType!=="eagle")options.append(check("Barding",{cost:"+4 pts, +1 save"+(elf()?", no Move penalty":", −1 Move"),checked:!!u.barding,onChange:v=>{u.barding=v;updateTotals();}}));
       }else if(cavalry){
-        const kit=document.createElement("p");kit.textContent=elf()?"Includes sword, light armour and horse. Choose one free: bow or spear. Always Strikes First.":"Includes sword, light armour and horse (+1 armour save).";options.append(kit);
+        const kit=document.createElement("p");kit.textContent=elf()?(u.mountType==="eagle"?"Includes sword, light armour, spear and bow on a Great Eagle. Always Strikes First.":"Includes sword, light armour and horse. Choose one free: bow or spear. Always Strikes First."):"Includes sword, light armour and horse (+1 armour save).";options.append(kit);
         if(elf())options.append(select("Mount",'<option value="horse">Elven horse</option><option value="eagle">Great Eagle (M12, flying cavalry)</option>',u.mountType||"horse",v=>{u.mountType=v;u.mounted=true;u.barding=false;if(v==="eagle"){u.heavyArmour=false;u.freeCavalryOption="spear";u.weapon="spear";u.bow=true;u.rangedWeapon="bow";}else{u.freeCavalryOption="bow";u.bow=false;u.weapon="handWeapon";u.rangedWeapon=null;}updateTotals();renderRows();}));
         if(elf()){
           if(u.mountType!=="eagle")options.append(select("Free equipment",'<option value="bow">Bow (24″ range)</option><option value="spear">Spear (+1 Strength on charge)</option>',u.freeCavalryOption||"bow",v=>{u.freeCavalryOption=v;if(v==="bow")u.bow=false;if(v==="spear"&&u.weapon==="spear")u.weapon="handWeapon";updateTotals();renderRows();}));
