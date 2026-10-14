@@ -1,7 +1,8 @@
 import { FACTIONS } from "./factions.js";
 
 export function unitCost(config, faction) {
-  const elf=faction==="highElves",type=config.type,models=config.models||1,character=["captain","lord","legendaryLord","shadowElf"].includes(type),eagleKit=elf&&(character||type==="cavalry")&&config.mountType==="eagle";
+  const elf=faction==="highElves",type=config.type,models=config.models||1,character=["captain","lord","legendaryLord","shadowElf","pegasusChampion"].includes(type),eagleKit=elf&&(character||type==="cavalry")&&(config.mountType==="eagle"||type==="pegasusChampion");
+  if(type==="pegasusChampion")return 110;
   if(type==="cannon")return 80;if(type==="boltThrower")return 60;
   const upgrades=[{key:"M",unit:2,character:5},{key:"WS",unit:2,character:5},{key:"BS",unit:2,character:5},{key:"S",unit:3,character:6},{key:"T",unit:4,character:8},{key:"I",unit:1,character:3},{key:"Ld",unit:1,character:3}].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
   const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
@@ -25,7 +26,7 @@ export function unitCost(config, faction) {
 function buildUnit(template,config,faction,opposing=false) {
   const elf=faction==="highElves"&&!opposing,stats={...template.stats};
   const isCannon=config.type==="cannon",isBoltThrower=config.type==="boltThrower",isSiegeEngine=isCannon||isBoltThrower;
-  const isCharacter=["captain","lord","legendaryLord","shadowElf"].includes(config.type),isCavalry=config.type==="cavalry",mountType=config.mountType||(config.mounted?"horse":"none"),mounted=isCavalry||(isCharacter&&mountType!=="none"),isEagleMounted=elf&&mountType==="eagle"&&(isCharacter||isCavalry),hasHeavyArmour=!!config.heavyArmour&&!isEagleMounted,hasMagicArmour=!!config.magicArmour&&!isEagleMounted,hasBarding=!!config.barding&&!isEagleMounted;
+  const isCharacter=["captain","lord","legendaryLord","shadowElf","pegasusChampion"].includes(config.type),isCavalry=config.type==="cavalry",mountType=config.type==="pegasusChampion"?"eagle":(config.mountType||(config.mounted?"horse":"none")),mounted=isCavalry||(isCharacter&&mountType!=="none"),isEagleMounted=elf&&mountType==="eagle"&&(isCharacter||isCavalry),hasHeavyArmour=!!config.heavyArmour&&(!isEagleMounted||config.type==="pegasusChampion"),hasMagicArmour=!!config.magicArmour&&!isEagleMounted,hasBarding=!!config.barding&&!isEagleMounted;
   if(mounted)stats.M=isEagleMounted?12:elf?9:8;
   const crewMovementCharacteristic=isCannon?4:isBoltThrower?(elf?5:4):null;
   if(isCannon)stats.M=2;
@@ -59,7 +60,7 @@ function buildUnit(template,config,faction,opposing=false) {
     ranksToShoot:mounted?1:rangedWeapon==="bow"?(elf?4:3):rangedWeapon==="crossbow"||rangedWeapon==="firearm"?2:0,
     overUnitPenalty:rangedWeapon==="bow"?1:rangedWeapon==="crossbow"?2:2,
     spears:weapon==="spear"&&meleeWeapons.includes("spear")&&!mounted&&!isCharacter,spearRanks:elf?3:2,hasBow,range:isBoltThrower?48+(config.campaignStats?.range||0):rangedWeapon==="magicBow"?36:rangedWeapon==="bow"?(elf?30:24):rangedWeapon==="crossbow"?30:rangedWeapon==="firearm"?20:(template.range||24),lightArmour,heavyArmour:hasHeavyArmour,barding:hasBarding,
-    alwaysStrikesFirst:!!template.alwaysStrikesFirst,elvenArchery:!!elf&&!!config.elvenArchery,skills:{...(config.skills||{})},skirmishCapable:!!config.skills?.skirmish||!!template.grantsSkirmish,grantsSkirmish:!!template.grantsSkirmish,dualWield:!!template.dualWield||(config.meleeWeapons||[]).includes("offhandWeapon")||!!config.offhandWeapon,gender:template.gender||null,skirmishing:false,skirmishCombatRound:0,faction:elf?"highElves":"empire",mountType:mounted?(isEagleMounted?"eagle":"horse"):"none",flyingMount:!!isEagleMounted,mountStats:mounted?{...(template.mountStats||{A:1,WS:3,I:3,S:3})}:null,
+    alwaysStrikesFirst:!!template.alwaysStrikesFirst,magicalLance:config.type==="pegasusChampion",reserveDeployRule:config.type==="pegasusChampion",priorityActivation:config.type==="pegasusChampion",canDeployNeutral:config.type==="pegasusChampion",elvenArchery:!!elf&&!!config.elvenArchery,skills:{...(config.skills||{})},skirmishCapable:!!config.skills?.skirmish||!!template.grantsSkirmish,grantsSkirmish:!!template.grantsSkirmish,dualWield:!!template.dualWield||(config.meleeWeapons||[]).includes("offhandWeapon")||!!config.offhandWeapon,gender:template.gender||null,skirmishing:false,skirmishCombatRound:0,faction:elf?"highElves":"empire",mountType:mounted?(isEagleMounted?"eagle":"horse"):"none",flyingMount:!!isEagleMounted,mountStats:mounted?{...(template.mountStats||{A:1,WS:3,I:3,S:3})}:null,
     baseWidthIn:isCannon?80/25.4:isBoltThrower?60/25.4:mounted?25/25.4:20/25.4,baseDepthIn:isCannon?100/25.4:isBoltThrower?80/25.4:mounted?50/25.4:20/25.4,heightIn:config.heightIn??(mounted?2.5:1.7),flightAltitudeIn:isEagleMounted?12:0,
     armour:isCharacter&&hasMagicArmour?"fullPlate":(isCavalry||isCharacter?(hasHeavyArmour?"heavy":"light"):(lightArmour?"light":"none")),magicArmour:hasMagicArmour,ignoreArmourSaves:!!template.ignoreArmourSaves,canDeployAnywhere:!!template.canDeployAnywhere,coverHitPenaltyBonus:!!template.coverHitPenaltyBonus,wardSave:null,
     largeTarget:false,singleCharacter:false,skirmisher:false,cover:null,x:config.x,y:config.y,facing:config.facing,deployed:config.side==="ai",
@@ -77,7 +78,7 @@ export function createUnitsFromArmy(army,faction="empire") {
       else if(!["lance","greatWeapon"].includes(aiEntry.weapon))aiEntry.weapon="spear";
     }
     units["p"+n]=buildUnit(FACTIONS[playerFaction].units[entry.type],{...playerEntry,id:"p"+n,index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
-    const opposingType=FACTIONS.opposing.units[entry.type]?entry.type:(["cannon","boltThrower"].includes(entry.type)?"swordsmen":(["legendaryLord","shadowElf"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
+    const opposingType=FACTIONS.opposing.units[entry.type]?entry.type:(["cannon","boltThrower"].includes(entry.type)?"swordsmen":(["legendaryLord","shadowElf","pegasusChampion"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
     units["a"+n]=buildUnit(FACTIONS.opposing.units[opposingType],{...opposingEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},"empire",true);
   });
   Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter&&!u.hasRangedWeapon).forEach(hero=>{
