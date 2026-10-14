@@ -162,12 +162,12 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     if(!cannon?.isCannon||!cannon.isSiege||cannon.artilleryWounds<=0||cannon.shot||cannon.models<=0){say("This cannon cannot fire: it may be disabled, crewless, or already fired this turn.");return false;}
     const ox=cannon.x*W(),oy=cannon.y*H(),tx=aimX*W(),ty=aimY*H(),dx=tx-ox,dy=ty-oy;
     const range=Math.hypot(dx,dy)/(W()/BATTLEFIELD_WIDTH_IN);
+    const aimElevation=terrainElevationAt(terrain(),tx,ty,W(),H())+(aimedUnit?(aimedUnit.heightIn||1.7)*.75:0),muzzleElevation=terrainElevationAt(terrain(),ox,oy,W(),H())+(cannon.heightIn||1.7)*.75,elevationDifference=aimElevation-muzzleElevation,maxRange=Math.max(1,60-elevationDifference),elevationAngle=Math.atan2(elevationDifference,Math.max(.1,range))*180/Math.PI;
     if(range<0.5){say("Choose a target at least half an inch from the cannon.");return false;}
-    if(range>48){say("Cannon target is beyond its 48-inch range.");return false;}
+    if(range>maxRange){say("Cannon target is out of range: "+range.toFixed(1)+" inches away; maximum at this elevation is "+maxRange.toFixed(1)+" inches.");return false;}
     const dice=roll(2),raw=dice[0]+dice[1],bs=Math.max(0,cannon.stats.BS||0),deviation=Math.max(0,raw-bs),side=roll(1)[0]%2===0?-1:1;
-    const aimElevation=terrainElevationAt(terrain(),tx,ty,W(),H())+(aimedUnit?(aimedUnit.heightIn||1.7)*.75:0),muzzleElevation=terrainElevationAt(terrain(),ox,oy,W(),H())+(cannon.heightIn||1.7)*.75,elevationAngle=Math.atan2(aimElevation-muzzleElevation,Math.max(.1,range))*180/Math.PI;
     const angle=Math.atan2(dy,dx)+side*deviation*Math.PI/180,pxPerIn=W()/BATTLEFIELD_WIDTH_IN,cos=Math.cos(angle),sin=Math.sin(angle);
-    const edgeX=cos>0?(W()-ox)/cos:cos<0?(0-ox)/cos:Infinity,edgeY=sin>0?(H()-oy)/sin:sin<0?(0-oy)/sin:Infinity,edgeDistance=Math.max(0,Math.min(edgeX,edgeY)),travel=aimedUnit?Math.min(48*pxPerIn,edgeDistance):range*pxPerIn;
+    const edgeX=cos>0?(W()-ox)/cos:cos<0?(0-ox)/cos:Infinity,edgeY=sin>0?(H()-oy)/sin:sin<0?(0-oy)/sin:Infinity,edgeDistance=Math.max(0,Math.min(edgeX,edgeY)),travel=aimedUnit?Math.min(maxRange*pxPerIn,edgeDistance):range*pxPerIn;
     const ex=ox+cos*travel,ey=oy+sin*travel,start={x:ox,y:oy},end={x:ex,y:ey};
     const heightAt=projection=>muzzleElevation+(aimElevation-muzzleElevation)*(projection*travel/pxPerIn/range);
     const candidates=[];
@@ -194,7 +194,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     }
     candidates.sort((a,b)=>a.at-b.at);
     cannon.shot=true;
-    say("<b>Cannon fire — "+cannon.name+"</b><div class=\"rollsummary\">Aim elevation "+aimElevation.toFixed(1)+"″ (vertical angle "+elevationAngle.toFixed(1)+"°). 2D6 "+dice.join(" + ")+" = "+raw+"; subtract BS "+bs+"; scatter "+deviation+"° "+(side<0?"left":"right")+".</div>");
+    say("<b>Cannon fire — "+cannon.name+"</b><div class=\"rollsummary\">Aim elevation "+aimElevation.toFixed(1)+"″ (vertical angle "+elevationAngle.toFixed(1)+"°); elevation-adjusted maximum range "+maxRange.toFixed(1)+"″. 2D6 "+dice.join(" + ")+" = "+raw+"; subtract BS "+bs+"; scatter "+deviation+"° "+(side<0?"left":"right")+".</div>");
     let strength=10,impacts=0;
     for(const item of candidates){
       if(strength<=0)break;
