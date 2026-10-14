@@ -12,7 +12,7 @@ export function generateSkirmishTerrain(seed=Date.now()){
   for(let i=0;i<wallCount;i++){
     const cx=.31+random()*.38,cy=.16+random()*.68,angle=(random()-.5)*Math.PI*.72,length=.105+random()*.075;
     const dx=Math.cos(angle)*length/2,dy=Math.sin(angle)*length/2;
-    terrain.push({type:"wall",x1:Math.max(.12,cx-dx),y1:Math.max(.08,cy-dy),x2:Math.min(.88,cx+dx),y2:Math.min(.92,cy+dy),widthIn:.38,heightIn:1.5,generated:true});
+    terrain.push({type:"wall",x1:Math.max(.12,cx-dx),y1:Math.max(.08,cy-dy),x2:Math.min(.88,cx+dx),y2:Math.min(.92,cy+dy),widthIn:.38,heightIn:1.5,toughness:7,wounds:2,maxWounds:2,siegeOnly:true,generated:true});
   }
   return terrain;
 }
