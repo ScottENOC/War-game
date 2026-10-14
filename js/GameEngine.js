@@ -56,7 +56,7 @@ function equipMeleeWeapon(u,weapon){if(!u||!(u.meleeWeapons||["handWeapon"]).inc
 function setRangedMode(u,mode){if(!u||!u.hasRangedWeapon||!u.ownsShield||u.shot||!["bow","shield"].includes(mode))return false;u.rangedMode=mode;u.shield=mode==="shield";if(["greatWeapon","halberd"].includes(u.weapon))u.shield=false;return true;}
 function eligibleForActivation(u){return alive(u)&&!u.attachedTo&&!u.fled&&!u.engaged&&!u.activated;}
 function canCharge(u,target){
-  if(target?.flyingMount&&!target.engaged&&!u?.flyingMount)return false;
+  if(target?.flyingMount&&!target.engaged&&!target.charged&&!u?.flyingMount)return false;
   const dx=(target.x-u.x)*W(),dy=(target.y-u.y)*H(),bearing=Math.atan2(dy,dx),length=Math.hypot(dx,dy);if(length<1)return false;
   let delta=bearing-(u.facing||0);while(delta>Math.PI)delta-=Math.PI*2;while(delta< -Math.PI)delta+=Math.PI*2;
   const targetRadius=Math.hypot(shape(target).front,shape(target).depth)/2,arcAllowance=Math.asin(Math.min(.999,targetRadius/length));
