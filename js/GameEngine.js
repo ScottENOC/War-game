@@ -75,7 +75,7 @@ const { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage, meleeAttack,
 const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H, terrain:()=>S.terrain, BATTLEFIELD_WIDTH_IN });
 const { shoot } = SHOOTING;
 function startActivations(){S.activationSide="player";units().filter(u=>u.side==="ai"&&u.fled&&alive(u)).forEach(rallyUnit);const p=units().filter(u=>u.side==="player"&&eligibleForActivation(u));if(!p.length){runAiActivations();return;}S.selected=p[0].id;render();}
-const AI = createAI({ S, units, alive, eligibleForActivation, enemies, dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, BOW_RANGE, beginCombatPhase });
+const AI = createAI({ S, units, alive, eligibleForActivation, enemies, dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, BOW_RANGE, beginCombatPhase, terrain:()=>S.terrain });
 const runAiActivation = AI.runAiActivation;
 const runAiActivations = AI.runAiActivations;
 function finishActivation(){const u=S.units[S.selected];if(!u||u.side!=="player"||u.activated||S.phase!=="movement")return;u.activated=true;S.mode=null;say(u.name+" completes its activation.");if(runAiActivation()){const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.activationSide="player";S.selected=next.id;render();return;}}const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.activationSide="player";S.selected=next.id;render();return;}runAiActivations();}
