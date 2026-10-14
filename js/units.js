@@ -39,7 +39,7 @@ function buildUnit(template,config,faction,opposing=false) {
   if(campaignStats.MI){stats.M+=campaignStats.MI;stats.I+=campaignStats.MI;}
   // Halberds are infantry weapons; prevent stale or malformed mounted loadouts.
   if(mounted&&weapon==="halberd")weapon="handWeapon";
-  if(isCavalry&&elf&&(config.freeCavalryOption||"bow")==="spear"&&weapon==="handWeapon"&&!meleeWeapons.includes("spear")){weapon="spear";meleeWeapons.push("spear");}
+  if(isCavalry&&elf&&(config.freeCavalryOption||"bow")==="spear"){if(!meleeWeapons.includes("spear"))meleeWeapons.push("spear");if(weapon==="handWeapon")weapon="spear";}
   const costFaction=opposing?"empire":faction;
   return {id:config.id,name:template.name+" "+config.index,short:template.short,side:config.side,kind:template.kind,
     isCharacter,isCavalry,mounted,isGeneral:false,attachedTo:null,baseMove:stats.M,
