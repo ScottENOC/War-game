@@ -134,9 +134,10 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const pursuer=linked(u).find(v=>alive(v)&&!v.fled);
       u.fled=true;u.engaged=false;
       say(u.name+' fails its break test and flees.');
-      if(pursuer)pursueAfterBreak?.(pursuer,u);else panicNearby?.(u,"a friendly unit flees from combat");
+      const waitingPursuit=pursuer?!!pursueAfterBreak?.(pursuer,u):false;if(!pursuer)panicNearby?.(u,"a friendly unit flees from combat");
       (u.engagedWithIds||[]).forEach(id=>{const v=S.units[id];if(v){v.engagedWithIds=(v.engagedWithIds||[]).filter(x=>x!==u.id);v.engagedWith= v.engagedWithIds[0]||null;if(!v.engagedWithIds.length)v.engaged=false;}});
       u.engagedWithIds=[];u.engagementSides={};u.engagedWith=null;
+      if(waitingPursuit){S.phase="pursuit";S.combatResolved=true;render();return;}
     }else say(u.name+' holds.');
     if(units().filter(alive).every(v=>v.fled)||units().filter(v=>v.side==="player"&&alive(v)).length===0||units().filter(v=>v.side==="ai"&&alive(v)).length===0){finishBattle(units().some(v=>v.side==="player"&&alive(v)&&!v.fled)?"Player wins the battle!":"Opponent wins the battle!");return;}
     if(nextBreakTest())return;
