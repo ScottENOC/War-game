@@ -1,5 +1,6 @@
 import { terrainShotEffect, terrainElevationAt, terrainRangeModifier } from "./terrain.js";
 export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, reset, validDeployment, canPlace, rallyUnit, fleeFromCharge, startBattle, say, equipMeleeWeapon, setRangedMode, shape, PX_PER_IN, terrain = () => [], BATTLEFIELD_WIDTH_IN = 48 }) {
+  function equipmentMarks(u){const marks=[];if(u.rangedWeapon==="bow"||u.rangedWeapon==="crossbow")marks.push("🏹");if(u.rangedWeapon==="firearm")marks.push("🔫");if((u.meleeWeapons||[]).includes("greatWeapon")||u.weapon==="greatWeapon")marks.push("⚔️");if((u.meleeWeapons||[]).includes("halberd")||u.weapon==="halberd")marks.push("🔱");if((u.meleeWeapons||[]).includes("spear")||u.weapon==="spear"||u.weapon==="lance")marks.push(u.weapon==="lance"?"🗡️":"🔱");if(u.ownsShield)marks.push("🛡️");return marks.length?'<span class="equipment-marks" aria-label="Equipment">'+marks.join(" ")+"</span>":"";}
   function renderRoster() {
     for (const side of ["ai", "player"]) {
       const el = $(side === "ai" ? "enemycards" : "playercards");
@@ -11,10 +12,10 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
           (side === "player" && !u.moved && !u.shot && !u.fled ? " unmoved" : "");
         b.setAttribute("aria-label", u.name + " " + u.models + " models, " + u.points + " points" + (u.champion.enabled ? ", champion" : "") + (u.lightArmour ? ", light armour" : "") + (u.alwaysStrikesFirst ? ", Always Strikes First" : ""));
         b.title = u.name + " — " + u.points + " pts" + (u.champion.enabled ? ", champion included" : "") + (u.lightArmour ? ", light armour" : "");
-        b.innerHTML = '<span class="sigil">' + (u.rangedWeapon==="firearm" ? "🔫" : u.hasRangedWeapon ? "🏹" : u.kind === "cavalry" ? "🐎" : "⚔") + '</span>' +
+        b.innerHTML = '<span class="sigil">' + (u.isCharacter ? "♟" : u.kind === "cavalry" ? "🐎" : "⚔") + '</span>' + equipmentMarks(u) +
           (u.champion.enabled ? '<span class="champion-mark">♛</span>' : "") +
           '<span class="count">' + u.models + '</span><span class="points-mark">' + u.points + '</span><span class="bar ' + (side === "ai" ? "ai" : "") + '"></span>';
-        b.onclick = () => { if(S.phase==="deployment"&&side==="ai")return; S.selected = u.id; S.mode = null; render(); };
+        b.onclick = () => { if(S.phase==="deployment"&&side==="ai")return; if(S.mode==="attachHero"){const hero=S.units[S.selected],host=u,compatible=hero&&hero.isCharacter&&!hero.attachedTo&&host!==hero&&!host.isCharacter&&host.side===hero.side&&!!hero.mounted===!!host.isCavalry;if(!compatible){say("Choose a compatible friendly regiment: foot characters join infantry, mounted characters join cavalry.");return;}if(S.phase==="movement"&&(hero.engaged||host.engaged||host.activated||dist(hero,host)>Math.max(0,hero.stats.M-hero.moveUsed))){say("The character cannot join that regiment from here this activation.");return;}hero.attachedTo=host.id;hero.x=host.x;hero.y=host.y;hero.deployed=host.deployed;host.attachedCharacters=[...new Set([...(host.attachedCharacters||[]),hero.id])];host.stats.M=Math.min(host.baseMove??host.stats.M,hero.stats.M);if(S.phase==="movement"){hero.moveUsed+=dist(hero,host);hero.activated=true;host.moveUsed=Math.min(host.moveUsed,host.stats.M);}S.mode=null;say(hero.name+" joins "+host.name+".");render();return;} S.selected = u.id; S.mode = null; render(); };
         el.append(b);
       });
     }
@@ -65,7 +66,7 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
       const placed=units().filter(v=>v.side==="player"&&v.deployed&&alive(v)).length, total=units().filter(v=>v.side==="player"&&alive(v)).length;
       btn("Rotate selected unit left 15 degrees","↶",()=>{if(u&&u.side==="player"){const f=u.facing-Math.PI/12;if(!u.deployed||validDeployment(u,u.x,u.y,f))u.facing=f;render();}},!u||u.side!=="player");
       btn("Rotate selected unit right 15 degrees","↷",()=>{if(u&&u.side==="player"){const f=u.facing+Math.PI/12;if(!u.deployed||validDeployment(u,u.x,u.y,f))u.facing=f;render();}},!u||u.side!=="player");
-      if (u && u.side === "player" && u.isCharacter && !u.attachedTo) btn("Attach character to a unit","♟",()=>{S.mode=S.mode==="attachHero"?null:"attachHero";render();},false,S.mode==="attachHero");
+      if (u && u.side === "player" && u.isCharacter && !u.attachedTo) btn("Attach character to a unit","♟",()=>{S.mode=S.mode==="attachHero"?null:"attachHero";if(S.mode==="attachHero")say("Embedding mode: tap a compatible friendly regiment on the battlefield or its roster card. Foot characters join infantry; mounted characters join cavalry.");render();},false,S.mode==="attachHero");
       if (u && u.side === "player" && u.isCharacter && u.attachedTo) btn("Detach character","↗",()=>{const host=S.units[u.attachedTo];if(host){u.x=host.x+0.025;u.y=host.y+0.025;u.deployed=true;host.attachedCharacters=(host.attachedCharacters||[]).filter(id=>id!==u.id);host.stats.M=host.baseMove??host.stats.M;(host.attachedCharacters||[]).forEach(id=>{const h=S.units[id];if(h)host.stats.M=Math.min(host.stats.M,h.stats.M);});u.attachedTo=null;S.mode=null;say(u.name+" leaves "+host.name+".");render();}},false);
       btn("Start battle","▶",startBattle,placed!==total);
       return;
