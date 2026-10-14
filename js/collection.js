@@ -24,7 +24,13 @@ const bitDefs=[
  {id:"both_halberd",label:"Both arms · halberd",kind:"twohand",weapon:"halberd"},
  {id:"both_bow",label:"Both arms · bow",kind:"twohand",weapon:"bow"},
  {id:"both_crossbow",label:"Both arms · crossbow",kind:"twohand",weapon:"crossbow"},
- {id:"both_firearm",label:"Both arms · firearm",kind:"twohand",weapon:"firearm"}
+ {id:"both_firearm",label:"Both arms · firearm",kind:"twohand",weapon:"firearm"},
+ {id:"back_bow",label:"Bow carried on back",kind:"backWeapon",weapon:"bow"},
+ {id:"back_greatsword",label:"Greatsword carried on back",kind:"backWeapon",weapon:"greatWeapon"},
+ {id:"back_crossbow",label:"Crossbow carried on back",kind:"backWeapon",weapon:"crossbow"},
+ {id:"back_halberd",label:"Halberd carried on back",kind:"backWeapon",weapon:"halberd"},
+ {id:"back_spear",label:"Spear carried on back",kind:"backWeapon",weapon:"spear"},
+ {id:"back_firearm",label:"Firearm carried on back",kind:"backWeapon",weapon:"firearm"}
 ];
 const labels={empire:"Human / Empire",highElves:"High Elf",swordsmen:"Swordsmen",archers:"Archers",cavalry:"Cavalry",captain:"Hero",lord:"Lord",legendaryLord:"Lord-Marshal Edric Voss",shadowElf:"Lethariel Starweaver",handWeapon:"Sword",magicBow:"Magical longbow",signature:"Signature equipment",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm"};
 const makeModel=(id,faction,type,weapon,extra={})=>({id,faction,type,weapon,shield:!!extra.shield,mounted:!!extra.mounted,components:["body",weapon,...(extra.shield?["shield"]:[]),...(extra.mounted?["horse"]:[])],name:extra.name||((faction==="empire"?"Empire ":"High Elf ")+labels[type]+(type==="swordsmen"||type==="archers"||type==="cavalry"?"":"")+" · "+labels[weapon])});
@@ -48,9 +54,10 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  const bitCount=id=>data.bits[id]||0;
  const addBit=(id,n=1)=>{data.bits[id]=(data.bits[id]||0)+n;};
  const consumeBit=id=>{if(bitCount(id)<1)return false;data.bits[id]--;if(!data.bits[id])delete data.bits[id];return true;};
- const modelLabel=m=>(m.faction==="empire"?"Empire ":"High Elf ")+title(m.type)+" · "+title(m.weapon)+(m.offhandWeapon?" + Off-hand sword":"")+(m.shield?" + Shield":"")+(m.mounted?" · Mounted":"");
+ const modelLabel=m=>(m.faction==="empire"?"Empire ":"High Elf ")+title(m.type)+" · "+title(m.weapon)+(m.offhandWeapon?" + Off-hand sword":"")+(m.shield?" + Shield":"")+((m.backWeapons||[]).length?" · Back: "+m.backWeapons.map(title).join(", "):"")+(m.mounted?" · Mounted":"");
  const canUseBit=(m,id)=>{
    const b=bitDefs.find(x=>x.id===id);if(!b)return false;
+   if(b.kind==="backWeapon")return !(m.backWeapons||[]).includes(b.weapon);
    if(b.kind==="shield")return !m.shield&&!["greatWeapon","halberd","bow"].includes(m.weapon);
    if(b.kind==="mount")return (m.type==="captain"||m.type==="lord"||m.type==="cavalry")&&!m.mounted&&m.weapon!=="halberd";
    if(b.kind==="right")return m.weapon==="none"&&m.type!=="archers"&&m.type!=="swordsmen";
@@ -80,7 +87,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const [faction,type,weapon,shield,mounted,offhand]=key.split("|");
    const card=document.createElement("article");card.className="inventory-model";
    const strong=document.createElement("strong");strong.textContent=type==="legendaryLord"?"Lord-Marshal Edric Voss":type==="shadowElf"?"Lethariel Starweaver":(faction==="empire"?"Empire ":"High Elf ")+title(type);
-   const meta=document.createElement("span");meta.textContent=title(weapon)+(offhand==="true"?" · Off-hand sword":"")+(shield==="true"?" · Shield":"")+(mounted==="true"?" · Mounted":"");
+   const meta=document.createElement("span");meta.textContent=title(weapon)+(offhand==="true"?" · Off-hand sword":"")+(shield==="true"?" · Shield":"")+((model.backWeapons||[]).length?" · Back: "+model.backWeapons.map(title).join(", "):"")+(mounted==="true"?" · Mounted":"");
    const qty=document.createElement("b");qty.textContent="×"+count;card.append(strong,meta,qty);
    const edit=document.createElement("button");edit.className="secondary-button";edit.textContent="Add component";
    const model=data.models.find(m=>[m.faction,m.type,m.weapon,String(m.shield),String(m.mounted),String(!!m.offhandWeapon)].join("|")===key);
@@ -113,6 +120,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const bit=field("Add component permanently",possible.map(b=>({value:b.id,label:b.label+" · "+bitCount(b.id)+" owned"})),possible[0].id);
    const add=document.createElement("button");add.className="primary-button";add.textContent="Glue component onto model";
    add.addEventListener("click",()=>{const def=bitDefs.find(b=>b.id===bit.value);if(!def||!consumeBit(def.id))return;
+    if(def.kind==="backWeapon"){model.backWeapons=[...(model.backWeapons||[]),def.weapon];model.components.push(def.id);}
     if(def.kind==="shield"){model.shield=true;model.components.push("left_shield");}
     if(def.kind==="mount"){model.mounted=true;model.components.push("horse");}
     if(def.kind==="right"||def.kind==="twohand"){model.weapon=def.weapon;model.components.push(def.id);}
