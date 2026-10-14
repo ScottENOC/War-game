@@ -1,7 +1,7 @@
 import { FACTIONS } from "./factions.js";
 
 export function unitCost(config, faction) {
-  const elf=faction==="highElves",type=config.type,models=config.models||1,character=["captain","lord","legendaryLord","shadowElf"].includes(type),eagleKit=elf&&character&&config.mountType==="eagle";
+  const elf=faction==="highElves",type=config.type,models=config.models||1,character=["captain","lord","legendaryLord","shadowElf"].includes(type),eagleKit=elf&&(character||type==="cavalry")&&config.mountType==="eagle";
   if(type==="cannon")return 80;if(type==="boltThrower")return 60;
   const upgrades=[{key:"M",unit:2,character:5},{key:"WS",unit:2,character:5},{key:"BS",unit:2,character:5},{key:"S",unit:3,character:6},{key:"T",unit:4,character:8},{key:"I",unit:1,character:3},{key:"Ld",unit:1,character:3}].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
   const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
@@ -15,7 +15,7 @@ export function unitCost(config, faction) {
   if(type==="cavalry"){
     const free=config.freeCavalryOption||"bow";
     const meleeCost=weapons.reduce((sum,w)=>sum+(w==="spear"&&!(elf&&free==="spear")?models:["lance","greatWeapon"].includes(w)?2*models:0),0);
-    const bowCost=(config.bow&&!(elf&&free==="bow")?2*models:0)+(ranged==="bow"&&!(elf&&free==="bow")&&!config.bow?2*models:0);
+    const bowCost=(config.bow&&!(elf&&free==="bow")&&!eagleKit?2*models:0)+(ranged==="bow"&&!(elf&&free==="bow")&&!config.bow&&!eagleKit?2*models:0);
     const otherRangedCost=ranged==="crossbow"?3*models:ranged==="firearm"?4*models:0;
     return models*(elf?24:16)+(config.elvenArchery&&elf&&(ranged==="bow"||config.bow||free==="bow")?2*models:0)+bowCost+otherRangedCost+(config.heavyArmour?2*models:0)+(config.barding?2*models:0)+(config.shield?0.5*models:0)+meleeCost+upgrades+skillCost;
   }
@@ -25,7 +25,7 @@ export function unitCost(config, faction) {
 function buildUnit(template,config,faction,opposing=false) {
   const elf=faction==="highElves"&&!opposing,stats={...template.stats};
   const isCannon=config.type==="cannon",isBoltThrower=config.type==="boltThrower",isSiegeEngine=isCannon||isBoltThrower;
-  const isCharacter=["captain","lord","legendaryLord","shadowElf"].includes(config.type),isCavalry=config.type==="cavalry",mountType=config.mountType||(config.mounted?"horse":"none"),mounted=isCavalry||(isCharacter&&mountType!=="none"),isEagleMounted=elf&&isCharacter&&mountType==="eagle";
+  const isCharacter=["captain","lord","legendaryLord","shadowElf"].includes(config.type),isCavalry=config.type==="cavalry",mountType=config.mountType||(config.mounted?"horse":"none"),mounted=isCavalry||(isCharacter&&mountType!=="none"),isEagleMounted=elf&&mountType==="eagle"&&(isCharacter||isCavalry);
   if(mounted)stats.M=isEagleMounted?12:elf?9:8;
   if(mounted&&config.barding&&!elf)stats.M=7;
   if(isCharacter&&!mounted&&config.heavyArmour&&!config.magicArmour&&!elf)stats.M=Math.max(1,stats.M-1);
