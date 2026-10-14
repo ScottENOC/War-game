@@ -4,7 +4,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   const list=$("army-list"),total=$("army-total"),addButton=$("add-unit"),startButton=$("begin-deployment");
   const elf=()=>faction==="highElves",fmt=n=>Number.isInteger(n)?String(n):n.toFixed(1);
   function defaults(u){
-    u.champion=false;u.championBonus=u.type==="archers"?"BS":"A";u.upgrades={};u.skills={};u.elvenArchery=false;u.lightArmour=false;u.heavyArmour=false;u.weapon="handWeapon";u.meleeWeapons=["handWeapon"];u.rangedWeapon=null;u.spears=false;u.bow=false;u.barding=false;u.mounted=false;u.shield=false;u.freeCavalryOption="bow";
+    u.champion=false;u.championBonus=u.type==="archers"?"BS":"A";u.upgrades={};u.skills={};u.elvenArchery=false;u.lightArmour=false;u.heavyArmour=false;u.magicArmour=false;u.weapon="handWeapon";u.meleeWeapons=["handWeapon"];u.rangedWeapon=null;u.spears=false;u.bow=false;u.barding=false;u.mounted=false;u.shield=false;u.freeCavalryOption="bow";
     if(elf()){if(u.type==="swordsmen"){u.lightArmour=true;u.shield=true;u.spears=true;u.weapon="spear";u.meleeWeapons=["handWeapon","spear"];}if(u.type==="archers")u.lightArmour=true;}
     if(u.type==="captain"||u.type==="lord")u.models=1;else if(u.type==="cavalry")u.models=Math.min(15,Math.max(5,u.models||5));else u.models=Math.min(30,Math.max(5,u.models||10));
   }
@@ -26,7 +26,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     const rangedCost=ranged==="bow"?(e&&u.type==="cavalry"&&(u.freeCavalryOption||"bow")==="bow"?0:(e?3:2)*(character?1:m)):ranged==="crossbow"?3*(character?1:m):ranged==="firearm"?4*(character?1:m):0;
     if(character){
       const meleeCost=weapons.reduce((sum,w)=>sum+(["halberd","greatWeapon"].includes(w)?4:w==="spear"&&u.mounted?2:w==="lance"&&u.mounted?4:0),0);
-      return (e?(u.type==="lord"?120:75):(u.type==="lord"?80:50))+(u.heavyArmour?4:0)+meleeCost+(u.mounted?8:0)+(u.mounted&&u.barding?4:0)+(u.shield?2:0)+rangedCost+upgradeCost+skillCost;
+      return (e?(u.type==="lord"?120:75):(u.type==="lord"?80:50))+(u.heavyArmour?4:0)+(u.magicArmour?10:0)+(u.weapon==="magicSword"?10:0)+meleeCost+(u.mounted?8:0)+(u.mounted&&u.barding?4:0)+(u.shield?2:0)+rangedCost+upgradeCost+skillCost;
     }
     if(u.type==="cavalry"){
       const free=u.freeCavalryOption||"bow";
@@ -58,9 +58,10 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
       }
       if(character){
         if(elf()){const rule=document.createElement("p");rule.textContent="Always Strikes First: +10 Initiative; reroll missed melee hits when your final modified Initiative is at least 11 higher than the target’s.";options.append(rule);}
-        options.append(check("Heavy armour",{cost:"+4 pts (5+ save"+((elf()||u.mounted)?", no Move penalty":", −1 Move")+")",checked:!!u.heavyArmour,onChange:v=>{u.heavyArmour=v;updateTotals();}}));
+        options.append(check("Heavy armour",{cost:"+4 pts (5+ save"+((elf()||u.mounted)?", no Move penalty":", −1 Move")+")",checked:!!u.heavyArmour,onChange:v=>{u.heavyArmour=v;if(v)u.magicArmour=false;updateTotals();renderRows();}}));
+        options.append(check("Enchanted heavy armour",{cost:"+10 pts (4+ base save, no Move penalty)",checked:!!u.magicArmour,onChange:v=>{u.magicArmour=v;if(v)u.heavyArmour=false;updateTotals();renderRows();}}));
         options.append(check("Shield",{cost:"+2 pts, +1 front armour save",checked:!!u.shield,onChange:v=>{u.shield=v;updateTotals();}}));
-        options.append(select("Melee weapon",'<option value="handWeapon">Sword/hand weapon (included)</option>'+(u.mounted?"":'<option value="halberd">Halberd (+4 pts)</option>')+'<option value="greatWeapon">Great weapon (+4 pts, +2 Strength, −10 Initiative)</option>'+(u.mounted?'<option value="spear">Spear (+2 pts, charge)</option><option value="lance">Lance (+4 pts, charge)</option>':""),u.weapon,v=>{u.weapon=v;u.meleeWeapons=[...new Set([...(u.meleeWeapons||["handWeapon"]),v])];u.spears=v==="spear";updateTotals();renderRows();}));
+        options.append(select("Melee weapon",'<option value="handWeapon">Sword/hand weapon (included)</option>'+'<option value="magicSword">Magic sword (+10 pts, +1 Attack, +1 Strength)</option>'+(u.mounted?"":'<option value="halberd">Halberd (+4 pts)</option>')+'<option value="greatWeapon">Great weapon (+4 pts, +2 Strength, −10 Initiative)</option>'+(u.mounted?'<option value="spear">Spear (+2 pts, charge)</option><option value="lance">Lance (+4 pts, charge)</option>':""),u.weapon,v=>{u.weapon=v;u.meleeWeapons=[...new Set([...(u.meleeWeapons||["handWeapon"]),v])];u.spears=v==="spear";updateTotals();renderRows();}));
         options.append(select("Ranged weapon",'<option value="">None</option>'+(elf()?'<option value="bow">Longbow (+3 pts)</option>':'<option value="bow">Bow (+2 pts)</option><option value="crossbow">Crossbow (+3 pts)</option><option value="firearm">Firearm (+4 pts)</option>'),u.rangedWeapon||"",v=>{u.rangedWeapon=v||null;updateTotals();renderRows();}));
         extraWeaponChecks(u,options,u.mounted?["spear","lance","greatWeapon"]:["halberd","greatWeapon"]);
         options.append(check("Warhorse",{cost:"+8 pts",checked:!!u.mounted,onChange:v=>{u.mounted=v;u.barding=false;if(v&&u.weapon==="halberd")u.weapon="handWeapon";if(!v&&["spear","lance"].includes(u.weapon))u.weapon="handWeapon";renderRows();}}));
