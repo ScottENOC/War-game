@@ -36,7 +36,7 @@ function buildUnit(template,config,faction,opposing=false) {
   let weapon=(isCharacter||isCavalry||config.type==="swordsmen")?(["bow","crossbow","firearm"].includes(config.weapon)?"handWeapon":(config.weapon||"handWeapon")):"handWeapon";
   const factionName=faction==="highElves"&&!opposing?"High Elf":opposing?"Opposing":faction==="highElves"?"High Elf":"Empire";
   const primaryMelee=weapon==="greatWeapon"||(meleeWeapons||[]).includes("greatWeapon")?"greatWeapon":weapon==="halberd"||(meleeWeapons||[]).includes("halberd")?"halberd":weapon==="spear"||(meleeWeapons||[]).includes("spear")?"spear":weapon;
-  const unitName=isSiegeEngine?template.name:isCharacter?template.name:isCavalry?template.name:rangedWeapon==="bow"?factionName+" Archers":rangedWeapon==="crossbow"?factionName+" Crossbowmen":rangedWeapon==="firearm"?factionName+" Handgunners":primaryMelee==="greatWeapon"?(factionName==="High Elf"?"High Elf Swordmasters":factionName+" Greatswords"):primaryMelee==="halberd"?factionName+" Halberdiers":primaryMelee==="spear"?factionName+" Spearmen":factionName+" Swordsmen";
+  const unitName=isSiegeEngine?template.name:isCharacter?template.name+(isEagleMounted?" (Great Eagle)":""):isCavalry?template.name+(isEagleMounted?" (Great Eagle)":""):rangedWeapon==="bow"?factionName+" Archers":rangedWeapon==="crossbow"?factionName+" Crossbowmen":rangedWeapon==="firearm"?factionName+" Handgunners":primaryMelee==="greatWeapon"?(factionName==="High Elf"?"High Elf Swordmasters":factionName+" Greatswords"):primaryMelee==="halberd"?factionName+" Halberdiers":primaryMelee==="spear"?factionName+" Spearmen":factionName+" Swordsmen";
   const unitShort=isSiegeEngine?template.short:isCharacter?template.short:isCavalry?template.short:rangedWeapon==="bow"?"Archers":rangedWeapon==="crossbow"?"Crossbows":rangedWeapon==="firearm"?"Handguns":primaryMelee==="greatWeapon"?"Greatswords":primaryMelee==="halberd"?"Halberds":primaryMelee==="spear"?"Spearmen":"Swordsmen";
   const shield=ownsShield&&(weapon==="spear"||(!["greatWeapon","halberd"].includes(weapon)&&(!rangedWeapon||config.rangedMode!=="bow")));
   for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.upgrades&&config.upgrades[key])stats[key]+=1;
@@ -62,7 +62,7 @@ function buildUnit(template,config,faction,opposing=false) {
     largeTarget:false,singleCharacter:false,skirmisher:false,cover:null,x:config.x,y:config.y,facing:config.facing,deployed:config.side==="ai",
     engaged:false,engagedWith:null,engagedSide:null,chargedSide:null,attackedFromSide:null,flankedBy:null,
     formationWidth:isSiegeEngine?3:5,canCounterCharge:!isSiegeEngine,fleeingCharge:false,activated:false,moved:false,shot:false,charged:false,fled:false,
-    moveUsed:0,damage:0,shootCasualties:0,panicTested:false,skirmishing:isSiegeEngine,cover:isSiegeEngine?"soft":null,stats,champion:{enabled:!!config.champion&&!isCharacter&&!isCavalry,bonus:config.championBonus||(config.type==="archers"?"BS":"A"),stats:null},attachedCharacters:[],
+    moveUsed:0,damage:0,shootCasualties:0,panicTested:false,skirmishing:isSiegeEngine||isEagleMounted,cover:isSiegeEngine?"soft":null,stats,champion:{enabled:!!config.champion&&!isCharacter&&!isCavalry,bonus:config.championBonus||(config.type==="archers"?"BS":"A"),stats:null},attachedCharacters:[],
     characterWounds:isCharacter?template.stats.W:null,delayedDeath:false,delayedDeathSnapshot:null,championAlive:!!config.champion,championWounds:config.champion?template.stats.W:0};
 }
 export function createUnitsFromArmy(army,faction="empire") {
