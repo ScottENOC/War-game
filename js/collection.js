@@ -170,7 +170,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     const type=body.kind==="infantry"?(arms.weapon==="bow"?"archers":"swordsmen"):body.kind;
     const namedName=body.kind==="legendaryLord"?"Lord-Marshal Edric Voss":body.kind==="shadowElf"?"Lethariel Starweaver":null;
     const model=makeModel("assembled-"+data.nextId++,body.faction,type,arms.weapon,{mounted,mountType,shield:addShield,backWeapons:mountType==="eagle"?["bow"]:[],name:namedName||(body.faction==="empire"?"Empire ":"High Elf ")+title(type)+" · "+title(arms.weapon)+(addShield?" + Shield":"")+(mounted?" · Mounted":"")});
-    model.components=[body.id,...(!named?[arms.id,...(arms.kind==="right"?[addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm"]:[])]:[]),...(mounted?[mountType==="eagle"?"eagle":"horse"]:[])];model.offhandWeapon=addOffhand;model.namedCharacter=named;
+    model.components=[body.id,...(!named?[arms.id,...(arms.kind==="right"?[addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm"]:[])]:[]),...(mounted?[mountType==="eagle"?"eagle":"horse"]:[]),...(mountType==="eagle"?["back_bow"]:[])];model.offhandWeapon=addOffhand;model.namedCharacter=named;
     data.models.push(model);save();renderAll();status.textContent="Model assembled and added to your collection.";
    });panel.append(assemble);
    const status=document.createElement("p");status.className="workbench-status";panel.append(status);
