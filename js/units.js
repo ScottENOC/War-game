@@ -74,7 +74,7 @@ export function createUnitsFromArmy(army,faction="empire") {
       else if(!["lance","greatWeapon"].includes(aiEntry.weapon))aiEntry.weapon="spear";
     }
     units["p"+n]=buildUnit(FACTIONS[playerFaction].units[entry.type],{...playerEntry,id:"p"+n,index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
-    const opposingType=FACTIONS.opposing.units[entry.type]?entry.type:(["legendaryLord","shadowElf"].includes(entry.type)?"lord":entry.type);const opposingEntry={...aiEntry,type:opposingType};
+    const opposingType=FACTIONS.opposing.units[entry.type]?entry.type:(entry.type==="cannon"?"swordsmen":(["legendaryLord","shadowElf"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
     units["a"+n]=buildUnit(FACTIONS.opposing.units[opposingType],{...opposingEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},"empire",true);
   });
   Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter&&!u.hasRangedWeapon).forEach(hero=>{
