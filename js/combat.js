@@ -136,7 +136,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       u.fled=true;u.engaged=false;
       say(u.name+' fails its break test and flees.');
       const waitingPursuit=pursuer?!!pursueAfterBreak?.(pursuer,u):false;if(!pursuer)panicNearby?.(u,"a friendly unit flees from combat");
-      (u.engagedWithIds||[]).forEach(id=>{const v=S.units[id];if(v){v.engagedWithIds=(v.engagedWithIds||[]).filter(x=>x!==u.id);v.engagedWith= v.engagedWithIds[0]||null;if(!v.engagedWithIds.length)v.engaged=false;}});
+      (u.engagedWithIds||[]).forEach(id=>{const v=S.units[id];if(v){v.engagedWithIds=(v.engagedWithIds||[]).filter(x=>x!==u.id);v.engagedWith= v.engagedWithIds[0]||null;if(!v.engagedWithIds.length){v.engaged=false;if(v.flyingMount)v.charged=false;}}});
       u.engagedWithIds=[];u.engagementSides={};u.engagedWith=null;
       if(waitingPursuit){S.phase="pursuit";S.combatResolved=true;render();return;}
     }else say(u.name+' holds.');
