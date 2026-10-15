@@ -20,7 +20,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   function unitPoints(u){
     const e=elf(),m=u.models||1,character=isCharacterType(u.type),eagleKit=e&&(character||u.type==="cavalry")&&u.mountType==="eagle";
     if(u.type==="cannon")return 80;if(u.type==="boltThrower")return 60;if(u.type==="pegasusChampion")return 110;
-    const upgradeCost=statUpgrades.reduce((sum,s)=>sum+(u.upgrades&&u.upgrades[s.key]?(character?s.character:s.unit*m):0),0);
+    const upgradeCost=statUpgrades.reduce((sum,s)=>{const elfRate=e&&(["WS","BS"].includes(s.key)?{unit:1,character:3}:s.key==="T"?{unit:6,character:10}:null);return sum+(u.upgrades&&u.upgrades[s.key]?(character?(elfRate?.character??s.character):(elfRate?.unit??s.unit)*m):0);},0);
     const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3:0),0);
     const weapons=[...new Set([...(u.meleeWeapons||[]),u.weapon||"handWeapon"])];
     const ranged=u.rangedWeapon||(u.type==="archers"?"bow":null);
@@ -118,7 +118,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
       {
         if(u.type!=="pegasusChampion"){const upgradeBox=document.createElement("div");upgradeBox.className="stat-upgrades";
         const heading=document.createElement("p");heading.className="stat-upgrades-heading";heading.textContent="Stat upgrades · +1 each, once per stat";upgradeBox.append(heading);
-        statUpgrades.forEach(s=>upgradeBox.append(check("+"+s.key+" "+s.label,{cost:"+"+(character?s.character:s.unit*(u.models||1))+" pts",checked:!!u.upgrades?.[s.key],disabled:u.rangedWeapon==="firearm"&&s.key==="BS",onChange:v=>{u.upgrades={...(u.upgrades||{}),[s.key]:v};updateTotals();}})));
+        statUpgrades.forEach(s=>{const e=elf(),m=u.models||1,elfRate=e&&(["WS","BS"].includes(s.key)?{unit:1,character:3}:s.key==="T"?{unit:6,character:10}:null),cost=character?(elfRate?.character??s.character):(elfRate?.unit??s.unit)*m;upgradeBox.append(check("+"+s.key+" "+s.label,{cost:"+"+cost+" pts",checked:!!u.upgrades?.[s.key],disabled:u.rangedWeapon==="firearm"&&s.key==="BS",onChange:v=>{u.upgrades={...(u.upgrades||{}),[s.key]:v};updateTotals();}}));});
         options.append(upgradeBox);
       }}
       main.append(type,ml,options);const cost=document.createElement("strong");cost.className="army-cost";const remove=document.createElement("button");remove.className="remove-unit secondary-button";remove.textContent="×";remove.title="Remove unit "+(index+1);remove.setAttribute("aria-label","Remove unit "+(index+1));remove.addEventListener("click",()=>{army.splice(index,1);renderRows();});row.append(main,cost,remove);list.append(row);
