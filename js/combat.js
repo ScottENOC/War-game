@@ -34,7 +34,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const wounds=new Map(group.map(u=>[u.id,0]));
       const attachedCombatants=group.flatMap(host=>(host.attachedCharacters||[]).map(id=>({u:S.units[id],host})).filter(x=>x.u&&alive(x.u)&&!x.u.fled));
       const effectiveI=(u,host=u,component="rider")=>{
-        const targetHasBracedSpears=linked(host).some(v=>v.hasSpear&&!v.charged&&!v.defendedWallCombat&&v.side!==host.side);
+        const targetHasBracedSpears=linked(host).some(v=>v.spears&&!v.charged&&!v.defendedWallCombat&&v.side!==host.side);
         const chargeBonus=host.charged&&!host.defendedWallCombat&&!targetHasBracedSpears?10:0;
         // Rider and mount are separate combatants: only the rider uses their
         // weapon and racial Initiative modifiers.
@@ -81,7 +81,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           // would still have struck first without that bonus, i.e. the final
           // modified Initiative gap (including ASF) is at least 11.
           const rerollMisses=component==="rider"&&!!u.alwaysStrikesFirst&&attackerI-targetI>=11;
-          const result=meleeAttack(u,target,{attackingModels:strikeState.skirmishRound?Math.min(strikeState.eligibleModels,Math.max(1,Math.floor(u.formationWidth||5))):strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged&&!host.defendedWallCombat&&!linked(host).some(v=>v.hasSpear&&!v.charged&&v.side!==host.side),attackComponent:component,rerollMisses,targetComponent:S.targetComponentByUnit?.[target.id]});
+          const result=meleeAttack(u,target,{attackingModels:strikeState.skirmishRound?Math.min(strikeState.eligibleModels,Math.max(1,Math.floor(u.formationWidth||5))):strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged&&!host.defendedWallCombat&&!linked(host).some(v=>v.spears&&!v.charged&&v.side!==host.side),attackComponent:component,rerollMisses,targetComponent:S.targetComponentByUnit?.[target.id]});
           say('<b>Melee dice — '+u.name+(component==="mount"?" (mount)":"")+' attacks '+target.name+'</b>'+diceStack(u,result));
           wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
           applyDamage(target,result.wounds,false,result.cascadePlan);
