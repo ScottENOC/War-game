@@ -3,7 +3,7 @@ export function segmentsIntersect(a,b,c,d){const cross=(p,q,r)=>(q.x-p.x)*(r.y-p
 export function generatedElevation(feature,x,y){const seed=Number(feature?.seed)||1,phaseA=(seed%997)/997*Math.PI*2,phaseB=(Math.floor(seed/7)%991)/991*Math.PI*2,phaseC=(Math.floor(seed/13)%983)/983*Math.PI*2;return 2.05+1.05*Math.sin((x*1.35+phaseA)*Math.PI*2)*Math.cos((y*1.1+phaseB)*Math.PI*2)+.68*Math.sin((x*2.15+y*1.65+phaseC)*Math.PI*2)+.34*Math.cos((x*3.2-y*2.7+phaseB)*Math.PI*2);}
 export function terrainIsWater(terrain,x,y,W,H){const px=x/W,py=y/H;for(const o of terrain||[]){if(o.type==="lake"&&(((px-o.x)/(o.rx||.03))**2+((py-o.y)/(o.ry||.03))**2<=1))return true;if(o.type==="river"&&pointSegmentDistance({x,y},{x:o.x1*W,y:o.y1*H},{x:o.x2*W,y:o.y2*H})<=(o.widthIn||1.5)*W/48/2)return true;}const auto=(terrain||[]).find(o=>o.type==="autoTerrain");return !!auto&&generatedElevation(auto,px,py)<.48;}
 export function terrainMovementCost(terrain,x1,y1,x2,y2,W,H,battlefieldWidthIn,fieldHeightIn){const dx=(x2-x1)*battlefieldWidthIn,dy=(y2-y1)*fieldHeightIn,length=Math.hypot(dx,dy);if(!length)return 0;const samples=Math.max(12,Math.ceil(length*5));let water=0;for(let i=1;i<=samples;i++){const t=i/samples,x=(x1+(x2-x1)*t)*W,y=(y1+(y2-y1)*t)*H;if(terrainIsWater(terrain,x,y,W,H))water++;}return length*(1+water/samples);}
-export function terrainElevationAt(terrain,x,y,W,H){const auto=(terrain||[]).find(f=>f.type==="autoTerrain");return auto?generatedElevation(auto,x/W,y/H):0;}
+export function terrainElevationAt(terrain,x,y,W,H){const list=terrain||[],auto=list.find(f=>f.type==="autoTerrain");let elevation=auto?generatedElevation(auto,x/W,y/H):0;for(const hill of list.filter(f=>f.type==="hill")){const dx=(x/W-hill.x)/(hill.rx||.03),dy=(y/H-hill.y)/(hill.ry||.03),r=Math.hypot(dx,dy);if(r<1)elevation+=(hill.elevationIn||2)*(1-r*r);}return elevation;}
 export function generateSkirmishTerrain(seed=Date.now(),battleType="skirmish"){
   const terrainSeed=Number(seed)||1,terrain=[{type:"autoTerrain",seed:terrainSeed}];
   if(battleType==="siege"){
@@ -16,6 +16,16 @@ export function generateSkirmishTerrain(seed=Date.now(),battleType="skirmish"){
     terrain.push(wall(left,bottom,left,.5+gateHalf,"west-south"),gate(left,.5+gateHalf,left,.5-gateHalf,"west-gate"),wall(left,.5-gateHalf,left,top,"west-north"));
     terrain.push({type:"stairs",x:.34,y:.36,inside:true,label:"North-west stairway"},{type:"stairs",x:.66,y:.64,inside:true,label:"South-east stairway"});
     terrain.push({type:"siegeCastle",left,right,top,bottom});
+    // Siege maps never roll independent lakes or random cross-field rivers. Castles
+    // are commonly sited on high ground, and a nearby river can serve as a moat.
+    if(random() < .72) terrain.push({type:"hill",x:.5,y:.5,rx:.32,ry:.42,elevationIn:2.5,siegeOnly:true,castleHill:true});
+    if(random() < .38){
+      const side=Math.floor(random()*4),widthIn=2.5;
+      if(side===0) terrain.push({type:"river",x1:.18,y1:.175,x2:.82,y2:.175,widthIn,siegeOnly:true,moat:true});
+      else if(side===1) terrain.push({type:"river",x1:.18,y1:.825,x2:.82,y2:.825,widthIn,siegeOnly:true,moat:true});
+      else if(side===2) terrain.push({type:"river",x1:.255,y1:.12,x2:.255,y2:.88,widthIn,siegeOnly:true,moat:true});
+      else terrain.push({type:"river",x1:.745,y1:.12,x2:.745,y2:.88,widthIn,siegeOnly:true,moat:true});
+    }
     return terrain;
   }
   let state=(terrainSeed>>>0)||1;
