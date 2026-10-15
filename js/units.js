@@ -221,7 +221,7 @@ export function buildOpponentArmy(playerArmy, playerFaction = "empire") {
   };
 
   let best = null, bestScore = Infinity;
-  const types = ["swordsmen", "archers", "cavalry", "captain", "lord"];
+  const types = siege ? ["swordsmen", "archers", "cavalry", "captain", "lord", "cannon"] : ["swordsmen", "archers", "cavalry", "captain", "lord"];
   for (let attempt = 0; attempt < 2400; attempt++) {
     const roster = [makeUnit("swordsmen")];
     const desired = target < 100 ? 1 : target < 220 ? randInt(2, 3) : randInt(3, 5);
@@ -229,11 +229,11 @@ export function buildOpponentArmy(playerArmy, playerFaction = "empire") {
       const choices = types.filter(type => {
         if ((type === "captain" || type === "lord") && roster.filter(u => ["captain", "lord"].includes(u.type)).length >= (target >= 360 ? 2 : 1)) return false;
         if (type === "lord" && target < 180) return false;
-        if (type === "cavalry" && target < 100) return false;
+        if (type === "cavalry" && (target < 100 || (siege && roster.filter(u => u.type === "cavalry").length >= 1))) return false;\n        if (type === "cannon" && (!siege || roster.some(u => u.type === "cannon") || target < 140)) return false;
         return true;
       });
       if (!choices.length) break;
-      const weights = choices.map(type => type === "archers" ? 1.35 : type === "cavalry" ? (target >= 240 ? 1.2 : 0.8) : type === "swordsmen" ? 1 : type === "captain" ? (target >= 160 ? 0.8 : 0.25) : 0.45);
+      const weights = choices.map(type => type === "archers" ? (siege ? 2.7 : 1.35) : type === "cavalry" ? (siege ? 0.18 : target >= 240 ? 1.2 : 0.8) : type === "cannon" ? (siege ? 1.8 : 0) : type === "swordsmen" ? (siege ? 1.05 : 1) : type === "captain" ? (target >= 160 ? 0.8 : 0.25) : 0.45);
       let roll = Math.random() * weights.reduce((a, b) => a + b, 0), picked = choices[0];
       for (let i = 0; i < choices.length; i++) { roll -= weights[i]; if (roll <= 0) { picked = choices[i]; break; } }
       roster.push(makeUnit(picked));
@@ -242,7 +242,7 @@ export function buildOpponentArmy(playerArmy, playerFaction = "empire") {
     const total = costOf(candidate);
     const withinTolerance = Math.abs(total - target) <= target * 0.10;
     const sensible = !(candidate.length === 1 && target >= 120) &&
-      (target < 180 || candidate.some(u => u.type === "archers" || u.rangedWeapon));
+      (target < 180 || candidate.some(u => u.type === "archers" || u.rangedWeapon || u.type === "cannon")) && (!siege || candidate.some(u => u.type === "archers" || u.rangedWeapon || u.type === "cannon"));
     const candidateScore = score(candidate);
     if (candidateScore < bestScore) { best = candidate; bestScore = candidateScore; }
     // Accept the first sensible roster within tolerance; no need to optimise further.
