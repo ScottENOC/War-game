@@ -1,7 +1,7 @@
 export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   let faction="empire";
   let army=[{type:"swordsmen",models:20,champion:false,championBonus:"A",upgrades:{},skills:{},lightArmour:false,heavyArmour:false,weapon:"handWeapon",spears:false,bow:false,barding:false,mounted:false,shield:false,freeCavalryOption:"bow"}];
-  const list=$("army-list"),total=$("army-total"),addButton=$("add-unit"),startButton=$("begin-deployment");
+  const list=$("army-list"),total=$("army-total"),addButton=$("add-unit"),startButton=$("begin-deployment"),battleType=$("battle-type"),siegeRole=$("siege-role"),siegeRoleWrap=$("siege-role-wrap");
   const elf=()=>faction==="highElves",isCharacterType=type=>["captain","lord","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss"].includes(type),fmt=n=>Number.isInteger(n)?String(n):n.toFixed(1);
   function defaults(u){
     u.champion=false;u.championBonus=u.type==="archers"?"BS":"A";u.upgrades={};u.skills={};u.elvenArchery=false;u.lightArmour=false;u.heavyArmour=["legendaryLord","shadowElf"].includes(u.type);u.magicArmour=false;u.weapon="handWeapon";u.meleeWeapons=u.type==="shadowElf"?["handWeapon","offhandWeapon"]:["handWeapon"];u.extraMeleeWeapons=[];u.rangedWeapon=u.type==="shadowElf"?"magicBow":u.type==="rifleman"?"longRifle":null;u.spears=false;u.bow=false;u.barding=false;u.mounted=u.type==="cavalry"||(u.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(u.mountType));u.mountType=u.mountType&&["youngDragon","dragon","ancientDragon"].includes(u.mountType)?u.mountType:(u.type==="cavalry"?"horse":"none");u.shield=u.type==="legendaryLord"||u.type==="pegasusChampion";u.freeCavalryOption="bow";if(u.type==="pegasusChampion"){u.mounted=true;u.mountType="eagle";u.heavyArmour=true;u.weapon="lance";u.meleeWeapons=["handWeapon","lance"];u.magicalLance=true;}
@@ -130,6 +130,6 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   function openBuilder(){ $("mainmenu").hidden=true;$("collection-screen").hidden=true;$("mode-screen").hidden=true;$("armybuilder").hidden=false;renderRows(); }
   $("builder-back").addEventListener("click",onBack);
   addButton.addEventListener("click",()=>{if(army.length>=6)return;const u={type:"swordsmen",models:20};defaults(u);army.push(u);renderRows();});
-  startButton.addEventListener("click",()=>{if(army.length&&!validateArmy(army,faction))onStart(army.map(u=>({...u})),faction);});
+  battleType?.addEventListener("change",()=>{if(siegeRoleWrap)siegeRoleWrap.hidden=battleType.value!=="siege";});\n  startButton.addEventListener("click",()=>{if(army.length&&!validateArmy(army,faction))onStart(army.map(u=>({...u})),faction,battleType?.value==="siege"?"siege":"skirmish",siegeRole?.value||"attacker");});
   return {open:openBuilder,refresh:renderRows};
 }
