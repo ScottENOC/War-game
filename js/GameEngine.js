@@ -95,7 +95,7 @@ function reformCombatPairs(){const pairs=[];units().filter(u=>u.engaged&&alive(u
 let render = () => {};
 const COMBAT = createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render: () => render(), endTurn, finishBattle, reformCombatPairs, pursueAfterBreak, panicNearby, leadership });
 const { resolveCombat, resolveBreak, continueBreakTests } = COMBAT;
-function endTurn(){S.combatResolved=false;units().forEach(u=>{u.charged=false;u.defendedWallCombat=false;if(!alive(u)||u.fled||!u.engagedWith||!alive(S.units[u.engagedWith])||S.units[u.engagedWith].fled){u.engaged=false;u.engagedWith=null;u.engagedSide=null;u.chargedSide=null;u.attackedFromSide=null;u.flankedBy=null;}});S.turn++;say("Turn "+S.turn+" begins.");setPhase("charges");}
+function endTurn(){S.combatResolved=false;units().forEach(u=>{u.charged=false;u.defendedWallCombat=false;if(!alive(u)||u.fled||!u.engagedWith||!alive(S.units[u.engagedWith])||S.units[u.engagedWith].fled){u.engaged=false;u.engagedWith=null;u.engagedSide=null;u.chargedSide=null;u.attackedFromSide=null;u.flankedBy=null;}});units().filter(u=>u.wallLevel&&!u.engaged&&u.wallSegment).forEach(u=>{u.cover="hard";u.wallDefence={wall:u.wallSegment,posture:"active",wasSkirmishing:true};});S.turn++;say("Turn "+S.turn+" begins.");setPhase("charges");}
 function finishBattle(msg){
  if(S.finished)return;
  S.finished=true;S.phase="over";
