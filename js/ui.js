@@ -112,6 +112,11 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
     }
     if (S.phase === "combat") {
       const activeMelee=units().some(v=>v.engaged&&alive(v));
+      const engagedTarget=u?.engagedWith?S.units[u.engagedWith]:u?.attachedTo&&S.units[u.attachedTo]?.engagedWith?S.units[S.units[u.attachedTo].engagedWith]:null;
+      if(engagedTarget?.isDragon&&(engagedTarget.attachedCharacters||[]).some(id=>S.units[id]?.models>0)){
+        const current=S.targetComponentByUnit?.[engagedTarget.id]||"dragon";
+        btn(current==="rider"?"Target dragon":"Target rider","🎯",()=>{S.targetComponentByUnit={...(S.targetComponentByUnit||{}),[engagedTarget.id]:current==="rider"?"dragon":"rider"};say("Melee attacks are now directed at the "+(current==="rider"?"dragon":"rider")+" where applicable.");render();},false);
+      }
       btn("Resolve melee", "⚔", resolveCombat, S.combatResolved||!units().some(v => v.side === "player" && v.engaged && alive(v)));
       if(u&&u.side==="player"&&(u.engaged||(u.attachedTo&&S.units[u.attachedTo]?.engaged))){const labels={handWeapon:"hand weapon",offhandWeapon:"off-hand sword",magicSword:"magic sword (+1 Strength and Attack for its attacks)",spear:"spear (+1 Strength on charge; shield auto-equipped)",halberd:"halberd (+1 Strength)",greatWeapon:"great weapon (+2 Strength, −10 Initiative)",lance:"lance (+2 Strength on charge)"};(u.meleeWeapons||["handWeapon"]).filter(w=>["handWeapon","offhandWeapon","magicSword","spear","halberd","greatWeapon","lance"].includes(w)).forEach(w=>btn("Use "+(labels[w]||w),"⚒",()=>{if(equipMeleeWeapon(u,w)){say(u.name+" equips "+(labels[w]||w)+(u.shield?" with shield":"")+".");render();}},S.combatResolved||u.fled,u.weapon===w));}
       btn("End turn", "▶", endTurn, !S.combatResolved); return;
