@@ -35,7 +35,7 @@ function buildUnit(template,config,faction,opposing=false) {
   if(mounted&&hasBarding&&!elf)stats.M=7;
   if(isCharacter&&!mounted&&hasHeavyArmour&&!hasMagicArmour&&!elf)stats.M=Math.max(1,stats.M-1);
   const lightArmour=isBoltThrower|| (isCavalry||isCharacter?(!hasHeavyArmour):(elf||!!config.lightArmour));
-  const meleeWeapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])].filter(w=>!["bow","crossbow","firearm"].includes(w)),ownsShield=!!config.shield;if(!meleeWeapons.includes("handWeapon"))meleeWeapons.unshift("handWeapon");const spears=config.weapon==="spear"&&meleeWeapons.includes("spear");
+  const meleeWeapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])].filter(w=>!["bow","crossbow","firearm","longRifle"].includes(w)),ownsShield=!!config.shield;if(!meleeWeapons.includes("handWeapon"))meleeWeapons.unshift("handWeapon");const spears=config.weapon==="spear"&&meleeWeapons.includes("spear");
   const rangedWeapon=isCannon?null:(isBoltThrower?"bow":(config.rangedWeapon||(["bow","crossbow","firearm","longRifle","magicBow"].includes(config.weapon)?config.weapon:(config.type==="archers"?"bow":(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"))?"bow":null)))));
   const hasBow=rangedWeapon==="bow"||rangedWeapon==="magicBow";
   let weapon=(isCharacter||isCavalry||config.type==="swordsmen")?(["bow","crossbow","firearm","longRifle"].includes(config.weapon)?"handWeapon":(config.weapon||"handWeapon")):"handWeapon";
@@ -85,7 +85,7 @@ export function createUnitsFromArmy(army,faction="empire") {
       const rider=buildUnit(FACTIONS.highElves.units.lord,{...playerEntry,type:"lord",mounted:false,mountType:"none",id:"p"+n+"r",index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
       rider.points=0;rider.mounted=true;rider.mountType=dragonType;rider.flyingMount=true;rider.flightAltitudeIn=12;rider.baseWidthIn=host.baseWidthIn;rider.baseDepthIn=host.baseDepthIn;rider.heightIn=3.5;rider.attachedTo=host.id;host.attachedCharacters=[rider.id];units[host.id]=host;units[rider.id]=rider;
     }else units["p"+n]=buildUnit(FACTIONS[playerFaction].units[entry.type],{...playerEntry,id:"p"+n,index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
-    const opposingType=FACTIONS.opposing.units[entry.type]?entry.type:(["cannon","boltThrower","youngDragon","dragon","ancientDragon"].includes(entry.type)?"swordsmen":(["legendaryLord","shadowElf","pegasusChampion"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
+    const opposingType=FACTIONS.opposing.units[entry.type]?entry.type:(["cannon","boltThrower","youngDragon","dragon","ancientDragon"].includes(entry.type)?"swordsmen":(["legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
     units["a"+n]=buildUnit(FACTIONS.opposing.units[opposingType],{...opposingEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},"empire",true);
   });
   Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter&&!u.hasRangedWeapon).forEach(hero=>{
