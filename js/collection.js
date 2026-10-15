@@ -53,7 +53,7 @@ function starterData(){
  return {version:1,nextId:id,models,bits:{},bypass:false,lootboxes:0,lastDailyClaim:null};
 }
 function load(){
- try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(saved&&Array.isArray(saved.models)&&saved.bits){const base=starterData(),merged={...base,...saved};if(!merged.models.some(m=>m.faction==="dwarfs"))merged.models.push(...base.models.filter(m=>m.faction==="dwarfs").map((m,i)=>({...m,id:"starter-dwarf-"+(i+1)})));merged.nextId=Math.max(Number(merged.nextId)||1,base.nextId);return merged;}}catch{}
+ try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(saved&&Array.isArray(saved.models)&&saved.bits){const base=starterData(),merged={...base,...saved};merged.models=merged.models.map(m=>m.faction==="dwarfs"&&["dwarfWarriors","dwarfThunderers","dwarfQuarrellers","dwarfLongbeards","dwarfIronbreakers"].includes(m.type)?{...m,type:"dwarfInfantry"}:m);if(!merged.models.some(m=>m.faction==="dwarfs"))merged.models.push(...base.models.filter(m=>m.faction==="dwarfs").map((m,i)=>({...m,id:"starter-dwarf-"+(i+1)})));merged.nextId=Math.max(Number(merged.nextId)||1,base.nextId);return merged;}}catch{}
  return starterData();
 }
 export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCampaign=()=>{}}){
