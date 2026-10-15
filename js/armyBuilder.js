@@ -25,11 +25,11 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     const weapons=[...new Set([...(u.meleeWeapons||[]),u.weapon||"handWeapon"])];
     const ranged=u.rangedWeapon||(u.type==="archers"?"bow":null);
     const dwarfBase={dwarfWarriors:8,dwarfThunderers:10,dwarfQuarrellers:10,dwarfLongbeards:11,dwarfIronbreakers:14};
-    const rangedCost=d&&["dwarfThunderers","dwarfQuarrellers"].includes(u.type)?0:ranged==="bow"?(eagleKit?0:e&&u.type==="cavalry"&&(u.freeCavalryOption||"bow")==="bow"?0:(e?3:2)*(character?1:m)):ranged==="crossbow"?3*(character?1:m):ranged==="firearm"?4*(character?1:m):ranged==="longRifle"?12*(character?1:m):0;
-    if(d&&dwarfBase[u.type]){const meleeCost=weapons.reduce((sum,w)=>sum+(w==="greatWeapon"?2*m:w==="halberd"?m:w==="spear"&&u.type!=="dwarfLongbeards"?m:0),0);return m*dwarfBase[u.type]+meleeCost+upgradeCost+skillCost;}
+    const rangedCost=d&&((u.type==="dwarfThunderers"&&ranged==="firearm")||(u.type==="dwarfQuarrellers"&&ranged==="crossbow"))?0:ranged==="bow"?(eagleKit?0:e&&u.type==="cavalry"&&(u.freeCavalryOption||"bow")==="bow"?0:(e?3:2)*(character?1:m)):ranged==="crossbow"?3*(character?1:m):ranged==="firearm"?4*(character?1:m):ranged==="longRifle"?12*(character?1:m):0;
+    if(d&&dwarfBase[u.type]){const meleeCost=weapons.reduce((sum,w)=>sum+(w==="greatWeapon"?2*m:w==="halberd"?m:w==="spear"&&u.type!=="dwarfLongbeards"?m:0),0);return m*dwarfBase[u.type]+meleeCost+rangedCost+upgradeCost+skillCost;}
     if(character){
       const meleeCost=weapons.reduce((sum,w)=>sum+(["halberd","greatWeapon"].includes(w)?4:w==="spear"&&u.mounted?(eagleKit?0:2):w==="lance"&&u.mounted?(eagleKit?2:4):0),0);
-      return (u.type==="pegasusChampion"?110:u.type==="legendaryLord"?160:u.type==="shadowElf"?165:u.type==="rifleman"?65:u.type==="captainWeiss"?70:(e?(u.type==="lord"?120:75):(u.type==="lord"?80:50)))+(u.heavyArmour&&!eagleKit&&!["legendaryLord","shadowElf"].includes(u.type)?4:0)+(u.magicArmour&&!eagleKit?10:0)+(u.weapon==="magicSword"?10:0)+meleeCost+ (u.mounted?({youngDragon:140,dragon:220,ancientDragon:320}[u.mountType]||8):0)+(u.mounted&&u.barding&&!eagleKit?4:0)+(u.shield&&u.type!=="legendaryLord"?2:0)+rangedCost+upgradeCost+skillCost;
+      return (u.type==="pegasusChampion"?110:u.type==="legendaryLord"?160:u.type==="shadowElf"?165:u.type==="rifleman"?65:u.type==="captainWeiss"?70:u.type==="dwarfCaptain"?55:u.type==="dwarfLord"?100:(e?(u.type==="lord"?120:75):(u.type==="lord"?80:50)))+(u.heavyArmour&&!eagleKit&&!["legendaryLord","shadowElf"].includes(u.type)?4:0)+(u.magicArmour&&!eagleKit?10:0)+(u.weapon==="magicSword"?10:0)+meleeCost+ (u.mounted?({youngDragon:140,dragon:220,ancientDragon:320}[u.mountType]||8):0)+(u.mounted&&u.barding&&!eagleKit?4:0)+(u.shield&&u.type!=="legendaryLord"?2:0)+rangedCost+upgradeCost+skillCost;
     }
     if(u.type==="cavalry"){
       const free=u.freeCavalryOption||"bow";
