@@ -1,7 +1,7 @@
 export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render, endTurn, finishBattle, reformCombatPairs, pursueAfterBreak, panicNearby, leadership = u => u.stats.Ld }) {
   const linked = u => {
     const ids = Array.isArray(u.engagedWithIds) ? u.engagedWithIds : (u.engagedWith ? [u.engagedWith] : []);
-    return [...new Set(ids)].map(id => S.units[id]).filter(v => v && v !== u && alive(v) && v.engaged && !v.fled);
+    return [...new Set(ids)].map(id => S.units[id]).filter(v => v && v !== u && alive(v) && v.engaged && !v.fled && !!v.wallLevel===!!u.wallLevel);
   };
   const addLink = (u,v) => {
     u.engagedWithIds = [...new Set([...(u.engagedWithIds || (u.engagedWith ? [u.engagedWith] : [])), v.id])];
