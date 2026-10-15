@@ -71,7 +71,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
           const dragonOptions=u.type==="lord"?'<option value="youngDragon">Young Dragon (+140 pts)</option><option value="dragon">Dragon (+220 pts)</option><option value="ancientDragon">Ancient Dragon (+320 pts)</option>':"";
           options.append(select("Mount",'<option value="none">On foot</option><option value="horse">Warhorse (+8 pts)</option><option value="eagle">Pegasus (+8 pts, M12, flying cavalry)</option>'+dragonOptions,u.mountType||"none",v=>{
             u.mountType=v;u.mounted=v!=="none";u.barding=false;
-            if(["youngDragon","dragon","ancientDragon"].includes(v)){u.weapon="handWeapon";u.meleeWeapons=["handWeapon"];u.rangedWeapon=null;u.heavyArmour=true;u.shield=true;u.barding=false;}
+            if(["youngDragon","dragon","ancientDragon"].includes(v)){u.weapon="handWeapon";u.meleeWeapons=["handWeapon"];u.rangedWeapon=null;u.barding=false;}
             else if(v==="eagle"){u.heavyArmour=false;u.magicArmour=false;u.weapon="spear";u.meleeWeapons=[...new Set(["handWeapon","spear",...(u.extraMeleeWeapons||[])])];u.spears=true;u.rangedWeapon="bow";}
             else if(v==="none"&&["spear","lance"].includes(u.weapon)){u.weapon="handWeapon";u.meleeWeapons=["handWeapon",...(u.extraMeleeWeapons||[])];u.spears=false;}
             if(u.weapon==="halberd"){u.weapon="handWeapon";u.meleeWeapons=["handWeapon",...(u.extraMeleeWeapons||[])];}
@@ -108,7 +108,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         options.append(check("Shield",{cost:"+0.5/model, +1 front armour save",checked:!!u.shield,onChange:v=>{u.shield=v;updateTotals();}}));
       }
       {
-        if(u.type!=="pegasusChampion"){const skillBox=document.createElement("div");skillBox.className="stat-upgrades";
+        if(u.type!=="pegasusChampion"&&!["youngDragon","dragon","ancientDragon"].includes(u.type)){const skillBox=document.createElement("div");skillBox.className="stat-upgrades";
         const skillHeading=document.createElement("p");skillHeading.className="stat-upgrades-heading";skillHeading.textContent="Special skills · 3 pts each";skillBox.append(skillHeading);
         skillBox.append(check("Melee Mastery",{cost:"+3 pts · reroll natural 1s to hit in melee",checked:!!u.skills?.rerollOnesMelee,onChange:v=>{u.skills={...(u.skills||{}),rerollOnesMelee:v};updateTotals();}}));
         const hasBow=u.type==="archers"||["bow","crossbow","firearm"].includes(u.weapon)||!!u.rangedWeapon||(u.type==="cavalry"&&(!!u.bow||!!u.rangedWeapon||(elf()&&(u.freeCavalryOption||"bow")==="bow")));
@@ -118,7 +118,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         options.append(skillBox);
       }}
       {
-        if(u.type!=="pegasusChampion"){const upgradeBox=document.createElement("div");upgradeBox.className="stat-upgrades";
+        if(u.type!=="pegasusChampion"&&!["youngDragon","dragon","ancientDragon"].includes(u.type)){const upgradeBox=document.createElement("div");upgradeBox.className="stat-upgrades";
         const heading=document.createElement("p");heading.className="stat-upgrades-heading";heading.textContent="Stat upgrades · +1 each, once per stat";upgradeBox.append(heading);
         statUpgrades.forEach(s=>{const e=elf(),m=u.models||1,elfRate=e&&(["WS","BS"].includes(s.key)?{unit:1,character:3}:s.key==="T"?{unit:6,character:10}:null),cost=character?(elfRate?.character??s.character):(elfRate?.unit??s.unit)*m;upgradeBox.append(check("+"+s.key+" "+s.label,{cost:"+"+cost+" pts",checked:!!u.upgrades?.[s.key],disabled:u.rangedWeapon==="firearm"&&s.key==="BS",onChange:v=>{u.upgrades={...(u.upgrades||{}),[s.key]:v};updateTotals();}}));});
         options.append(upgradeBox);
