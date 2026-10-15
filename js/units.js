@@ -100,8 +100,10 @@ export function createStartingUnits(){return createUnitsFromArmy([{type:"swordsm
 
 // Build an independent Empire opponent roster for Skirmish. The opponent targets
 // the player's points total, but uses its own composition rather than copying units.
-export function buildOpponentArmy(playerArmy, playerFaction = "empire") {
-  const target = playerArmy.reduce((sum, unit) => sum + unitCost(unit, playerFaction), 0);
+export function buildOpponentArmy(playerArmy, playerFaction = "empire", options = {}) {
+  const baseTarget = playerArmy.reduce((sum, unit) => sum + unitCost(unit, playerFaction), 0);
+  const target = baseTarget * (options.budgetMultiplier || 1);
+  const siege = !!options.siege;
   if (target <= 0) return [{ type: "swordsmen", models: 5, weapon: "handWeapon" }];
 
   const costOf = roster => roster.reduce((sum, unit) => sum + unitCost(unit, "empire"), 0);
@@ -112,6 +114,7 @@ export function buildOpponentArmy(playerArmy, playerFaction = "empire") {
       return { type, models: randInt(5, 30), weapon, meleeWeapons: ["handWeapon", weapon] };
     }
     if (type === "archers") return { type, models: randInt(5, 30), weapon: "handWeapon", rangedWeapon: "bow" };
+    if (type === "cannon") return { type, models: 3, weapon: "handWeapon" };
     if (type === "cavalry") {
       const weapon = ["handWeapon", "handWeapon", "spear", "lance"][randInt(0, 3)];
       return { type, models: randInt(5, 15), weapon, meleeWeapons: ["handWeapon", weapon], freeCavalryOption: "spear" };
