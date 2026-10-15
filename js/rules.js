@@ -72,7 +72,8 @@ export function createRules({ roll, units = () => [] }) {
     const groupFor=tier=>{const key=tier.kind+":"+tier.id;let g=groups.get(key);if(!g){g={label:attackerPool.labels.join(" / "),targetLabel:tier.label,attacks:0,hitNeed:7,hitRolls:[],hitPasses:[],hitRerolls:[],hitRerollPasses:[],hitFollowUps:[],hitFollowUpPasses:[],hits:0,woundNeed:null,woundRolls:[],woundsBeforeSave:0,saveNeed:null,saveRolls:[],saved:0,wardNeed:null,wardRolls:[],wardSaved:0,wounds:0,WS:attackerPool.stats.WS,S:attackerPool.stats.S,A:attackerPool.stats.A,BS:attackerPool.stats.BS};groups.set(key,g);}return g;};
     for(let i=0;i<attackCount;i++){
       const tiers=targetTiers(target,v,context.attacker,context.targetComponent);if(!tiers.length)break;
-      const tier=mode==="shooting"&&target.isDragon&&tiers.length>1&&roll(1)[0]<=2?tiers[1]:tiers[0],g=groupFor(tier);g.attacks++;
+      let tier=tiers[0],g=groupFor(tier);g.attacks++;
+      const logKeys=["hitRolls","hitPasses","hitRerolls","hitRerollPasses","hitFollowUps","hitFollowUpPasses"],logStarts=Object.fromEntries(logKeys.map(key=>[key,g[key].length]));
       let hitNeed;
       if(mode==="melee")hitNeed=hitTarget(attackerPool.stats.WS,tier.stats.WS);
       else {
