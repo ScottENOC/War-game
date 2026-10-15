@@ -239,7 +239,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
   }
 
   function breathAttack(u,endX,endY){
-    if(!u?.isDragon||u.side!=="player"||!alive(u)||u.shot||u.engaged||u.fled){say("This dragon cannot breathe fire right now.");return false;}
+    if(!u?.isDragon||u.side!=="player"||!alive(u)||u.breathUsed||u.shot||u.engaged||u.fled){say(u?.breathUsed?"This dragon has already used its breath attack this battle.":"This dragon cannot breathe fire right now.");return false;}
     const w=W(),h=H(),scale=w/BATTLEFIELD_WIDTH_IN,q=shape(u),ox=u.x*w+Math.cos(u.facing||0)*q.depth/2,oy=u.y*h+Math.sin(u.facing||0)*q.depth/2;
     const aim=Math.atan2(endY-oy,endX-ox),range=12*scale,half=Math.PI/8,wrap=a=>{while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;return a;};
     const hits=[];
@@ -253,7 +253,8 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       if(count)hits.push({target,count});
     }
     u.shot=true;
-    say("<b>"+u.name+" breathes fire (S"+u.dragonBreathStrength+").</b> The 45° cone reaches up to 12 inches and automatically hits each model inside it.");
+    u.breathUsed=true;
+    say("<b>"+u.name+" breathes fire (S"+u.dragonBreathStrength+").</b> The 45° cone reaches up to 12 inches and automatically hits each model inside it. Its breath is expended for the battle.");
     if(!hits.length){say("The breath cone catches no models.");return true;}
     for(const {target,count} of hits){
       const proxy={...u,models:count,startModels:count,stats:{...u.stats,BS:6},hasRangedWeapon:true,rangedWeapon:"dragonBreath",rangedStrength:u.dragonBreathStrength,rangedUsesUserStats:false,bsCap:99,armourPiercing:0,skills:{}};
