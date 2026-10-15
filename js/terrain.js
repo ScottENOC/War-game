@@ -6,6 +6,8 @@ export function terrainMovementCost(terrain,x1,y1,x2,y2,W,H,battlefieldWidthIn,f
 export function terrainElevationAt(terrain,x,y,W,H){const list=terrain||[],auto=list.find(f=>f.type==="autoTerrain");let elevation=auto?generatedElevation(auto,x/W,y/H):0;for(const hill of list.filter(f=>f.type==="hill")){const dx=(x/W-hill.x)/(hill.rx||.03),dy=(y/H-hill.y)/(hill.ry||.03),r=Math.hypot(dx,dy);if(r<1)elevation+=(hill.elevationIn||2)*(1-r*r);}return elevation;}
 export function generateSkirmishTerrain(seed=Date.now(),battleType="skirmish"){
   const terrainSeed=Number(seed)||1,terrain=[{type:"autoTerrain",seed:terrainSeed}];
+  let state=(terrainSeed>>>0)||1;
+  const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
   if(battleType==="siege"){
     const left=.29,right=.71,top=.22,bottom=.78,gateHalf=.055;
     const wall=(x1,y1,x2,y2,side)=>({type:"wall",x1,y1,x2,y2,side,widthIn:60/25.4,heightIn:5,toughness:10,wounds:10,maxWounds:10,siegeOnly:true,castle:true});
@@ -28,8 +30,6 @@ export function generateSkirmishTerrain(seed=Date.now(),battleType="skirmish"){
     }
     return terrain;
   }
-  let state=(terrainSeed>>>0)||1;
-  const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
   const wallCount=3+Math.floor(random()*2);
   for(let i=0;i<wallCount;i++){
     const cx=.31+random()*.38,cy=.16+random()*.68,angle=(random()-.5)*Math.PI*.72,length=.105+random()*.075;
