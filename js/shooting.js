@@ -180,7 +180,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       const nearest={x:ox+vx*projection,y:oy+vy*projection},radius=Math.hypot(q.depth/2,q.front/2);
       if(Math.hypot(ux-nearest.x,uy-nearest.y)<=radius)candidates.push({kind:"unit",unit,at:projection});
     }
-    for(const wall of (terrain()||[]).filter(t=>t.type==="wall"&&(t.wounds??2)>0)){
+    for(const wall of (terrain()||[]).filter(t=>(t.type==="wall"||t.type==="gate")&&(t.wounds??2)>0)){
       const a={x:wall.x1*W(),y:wall.y1*H()},b={x:wall.x2*W(),y:wall.y2*H()};
       if(!segmentsIntersect(start,end,a,b))continue;
       const vx=ex-ox,vy=ey-oy,projection=((a.x-ox)*vx+(a.y-oy)*vy)/(vx*vx+vy*vy||1);
@@ -202,9 +202,9 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       if(strength<=0)break;
       if(item.kind==="ground"){say(projectileLabel+" strikes the ground before reaching the aim point.");break;}
       if(item.kind==="wall"){
-        const wall=item.wall,need=woundTarget(strength,wall.toughness||7),die=roll(1)[0],wounded=need!==null&&die>=need,damage=wounded?(roll(1)[0]%3+1):0;
-        say(projectileLabel+" strikes a wall (T"+(wall.toughness||7)+"): S"+strength+", wound roll "+die+" (need "+(need===null?"impossible":need)+")."+(wounded?" D3 damage: "+damage+".":" No wound."));
-        if(wounded){wall.wounds=Math.max(0,(wall.wounds??2)-damage);say("Wall has "+wall.wounds+" wound"+(wall.wounds===1?"":"s")+" remaining.");}
+        const wall=item.wall,need=woundTarget(strength,wall.toughness||(wall.type==="gate"?8:7)),die=roll(1)[0],wounded=need!==null&&die>=need,damage=wounded?(roll(1)[0]%3+1):0;
+        say(projectileLabel+" strikes a "+(wall.type==="gate"?"gate":"wall")+" (T"+(wall.toughness||(wall.type==="gate"?8:7))+"): S"+strength+", wound roll "+die+" (need "+(need===null?"impossible":need)+")."+(wounded?" D3 damage: "+damage+".":" No wound."));
+        if(wounded){wall.wounds=Math.max(0,(wall.wounds??2)-damage);say((wall.type==="gate"?"Gate":"Wall")+" has "+wall.wounds+" wound"+(wall.wounds===1?"":"s")+" remaining.");}
       }else{
         const target=item.unit;
         if(target.isCannon||target.isBoltThrower){
