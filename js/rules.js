@@ -56,20 +56,21 @@ export function createRules({ roll, units = () => [] }) {
     if(target.isCharacter)characters[target.id]=target.characterWounds??target.stats.W;
     return {rankFiles:target.isCharacter?0:Math.max(0,target.models-(championAlive?1:0)),rankFileDamage:target.damage||0,championAlive,championWounds:target.championWounds??target.champion?.stats?.W??target.stats.W,characters,heroRefs,rankFileLost:0,championKilled:false,characterDamage:[]};
   }
-  function targetTiers(target,v,attacker) {
+  function targetTiers(target,v,attacker,targetComponent=null) {
     const shield=shieldFacesAttacker(target,attacker);
     if(target.isCharacter)return target.delayedDeath?[]:[{kind:"character",id:target.id,hero:target,label:target.name,stats:target.stats,remaining:v.characters[target.id]??0,armour:target.armour,intrinsicArmourSave:target.intrinsicArmourSave,shield,wardSave:target.wardSave}];
     const tiers=[];
     if(!target.delayedDeath&&v.rankFiles>0)tiers.push({kind:target.isDragon?"dragon":"rankFile",id:target.id,label:target.name,stats:target.stats,remaining:v.rankFiles,armour:target.armour,intrinsicArmourSave:target.intrinsicArmourSave,shield,wardSave:target.wardSave});
     if(!target.delayedDeath&&v.championAlive)tiers.push({kind:"champion",label:"Champion",stats:{...target.stats,...(target.champion?.stats||{})},remaining:v.championWounds,armour:target.armour,shield,wardSave:target.wardSave});
     for(const id of (target.attachedCharacters||[])){const hero=v.heroRefs[id];if(hero&&!hero.delayedDeath&&hero.models>0&&v.characters[id]>0)tiers.push({kind:"character",id,hero,label:hero.name,stats:hero.stats,remaining:v.characters[id],armour:hero.armour,intrinsicArmourSave:hero.intrinsicArmourSave,shield:shieldFacesAttacker(hero,attacker),wardSave:hero.wardSave});}
+    if(target.isDragon&&targetComponent==="rider"){const i=tiers.findIndex(t=>t.kind==="character");if(i>0)tiers.unshift(tiers.splice(i,1)[0]);}
     return tiers;
   }
   function rollPool(attackerPool,target,mode,context,v) {
     const attackCount=attackerPool.count*(context.attacksPerModel??(mode==="melee"?attackerPool.stats.A:(context.attacker?.rangedUsesUserStats?attackerPool.stats.A:1))),groups=new Map();
     const groupFor=tier=>{const key=tier.kind+":"+tier.id;let g=groups.get(key);if(!g){g={label:attackerPool.labels.join(" / "),targetLabel:tier.label,attacks:0,hitNeed:7,hitRolls:[],hitPasses:[],hitRerolls:[],hitRerollPasses:[],hitFollowUps:[],hitFollowUpPasses:[],hits:0,woundNeed:null,woundRolls:[],woundsBeforeSave:0,saveNeed:null,saveRolls:[],saved:0,wardNeed:null,wardRolls:[],wardSaved:0,wounds:0,WS:attackerPool.stats.WS,S:attackerPool.stats.S,A:attackerPool.stats.A,BS:attackerPool.stats.BS};groups.set(key,g);}return g;};
     for(let i=0;i<attackCount;i++){
-      const tiers=targetTiers(target,v,context.attacker);if(!tiers.length)break;
+      const tiers=targetTiers(target,v,context.attacker,context.targetComponent);if(!tiers.length)break;
       const tier=mode==="shooting"&&target.isDragon&&tiers.length>1&&roll(1)[0]<=2?tiers[1]:tiers[0],g=groupFor(tier);g.attacks++;
       let hitNeed;
       if(mode==="melee")hitNeed=hitTarget(attackerPool.stats.WS,tier.stats.WS);
