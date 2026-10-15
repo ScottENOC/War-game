@@ -4,7 +4,7 @@ export function createRules({ roll, units = () => [] }) {
   function woundTarget(strength,toughness) { if(strength<=0||toughness<=0)return null;if(strength>=toughness*2)return 2;if(strength>toughness)return 3;if(strength===toughness)return 4;if(strength*2>toughness)return 5;if(strength*2===toughness)return 6;return null; }
   function saveTarget(defender,strength,armourPiercing=0) {
     const type=defender.armour||(defender.lightArmour?"light":"none");
-    const base=type==="fullPlate"?4:type==="heavy"?5:type==="light"?6:(defender.shield?7:0);
+    const base=defender.intrinsicArmourSave|| (type==="fullPlate"?4:type==="heavy"?5:type==="light"?6:(defender.shield?7:0));
     if(!base)return null;
     return base+Math.max(0,strength-3)+Math.max(0,armourPiercing)-(defender.shield?1:0)-(defender.mountStats?1:0)-(defender.barding?1:0);
   }
@@ -58,11 +58,11 @@ export function createRules({ roll, units = () => [] }) {
   }
   function targetTiers(target,v,attacker) {
     const shield=shieldFacesAttacker(target,attacker);
-    if(target.isCharacter)return target.delayedDeath?[]:[{kind:"character",id:target.id,hero:target,label:target.name,stats:target.stats,remaining:v.characters[target.id]??0,armour:target.armour,shield,wardSave:target.wardSave}];
+    if(target.isCharacter)return target.delayedDeath?[]:[{kind:"character",id:target.id,hero:target,label:target.name,stats:target.stats,remaining:v.characters[target.id]??0,armour:target.armour,intrinsicArmourSave:target.intrinsicArmourSave,shield,wardSave:target.wardSave}];
     const tiers=[];
-    if(!target.delayedDeath&&v.rankFiles>0)tiers.push({kind:"rankFile",label:"Rank and file",stats:target.stats,remaining:v.rankFiles,armour:target.armour,shield,wardSave:target.wardSave});
+    if(!target.delayedDeath&&v.rankFiles>0)tiers.push({kind:target.isDragon?"dragon":"rankFile",id:target.id,label:target.name,stats:target.stats,remaining:v.rankFiles,armour:target.armour,intrinsicArmourSave:target.intrinsicArmourSave,shield,wardSave:target.wardSave});
     if(!target.delayedDeath&&v.championAlive)tiers.push({kind:"champion",label:"Champion",stats:{...target.stats,...(target.champion?.stats||{})},remaining:v.championWounds,armour:target.armour,shield,wardSave:target.wardSave});
-    for(const id of (target.attachedCharacters||[])){const hero=v.heroRefs[id];if(hero&&!hero.delayedDeath&&hero.models>0&&v.characters[id]>0)tiers.push({kind:"character",id,hero,label:hero.name,stats:hero.stats,remaining:v.characters[id],armour:hero.armour,shield:shieldFacesAttacker(hero,attacker),wardSave:hero.wardSave});}
+    for(const id of (target.attachedCharacters||[])){const hero=v.heroRefs[id];if(hero&&!hero.delayedDeath&&hero.models>0&&v.characters[id]>0)tiers.push({kind:"character",id,hero,label:hero.name,stats:hero.stats,remaining:v.characters[id],armour:hero.armour,intrinsicArmourSave:hero.intrinsicArmourSave,shield:shieldFacesAttacker(hero,attacker),wardSave:hero.wardSave});}
     return tiers;
   }
   function rollPool(attackerPool,target,mode,context,v) {
@@ -70,7 +70,7 @@ export function createRules({ roll, units = () => [] }) {
     const groupFor=tier=>{const key=tier.kind+":"+tier.id;let g=groups.get(key);if(!g){g={label:attackerPool.labels.join(" / "),targetLabel:tier.label,attacks:0,hitNeed:7,hitRolls:[],hitPasses:[],hitRerolls:[],hitRerollPasses:[],hitFollowUps:[],hitFollowUpPasses:[],hits:0,woundNeed:null,woundRolls:[],woundsBeforeSave:0,saveNeed:null,saveRolls:[],saved:0,wardNeed:null,wardRolls:[],wardSaved:0,wounds:0,WS:attackerPool.stats.WS,S:attackerPool.stats.S,A:attackerPool.stats.A,BS:attackerPool.stats.BS};groups.set(key,g);}return g;};
     for(let i=0;i<attackCount;i++){
       const tiers=targetTiers(target,v,context.attacker);if(!tiers.length)break;
-      const tier=tiers[0],g=groupFor(tier);g.attacks++;
+      const tier=mode==="shooting"&&target.isDragon&&tiers.length>1&&roll(1)[0]<=2?tiers[1]:tiers[0],g=groupFor(tier);g.attacks++;
       let hitNeed;
       if(mode==="melee")hitNeed=hitTarget(attackerPool.stats.WS,tier.stats.WS);
       else {
@@ -100,7 +100,7 @@ export function createRules({ roll, units = () => [] }) {
       if(saveNeed!==null&&saveNeed<=6){const sr=roll(1)[0];g.saveRolls.push(sr);saved=sr!==1&&sr>=saveNeed;}
       if(!saved&&tier.wardSave){const wn=parseInt(tier.wardSave,10);g.wardNeed=wn;if(Number.isFinite(wn)){const wrd=roll(1)[0];g.wardRolls.push(wrd);if(wrd!==1&&wrd>=wn){g.wardSaved++;saved=true;}}}
       if(saved){g.saved++;continue;}g.wounds++;
-      if(tier.kind==="rankFile"){v.rankFileDamage++;if(v.rankFileDamage>=Math.max(1,tier.stats.W)){v.rankFileDamage=0;v.rankFiles--;v.rankFileLost++;}}
+      if(tier.kind==="rankFile"||tier.kind==="dragon"){v.rankFileDamage++;if(v.rankFileDamage>=Math.max(1,tier.stats.W)){v.rankFileDamage=0;v.rankFiles--;v.rankFileLost++;}}
       else if(tier.kind==="champion"){v.championWounds--;if(v.championWounds<=0){v.championAlive=false;v.championKilled=true;}}
       else {v.characters[tier.id]--;const old=v.characterDamage.find(x=>x.id===tier.id);if(old){old.remaining=v.characters[tier.id];old.wounds++;}else v.characterDamage.push({id:tier.id,hero:tier.hero,remaining:v.characters[tier.id],wounds:1});}
     }
