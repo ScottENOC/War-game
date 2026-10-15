@@ -29,6 +29,7 @@ function renderFaction(){
  byId("grand-campaign-begin").disabled=false;byId("grand-campaign-begin").textContent="Choose "+f.name+" →";renderCity();
 }
 export function startGrandCampaign(){
+ try{const saved=JSON.parse(localStorage.getItem("warGameGrandCampaignStart")||"null");if(saved&&FACTIONS[saved.faction]){selectedFaction=saved.faction;if(CITIES.some(city=>city.id===saved.selectedCity))selectedCity=saved.selectedCity;}}catch{}
  const screen=byId("grand-campaign-screen"),menu=byId("mainmenu");if(!screen||!menu)return;
  document.addEventListener("click",event=>{const target=event.target instanceof Element?event.target.closest('[data-mode="grand"]'):null;if(!target)return;event.preventDefault();event.stopPropagation();screen.hidden=false;menu.hidden=true;renderFaction();},true);
  byId("grand-campaign-back").addEventListener("click",()=>{screen.hidden=true;menu.hidden=false;});
