@@ -85,8 +85,9 @@ export function createUnitsFromArmy(army,faction="empire") {
       const rider=buildUnit(FACTIONS.highElves.units.lord,{...playerEntry,type:"lord",mounted:false,mountType:"none",id:"p"+n+"r",index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
       rider.points=unitCost(entry,playerFaction)-host.points;rider.isDragonRider=true;rider.mounted=true;rider.mountType=dragonType;rider.flyingMount=true;rider.flightAltitudeIn=12;rider.baseWidthIn=host.baseWidthIn;rider.baseDepthIn=host.baseDepthIn;rider.heightIn=3.5;rider.attachedTo=host.id;host.attachedCharacters=[rider.id];units[host.id]=host;units[rider.id]=rider;
     }else units["p"+n]=buildUnit(FACTIONS[playerFaction].units[entry.type],{...playerEntry,id:"p"+n,index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
-    const opposingType=FACTIONS.opposing.units[entry.type]?entry.type:(["cannon","boltThrower","youngDragon","dragon","ancientDragon"].includes(entry.type)?"swordsmen":(["legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
-    units["a"+n]=buildUnit(FACTIONS.opposing.units[opposingType],{...opposingEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},"empire",true);
+    const opposingType=entry.type==="cannon"&&FACTIONS.empire.units.cannon?"cannon":FACTIONS.opposing.units[entry.type]?entry.type:(["cannon","boltThrower","youngDragon","dragon","ancientDragon"].includes(entry.type)?"swordsmen":(["legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
+    const opposingTemplate=FACTIONS.opposing.units[opposingType]||FACTIONS.empire.units[opposingType]||FACTIONS.opposing.units.swordsmen;
+    units["a"+n]=buildUnit(opposingTemplate,{...opposingEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},"empire",true);
   });
   Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter&&!u.hasRangedWeapon).forEach(hero=>{
     const host=Object.values(units).find(u=>u.side==="ai"&&!u.isCharacter&&u.models>0&&!!u.isCavalry===!!hero.mounted);
