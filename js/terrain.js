@@ -4,7 +4,7 @@ export function generatedElevation(feature,x,y){const seed=Number(feature?.seed)
 export function terrainIsWater(terrain,x,y,W,H){const px=x/W,py=y/H;for(const o of terrain||[]){if(o.type==="lake"&&(((px-o.x)/(o.rx||.03))**2+((py-o.y)/(o.ry||.03))**2<=1))return true;if(o.type==="river"&&pointSegmentDistance({x,y},{x:o.x1*W,y:o.y1*H},{x:o.x2*W,y:o.y2*H})<=(o.widthIn||1.5)*W/48/2)return true;}const auto=(terrain||[]).find(o=>o.type==="autoTerrain");return !!auto&&generatedElevation(auto,px,py)<.48;}
 export function terrainMovementCost(terrain,x1,y1,x2,y2,W,H,battlefieldWidthIn,fieldHeightIn){const dx=(x2-x1)*battlefieldWidthIn,dy=(y2-y1)*fieldHeightIn,length=Math.hypot(dx,dy);if(!length)return 0;const samples=Math.max(12,Math.ceil(length*5));let water=0;for(let i=1;i<=samples;i++){const t=i/samples,x=(x1+(x2-x1)*t)*W,y=(y1+(y2-y1)*t)*H;if(terrainIsWater(terrain,x,y,W,H))water++;}return length*(1+water/samples);}
 export function terrainElevationAt(terrain,x,y,W,H){const auto=(terrain||[]).find(f=>f.type==="autoTerrain");return auto?generatedElevation(auto,x/W,y/H):0;}
-export function generateSkirmishTerrain(seed=Date.now(),battleType="skirmish"){
+export export function generateSkirmishTerrain(seed=Date.now(),battleType="skirmish"){
   const terrainSeed=Number(seed)||1,terrain=[{type:"autoTerrain",seed:terrainSeed}];
   if(battleType==="siege"){
     const left=.29,right=.71,top=.22,bottom=.78,gateHalf=.055;
