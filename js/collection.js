@@ -97,7 +97,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
   groups.forEach(([key,count])=>{
    const [faction,type,weapon,shield,mounted,mountType,offhand,backWeaponsKey]=key.split("|");const backWeapons=JSON.parse(backWeaponsKey||"[]");
    const card=document.createElement("article");card.className="inventory-model";
-   const strong=document.createElement("strong");strong.textContent=type==="legendaryLord"?"Lord-Marshal Edric Voss":type==="shadowElf"?"Lethariel Starweaver":(faction==="empire"?"Empire ":"High Elf ")+title(type);
+   const strong=document.createElement("strong");strong.textContent=type==="legendaryLord"?"Lord-Marshal Edric Voss":type==="shadowElf"?"Lethariel Starweaver":(faction==="empire"?"Empire ":faction==="dwarfs"?"Dwarf ":"High Elf ")+title(type);
    const meta=document.createElement("span");meta.textContent=title(weapon)+(offhand==="true"?" · Off-hand sword":"")+(shield==="true"?" · Shield":"")+(backWeapons.length?" · Back: "+backWeapons.map(title).join(", "):"")+(mountType==="eagle"?" · Pegasus":mounted==="true"?" · Mounted":"");
    const qty=document.createElement("b");qty.textContent="×"+count;card.append(strong,meta,qty);
    const edit=document.createElement("button");edit.className="secondary-button";edit.textContent="Add component";
