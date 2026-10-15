@@ -130,6 +130,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   function openBuilder(){ $("mainmenu").hidden=true;$("collection-screen").hidden=true;$("mode-screen").hidden=true;$("armybuilder").hidden=false;renderRows(); }
   $("builder-back").addEventListener("click",onBack);
   addButton.addEventListener("click",()=>{if(army.length>=6)return;const u={type:"swordsmen",models:20};defaults(u);army.push(u);renderRows();});
-  battleType?.addEventListener("change",()=>{if(siegeRoleWrap)siegeRoleWrap.hidden=battleType.value!=="siege";});\n  startButton.addEventListener("click",()=>{if(army.length&&!validateArmy(army,faction))onStart(army.map(u=>({...u})),faction,battleType?.value==="siege"?"siege":"skirmish",siegeRole?.value||"attacker");});
+  battleType?.addEventListener("change",()=>{if(siegeRoleWrap)siegeRoleWrap.hidden=battleType.value!=="siege";});
+  startButton.addEventListener("click",()=>{if(army.length&&!validateArmy(army,faction))onStart(army.map(u=>({...u})),faction,battleType?.value==="siege"?"siege":"skirmish",siegeRole?.value||"attacker");});
   return {open:openBuilder,refresh:renderRows};
 }
