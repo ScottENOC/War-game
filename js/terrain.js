@@ -14,7 +14,7 @@ export function generateSkirmishTerrain(seed=Date.now(),battleType="skirmish"){
     terrain.push(wall(right,top,right,bottom,"east"));
     terrain.push(wall(right,bottom,left,bottom,"south"));
     terrain.push(wall(left,bottom,left,.5+gateHalf,"west-south"),gate(left,.5+gateHalf,left,.5-gateHalf,"west-gate"),wall(left,.5-gateHalf,left,top,"west-north"));
-    terrain.push({type:"stairs",x:.305,y:.36,inside:true,label:"North-west stairway"},{type:"stairs",x:.695,y:.64,inside:true,label:"South-east stairway"});
+    terrain.push({type:"stairs",x:.34,y:.36,inside:true,label:"North-west stairway"},{type:"stairs",x:.66,y:.64,inside:true,label:"South-east stairway"});
     terrain.push({type:"siegeCastle",left,right,top,bottom});
     return terrain;
   }
