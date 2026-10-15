@@ -63,7 +63,8 @@ export function createRules({ roll, units = () => [] }) {
     if(!target.delayedDeath&&v.rankFiles>0)tiers.push({kind:target.isDragon?"dragon":"rankFile",id:target.id,label:target.name,stats:target.stats,remaining:v.rankFiles,armour:target.armour,intrinsicArmourSave:target.intrinsicArmourSave,shield,wardSave:target.wardSave});
     if(!target.delayedDeath&&v.championAlive)tiers.push({kind:"champion",label:"Champion",stats:{...target.stats,...(target.champion?.stats||{})},remaining:v.championWounds,armour:target.armour,shield,wardSave:target.wardSave});
     for(const id of (target.attachedCharacters||[])){const hero=v.heroRefs[id];if(hero&&!hero.delayedDeath&&hero.models>0&&v.characters[id]>0)tiers.push({kind:"character",id,hero,label:hero.name,stats:hero.stats,remaining:v.characters[id],armour:hero.armour,intrinsicArmourSave:hero.intrinsicArmourSave,shield:shieldFacesAttacker(hero,attacker),wardSave:hero.wardSave});}
-    if(target.isDragon&&targetComponent==="rider"){const i=tiers.findIndex(t=>t.kind==="character");if(i>0)tiers.unshift(tiers.splice(i,1)[0]);}
+    if(target.isDragon&&targetComponent==="rider"){const i=tiers.findIndex(t=>t.kind==="character");if(i<0)return [];if(i>0)tiers.unshift(tiers.splice(i,1)[0]);}
+    if(target.isDragon&&targetComponent==="dragon"&&!tiers.some(t=>t.kind==="dragon"))return [];
     return tiers;
   }
   function rollPool(attackerPool,target,mode,context,v) {
