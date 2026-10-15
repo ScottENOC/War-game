@@ -133,8 +133,9 @@ function validateArmy(army,faction){
  if(collectionManager?.getBypass())return "";
  const owned=collectionManager?.getInventory()||[],used=new Set(),shortages=[];
  for(const entry of army){
-  if(entry.type==="cannon"||entry.type==="boltThrower"){if(entry.type==="cannon"&&faction==="highElves")shortages.push("Cannons are only available to the Empire.");if(entry.type==="boltThrower"&&faction!=="highElves")shortages.push("Bolt throwers are only available to the High Elves.");continue;}
+  if(entry.type==="cannon"||entry.type==="boltThrower"||["youngDragon","dragon","ancientDragon"].includes(entry.type)){if(entry.type==="cannon"&&faction==="highElves")shortages.push("Cannons are only available to the Empire.");if(entry.type==="boltThrower"&&faction!=="highElves")shortages.push("Bolt throwers are only available to the High Elves.");if(["youngDragon","dragon","ancientDragon"].includes(entry.type)&&faction!=="highElves")shortages.push("Dragons are only available to the High Elves.");continue;}
   const character=["captain","lord","legendaryLord","shadowElf","pegasusChampion"].includes(entry.type),collectionType=["legendaryLord","shadowElf"].includes(entry.type)?"lord":entry.type;
+  if(entry.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(entry.mountType)){if(faction!=="highElves")shortages.push("Only High Elf Lords may ride dragons.");continue;}
   const count=character?1:(entry.models||1);
   const mounted=entry.type==="cavalry"||(character&&!!entry.mounted),expectedMount=mounted?(entry.mountType||(entry.type==="cavalry"?"horse":"horse")):"none";
   const matches=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&(m.type===collectionType||(["swordsmen","archers"].includes(entry.type)&&["swordsmen","archers"].includes(m.type)))&&!!m.mounted===mounted&&(m.mountType||(m.mounted?"horse":"none"))===expectedMount);
