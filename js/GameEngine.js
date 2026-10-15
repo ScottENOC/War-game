@@ -1,6 +1,6 @@
 import { createUnitsFromArmy, buildOpponentArmy } from "./units.js";
 import { createArmyBuilder } from "./armyBuilder.js";
-import { createCollectionManager } from "./collection.js?v=20261015-collection-label-fix-v2";
+import { createCollectionManager } from "./collection.js?v=20261015-infantry-names-v3";
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js";
 import { createRules } from "./rules.js";
