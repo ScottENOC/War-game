@@ -25,7 +25,7 @@ const S=createGameState({});S.terrain=[];S.terrainTool="off";S.battleType="skirm
 const units=()=>Object.values(S.units), alive=u=>!!u&&(u.models>0||(u.attachedCharacters||[]).some(id=>S.units[id]&&S.units[id].models>0));
 const W=()=>canvas.clientWidth,H=()=>canvas.clientHeight,PX_PER_IN=()=>W()/BATTLEFIELD_WIDTH_IN,fieldHeightIn=()=>H()/Math.max(1,PX_PER_IN());
 const enemies=u=>units().filter(v=>v.side!==u.side&&alive(v)&&!v.attachedTo);
-const MOVEMENT = createMovement({ W, H, PX_PER_IN, MODEL_BASE_IN, BATTLEFIELD_WIDTH_IN, fieldHeightIn, units, alive, terrain:()=>S.terrain });
+const MOVEMENT = createMovement({ W, H, PX_PER_IN, MODEL_BASE_IN, BATTLEFIELD_WIDTH_IN, fieldHeightIn, units, alive, terrain:()=>S.terrain, canPassGate:u=>S.battleType==="siege"&&((u.side==="player")===(S.siegeRole==="defender")) });
 const { dist, shape, corners, overlap, canPlace } = MOVEMENT;
 function hasPriorityRule(u){return !!u&&(!!u.priorityActivation||!!u.reserveDeployRule||(u.attachedCharacters||[]).some(id=>S.units[id]?.models>0&&S.units[id]?.priorityActivation));}
  function canUseNeutralZone(u){return !!u&&(!!u.canDeployNeutral||(u.attachedCharacters||[]).some(id=>S.units[id]?.models>0&&S.units[id]?.canDeployNeutral));}
