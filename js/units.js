@@ -37,7 +37,7 @@ function buildUnit(template,config,faction,opposing=false) {
   if(mounted&&hasBarding&&!elf)stats.M=7;
   if(isCharacter&&!mounted&&hasHeavyArmour&&!hasMagicArmour&&!elf&&!dwarf)stats.M=Math.max(1,stats.M-1);
   const lightArmour=isBoltThrower||dwarf|| (isCavalry||isCharacter?(!hasHeavyArmour):(elf||!!config.lightArmour));
-  const meleeWeapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])].filter(w=>!["bow","crossbow","firearm","longRifle"].includes(w)),ownsShield=!!config.shield||(dwarf&&!isSiegeEngine);if(!meleeWeapons.includes("handWeapon"))meleeWeapons.unshift("handWeapon");const spears=config.weapon==="spear"&&meleeWeapons.includes("spear");
+  const meleeWeapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])].filter(w=>!["bow","crossbow","firearm","longRifle"].includes(w)),ownsShield=!!config.shield||dwarf;if(!meleeWeapons.includes("handWeapon"))meleeWeapons.unshift("handWeapon");const spears=config.weapon==="spear"&&meleeWeapons.includes("spear");
   const rangedWeapon=isCannon?null:(isBoltThrower?"bow":(config.rangedWeapon||(["bow","crossbow","firearm","longRifle","magicBow"].includes(config.weapon)?config.weapon:(config.type==="archers"?"bow":(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"))?"bow":null)))));
   const hasBow=rangedWeapon==="bow"||rangedWeapon==="magicBow";
   let weapon=(isCharacter||isCavalry||["swordsmen","dwarfWarriors","dwarfThunderers","dwarfQuarrellers","dwarfLongbeards","dwarfIronbreakers"].includes(config.type))?(["bow","crossbow","firearm","longRifle"].includes(config.weapon)?"handWeapon":(config.weapon||"handWeapon")):"handWeapon";
