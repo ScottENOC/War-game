@@ -33,6 +33,50 @@
 <section id="mode-screen" class="screen builder-screen" hidden><div class="builder-panel">
 <header class="builder-header"><div><div class="eyebrow">Campaign selection</div><h1 id="mode-title">Campaign</h1></div><button id="mode-back" class="secondary-button">Main Menu</button></header>
 <p id="mode-description" class="builder-intro"></p><div class="mode-placeholder"><div class="mode-mark">✦</div><h2>Coming soon</h2><p>This mode will use the same miniature collection as Skirmish. Models you own will determine which troops you can field.</p><button id="mode-collection" class="primary-button">Open Collection</button></div></div></section>
+
+<section id="grand-campaign-screen" class="screen builder-screen" hidden><div class="builder-panel grand-campaign-panel">
+<header class="builder-header"><div><div class="eyebrow">Grand campaign · persistent world</div><h1>The Shattered Realms</h1></div><button id="grand-campaign-back" class="secondary-button">Main Menu</button></header>
+<p class="builder-intro">A fixed world map, with old kingdoms, rival lords and contested borders. This map is authored as campaign data: reopening the game will not generate a different world.</p>
+<div class="grand-campaign-layout"><section class="grand-map-wrap"><div class="grand-map-legend"><span>◆ Cities</span><span>♟ Mountains</span><span>♣ Forests</span><span>≈ Rivers</span></div><svg id="grand-world-map" class="grand-world-map" viewBox="0 0 1000 620" role="img" aria-label="The Shattered Realms, a fantasy campaign map with two continents and scattered islands">
+<defs><pattern id="map-paper" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="3" cy="5" r="1" fill="#7e916a" opacity=".18"/><circle cx="18" cy="16" r=".8" fill="#7e916a" opacity=".15"/></pattern></defs>
+<rect width="1000" height="620" fill="#78949a"/><rect width="1000" height="620" fill="url(#map-paper)"/>
+<g fill="#d5c99d" stroke="#6e8068" stroke-width="3" stroke-linejoin="round">
+<path d="M83 125 L132 79 210 62 264 91 304 72 354 102 398 89 432 133 417 171 449 205 422 244 390 269 365 309 327 327 299 369 252 375 218 345 176 349 145 318 111 306 94 269 62 235 71 187Z"/>
+<path d="M433 331 L472 293 516 303 548 276 589 287 616 265 657 281 684 265 726 287 754 313 799 319 833 349 870 369 879 404 853 434 817 446 795 483 753 494 722 525 679 517 649 545 612 531 583 552 551 531 522 543 490 519 461 522 444 486 412 462 402 426 418 391Z"/>
+<path d="M506 174 L533 151 561 159 575 184 559 205 531 210 511 196Z"/>
+<path d="M623 111 L651 91 678 101 689 125 672 145 642 143Z"/>
+<path d="M766 191 L795 177 820 192 823 218 801 236 777 223Z"/>
+<path d="M908 265 L931 252 950 267 947 288 925 299 909 284Z"/>
+<path d="M340 426 L362 411 384 420 391 443 372 458 349 450Z"/>
+<path d="M122 425 L148 408 172 419 178 442 159 457 135 450Z"/>
+<path d="M241 500 L267 486 292 496 300 519 282 535 257 527Z"/>
+</g>
+<g fill="none" stroke="#6aa5bd" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M158 104 C180 143 168 172 206 198 S250 240 229 276 S257 314 282 355"/><path d="M326 101 C302 143 334 167 313 203 S333 248 303 282"/><path d="M478 310 C499 348 474 374 510 401 S534 454 564 480 S596 516 617 529"/><path d="M674 285 C655 322 685 347 662 379 S680 418 709 442"/></g>
+<g fill="none" stroke="#64704f" stroke-width="2" opacity=".9"><path d="M120 155 Q200 133 272 166"/><path d="M150 281 Q219 260 286 298"/><path d="M455 405 Q523 380 585 422"/><path d="M602 467 Q670 455 744 479"/></g>
+<g fill="#7f8e78" stroke="#56634f" stroke-width="1.5">
+<path d="M238 104 l18 -25 18 25 -12 -5 -6 11 -7 -11Z"/><path d="M267 119 l17 -24 17 24 -12 -5 -5 10 -7 -10Z"/><path d="M292 135 l18 -26 18 26 -12 -5 -6 11 -7 -11Z"/><path d="M351 150 l19 -27 19 27 -13 -5 -6 12 -7 -12Z"/><path d="M369 177 l19 -27 19 27 -13 -5 -6 12 -7 -12Z"/>
+<path d="M469 350 l19 -27 19 27 -13 -5 -6 12 -7 -12Z"/><path d="M493 367 l19 -27 19 27 -13 -5 -6 12 -7 -12Z"/><path d="M517 385 l19 -27 19 27 -13 -5 -6 12 -7 -12Z"/><path d="M541 402 l19 -27 19 27 -13 -5 -6 12 -7 -12Z"/><path d="M571 420 l19 -27 19 27 -13 -5 -6 12 -7 -12Z"/><path d="M618 303 l19 -27 19 27 -13 -5 -6 12 -7 -12Z"/><path d="M645 318 l19 -27 19 27 -13 -5 -6 12 -7 -12Z"/>
+</g>
+<g fill="#315e45" stroke="#234a38" stroke-width="1"><g transform="translate(111 205)"><circle r="13"/><circle cx="19" cy="8" r="12"/><circle cx="4" cy="23" r="12"/><path d="M1 17 v19 M19 20 v16" stroke="#c6b98b" stroke-width="3"/></g><g transform="translate(161 234)"><circle r="13"/><circle cx="20" cy="8" r="12"/><circle cx="3" cy="22" r="12"/></g><g transform="translate(341 233)"><circle r="13"/><circle cx="20" cy="8" r="12"/><circle cx="3" cy="22" r="12"/></g><g transform="translate(715 343)"><circle r="13"/><circle cx="20" cy="8" r="12"/><circle cx="3" cy="22" r="12"/></g><g transform="translate(759 400)"><circle r="13"/><circle cx="20" cy="8" r="12"/><circle cx="3" cy="22" r="12"/></g><g transform="translate(542 467)"><circle r="13"/><circle cx="20" cy="8" r="12"/><circle cx="3" cy="22" r="12"/></g></g>
+<g fill="#26312b" font-family="Georgia,serif" font-size="21" font-style="italic" opacity=".85"><text x="125" y="390">The Oldreach</text><text x="585" y="580">The Southlands</text><text x="500" y="125" font-size="15">The Greyward Isles</text><text x="805" y="164" font-size="15">The Far Shoals</text></g>
+<g id="grand-city-markers" font-family="system-ui,sans-serif" font-size="13" font-weight="700">
+<g class="grand-city" data-city="1" tabindex="0" role="button" aria-label="Crownfall, human city" transform="translate(205 214)"><circle r="13" fill="#9b6845" stroke="#f4e6bb" stroke-width="3"/><path d="M-6 2 v-8 l4 3 3 -5 4 5 v5Z" fill="#fff1c6"/><text x="17" y="5">Crownfall</text></g>
+<g class="grand-city" data-city="2" tabindex="0" role="button" aria-label="Westmere, human city" transform="translate(142 286)"><circle r="11" fill="#9b6845" stroke="#f4e6bb" stroke-width="3"/><text x="-8" y="27">Westmere</text></g>
+<g class="grand-city" data-city="3" tabindex="0" role="button" aria-label="Goldhaven, human city" transform="translate(335 294)"><circle r="11" fill="#9b6845" stroke="#f4e6bb" stroke-width="3"/><text x="13" y="4">Goldhaven</text></g>
+<g class="grand-city" data-city="4" tabindex="0" role="button" aria-label="Stonebridge, human city" transform="translate(473 428)"><circle r="11" fill="#9b6845" stroke="#f4e6bb" stroke-width="3"/><text x="-79" y="24">Stonebridge</text></g>
+<g class="grand-city" data-city="5" tabindex="0" role="button" aria-label="Southwatch, human city" transform="translate(596 491)"><circle r="11" fill="#9b6845" stroke="#f4e6bb" stroke-width="3"/><text x="13" y="4">Southwatch</text></g>
+<g class="grand-city" data-city="6" tabindex="0" role="button" aria-label="Aelthir, elven city" transform="translate(160 142)"><circle r="11" fill="#4e8a75" stroke="#e4f2c8" stroke-width="3"/><text x="-44" y="-15">Aelthir</text></g>
+<g class="grand-city" data-city="7" tabindex="0" role="button" aria-label="Moonspire, elven city" transform="translate(541 182)"><circle r="11" fill="#4e8a75" stroke="#e4f2c8" stroke-width="3"/><text x="14" y="2">Moonspire</text></g>
+<g class="grand-city" data-city="8" tabindex="0" role="button" aria-label="Silvershade, elven city" transform="translate(793 207)"><circle r="11" fill="#4e8a75" stroke="#e4f2c8" stroke-width="3"/><text x="13" y="3">Silvershade</text></g>
+<g class="grand-city" data-city="9" tabindex="0" role="button" aria-label="Ironhold, dwarf city" transform="translate(515 352)"><circle r="11" fill="#687a8d" stroke="#e1e9f0" stroke-width="3"/><text x="-76" y="-13">Ironhold</text></g>
+<g class="grand-city" data-city="10" tabindex="0" role="button" aria-label="Deepdelve, dwarf city" transform="translate(653 329)"><circle r="11" fill="#687a8d" stroke="#e1e9f0" stroke-width="3"/><text x="14" y="-8">Deepdelve</text></g>
+</g>
+</svg><p class="subtle">Map v1 · two main continents, northern and eastern island chains, rivers, forest belts and mountain ranges. Geography is fixed in the campaign data.</p></section>
+<aside class="grand-campaign-sidebar"><h2>Choose a realm</h2><p class="subtle">Each people has several cities and rival power centres. Choosing a faction gives you a political starting position—not ownership of every city of that race.</p><div id="grand-faction-choices" class="grand-faction-choices">
+<button class="grand-faction-choice active" data-faction="empire"><b>Human Realms</b><small>Most territory · five cities · fractured crowns</small></button><button class="grand-faction-choice" data-faction="highElves"><b>High Elves</b><small>Forests and islands · three cities · divided courts</small></button><button class="grand-faction-choice" data-faction="dwarfs"><b>Dwarfs</b><small>Mountain holds only · two cities · rival clans</small></button>
+</div><div id="grand-faction-detail" class="grand-faction-detail" aria-live="polite"></div><h2>Selected settlement</h2><div id="grand-city-detail" class="grand-city-detail">Tap a city marker to inspect its ruler and strategic position.</div><button id="grand-campaign-begin" class="primary-button" disabled>Campaign setup coming next</button></aside></div>
+</div></section>
+
 <section id="collection-screen" class="screen builder-screen" hidden><div class="builder-panel collection-panel">
 <header class="builder-header"><div><div class="eyebrow">Your physical collection</div><h1>Army Builder</h1></div><button id="collection-back" class="secondary-button">Main Menu</button></header>
 <p class="builder-intro">Models are permanent physical pieces. Add components to an existing model, or assemble a new one from matching bits.</p>
