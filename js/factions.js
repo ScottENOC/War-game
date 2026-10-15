@@ -6,7 +6,7 @@ export const FACTIONS = {
     lord:{name:"Empire General",short:"General",kind:"hero",models:1,points:80,stats:{M:4,WS:5,BS:5,S:4,T:4,W:3,I:5,A:3,Ld:9}},
     legendaryLord:{name:"Lord-Marshal Edric Voss",short:"Edric Voss",kind:"hero",models:1,points:160,namedCharacter:true,ignoreArmourSaves:true,defaultHeavyArmour:true,defaultShield:true,stats:{M:4,WS:6,BS:5,S:5,T:5,W:4,I:6,A:4,Ld:10}},
     rifleman:{name:"Matthias Keller, Imperial Marksman",short:"Keller",kind:"hero",models:1,points:65,namedCharacter:true,stats:{M:4,WS:4,BS:5,S:3,T:3,W:2,I:4,A:1,Ld:8}},
-    captainWeiss:{name:"Captain Marta Weiss",short:"Marta Weiss",kind:"hero",models:1,points:70,namedCharacter:true,stats:{M:4,WS:5,BS:4,S:4,T:4,W:3,I:4,A:2,Ld:8}},
+    captainWeiss:{name:"Captain Marta Weiss",short:"Marta Weiss",kind:"hero",models:1,points:70,namedCharacter:true,rallyingCall:true,stats:{M:4,WS:5,BS:4,S:4,T:4,W:3,I:4,A:2,Ld:8}},
     cavalry:{name:"Empire Cavalry",short:"Cavalry",kind:"cavalry",models:5,points:16,stats:{M:8,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},mountStats:{A:1,WS:3,I:3,S:3},range:24},
     cannon:{name:"Empire Cannon",short:"Cannon",kind:"artillery",models:3,points:80,stats:{M:0,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}}
   }},
