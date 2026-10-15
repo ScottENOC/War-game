@@ -16,6 +16,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     return groups;
   }
   function combatantAlive(u) { return !!u && u.models > 0 && !u.fled; }
+  function combatUnitStrength(u){if(!u)return 0;if(Number.isFinite(u.unitStrength))return u.unitStrength;if(u.isDragon||u.isDragonRider)return 6;if(u.isCavalry)return Math.max(0,u.models)*2;return Math.max(0,u.models||0);}
   function captureFighter(u, host=u) {
     const champion = !!(u.champion?.enabled && u.championAlive !== false && u.models > 0);
     const rankWidth=Math.max(1,Math.floor(u.formationWidth||5));
@@ -81,7 +82,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           // would still have struck first without that bonus, i.e. the final
           // modified Initiative gap (including ASF) is at least 11.
           const rerollMisses=component==="rider"&&!!u.alwaysStrikesFirst&&attackerI-targetI>=11;
-          const result=meleeAttack(u,target,{attackingModels:strikeState.skirmishRound?Math.min(strikeState.eligibleModels,Math.max(1,Math.floor(u.formationWidth||5))):strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged&&!host.defendedWallCombat&&!linked(host).some(v=>v.spears&&!v.charged&&v.side!==host.side),attackComponent:component,rerollMisses,targetComponent:target.isDragon?(S.targetComponentByUnit?.[target.id]||"dragon"):undefined});
+          const result=meleeAttack(u,target,{attackingModels:strikeState.skirmishRound?Math.min(strikeState.eligibleModels,Math.max(1,Math.floor(u.formationWidth||5))):strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged&&!host.defendedWallCombat&&!linked(host).some(v=>v.spears&&!v.charged&&v.side!==host.side),attackComponent:component,rerollMisses,onlySixes:!!(u.failedFearAgainst===target.id&&u.failedFearCombatRound===S.combatRound),targetComponent:target.isDragon?(S.targetComponentByUnit?.[target.id]||"dragon"):undefined});
           say('<b>Melee dice — '+u.name+(component==="mount"?" (mount)":"")+' attacks '+target.name+'</b>'+diceStack(u,result));
           wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
           applyDamage(target,result.wounds,false,result.cascadePlan);
@@ -116,7 +117,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       });
       const diff=sideScore.player-sideScore.ai;
       say("Combat resolution (combined melee): Player "+sideScore.player+" (wounds "+detail.player[0].value+", best ranks "+detail.player[1].value+", flank/rear "+detail.player[2].value+", outnumber "+detail.player[3].value+") vs Opponent "+sideScore.ai+" (wounds "+detail.ai[0].value+", best ranks "+detail.ai[1].value+", flank/rear "+detail.ai[2].value+", outnumber "+detail.ai[3].value+").");
-      if(diff!==0){const losingSide=diff>0?"ai":"player";group.filter(u=>u.side===losingSide&&alive(u)&&linked(u).length).forEach(loser=>tests.push({loser,diff:Math.abs(diff)}));}
+      if(diff!==0){const losingSide=diff>0?"ai":"player";group.filter(u=>u.side===losingSide&&alive(u)&&linked(u).length).forEach(loser=>{const fearEnemy=linked(loser).find(v=>v.side!==loser.side&&((v.causesFear||v.causesTerror||v.isDragon||v.isDragonRider))&&combatUnitStrength(v)>combatUnitStrength(loser));if(fearEnemy){tests.push({loser,diff:Math.abs(diff),automaticFear:true});say(loser.name+" is defeated and outnumbered by "+fearEnemy.name+"; Fear breaks the unit automatically.");}else tests.push({loser,diff:Math.abs(diff)});});}
     });
     if(units().filter(alive).filter(u=>u.side==="player").length===0){finishBattle("Opponent wins the battle!");return;}
     if(units().filter(alive).filter(u=>u.side==="ai").length===0){finishBattle("Player wins the battle!");return;}
@@ -124,19 +125,21 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     else{say("Combat drawn; engaged units hold.");reformCombatPairs?.();S.combatResolved=true;render();}
   }
   function hasStubborn(u){if(u.stubborn)return true;return units().some(source=>source!==u&&source.grantsStubbornAura&&source.side===u.side&&alive(source)&&!source.fled&&dist(u,source)<=12);}
-  function nextBreakTest(){while(S.breakTests&&S.breakTests.length){const next=S.breakTests.shift();if(alive(next.loser)&&next.loser.engaged){S.loser=next.loser;S.crDiff=next.diff;S.phase="break";render();return true;}}S.loser=null;return false;}
+  function nextBreakTest(){while(S.breakTests&&S.breakTests.length){const next=S.breakTests.shift();if(alive(next.loser)&&next.loser.engaged){S.loser=next.loser;S.crDiff=next.diff;if(next.automaticFear){S.autoFearBreak=true;resolveBreak();return true;}S.phase="break";render();return true;}}S.loser=null;return false;}
   function resolveBreak(){
     const u=S.loser;if(!u||!alive(u)){endTurn();return;}
-    const dice=roll(2),total=dice[0]+dice[1],snakeEyes=dice[0]===1&&dice[1]===1;
+    const automaticFearBreak=!!S.autoFearBreak;S.autoFearBreak=false;
+    const dice=automaticFearBreak?null:roll(2),total=dice?dice[0]+dice[1]:null,snakeEyes=!!dice&&dice[0]===1&&dice[1]===1;
     const testLeadership=leadership(u);
     const stubborn=hasStubborn(u),steadfast=!!u.skills?.steadfast,ignoresCombatPenalty=stubborn||steadfast,appliedDiff=ignoresCombatPenalty?0:S.crDiff;
-    const holds=snakeEyes||total+appliedDiff<=testLeadership;
-    say('<b>Break test — '+u.name+'</b>: 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; Leadership '+leadership(u)+(stubborn?' (Stubborn ignores combat-result penalty)':steadfast?' (Steadfast ignores combat-result penalty)':' − combat result '+S.crDiff)+' (modified total '+(total+appliedDiff)+').');
+    const holds=!automaticFearBreak&&(snakeEyes||total+appliedDiff<=testLeadership);
+    if(automaticFearBreak)say('<b>Automatic break — '+u.name+'</b>: defeated and outnumbered by a Fear-causing enemy; no Break test is taken.');
+    else say('<b>Break test — '+u.name+'</b>: 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; Leadership '+leadership(u)+(stubborn?' (Stubborn ignores combat-result penalty)':steadfast?' (Steadfast ignores combat-result penalty)':' − combat result '+S.crDiff)+' (modified total '+(total+appliedDiff)+').');
     if(snakeEyes)say('Snake eyes! A double 1 always holds, regardless of the combat result.');
     if(!holds){
       const pursuer=linked(u).find(v=>alive(v)&&!v.fled);
       u.fled=true;u.engaged=false;
-      say(u.name+' fails its break test and flees.');
+      say(u.name+(automaticFearBreak?' is broken by Fear and flees.':' fails its break test and flees.'));
       const waitingPursuit=pursuer?!!pursueAfterBreak?.(pursuer,u):false;if(!pursuer)panicNearby?.(u,"a friendly unit flees from combat");
       (u.engagedWithIds||[]).forEach(id=>{const v=S.units[id];if(v){v.engagedWithIds=(v.engagedWithIds||[]).filter(x=>x!==u.id);v.engagedWith= v.engagedWithIds[0]||null;if(!v.engagedWithIds.length){v.engaged=false;if(v.flyingMount)v.charged=false;}}});
       u.engagedWithIds=[];u.engagementSides={};u.engagedWith=null;
