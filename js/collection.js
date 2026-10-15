@@ -11,6 +11,7 @@ const bodyKinds=[
   {id:"dwarf_infantry_body",label:"Dwarf infantry body",faction:"dwarfs",kind:"dwarfInfantry"},
   {id:"dwarf_hero_body",label:"Dwarf thane body",faction:"dwarfs",kind:"dwarfCaptain"},
   {id:"dwarf_lord_body",label:"Dwarf lord body",faction:"dwarfs",kind:"dwarfLord"},
+  {id:"haldric_stoneward_body",label:"King Haldric Stoneward (named character)",faction:"dwarfs",kind:"dwarfKingHaldric",namedCharacter:true},
   {id:"edric_voss_body",label:"Lord-Marshal Edric Voss (named character)",faction:"empire",kind:"legendaryLord",namedCharacter:true},
   {id:"lethariel_starweaver_body",label:"Lethariel Starweaver (named character)",faction:"highElves",kind:"shadowElf",namedCharacter:true},
   {id:"aelthir_dawnwing_body",label:"Aelthir, the Dawnwing (named character)",faction:"highElves",kind:"pegasusChampion",namedCharacter:true}
@@ -36,13 +37,14 @@ const bitDefs=[
  {id:"back_spear",label:"Spear carried on back",kind:"backWeapon",weapon:"spear"},
  {id:"back_firearm",label:"Firearm carried on back",kind:"backWeapon",weapon:"firearm"}
 ];
-const labels={empire:"Human / Empire",highElves:"High Elf",dwarfs:"Dwarf",swordsmen:"Infantry Sword",archers:"Infantry",dwarfInfantry:"Dwarf Infantry",dwarfCaptain:"Dwarf Thane",dwarfLord:"Dwarf Lord",cavalry:"Cavalry",captain:"Hero",lord:"Lord",legendaryLord:"Lord-Marshal Edric Voss",shadowElf:"Lethariel Starweaver",handWeapon:"Sword",magicBow:"Magical longbow",signature:"Signature equipment",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm"};
+const labels={empire:"Human / Empire",highElves:"High Elf",dwarfs:"Dwarf",swordsmen:"Infantry Sword",archers:"Infantry",dwarfInfantry:"Dwarf Infantry",dwarfCaptain:"Dwarf Thane",dwarfLord:"Dwarf Lord",dwarfKingHaldric:"King Haldric Stoneward",cavalry:"Cavalry",captain:"Hero",lord:"Lord",legendaryLord:"Lord-Marshal Edric Voss",shadowElf:"Lethariel Starweaver",handWeapon:"Sword",magicBow:"Magical longbow",signature:"Signature equipment",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm"};
 const makeModel=(id,faction,type,weapon,extra={})=>({id,faction,type,weapon,shield:!!extra.shield,mounted:!!extra.mounted,mountType:extra.mountType||(extra.mounted?"horse":"none"),backWeapons:[...(extra.backWeapons||[])],components:["body",weapon,...(extra.shield?["shield"]:[]),...(extra.mounted?[extra.mountType==="eagle"?"eagle":"horse"]:[]),...(extra.backWeapons||[]).map(w=>w==="bow"?"back_bow":w==="crossbow"?"back_crossbow":w==="greatWeapon"?"back_greatsword":w==="halberd"?"back_halberd":w==="spear"?"back_spear":w==="firearm"?"back_firearm":w)],name:extra.name||((faction==="empire"?"Empire ":faction==="dwarfs"?"Dwarf ":"High Elf ")+labels[type]+(type==="swordsmen"||type==="archers"||type==="cavalry"?"":"")+" · "+labels[weapon])});
 function starterData(){
  const models=[];let id=1;
  for(let i=0;i<100;i++)models.push(makeModel("starter-"+id++,"empire","swordsmen","handWeapon"));
  for(let i=0;i<50;i++)models.push(makeModel("starter-"+id++,"empire","archers","bow"));
  models.push(makeModel("starter-"+id++,"empire","captain","handWeapon",{name:"Empire Hero · Sword only"}));
+ models.push(makeModel("starter-"+id++,"dwarfs","dwarfKingHaldric","handWeapon",{shield:true,name:"King Haldric Stoneward"}));
  return {version:1,nextId:id,models,bits:{},bypass:false,lootboxes:0,lastDailyClaim:null};
 }
 function load(){
