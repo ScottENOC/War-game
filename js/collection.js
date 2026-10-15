@@ -8,7 +8,11 @@ const bodyKinds=[
   {id:"elf_hero_body",label:"Elf hero body",faction:"highElves",kind:"captain"},
   {id:"human_lord_body",label:"Human lord body",faction:"empire",kind:"lord"},
   {id:"elf_lord_body",label:"Elf lord body",faction:"highElves",kind:"lord"},
-  {id:"dwarf_infantry_body",label:"Dwarf infantry body",faction:"dwarfs",kind:"infantry"},
+  {id:"dwarf_warrior_body",label:"Dwarf warrior body",faction:"dwarfs",kind:"dwarfWarriors"},
+  {id:"dwarf_thunderer_body",label:"Dwarf thunderer body",faction:"dwarfs",kind:"dwarfThunderers"},
+  {id:"dwarf_quarreller_body",label:"Dwarf quarreller body",faction:"dwarfs",kind:"dwarfQuarrellers"},
+  {id:"dwarf_longbeard_body",label:"Dwarf longbeard body",faction:"dwarfs",kind:"dwarfLongbeards"},
+  {id:"dwarf_ironbreaker_body",label:"Dwarf ironbreaker body",faction:"dwarfs",kind:"dwarfIronbreakers"},
   {id:"dwarf_hero_body",label:"Dwarf thane body",faction:"dwarfs",kind:"dwarfCaptain"},
   {id:"dwarf_lord_body",label:"Dwarf lord body",faction:"dwarfs",kind:"dwarfLord"},
   {id:"edric_voss_body",label:"Lord-Marshal Edric Voss (named character)",faction:"empire",kind:"legendaryLord",namedCharacter:true},
@@ -147,7 +151,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const weapon=field("Arms / weapon",[], "right_sword");
    const horseWrap=field("Mount",[{value:"no",label:"No mount"},{value:"yes",label:"Add horse"},{value:"eagle",label:"Pegasus (High Elves)"}],"no");
    const refresh=()=>{
-    const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=body.kind==="cavalry";const named=!!body.namedCharacter;const hero=body.kind==="captain"||body.kind==="lord"||named;
+    const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=body.kind==="cavalry";const named=!!body.namedCharacter;const hero=body.kind==="captain"||body.kind==="lord"||body.kind==="dwarfCaptain"||body.kind==="dwarfLord"||named;
     horseWrap.querySelectorAll("option").forEach(o=>{if(o.value==="eagle")o.disabled=body.faction!=="highElves"||!(cavalry||hero);});
     if(horseWrap.selectedOptions[0]?.disabled)horseWrap.value="no";if(body.kind==="pegasusChampion"){horseWrap.value="eagle";horseWrap.querySelectorAll("option").forEach(o=>{o.disabled=o.value!=="eagle";});}
     offhandLabel.hidden=!(body.faction==="highElves"||((body.kind==="captain"||body.kind==="lord")&&body.faction==="empire"));if(offhandLabel.hidden)offhandCheck.checked=false;
@@ -156,7 +160,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     const arms=named?["signature"]:(cavalry?(body.faction==="empire"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]):(hero?(horseWrap.value!=="no"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","both_greatWeapon","both_halberd",...rangedArms]):(body.faction==="empire"?["right_sword","right_spear","both_bow","both_crossbow","both_firearm","both_greatWeapon","both_halberd"]:["right_sword","right_spear","both_bow","both_greatWeapon","both_halberd"])));
     
     arms.forEach(id=>{const d=bitDefs.find(b=>b.id===id);const o=document.createElement("option");o.value=id;o.textContent=named?(body.kind==="legendaryLord"?"Signature sword and shield (included)":body.kind==="pegasusChampion"?"Magical lance and shield (included)":"Magical longbow and dual swords (included)"):d.label+" ("+bitCount(id)+" owned)";weapon.append(o);});
-    horseWrap.parentElement.hidden=named&&body.kind==="shadowElf"?!cavalry:!cavalry&&!hero;
+    horseWrap.parentElement.hidden=body.faction==="dwarfs"||(named&&body.kind==="shadowElf"?!cavalry:!cavalry&&!hero);
     if(!cavalry&&!hero)horseWrap.value="no";
     if(cavalry)horseWrap.value="yes";
     if(named&&body.kind==="shadowElf")horseWrap.value="no";
@@ -171,17 +175,17 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     if(body.faction!==faction.value){status.textContent="Choose a main body matching the selected faction.";return;}
     if(mounted&&arms.weapon==="halberd"){status.textContent="Halberds cannot be used by mounted models.";return;}
     if(mountType==="eagle"&&(body.faction!=="highElves"||arms.weapon==="halberd")){status.textContent="Pegasi are available to High Elves and cannot carry halberds.";return;}
-    const addShield=named?["legendaryLord","pegasusChampion"].includes(body.kind):shieldCheck.checked&&arms.kind==="right";if(!named&&shieldCheck.checked&&!addShield){status.textContent="Two-handed weapons use both arms and cannot take a shield.";return;}
+    const addShield=named?["legendaryLord","pegasusChampion"].includes(body.kind):shieldCheck.checked&&(arms.kind==="right"||body.faction==="dwarfs");if(!named&&shieldCheck.checked&&!addShield){status.textContent="Two-handed weapons use both arms and cannot take a shield.";return;}
     const addOffhand=named?body.kind==="shadowElf":offhandCheck.checked&&!offhandLabel.hidden;if(!named&&addOffhand&&arms.kind!=="right"){status.textContent="A left-hand sword needs a free right-hand weapon, not a two-handed weapon.";return;}if(addShield&&addOffhand){status.textContent="A model cannot hold both a shield and a sword in its left hand.";return;}
-    const need=[body.id];if(!named){need.push(arms.id);if(arms.kind==="right")need.push(addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm");}if(mounted)need.push(mountType==="eagle"?"eagle":"horse");if(mountType==="eagle"&&body.kind!=="pegasusChampion")need.push("back_bow");
+    const need=[body.id];if(!named){need.push(arms.id);if(arms.kind==="right")need.push(addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm");else if(addShield)need.push("left_shield");}if(mounted)need.push(mountType==="eagle"?"eagle":"horse");if(mountType==="eagle"&&body.kind!=="pegasusChampion")need.push("back_bow");
     const shortage=need.find(id=>bitCount(id)<1);if(shortage){status.textContent="Not enough bits: "+bitDefs.find(b=>b.id===shortage).label+".";return;}
     if(body.kind==="cavalry"&&!mounted){status.textContent="Cavalry bodies require a horse.";return;}
     if(body.faction==="highElves"&&["crossbow","firearm"].includes(arms.weapon)){status.textContent="High Elves refuse crossbows and firearms.";return;}
     need.forEach(consumeBit);
     const type=body.kind==="infantry"?(arms.weapon==="bow"?"archers":"swordsmen"):body.kind;
     const namedName=body.kind==="legendaryLord"?"Lord-Marshal Edric Voss":body.kind==="shadowElf"?"Lethariel Starweaver":body.kind==="pegasusChampion"?"Aelthir, the Dawnwing":null;
-    const model=makeModel("assembled-"+data.nextId++,body.faction,type,arms.weapon,{mounted,mountType,shield:addShield,backWeapons:mountType==="eagle"&&body.kind!=="pegasusChampion"?["bow"]:[],name:namedName||(body.faction==="empire"?"Empire ":"High Elf ")+title(type)+" · "+title(arms.weapon)+(addShield?" + Shield":"")+(mounted?" · Mounted":"")});
-    model.components=[body.id,...(!named?[arms.id,...(arms.kind==="right"?[addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm"]:[])]:[]),...(mounted?[mountType==="eagle"?"eagle":"horse"]:[]),...(mountType==="eagle"&&body.kind!=="pegasusChampion"?["back_bow"]:[])];model.offhandWeapon=addOffhand;model.namedCharacter=named;
+    const model=makeModel("assembled-"+data.nextId++,body.faction,type,arms.weapon,{mounted,mountType,shield:addShield,backWeapons:mountType==="eagle"&&body.kind!=="pegasusChampion"?["bow"]:[],name:namedName||(body.faction==="empire"?"Empire ":body.faction==="dwarfs"?"Dwarf ":"High Elf ")+title(type)+" · "+title(arms.weapon)+(addShield?" + Shield":"")+(mounted?" · Mounted":"")});
+    model.components=[body.id,...(!named?[arms.id,...(arms.kind==="right"?[addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm"]:addShield?["left_shield"]:[])]:[]),...(mounted?[mountType==="eagle"?"eagle":"horse"]:[]),...(mountType==="eagle"&&body.kind!=="pegasusChampion"?["back_bow"]:[])];model.offhandWeapon=addOffhand;model.namedCharacter=named;
     data.models.push(model);save();renderAll();status.textContent="Model assembled and added to your collection.";
    });panel.append(assemble);
    const status=document.createElement("p");status.className="workbench-status";panel.append(status);
