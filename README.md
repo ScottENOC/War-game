@@ -84,6 +84,11 @@ Shooting modifiers are cumulative: long range −1, moving −1, Stand & Shoot �
 - Shields cost 0.5 points per troop model and 2 points per character. They improve armour saves only when the attacker is in the defender's front arc; side and rear attacks receive no shield bonus. Shields cannot be combined with a two-handed great weapon or halberd.
 - Rider and mount attacks now resolve in separate Initiative packets. Mounts use their own Initiative and do not inherit the rider's great-weapon penalty or racial Always Strikes First rule.
 
+## Named Dwarf Lord: King Haldric Stoneward
+
+- King Haldric Stoneward is a 210-point named Dwarf Lord (M3, WS7, BS4, S4, T5, W4, I4, A4, Ld10). His fixed Runic Plate gives a 4+ base armour save; his Shield of the Deep Hall improves armour by 1 against attacks from the front and grants a 5+ ward save against those same attacks. The shield’s ward save does not protect against side or rear attacks.
+- Unyielding Presence makes Haldric himself and friendly units within 12 inches Stubborn while he is alive and not fleeing. Stubborn ignores combat-result penalties on break tests; it does not make units immune to fleeing for other reasons.
+
 ## Miniature collection prototype
 
 The main menu now exposes four game-mode entry points: Grand Campaign (4X), Narrative Campaign, Roguelike Expedition, and Skirmish. Grand Campaign and Roguelike Expedition remain placeholders. Narrative Campaign now has a three-mission leveling prototype: 20 human swordsmen, one human hero and 20 human archers fight 20 human swordsmen in each mission. Every victory offers one upgrade for each player unit; the force is restored to full strength between missions while upgrades persist.
