@@ -53,7 +53,7 @@ function starterData(){
  return {version:1,nextId:id,models,bits:{},bypass:false,lootboxes:0,lastDailyClaim:null};
 }
 function load(){
- try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(saved&&Array.isArray(saved.models)&&saved.bits){const base=starterData(),merged={...base,...saved};if(!merged.models.some(m=>m.faction==="dwarfs"))merged.models.push(...base.models.filter(m=>m.faction==="dwarfs"));merged.nextId=Math.max(Number(merged.nextId)||1,base.nextId);return merged;}}catch{}
+ try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(saved&&Array.isArray(saved.models)&&saved.bits){const base=starterData(),merged={...base,...saved};if(!merged.models.some(m=>m.faction==="dwarfs"))merged.models.push(...base.models.filter(m=>m.faction==="dwarfs").map((m,i)=>({...m,id:"starter-dwarf-"+(i+1)})));merged.nextId=Math.max(Number(merged.nextId)||1,base.nextId);return merged;}}catch{}
  return starterData();
 }
 export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCampaign=()=>{}}){
@@ -69,7 +69,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  const canUseBit=(m,id)=>{
    const b=bitDefs.find(x=>x.id===id);if(!b)return false;
    if(b.kind==="backWeapon")return m.weapon!==b.weapon&&!(m.backWeapons||[]).includes(b.weapon);
-   if(b.kind==="shield")return !m.shield&&!["greatWeapon","halberd","bow"].includes(m.weapon);
+   if(b.kind==="shield")return !m.shield&&(!["greatWeapon","halberd","bow"].includes(m.weapon)||m.faction==="dwarfs");
    if(b.kind==="mount")return (m.type==="captain"||m.type==="lord"||m.type==="dwarfCaptain"||m.type==="dwarfLord"||m.type==="cavalry")&&!m.mounted&&m.weapon!=="halberd"&&(id!=="eagle"||m.faction==="highElves")&&m.faction!=="dwarfs";
    if(b.kind==="right")return m.weapon==="none"&&m.type!=="archers"&&m.type!=="swordsmen";
    if(b.kind==="leftSword")return !m.shield&&!["greatWeapon","halberd","bow","crossbow","firearm"].includes(m.weapon)&&!m.components?.includes("left_sword")&&(m.faction==="highElves"||((m.type==="captain"||m.type==="lord")&&m.faction==="empire"));
