@@ -8,11 +8,7 @@ const bodyKinds=[
   {id:"elf_hero_body",label:"Elf hero body",faction:"highElves",kind:"captain"},
   {id:"human_lord_body",label:"Human lord body",faction:"empire",kind:"lord"},
   {id:"elf_lord_body",label:"Elf lord body",faction:"highElves",kind:"lord"},
-  {id:"dwarf_warrior_body",label:"Dwarf warrior body",faction:"dwarfs",kind:"dwarfWarriors"},
-  {id:"dwarf_thunderer_body",label:"Dwarf thunderer body",faction:"dwarfs",kind:"dwarfThunderers"},
-  {id:"dwarf_quarreller_body",label:"Dwarf quarreller body",faction:"dwarfs",kind:"dwarfQuarrellers"},
-  {id:"dwarf_longbeard_body",label:"Dwarf longbeard body",faction:"dwarfs",kind:"dwarfLongbeards"},
-  {id:"dwarf_ironbreaker_body",label:"Dwarf ironbreaker body",faction:"dwarfs",kind:"dwarfIronbreakers"},
+  {id:"dwarf_infantry_body",label:"Dwarf infantry body",faction:"dwarfs",kind:"dwarfInfantry"},
   {id:"dwarf_hero_body",label:"Dwarf thane body",faction:"dwarfs",kind:"dwarfCaptain"},
   {id:"dwarf_lord_body",label:"Dwarf lord body",faction:"dwarfs",kind:"dwarfLord"},
   {id:"edric_voss_body",label:"Lord-Marshal Edric Voss (named character)",faction:"empire",kind:"legendaryLord",namedCharacter:true},
@@ -40,17 +36,17 @@ const bitDefs=[
  {id:"back_spear",label:"Spear carried on back",kind:"backWeapon",weapon:"spear"},
  {id:"back_firearm",label:"Firearm carried on back",kind:"backWeapon",weapon:"firearm"}
 ];
-const labels={empire:"Human / Empire",highElves:"High Elf",dwarfs:"Dwarf",swordsmen:"Swordsmen",archers:"Archers",dwarfWarriors:"Dwarf Warriors",dwarfThunderers:"Dwarf Thunderers",dwarfQuarrellers:"Dwarf Quarrellers",dwarfLongbeards:"Dwarf Longbeards",dwarfIronbreakers:"Dwarf Ironbreakers",dwarfCaptain:"Dwarf Thane",dwarfLord:"Dwarf Lord",cavalry:"Cavalry",captain:"Hero",lord:"Lord",legendaryLord:"Lord-Marshal Edric Voss",shadowElf:"Lethariel Starweaver",handWeapon:"Sword",magicBow:"Magical longbow",signature:"Signature equipment",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm"};
+const labels={empire:"Human / Empire",highElves:"High Elf",dwarfs:"Dwarf",swordsmen:"Swordsmen",archers:"Archers",dwarfInfantry:"Dwarf Infantry",dwarfCaptain:"Dwarf Thane",dwarfLord:"Dwarf Lord",cavalry:"Cavalry",captain:"Hero",lord:"Lord",legendaryLord:"Lord-Marshal Edric Voss",shadowElf:"Lethariel Starweaver",handWeapon:"Sword",magicBow:"Magical longbow",signature:"Signature equipment",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm"};
 const makeModel=(id,faction,type,weapon,extra={})=>({id,faction,type,weapon,shield:!!extra.shield,mounted:!!extra.mounted,mountType:extra.mountType||(extra.mounted?"horse":"none"),backWeapons:[...(extra.backWeapons||[])],components:["body",weapon,...(extra.shield?["shield"]:[]),...(extra.mounted?[extra.mountType==="eagle"?"eagle":"horse"]:[]),...(extra.backWeapons||[]).map(w=>w==="bow"?"back_bow":w==="crossbow"?"back_crossbow":w==="greatWeapon"?"back_greatsword":w==="halberd"?"back_halberd":w==="spear"?"back_spear":w==="firearm"?"back_firearm":w)],name:extra.name||((faction==="empire"?"Empire ":faction==="dwarfs"?"Dwarf ":"High Elf ")+labels[type]+(type==="swordsmen"||type==="archers"||type==="cavalry"?"":"")+" · "+labels[weapon])});
 function starterData(){
  const models=[];let id=1;
  for(let i=0;i<100;i++)models.push(makeModel("starter-"+id++,"empire","swordsmen","handWeapon"));
  for(let i=0;i<50;i++)models.push(makeModel("starter-"+id++,"empire","archers","bow"));
- for(let i=0;i<100;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfWarriors","handWeapon",{shield:true}));
- for(let i=0;i<50;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfThunderers","firearm",{shield:true}));
- for(let i=0;i<50;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfQuarrellers","crossbow",{shield:true}));
- for(let i=0;i<20;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfLongbeards","handWeapon",{shield:true}));
- for(let i=0;i<20;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfIronbreakers","handWeapon",{shield:true}));
+ for(let i=0;i<100;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfInfantry","handWeapon",{shield:true}));
+ for(let i=0;i<50;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfInfantry","firearm",{shield:true}));
+ for(let i=0;i<50;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfInfantry","crossbow",{shield:true}));
+ for(let i=0;i<20;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfInfantry","handWeapon",{shield:true}));
+ for(let i=0;i<20;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfInfantry","handWeapon",{shield:true}));
  models.push(makeModel("starter-"+id++,"dwarfs","dwarfCaptain","handWeapon",{shield:true}));
  models.push(makeModel("starter-"+id++,"dwarfs","dwarfLord","handWeapon",{shield:true}));
  models.push(makeModel("starter-"+id++,"empire","captain","handWeapon",{name:"Empire Hero · Sword only"}));
