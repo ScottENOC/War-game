@@ -190,3 +190,5 @@ h1{font-size:clamp(28px,6vw,44px);line-height:1.1;margin:10px 0 16px;letter-spac
 .grand-city-dot.dwarfs{background:#687a8d;border-color:#e1e9f0}
 .grand-saved-note{border-left:3px solid #e0c276;padding:8px 10px;background:#2c3028;border-radius:0 7px 7px 0}
 @media(max-width:850px){.grand-campaign-layout{grid-template-columns:1fr}.grand-campaign-panel{padding:12px}.grand-campaign-sidebar{grid-template-columns:1fr}.grand-world-map{min-height:220px}.grand-campaign-panel .builder-header{align-items:flex-start}.grand-campaign-panel .builder-header h1{font-size:23px}}
+
+.danger-button{border:1px solid #b75c54;background:#512e2d;color:#ffe8df;border-radius:8px;padding:10px 13px;font:inherit;font-weight:750;cursor:pointer}.danger-button:hover{background:#6a3531}.danger-button:focus-visible{outline:2px solid #f0c7a8;outline-offset:2px}
