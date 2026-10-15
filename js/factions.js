@@ -27,6 +27,7 @@ export const FACTIONS = {
     dwarfInfantry:{name:"Dwarf Infantry",short:"Infantry",kind:"melee",models:20,points:8,stats:{M:3,WS:4,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:9}},
     dwarfCaptain:{name:"Dwarf Thane",short:"Thane",kind:"hero",models:1,points:55,stats:{M:3,WS:6,BS:4,S:4,T:5,W:2,I:3,A:3,Ld:9}},
     dwarfLord:{name:"Dwarf Lord",short:"Lord",kind:"hero",models:1,points:100,stats:{M:3,WS:7,BS:4,S:4,T:5,W:3,I:4,A:4,Ld:10}},
+    dwarfKingHaldric:{name:"King Haldric Stoneward",short:"Haldric Stoneward",kind:"hero",models:1,points:210,namedCharacter:true,defaultHeavyArmour:true,defaultShield:true,magicArmour:true,stubborn:true,grantsStubbornAura:true,wardSave:5,wardSaveFrontOnly:true,isGeneral:true,stats:{M:3,WS:7,BS:4,S:4,T:5,W:4,I:4,A:4,Ld:10}},
     cannon:{name:"Dwarf Cannon",short:"Cannon",kind:"artillery",models:3,points:85,stats:{M:0,WS:3,BS:3,S:3,T:3,W:1,I:2,A:1,Ld:9}}
   }},
   opposing: { name:"Opposing Host", units:{
