@@ -230,7 +230,8 @@ export function buildOpponentArmy(playerArmy, playerFaction = "empire") {
       const choices = types.filter(type => {
         if ((type === "captain" || type === "lord") && roster.filter(u => ["captain", "lord"].includes(u.type)).length >= (target >= 360 ? 2 : 1)) return false;
         if (type === "lord" && target < 180) return false;
-        if (type === "cavalry" && (target < 100 || (siege && roster.filter(u => u.type === "cavalry").length >= 1))) return false;\n        if (type === "cannon" && (!siege || roster.some(u => u.type === "cannon") || target < 140)) return false;
+        if (type === "cavalry" && (target < 100 || (siege && roster.filter(u => u.type === "cavalry").length >= 1))) return false;
+        if (type === "cannon" && (!siege || roster.some(u => u.type === "cannon") || target < 140)) return false;
         return true;
       });
       if (!choices.length) break;
