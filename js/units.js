@@ -81,9 +81,9 @@ export function createUnitsFromArmy(army,faction="empire") {
     const dragonMount=playerFaction==="highElves"&&entry.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(entry.mountType);
     if(dragonMount){
       const dragonType=entry.mountType,dragonTemplate=FACTIONS.highElves.units[dragonType],host=buildUnit(dragonTemplate,{type:dragonType,id:"p"+n,index:n,models:1,side:"player",x:.22,y,facing:0},playerFaction,false);
-      host.points=unitCost(entry,playerFaction);host.isDragonMount=true;host.mounted=true;host.isCavalry=true;host.mountType=dragonType;
+      host.points=dragonTemplate.points;host.isDragonMount=true;host.mounted=true;host.isCavalry=true;host.mountType=dragonType;
       const rider=buildUnit(FACTIONS.highElves.units.lord,{...playerEntry,type:"lord",mounted:false,mountType:"none",id:"p"+n+"r",index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
-      rider.points=0;rider.mounted=true;rider.mountType=dragonType;rider.flyingMount=true;rider.flightAltitudeIn=12;rider.baseWidthIn=host.baseWidthIn;rider.baseDepthIn=host.baseDepthIn;rider.heightIn=3.5;rider.attachedTo=host.id;host.attachedCharacters=[rider.id];units[host.id]=host;units[rider.id]=rider;
+      rider.points=unitCost(entry,playerFaction)-host.points;rider.isDragonRider=true;rider.mounted=true;rider.mountType=dragonType;rider.flyingMount=true;rider.flightAltitudeIn=12;rider.baseWidthIn=host.baseWidthIn;rider.baseDepthIn=host.baseDepthIn;rider.heightIn=3.5;rider.attachedTo=host.id;host.attachedCharacters=[rider.id];units[host.id]=host;units[rider.id]=rider;
     }else units["p"+n]=buildUnit(FACTIONS[playerFaction].units[entry.type],{...playerEntry,id:"p"+n,index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
     const opposingType=FACTIONS.opposing.units[entry.type]?entry.type:(["cannon","boltThrower","youngDragon","dragon","ancientDragon"].includes(entry.type)?"swordsmen":(["legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
     units["a"+n]=buildUnit(FACTIONS.opposing.units[opposingType],{...opposingEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},"empire",true);
