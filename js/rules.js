@@ -96,7 +96,13 @@ export function createRules({ roll, units = () => [] }) {
       const rerollNaturalOne=!forcedHit&&hit===1&&((mode==="melee"&&context.rerollOnesMelee)||(mode==="shooting"&&context.rerollOnesShooting));
       if(rerollNaturalOne){const reroll=roll(1)[0];let pass=mode==="melee"?(reroll!==1&&(reroll===6||reroll>=hitNeed)):(reroll!==1&&(hitNeed<=6?reroll>=hitNeed:(hitNeed<10&&reroll===6&&roll(1)[0]>=hitNeed-3)));g.hitRerolls.push(reroll);g.hitRerollPasses.push(pass);if(pass)hitPass=true;}
       if(!hitPass&&mode==="melee"&&context.rerollMisses){const reroll=roll(1)[0],rerollPass=reroll!==1&&(reroll===6||reroll>=hitNeed);g.hitRerolls.push(reroll);g.hitRerollPasses.push(rerollPass);if(rerollPass)hitPass=true;}
-      if(!hitPass)continue;g.hits++;
+      if(!hitPass)continue;
+      if(mode==="shooting"&&target.isDragon&&tiers.length>1&&roll(1)[0]<=2){
+        const oldGroup=g;tier=tiers[1];g=groupFor(tier);oldGroup.attacks--;g.attacks++;
+        for(const key of logKeys)g[key].push(...oldGroup[key].splice(logStarts[key]));
+        g.hitNeed=hitNeed;
+      }
+      g.hits++;
       const woundNeed=woundTarget(attackerPool.stats.S,tier.stats.T);g.woundNeed=woundNeed;if(woundNeed===null)continue;
       const wr=roll(1)[0];g.woundRolls.push(wr);if(wr<woundNeed)continue;g.woundsBeforeSave++;
       const saveNeed=mode==="melee"&&context.attackComponent!=="mount"&&context.attacker?.ignoreArmourSaves?null:saveTarget(tier,attackerPool.stats.S,mode==="shooting"?(context.armourPiercing||0):0);g.saveNeed=saveNeed;let saved=false;
