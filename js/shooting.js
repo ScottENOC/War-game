@@ -237,5 +237,5 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     else if(impacts>1)say("The "+projectileLabel+" penetrates through "+impacts+" objects; Strength drops by 1 after each impact.");
     return true;
   }
-  return {shoot,fireCannon};
+  return {shoot,fireCannon,breathAttack};
 }
