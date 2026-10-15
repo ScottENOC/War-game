@@ -219,15 +219,15 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
             say(projectileLabel+" hits "+target.name+"'s crew: S"+strength+", wound "+die+" (need "+(need===null?"impossible":need)+")"+(wounded?"; D3 damage "+damage+".":"; no wound."));
           }
         }else{
-          const need=woundTarget(strength,target.stats.T),die=roll(1)[0],wounded=need!==null&&die>=need,save=saveTarget(target,strength,armourPiercing);
+          const bearing=Math.atan2(cannon.y-target.y,cannon.x-target.x);let shieldDelta=bearing-(target.facing||0);while(shieldDelta>Math.PI)shieldDelta-=Math.PI*2;while(shieldDelta< -Math.PI)shieldDelta+=Math.PI*2;const shieldFront=!!target.shield&&(!!target.skirmishing||Math.abs(shieldDelta)<=Math.PI/4),need=woundTarget(strength,target.stats.T),die=roll(1)[0],wounded=need!==null&&die>=need,save=saveTarget({...target,shield:shieldFront},strength,armourPiercing);
           if(!wounded){say(projectileLabel+" hits "+target.name+" but fails to wound (S"+strength+", roll "+die+", need "+(need===null?"impossible":need)+").");}
           else{
-            const saveDie=save!==null&&save<=6?roll(1)[0]:null,saved=saveDie!==null&&saveDie!==1&&saveDie>=save,damage=saved?0:(roll(1)[0]%3+1);
+            const saveDie=save!==null&&save<=6?roll(1)[0]:null,armourSaved=saveDie!==null&&saveDie!==1&&saveDie>=save,wardDie=!armourSaved&&target.wardSave&&(!target.wardSaveFrontOnly||shieldFront)?roll(1)[0]:null,wardSaved=wardDie!==null&&wardDie!==1&&wardDie>=Number(target.wardSave),saved=armourSaved||wardSaved,damage=saved?0:(roll(1)[0]%3+1);
             if(!saved){
               if(target.isCharacter){target.characterWounds=Math.max(0,(target.characterWounds??target.stats.W)-damage);if(target.characterWounds<=0)target.models=0;}
               else applyDamage(target,damage,true);
-              say(projectileLabel+" wounds "+target.name+" at S"+strength+"; D3 damage "+damage+(saveDie!==null?"; armour save "+saveDie+" vs "+save:"")+".");
-            }else say(target.name+" saves the "+projectileLabel+" hit ("+saveDie+" vs "+save+").");
+              say(projectileLabel+" wounds "+target.name+" at S"+strength+"; D3 damage "+damage+(saveDie!==null?"; armour save "+saveDie+" vs "+save:"")+(wardDie!==null?"; ward save "+wardDie+" vs "+target.wardSave:"")+".");
+            }else say(target.name+" saves the "+projectileLabel+" hit"+(armourSaved?" ("+saveDie+" vs "+save+")":"")+(wardSaved?"; ward save "+wardDie+" vs "+target.wardSave:"")+".");
           }
         }
       }
