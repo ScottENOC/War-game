@@ -10,11 +10,11 @@ export function generateSkirmishTerrain(seed=Date.now(),battleType="skirmish"){
     const left=.29,right=.71,top=.22,bottom=.78,gateHalf=.055;
     const wall=(x1,y1,x2,y2,side)=>({type:"wall",x1,y1,x2,y2,side,widthIn:60/25.4,heightIn:5,toughness:10,wounds:10,maxWounds:10,siegeOnly:true,castle:true});
     const gate=(x1,y1,x2,y2,side)=>({type:"gate",x1,y1,x2,y2,side,widthIn:60/25.4,heightIn:4,toughness:8,wounds:6,maxWounds:6,siegeOnly:true,castle:true});
-    terrain.push(wall(left,top,.5-gateHalf,top,"north-west"),gate(.5-gateHalf,top,.5+gateHalf,top,"north-gate"),wall(.5+gateHalf,top,right,top,"north-east"));
+    terrain.push(wall(left,top,right,top,"north"));
     terrain.push(wall(right,top,right,bottom,"east"));
-    terrain.push(wall(right,bottom,.5+gateHalf,bottom,"south-east"),gate(.5+gateHalf,bottom,.5-gateHalf,bottom,"south-gate"),wall(.5-gateHalf,bottom,left,bottom,"south-west"));
-    terrain.push(wall(left,bottom,left,top,"west"));
-    terrain.push({type:"stairs",x:.305,y:.5,inside:true,label:"West stairway"},{type:"stairs",x:.695,y:.5,inside:true,label:"East stairway"});
+    terrain.push(wall(right,bottom,left,bottom,"south"));
+    terrain.push(wall(left,bottom,left,.5+gateHalf,"west-south"),gate(left,.5+gateHalf,left,.5-gateHalf,"west-gate"),wall(left,.5-gateHalf,left,top,"west-north"));
+    terrain.push({type:"stairs",x:.305,y:.36,inside:true,label:"North-west stairway"},{type:"stairs",x:.695,y:.64,inside:true,label:"South-east stairway"});
     terrain.push({type:"siegeCastle",left,right,top,bottom});
     return terrain;
   }
