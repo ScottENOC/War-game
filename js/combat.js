@@ -123,15 +123,15 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     if(tests.length){S.breakTests=tests.sort((a,b)=>b.diff-a.diff);nextBreakTest();}
     else{say("Combat drawn; engaged units hold.");reformCombatPairs?.();S.combatResolved=true;render();}
   }
-  function hasStubborn(u){if(u.stubborn||u.skills?.steadfast)return true;return units().some(source=>source!==u&&source.grantsStubbornAura&&source.side===u.side&&alive(source)&&!source.fled&&dist(u,source)<=12);}
+  function hasStubborn(u){if(u.stubborn)return true;return units().some(source=>source!==u&&source.grantsStubbornAura&&source.side===u.side&&alive(source)&&!source.fled&&dist(u,source)<=12);}
   function nextBreakTest(){while(S.breakTests&&S.breakTests.length){const next=S.breakTests.shift();if(alive(next.loser)&&next.loser.engaged){S.loser=next.loser;S.crDiff=next.diff;S.phase="break";render();return true;}}S.loser=null;return false;}
   function resolveBreak(){
     const u=S.loser;if(!u||!alive(u)){endTurn();return;}
     const dice=roll(2),total=dice[0]+dice[1],snakeEyes=dice[0]===1&&dice[1]===1;
     const testLeadership=leadership(u);
-    const stubborn=hasStubborn(u),appliedDiff=stubborn?0:S.crDiff;
+    const stubborn=hasStubborn(u),steadfast=!!u.skills?.steadfast,ignoresCombatPenalty=stubborn||steadfast,appliedDiff=ignoresCombatPenalty?0:S.crDiff;
     const holds=snakeEyes||total+appliedDiff<=testLeadership;
-    say('<b>Break test — '+u.name+'</b>: 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; Leadership '+leadership(u)+(stubborn?' (Stubborn ignores combat-result penalty)':' − combat result '+S.crDiff)+' (modified total '+(total+appliedDiff)+').');
+    say('<b>Break test — '+u.name+'</b>: 2D6 <span class="dice">'+dice.join(' + ')+' = '+total+'</span>; Leadership '+leadership(u)+(stubborn?' (Stubborn ignores combat-result penalty)':steadfast?' (Steadfast ignores combat-result penalty)':' − combat result '+S.crDiff)+' (modified total '+(total+appliedDiff)+').');
     if(snakeEyes)say('Snake eyes! A double 1 always holds, regardless of the combat result.');
     if(!holds){
       const pursuer=linked(u).find(v=>alive(v)&&!v.fled);
