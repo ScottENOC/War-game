@@ -42,20 +42,34 @@ function starterData(){
  const models=[];let id=1;
  for(let i=0;i<100;i++)models.push(makeModel("starter-"+id++,"empire","swordsmen","handWeapon"));
  for(let i=0;i<50;i++)models.push(makeModel("starter-"+id++,"empire","archers","bow"));
- for(let i=0;i<100;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfInfantry","handWeapon",{shield:true}));
- for(let i=0;i<50;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfInfantry","firearm",{shield:true}));
- for(let i=0;i<50;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfInfantry","crossbow",{shield:true}));
- for(let i=0;i<20;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfInfantry","handWeapon",{shield:true}));
- for(let i=0;i<20;i++)models.push(makeModel("starter-"+id++,"dwarfs","dwarfInfantry","handWeapon",{shield:true}));
- models.push(makeModel("starter-"+id++,"dwarfs","dwarfCaptain","handWeapon",{shield:true}));
- models.push(makeModel("starter-"+id++,"dwarfs","dwarfLord","handWeapon",{shield:true}));
  models.push(makeModel("starter-"+id++,"empire","captain","handWeapon",{name:"Empire Hero · Sword only"}));
  return {version:1,nextId:id,models,bits:{},bypass:false,lootboxes:0,lastDailyClaim:null};
 }
 function load(){
- try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(saved&&Array.isArray(saved.models)&&saved.bits){const base=starterData(),merged={...base,...saved};merged.models=merged.models.map(m=>m.faction==="dwarfs"&&["dwarfWarriors","dwarfThunderers","dwarfQuarrellers","dwarfLongbeards","dwarfIronbreakers"].includes(m.type)?{...m,type:"dwarfInfantry"}:m);if(!merged.models.some(m=>m.faction==="dwarfs"))merged.models.push(...base.models.filter(m=>m.faction==="dwarfs").map((m,i)=>({...m,id:"starter-dwarf-"+(i+1)})));merged.nextId=Math.max(Number(merged.nextId)||1,base.nextId);return merged;}}catch{}
+ try{
+  const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+  if(saved&&Array.isArray(saved.models)&&saved.bits&&typeof saved.bits==="object"){
+   const merged={...starterData(),...saved};
+   const legacyTypes={dwarfWarriors:"dwarfInfantry",dwarfThunderers:"dwarfInfantry",dwarfQuarrellers:"dwarfInfantry",dwarfLongbeards:"dwarfInfantry",dwarfIronbreakers:"dwarfInfantry"};
+   merged.models=merged.models.filter(m=>m&&typeof m==="object").map((m,i)=>{
+    const type=legacyTypes[m.type]||m.type||"swordsmen";
+    const faction=["empire","highElves","dwarfs"].includes(m.faction)?m.faction:"empire";
+    const weapon=typeof m.weapon==="string"&&m.weapon?m.weapon:"handWeapon";
+    const safe={...m,id:typeof m.id==="string"&&m.id?m.id:"recovered-"+(i+1),faction,type,weapon,shield:!!m.shield,mounted:!!m.mounted,mountType:m.mountType||(m.mounted?"horse":"none"),backWeapons:Array.isArray(m.backWeapons)?m.backWeapons.filter(w=>typeof w==="string"):[],components:Array.isArray(m.components)?m.components:[]};
+    if(typeof safe.name!=="string"||!safe.name.trim()){
+     const typeLabel=labels[type]||String(type).replace(/([a-z])([A-Z])/g,"$1 $2");
+     safe.name=(faction==="empire"?"Empire ":faction==="dwarfs"?"Dwarf ":"High Elf ")+typeLabel+" · "+(labels[weapon]||weapon);
+    }
+    return safe;
+   });
+   merged.bits=Object.fromEntries(Object.entries(merged.bits).filter(([k,v])=>typeof k==="string"&&Number.isFinite(Number(v))&&Number(v)>0).map(([k,v])=>[k,Math.floor(Number(v))]));
+   merged.nextId=Math.max(Number(merged.nextId)||1,152);
+   return merged;
+  }
+ }catch{}
  return starterData();
 }
+
 export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCampaign=()=>{}}){
  let data=load(),editingId=null;
  data.lootboxes=Number.isFinite(data.lootboxes)?Math.max(0,data.lootboxes):0;
@@ -91,17 +105,22 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  }
  function renderModels(){
   const root=$("model-inventory");root.replaceChildren();
-  const counts=new Map();data.models.forEach(m=>{const key=[m.faction,m.type,m.weapon,m.shield,m.mounted,m.mountType||"none",!!m.offhandWeapon,JSON.stringify(m.backWeapons||[])].join("|");counts.set(key,(counts.get(key)||0)+1);});
+  const safeModels=data.models.filter(m=>m&&typeof m==="object");
+  const modelKey=m=>JSON.stringify([m.faction||"empire",m.type||"swordsmen",m.weapon||"handWeapon",!!m.shield,!!m.mounted,m.mountType||"none",!!m.offhandWeapon,Array.isArray(m.backWeapons)?m.backWeapons:[]]);
+  const counts=new Map();
+  safeModels.forEach(m=>{const key=modelKey(m);counts.set(key,(counts.get(key)||0)+1);});
   const groups=[...counts.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
   if(!groups.length){root.textContent="No assembled models yet.";return;}
   groups.forEach(([key,count])=>{
-   const [faction,type,weapon,shield,mounted,mountType,offhand,backWeaponsKey]=key.split("|");const backWeapons=JSON.parse(backWeaponsKey||"[]");
+   const [faction,type,weapon,shield,mounted,mountType,offhand,backWeapons]=JSON.parse(key);
    const card=document.createElement("article");card.className="inventory-model";
-   const strong=document.createElement("strong");strong.textContent=type==="legendaryLord"?"Lord-Marshal Edric Voss":type==="shadowElf"?"Lethariel Starweaver":(faction==="empire"?"Empire ":faction==="dwarfs"?"Dwarf ":"High Elf ")+title(type);
-   const meta=document.createElement("span");meta.textContent=title(weapon)+(offhand==="true"?" · Off-hand sword":"")+(shield==="true"?" · Shield":"")+(backWeapons.length?" · Back: "+backWeapons.map(title).join(", "):"")+(mountType==="eagle"?" · Pegasus":mounted==="true"?" · Mounted":"");
+   const strong=document.createElement("strong");
+   strong.textContent=type==="legendaryLord"?"Lord-Marshal Edric Voss":type==="shadowElf"?"Lethariel Starweaver":type==="pegasusChampion"?"Aelthir, the Dawnwing":(faction==="empire"?"Empire ":faction==="dwarfs"?"Dwarf ":"High Elf ")+(labels[type]||String(type).replace(/([a-z])([A-Z])/g,"$1 $2"));
+   const meta=document.createElement("span");
+   meta.textContent=(labels[weapon]||String(weapon))+(offhand?" · Off-hand sword":"")+(shield?" · Shield":"")+(backWeapons.length?" · Back: "+backWeapons.map(w=>labels[w]||w).join(", "):"")+(mountType==="eagle"?" · Pegasus":mounted?" · Mounted":"");
    const qty=document.createElement("b");qty.textContent="×"+count;card.append(strong,meta,qty);
    const edit=document.createElement("button");edit.className="secondary-button";edit.textContent="Add component";
-   const model=data.models.find(m=>[m.faction,m.type,m.weapon,String(m.shield),String(m.mounted),String(!!m.offhandWeapon),JSON.stringify(m.backWeapons||[])].join("|")===key);
+   const model=safeModels.find(m=>modelKey(m)===key);
    edit.disabled=!bitDefs.some(b=>canUseBit(model,b.id)&&bitCount(b.id)>0);
    edit.addEventListener("click",()=>{editingId=model.id;renderWorkbench();$("model-workbench").scrollIntoView({behavior:"smooth",block:"nearest"});});
    card.append(edit);root.append(card);
@@ -256,6 +275,11 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  $("open-dev").addEventListener("click",()=>{$("dev-panel").hidden=!$("dev-panel").hidden;});
  $("bypass-model-check").addEventListener("change",e=>{data.bypass=e.target.checked;save();});
  $("dev-lootbox").addEventListener("click",openDeveloperLootbox);
+ $("dev-reset-collection").addEventListener("click",()=>{
+  if(!window.confirm("Reset this device’s collection to the original 151 models? This permanently removes all added models, loose bits, lootboxes and developer bypass settings."))return;
+  data=starterData();editingId=null;save();renderAll();
+  $("lootbox-result").textContent="Collection reset complete: 100 Empire swordsmen, 50 Empire archers and 1 sword-only Empire hero (151 models total).";
+ });
  $("mode-collection").addEventListener("click",()=>{$("mode-screen").hidden=true;$("collection-screen").hidden=false;renderAll();});
  $("mode-back").addEventListener("click",onMainMenu);
  document.querySelectorAll("[data-mode]").forEach(btn=>btn.addEventListener("click",()=>{
