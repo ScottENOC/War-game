@@ -6,7 +6,25 @@ function aiTargetScore(u,t,preferRanged){const dx=(t.x-u.x)*BATTLEFIELD_WIDTH_IN
 function aiBestTarget(u,targets,preferRanged){return targets.slice().sort((a,b)=>aiTargetScore(u,a,preferRanged)-aiTargetScore(u,b,preferRanged))[0]||null;}
 function aiPivotAndAdvance(u,target){const dx=(target.x-u.x)*BATTLEFIELD_WIDTH_IN,dy=(target.y-u.y)*fieldHeightIn(),desired=Math.atan2(dy,dx);let turn=desired-u.facing;while(turn>Math.PI)turn-=Math.PI*2;while(turn< -Math.PI)turn+=Math.PI*2;const q=shape(u),frontIn=q.front/PX_PER_IN(),pivotCost=Math.abs(turn)*frontIn;const budget=Math.max(0,u.stats.M-u.moveUsed);let allowedTurn=Math.min(Math.abs(turn),budget/Math.max(.01,frontIn));while(allowedTurn>.01&&!canPlace(u,u.x,u.y,u.facing+Math.sign(turn)*allowedTurn))allowedTurn=Math.max(0,allowedTurn-.05);u.facing+=Math.sign(turn)*allowedTurn;u.moveUsed+=allowedTurn*frontIn;u.moved=u.moved||allowedTurn>.01;say(u.name+" pivots to face "+target.name+".");const remaining=Math.max(0,u.stats.M-u.moveUsed),gap=dist(u,target),stop=(u.kind==="melee"&&!u.hasRangedWeapon)||(u.isCavalry&&!u.hasRangedWeapon)||(u.isCharacter&&!u.hasRangedWeapon)?1.2:Math.max(0,gap-(u.range||BOW_RANGE)+0.5),travel=Math.max(0,Math.min(remaining,gap-stop)),steps=Math.max(1,Math.ceil(travel/.1));let best=0;for(let i=1;i<=steps;i++){const n=travel*i/steps,x=u.x+Math.cos(u.facing)*n/BATTLEFIELD_WIDTH_IN,y=u.y+Math.sin(u.facing)*n/fieldHeightIn();if(terrainMovementCost(terrain(),u.x,u.y,x,y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn())>remaining+.001||!canPlace(u,x,y,u.facing))break;best=n;}if(best>0){u.x+=Math.cos(u.facing)*best/BATTLEFIELD_WIDTH_IN;u.y+=Math.sin(u.facing)*best/fieldHeightIn();u.moveUsed+=best;u.moved=true;say(u.name+" advances "+best.toFixed(1)+'".');}return best>0||allowedTurn>.01;}
 function aiSiegeLadder(u){
-  if(S.battleType!=="siege"||S.siegeRole!=="defender"||u.side!=="ai"||u.isCharacter||u.isCavalry||u.isSiegeEngine||u.models<1)return false;
+  if(S.battleType!=="siege"||u.side!=="ai"||u.isCharacter||u.isCavalry||u.isSiegeEngine||u.models<1)return false;
+  if(S.siegeRole==="attacker"&&!u.wallLevel){
+    const stairs=terrain().filter(t=>t.type==="stairs");
+    const stair=stairs.sort((a,b)=>dist(u,a)-dist(u,b))[0];
+    if(stair){
+      const d=dist(u,stair);
+      if(d<=2.2){
+        const walls=terrain().filter(t=>(t.type==="wall"||t.type==="gate")&&(t.wounds??2)>0);let near=null;
+        for(const wall of walls){const ax=wall.x1*BATTLEFIELD_WIDTH_IN,ay=wall.y1*fieldHeightIn(),bx=wall.x2*BATTLEFIELD_WIDTH_IN,by=wall.y2*fieldHeightIn(),dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy||1,p=Math.max(0,Math.min(1,((stair.x*BATTLEFIELD_WIDTH_IN-ax)*dx+(stair.y*fieldHeightIn()-ay)*dy)/l2)),x=(ax+dx*p)/BATTLEFIELD_WIDTH_IN,y=(ay+dy*p)/fieldHeightIn(),dd=Math.hypot((stair.x-x)*BATTLEFIELD_WIDTH_IN,(stair.y-y)*fieldHeightIn());if(!near||dd<near.d)near={wall,x,y,d:dd};}
+        if(near){u.x=near.x;u.y=near.y;u.wallLevel=true;u.wallSegment=near.wall;u.cover="hard";u.wallDefence={wall:near.wall,posture:"active",wasSkirmishing:!!u.skirmishing};u.skirmishing=true;u.moveUsed=u.stats.M;u.moved=true;say(u.name+" climbs the inner stairs to the battlements.");return true;}
+      }else{
+        const dx=(stair.x-u.x)*BATTLEFIELD_WIDTH_IN,dy=(stair.y-u.y)*fieldHeightIn(),length=Math.hypot(dx,dy)||1,travel=Math.min(Math.max(0,u.stats.M-u.moveUsed),d),steps=Math.max(1,Math.ceil(travel/.1));let best=0;
+        for(let i=1;i<=steps;i++){const n=travel*i/steps,x=u.x+dx/length*n/BATTLEFIELD_WIDTH_IN,y=u.y+dy/length*n/fieldHeightIn();if(!canPlace(u,x,y,u.facing))break;best=n;}
+        if(best>0){u.x+=dx/length*best/BATTLEFIELD_WIDTH_IN;u.y+=dy/length*best/fieldHeightIn();u.moveUsed+=best;u.moved=true;say(u.name+" moves toward the castle stairway.");return true;}
+      }
+    }
+    return false;
+  }
+  if(S.siegeRole!=="defender")return false;
   const available=terrain().filter(t=>t.type==="ladder"&&t.wallSegment&&t.usedTurn!==S.turn&&dist(u,t)<=3.5);
   if(available.length){
     const count=Math.min(u.models,available.length),ladder=available[0],foe=units().find(v=>v.side==="player"&&alive(v)&&!v.fled&&v.wallLevel&&dist(v,ladder)<=1);
