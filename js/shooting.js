@@ -237,5 +237,32 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     else if(impacts>1)say("The "+projectileLabel+" penetrates through "+impacts+" objects; Strength drops by 1 after each impact.");
     return true;
   }
+
+  function breathAttack(u,endX,endY){
+    if(!u?.isDragon||u.side!=="player"||!alive(u)||u.shot||u.engaged||u.fled){say("This dragon cannot breathe fire right now.");return false;}
+    const w=W(),h=H(),scale=w/BATTLEFIELD_WIDTH_IN,q=shape(u),ox=u.x*w+Math.cos(u.facing||0)*q.depth/2,oy=u.y*h+Math.sin(u.facing||0)*q.depth/2;
+    const aim=Math.atan2(endY-oy,endX-ox),range=12*scale,half=Math.PI/8,wrap=a=>{while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;return a;};
+    const hits=[];
+    for(const target of units().filter(v=>v!==u&&!v.attachedTo&&alive(v)&&v.deployed!==false)){
+      const tq=shape(target),fx=Math.cos(target.facing||0),fy=Math.sin(target.facing||0),lx=-fy,ly=fx;let count=0;
+      for(let rank=0;rank<tq.ranks;rank++)for(let file=0;file<Math.min(tq.files,Math.max(0,target.models-rank*tq.files));file++){
+        const px=target.x*w+fx*(tq.depth/2-(rank+.5)*tq.baseDepth)+lx*(-tq.front/2+(file+.5)*tq.baseWidth),py=target.y*h+fy*(tq.depth/2-(rank+.5)*tq.baseDepth)+ly*(-tq.front/2+(file+.5)*tq.baseWidth);
+        const dx=px-ox,dy=py-oy,d=Math.hypot(dx,dy),angle=wrap(Math.atan2(dy,dx)-aim);
+        if(d<=range&&Math.abs(angle)<=half)count++;
+      }
+      if(count)hits.push({target,count});
+    }
+    u.shot=true;
+    say("<b>"+u.name+" breathes fire (S"+u.dragonBreathStrength+").</b> The 45° cone reaches up to 12 inches and automatically hits each model inside it.");
+    if(!hits.length){say("The breath cone catches no models.");return true;}
+    for(const {target,count} of hits){
+      const proxy={...u,models:count,startModels:count,stats:{...u.stats,BS:6},hasRangedWeapon:true,rangedWeapon:"dragonBreath",rangedStrength:u.dragonBreathStrength,rangedUsesUserStats:false,bsCap:99,armourPiercing:0,skills:{}};
+      const result=shootingAttack(proxy,target,{attacker:proxy,attackingModels:count,forcedHits:count,largeTarget:!!target.largeTarget,cover:target.cover||null});
+      say('<b>Breath hits — '+target.name+' ('+count+' automatic hit'+(count===1?"":"s")+')</b>'+diceStack(u,result));
+      applyDamage(target,result.wounds,true,result.cascadePlan);
+      if(target.models<=0)panicNearby(target,"a friendly unit is destroyed by dragon fire");
+    }
+    return true;
+  }
   return {shoot,fireCannon,breathAttack};
 }
