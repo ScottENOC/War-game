@@ -4,7 +4,7 @@ export function unitCost(config, faction) {
   const elf=faction==="highElves",type=config.type,models=config.models||1,character=["captain","lord","legendaryLord","shadowElf","pegasusChampion"].includes(type),eagleKit=elf&&(character||type==="cavalry")&&(config.mountType==="eagle"||type==="pegasusChampion");
   if(type==="pegasusChampion")return 110;
   if(type==="cannon")return 80;if(type==="boltThrower")return 60;
-  const upgrades=[{key:"M",unit:2,character:5},{key:"WS",unit:2,character:5},{key:"BS",unit:2,character:5},{key:"S",unit:3,character:6},{key:"T",unit:4,character:8},{key:"I",unit:1,character:3},{key:"Ld",unit:1,character:3}].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
+  const upgrades=[{key:"M",unit:2,character:5},{key:"WS",unit:elf?1:2,character:elf?3:5},{key:"BS",unit:elf?1:2,character:elf?3:5},{key:"S",unit:3,character:6},{key:"T",unit:elf?6:4,character:elf?10:8},{key:"I",unit:1,character:3},{key:"Ld",unit:1,character:3}].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
   const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
   const weapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])];
   const ranged=config.rangedWeapon||(["bow","crossbow","firearm"].includes(config.weapon)?config.weapon:(type==="archers"?"bow":config.bow?"bow":null));
