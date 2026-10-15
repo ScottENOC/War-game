@@ -82,7 +82,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           // would still have struck first without that bonus, i.e. the final
           // modified Initiative gap (including ASF) is at least 11.
           const rerollMisses=component==="rider"&&!!u.alwaysStrikesFirst&&attackerI-targetI>=11;
-          const result=meleeAttack(u,target,{attackingModels:strikeState.skirmishRound?Math.min(strikeState.eligibleModels,Math.max(1,Math.floor(u.formationWidth||5))):strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged&&!host.defendedWallCombat&&!linked(host).some(v=>v.spears&&!v.charged&&v.side!==host.side),attackComponent:component,rerollMisses,onlySixes:!!(u.failedFearAgainst===target.id&&u.failedFearCombatRound===S.combatRound),targetComponent:target.isDragon?(S.targetComponentByUnit?.[target.id]||"dragon"):undefined});
+          const result=meleeAttack(u,target,{attackingModels:strikeState.skirmishRound?Math.min(strikeState.eligibleModels,Math.max(1,Math.floor(u.formationWidth||5))):strikeState.eligibleModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged&&!host.defendedWallCombat&&!linked(host).some(v=>v.spears&&!v.charged&&v.side!==host.side),attackComponent:component,rerollMisses,onlySixes:!!(host.failedFearAgainst===target.id&&host.failedFearCombatRound===S.combatRound),targetComponent:target.isDragon?(S.targetComponentByUnit?.[target.id]||"dragon"):undefined});
           say('<b>Melee dice — '+u.name+(component==="mount"?" (mount)":"")+' attacks '+target.name+'</b>'+diceStack(u,result));
           wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
           applyDamage(target,result.wounds,false,result.cascadePlan);
