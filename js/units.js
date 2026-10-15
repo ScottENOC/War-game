@@ -45,7 +45,7 @@ function buildUnit(template,config,faction,opposing=false) {
   const primaryMelee=weapon==="greatWeapon"||(meleeWeapons||[]).includes("greatWeapon")?"greatWeapon":weapon==="halberd"||(meleeWeapons||[]).includes("halberd")?"halberd":weapon==="spear"||(meleeWeapons||[]).includes("spear")?"spear":weapon;
   const unitName=isSiegeEngine||isDragon?template.name:isCharacter?template.name+(isEagleMounted?" (Pegasus)":""):isCavalry?template.name+(isEagleMounted?" (Pegasus)":""):dwarf?template.name:rangedWeapon==="bow"?factionName+" Archers":rangedWeapon==="crossbow"?factionName+" Crossbowmen":rangedWeapon==="firearm"?factionName+" Handgunners":primaryMelee==="greatWeapon"?(factionName==="High Elf"?"High Elf Swordmasters":factionName+" Greatswords"):primaryMelee==="halberd"?factionName+" Halberdiers":primaryMelee==="spear"?factionName+" Spearmen":factionName+" Swordsmen";
   const unitShort=isSiegeEngine?template.short:isCharacter?template.short:isCavalry?template.short:rangedWeapon==="bow"?"Archers":rangedWeapon==="crossbow"?"Crossbows":rangedWeapon==="firearm"?"Handguns":rangedWeapon==="longRifle"?"Long rifle":primaryMelee==="greatWeapon"?"Greatswords":primaryMelee==="halberd"?"Halberds":primaryMelee==="spear"?"Spearmen":"Swordsmen";
-  const shield=ownsShield&&(weapon==="spear"||(!["greatWeapon","halberd"].includes(weapon)&&(!rangedWeapon||config.rangedMode!=="bow")));
+  const shield=ownsShield&&!["greatWeapon","halberd"].includes(weapon)&&(!rangedWeapon||(config.rangedMode||(dwarf?"bow":"shield"))!=="bow");
   for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.type!=="pegasusChampion"&&config.upgrades&&config.upgrades[key])stats[key]+=(isSiegeEngine&&key==="M"?0.5:1);
   
   const campaignStats=config.campaignStats||{};
