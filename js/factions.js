@@ -23,6 +23,16 @@ export const FACTIONS = {
     dragon:{name:"Dragon",short:"Dragon",kind:"monster",models:1,points:220,isDragon:true,breathStrength:4,intrinsicArmourSave:4,stats:{M:8,WS:5,BS:0,S:6,T:6,W:6,I:5,A:4,Ld:7}},
     ancientDragon:{name:"Ancient Dragon",short:"Ancient Dragon",kind:"monster",models:1,points:320,isDragon:true,breathStrength:5,intrinsicArmourSave:3,stats:{M:8,WS:6,BS:0,S:7,T:7,W:8,I:6,A:5,Ld:8}}
   }},
+  dwarfs: { name:"Dwarfs", units:{
+    dwarfWarriors:{name:"Dwarf Warriors",short:"Warriors",kind:"melee",models:20,points:8,stats:{M:3,WS:4,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:9}},
+    dwarfThunderers:{name:"Dwarf Thunderers",short:"Thunderers",kind:"ranged",models:10,points:10,stats:{M:3,WS:3,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:9},range:24},
+    dwarfQuarrellers:{name:"Dwarf Quarrellers",short:"Quarrellers",kind:"ranged",models:10,points:10,stats:{M:3,WS:3,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:9},range:30},
+    dwarfLongbeards:{name:"Dwarf Longbeards",short:"Longbeards",kind:"melee",models:20,points:11,stats:{M:3,WS:5,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:9}},
+    dwarfIronbreakers:{name:"Dwarf Ironbreakers",short:"Ironbreakers",kind:"melee",models:10,points:14,stats:{M:3,WS:5,BS:3,S:4,T:4,W:1,I:2,A:1,Ld:9},defaultHeavyArmour:true},
+    dwarfCaptain:{name:"Dwarf Thane",short:"Thane",kind:"hero",models:1,points:55,stats:{M:3,WS:6,BS:4,S:4,T:5,W:2,I:3,A:3,Ld:9}},
+    dwarfLord:{name:"Dwarf Lord",short:"Lord",kind:"hero",models:1,points:100,stats:{M:3,WS:7,BS:4,S:4,T:5,W:3,I:4,A:4,Ld:10}},
+    cannon:{name:"Dwarf Cannon",short:"Cannon",kind:"artillery",models:3,points:85,stats:{M:0,WS:3,BS:3,S:3,T:3,W:1,I:2,A:1,Ld:9}}
+  }},
   opposing: { name:"Opposing Host", units:{
     swordsmen:{name:"Opposing Swordsmen",short:"Swordsmen",kind:"melee",models:20,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
     archers:{name:"Opposing Archers",short:"Infantry",kind:"archer",models:10,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},range:24},
