@@ -4,8 +4,20 @@ export function generatedElevation(feature,x,y){const seed=Number(feature?.seed)
 export function terrainIsWater(terrain,x,y,W,H){const px=x/W,py=y/H;for(const o of terrain||[]){if(o.type==="lake"&&(((px-o.x)/(o.rx||.03))**2+((py-o.y)/(o.ry||.03))**2<=1))return true;if(o.type==="river"&&pointSegmentDistance({x,y},{x:o.x1*W,y:o.y1*H},{x:o.x2*W,y:o.y2*H})<=(o.widthIn||1.5)*W/48/2)return true;}const auto=(terrain||[]).find(o=>o.type==="autoTerrain");return !!auto&&generatedElevation(auto,px,py)<.48;}
 export function terrainMovementCost(terrain,x1,y1,x2,y2,W,H,battlefieldWidthIn,fieldHeightIn){const dx=(x2-x1)*battlefieldWidthIn,dy=(y2-y1)*fieldHeightIn,length=Math.hypot(dx,dy);if(!length)return 0;const samples=Math.max(12,Math.ceil(length*5));let water=0;for(let i=1;i<=samples;i++){const t=i/samples,x=(x1+(x2-x1)*t)*W,y=(y1+(y2-y1)*t)*H;if(terrainIsWater(terrain,x,y,W,H))water++;}return length*(1+water/samples);}
 export function terrainElevationAt(terrain,x,y,W,H){const auto=(terrain||[]).find(f=>f.type==="autoTerrain");return auto?generatedElevation(auto,x/W,y/H):0;}
-export function generateSkirmishTerrain(seed=Date.now()){
+export function generateSkirmishTerrain(seed=Date.now(),battleType="skirmish"){
   const terrainSeed=Number(seed)||1,terrain=[{type:"autoTerrain",seed:terrainSeed}];
+  if(battleType==="siege"){
+    const left=.29,right=.71,top=.22,bottom=.78,gateHalf=.055;
+    const wall=(x1,y1,x2,y2,side)=>({type:"wall",x1,y1,x2,y2,side,widthIn:60/25.4,heightIn:5,toughness:10,wounds:10,maxWounds:10,siegeOnly:true,castle:true});
+    const gate=(x1,y1,x2,y2,side)=>({type:"gate",x1,y1,x2,y2,side,widthIn:60/25.4,heightIn:4,toughness:8,wounds:6,maxWounds:6,siegeOnly:true,castle:true});
+    terrain.push(wall(left,top,.5-gateHalf,top,"north-west"),gate(.5-gateHalf,top,.5+gateHalf,top,"north-gate"),wall(.5+gateHalf,top,right,top,"north-east"));
+    terrain.push(wall(right,top,right,bottom,"east"));
+    terrain.push(wall(right,bottom,.5+gateHalf,bottom,"south-east"),gate(.5+gateHalf,bottom,.5-gateHalf,bottom,"south-gate"),wall(.5-gateHalf,bottom,left,bottom,"south-west"));
+    terrain.push(wall(left,bottom,left,top,"west"));
+    terrain.push({type:"stairs",x:.34,y:.31,inside:true,label:"North-west stairs"},{type:"stairs",x:.66,y:.69,inside:true,label:"South-east stairs"});
+    terrain.push({type:"siegeCastle",left,right,top,bottom});
+    return terrain;
+  }
   let state=(terrainSeed>>>0)||1;
   const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
   const wallCount=3+Math.floor(random()*2);
