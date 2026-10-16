@@ -192,3 +192,32 @@ h1{font-size:clamp(28px,6vw,44px);line-height:1.1;margin:10px 0 16px;letter-spac
 @media(max-width:850px){.grand-campaign-layout{grid-template-columns:1fr}.grand-campaign-panel{padding:12px}.grand-campaign-sidebar{grid-template-columns:1fr}.grand-world-map{min-height:220px}.grand-campaign-panel .builder-header{align-items:flex-start}.grand-campaign-panel .builder-header h1{font-size:23px}}
 
 .danger-button{border:1px solid #b75c54;background:#512e2d;color:#ffe8df;border-radius:8px;padding:10px 13px;font:inherit;font-weight:750;cursor:pointer}.danger-button:hover{background:#6a3531}.danger-button:focus-visible{outline:2px solid #f0c7a8;outline-offset:2px}
+
+
+/* Touch-friendly help: long-press a labelled control to read its tooltip. */
+button,[role="button"]{
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+}
+.touch-tooltip{
+  position:fixed;
+  z-index:10000;
+  width:max-content;
+  max-width:calc(100vw - 24px);
+  padding:10px 12px;
+  border:1px solid #e0c276;
+  border-radius:9px;
+  background:rgba(15,20,22,.97);
+  color:#fff6dc;
+  font-size:14px;
+  font-weight:600;
+  line-height:1.4;
+  text-align:left;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  box-shadow:0 5px 20px #0009;
+  pointer-events:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
