@@ -109,6 +109,7 @@ function endTurn(){S.combatResolved=false;units().forEach(u=>{u.charged=false;u.
 function finishBattle(msg){
  if(S.finished)return;
  S.finished=true;S.phase="over";
+ clearBattleSave();
  const won=msg.toLowerCase().includes("player wins");
  if(won&&collectionManager&&!campaignBattle&&!roguelikeBattle){collectionManager.grantLootbox("skirmish");say("Skirmish victory reward: one lootbox added to your collection.");}
  say('<b>'+msg+'</b>');
@@ -125,7 +126,40 @@ function requestRender(){ render(); }
 const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, PX_PER_IN, BOW_RANGE, roll, dist, enemies, say, shoot, render:requestRender, startActivations, canPlace, canCharge, testTerrorAtTurnStart, testChargePsychology });
 const { setPhase, declareCharge, fleeFromCharge, finishMovement, passCharges, aiChargeStep, resolveDeclaredCharges } = PHASES;
 const UI = createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, resolvePursuit, reset, validDeployment, canPlace, rallyUnit, rallyingCall, fleeFromCharge, say, equipMeleeWeapon, setRangedMode, shape, PX_PER_IN, terrain:()=>S.terrain, BATTLEFIELD_WIDTH_IN, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
-render = UI.render;
+const renderUI = UI.render;
+let persistenceReady = false;
+const BATTLE_SAVE_KEY = "warGameActiveBattleV1";
+const BATTLE_BACKUP_KEY = "warGameActiveBattleBackupV1";
+function clearBattleSave() {
+ try { localStorage.removeItem(BATTLE_SAVE_KEY); } catch {}
+}
+function saveBattleSnapshot() {
+ if (!persistenceReady) return;
+ if (S.finished || !S.units || !Object.keys(S.units).length || !S.phase || S.phase === "menu") {
+  clearBattleSave();
+  return;
+ }
+ try {
+  const snapshot = {
+   schemaVersion: 1,
+   savedAt: new Date().toISOString(),
+   state: S,
+   view,
+   campaignBattle,
+   roguelikeBattle
+  };
+  const json = JSON.stringify(snapshot);
+  const previous = localStorage.getItem(BATTLE_SAVE_KEY);
+  if (previous) localStorage.setItem(BATTLE_BACKUP_KEY, previous);
+  localStorage.setItem(BATTLE_SAVE_KEY, json);
+ } catch (error) {
+  console.warn("Battle autosave failed", error);
+ }
+}
+render = () => {
+ renderUI();
+ saveBattleSnapshot();
+};
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, fireCannon, breathAttack, declareCharge, render, draw, $, say, dist, finishActivation, terrain:()=>S.terrain, rallyingCall });
 
 function startBattleWithArmy(army,faction,battleType="skirmish",siegeRole="attacker"){if(roguelikeBuilderMode){roguelikeBuilderMode=false;roguelike?.beginBattle(army,faction,roguelikeArmyPoints(army,faction));return;}campaignBattle=false;S.battleType=battleType;S.siegeRole=siegeRole;S.autoTerrain=true;S.terrainSeed=Date.now();const budgetMultiplier=battleType==="siege"?(siegeRole==="attacker"?1/1.5:1.5):1;const playerForce=createUnitsFromArmy(army,faction),aiRoster=buildOpponentArmy(army,faction,{budgetMultiplier,siege:battleType==="siege"}),aiForce=createUnitsFromArmy(aiRoster,faction);S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};if(battleType==="siege"){const castle={left:.29,right:.71,top:.22,bottom:.78};Object.values(S.units).forEach(u=>{if(u.side==="player"){u.x=siegeRole==="defender"?.5:.12;u.y=.5;}else{u.x=siegeRole==="defender"?.12:.5;u.y=.5;}u.facing=u.side==="player"?(siegeRole==="defender"?0:0):Math.PI;});}const playerPoints=units().filter(u=>u.side==="player").reduce((sum,u)=>sum+(u.points||0),0),aiPoints=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();say((battleType==="siege"?"Siege · you are the "+siegeRole+". ":"Skirmish · ")+"Your army "+playerPoints+" pts; opponent "+aiPoints+" pts ("+(aiPoints>=playerPoints?"+"+(aiPoints-playerPoints):"−"+(playerPoints-aiPoints))+" pts). "+(battleType==="siege"?"The attacker receives 50% more budget; castle walls are T10/10 W and gates T8/6 W.":""));setupCanvas();}
@@ -208,6 +242,48 @@ roguelike=createRoguelike({
  resetProgress:()=>{}
 });
 $("battle-return").addEventListener("click",()=>{ $("battle-return").hidden=true;showCollection();collectionManager?.open();});
+function restoreBattleSnapshot() {
+ let snapshot = null;
+ try {
+  const current = localStorage.getItem(BATTLE_SAVE_KEY);
+  const backup = localStorage.getItem(BATTLE_BACKUP_KEY);
+  for (const candidate of [current, backup]) {
+   if (!candidate) continue;
+   try {
+    const parsed = JSON.parse(candidate);
+    if (parsed?.schemaVersion === 1 && parsed.state?.units && Object.keys(parsed.state.units).length && parsed.state.phase && parsed.state.phase !== "over") {
+     snapshot = parsed;
+     break;
+    }
+   } catch {}
+  }
+ } catch {}
+ persistenceReady = true;
+ if (!snapshot) return;
+ try {
+  Object.assign(S, snapshot.state);
+  if (snapshot.view && Number.isFinite(snapshot.view.zoom)) Object.assign(view, snapshot.view);
+  campaignBattle = !!snapshot.campaignBattle;
+  roguelikeBattle = !!snapshot.roguelikeBattle;
+  $("mainmenu").hidden = true;
+  $("mode-screen").hidden = true;
+  $("campaign-screen").hidden = true;
+  $("roguelike-screen").hidden = true;
+  $("collection-screen").hidden = true;
+  $("armybuilder").hidden = true;
+  $("game").hidden = false;
+  $("battle-return").hidden = true;
+  $("log").innerHTML = (S.log || []).map(x=>'<div class="logentry">'+x+'</div>').join("");
+  $("rollcontent").replaceChildren();
+  setupCanvas();
+  render();
+ } catch (error) {
+  console.warn("Could not restore autosaved battle", error);
+ }
+}
+window.addEventListener("pagehide", saveBattleSnapshot);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") saveBattleSnapshot(); });
+restoreBattleSnapshot();
 })();
 }
 ;
