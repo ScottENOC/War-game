@@ -152,7 +152,8 @@ function showCollection(){$("game").hidden=true;$("armybuilder").hidden=true;$("
 function showSkirmishBuilder(){$("game").hidden=true;$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=false;armyBuilder?.open();}
 let collectionManager=null;
 let narrativeCampaign=null;
-let roguelike=null;\nlet campaignBattle=false,roguelikeBattle=false,roguelikeBuilderMode=false;
+let roguelike=null;
+let campaignBattle=false,roguelikeBattle=false,roguelikeBuilderMode=false;
 function validateArmy(army,faction){
  if(collectionManager?.getBypass())return "";
  const owned=collectionManager?.getInventory()||[],used=new Set(),shortages=[];
