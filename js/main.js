@@ -6,3 +6,4 @@ import { startGrandCampaign } from "./grandCampaign.js";
 startGrandCampaign();
 startGame();
 installSaveBackupControls();
+window.__warGameStartupReady = true;
