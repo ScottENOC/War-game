@@ -289,7 +289,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     {faction:"dwarfs",type:"dwarfKingHaldric",weapon:"handWeapon",shield:true,namedCharacter:true,name:"King Haldric Stoneward"}
    ]
   };
-  const legendary=["legendaryLord","shadowElf","pegasusChampion","dwarfKingHaldric"].includes.bind(["legendaryLord","shadowElf","pegasusChampion","dwarfKingHaldric"]);
+  const legendary=type=>["legendaryLord","shadowElf","pegasusChampion","dwarfKingHaldric"].includes(type);
   let pool=(pools[category]||pools.infantry).filter(p=>{
    if(!legendary(p.type))return true;
    const mount=p.mountType||(p.mounted?"horse":"none");
