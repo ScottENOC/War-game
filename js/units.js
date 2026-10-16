@@ -8,7 +8,7 @@ export function unitCost(config, faction) {
   if(dragonCosts[type])return dragonCosts[type];
   if(type==="cannon")return dwarf?85:80;if(type==="boltThrower")return 60;
   const upgrades=[{key:"M",unit:dwarf?4:2,character:dwarf?8:5},{key:"WS",unit:elf?1:2,character:elf?3:5},{key:"BS",unit:elf?1:2,character:elf?3:5},{key:"S",unit:3,character:6},{key:"T",unit:dwarf?2:elf?6:4,character:dwarf?5:elf?10:8},{key:"I",unit:dwarf?3:1,character:dwarf?5:3},{key:"Ld",unit:1,character:3}].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
-  const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
+  const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3*(character?1:models):0),0);
   const weapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])];
   const ranged=config.rangedWeapon||(["bow","crossbow","firearm","longRifle"].includes(config.weapon)?config.weapon:(type==="archers"?"bow":config.bow?"bow":null));
   const rangedCost=ranged==="bow"?(eagleKit?0:elf&&type==="cavalry"&&(config.freeCavalryOption||"bow")==="bow"?0:(elf?3:2)*(character?1:models)):ranged==="crossbow"?3*(character?1:models):ranged==="firearm"?4*(character?1:models):ranged==="longRifle"?12*(character?1:models):0;
