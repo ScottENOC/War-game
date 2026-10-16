@@ -2,6 +2,7 @@ const LONG_PRESS_MS = 550;
 let pressTimer = null;
 let activeTooltip = null;
 let suppressNextClick = false;
+let suppressClickTarget = null;
 let suppressTimer = null;
 let pressOrigin = null;
 
@@ -44,8 +45,9 @@ document.addEventListener("pointerdown", event => {
   pressTimer = setTimeout(() => {
     showTooltip(target, message);
     suppressNextClick = true;
+    suppressClickTarget = target;
     clearTimeout(suppressTimer);
-    suppressTimer = setTimeout(() => { suppressNextClick = false; }, 900);
+    suppressTimer = setTimeout(() => { suppressNextClick = false; suppressClickTarget = null; }, 900);
   }, LONG_PRESS_MS);
 });
 
@@ -62,10 +64,12 @@ document.addEventListener("pointermove", event => {
 }, true);
 
 document.addEventListener("click", event => {
-  if (suppressNextClick) {
+  const clickedControl = event.target.closest?.("button, [role='button']");
+  if (suppressNextClick && clickedControl === suppressClickTarget) {
     event.preventDefault();
     event.stopImmediatePropagation();
     suppressNextClick = false;
+    suppressClickTarget = null;
     clearTimeout(suppressTimer);
     return;
   }
