@@ -30,7 +30,7 @@ export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTa
   function btn(label, icon, fn, disabled, active) {
     const b = document.createElement("button");
     b.textContent = icon; b.title = label; b.setAttribute("aria-label", label);
-    b.disabled = !!disabled; if (active) b.classList.add("active"); b.onclick = fn; $("actions").append(b);
+    b.disabled = !!disabled; if (active) b.classList.add("active"); b.onclick = () => fn(); $("actions").append(b);
   }
   function controls() {
     const el = $("actions"); el.replaceChildren();
