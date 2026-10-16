@@ -39,7 +39,7 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
     const hasRanged=!!unit.rangedWeapon||unit.type==="archers"||unit.type==="shadowElf"||unit.type==="rifleman"||(unit.type==="cavalry"&&(unit.bow||unit.freeCavalryOption==="bow"));
     const available=skillChoices.filter(s=>!unit.skills?.[s.key]&&(s.key!=="rerollOnesShooting"||hasRanged));
     const choices=available.length?available:veteranStats.map(s=>({key:"veteran_"+s.key,label:s.label,description:"Permanent veteran improvement earned through survival."}));
-    choices.forEach((s,j)=>{const label=document.createElement("label");label.className="campaign-choice";const radio=document.createElement("input");radio.type="radio";radio.name="rogue-skill-"+i;radio.value=s.key;if(j===0)radio.checked=true;const copy=document.createElement("span");copy.innerHTML="<b>"+s.label+"</b><small>"+(s.description||"")+"</small>";label.append(radio,copy);group.append(label);});
+    choices.forEach((s,j)=>{const label=document.createElement("label");label.className="campaign-choice";const radio=document.createElement("input");radio.type="radio";radio.name="rogue-skill-"+i;radio.value=s.key;const copy=document.createElement("span");copy.innerHTML="<b>"+s.label+"</b><small>"+(s.description||"")+"</small>";label.append(radio,copy);group.append(label);});
     card.append(group);skillsHost.append(card);
    });
    el("roguelike-start").hidden=true;el("roguelike-continue").hidden=false;el("roguelike-continue").textContent="Apply skills and prepare next round";return;
@@ -99,6 +99,7 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
  function applySkills(){
   const selected=[];
   run.pendingSkills.forEach((u,i)=>{const radio=document.querySelector('input[name="rogue-skill-'+i+'"]:checked');if(radio)selected.push([u,radio.value]);});
+  if(selected.length!==run.pendingSkills.length){el("roguelike-description").textContent="Choose one skill for each surviving unit before continuing.";return;}
   for(const [unit,key] of selected){const target=run.army.find(x=>x.id===unit.id)||run.army[unit._sourceIndex];if(!target)continue;if(key.startsWith("veteran_")){const stat=key.slice(8);target.campaignStats=target.campaignStats||{};if(stat==="MI")target.campaignStats.MI=(target.campaignStats.MI||0)+1;else target.campaignStats[stat]=(target.campaignStats[stat]||0)+1;}else{target.skills=target.skills||{};target.skills[key]=true;}}
   run.pendingSkills=[];run.state="ready";run.rosterPoints=calculatePoints?calculatePoints(run.army,run.faction):run.rosterPoints;save();render();
  }
