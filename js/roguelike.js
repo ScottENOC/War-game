@@ -42,7 +42,8 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
     const hasRanged=!!unit.rangedWeapon||unit.type==="archers"||unit.type==="shadowElf"||unit.type==="rifleman"||(unit.type==="cavalry"&&(unit.bow||unit.freeCavalryOption==="bow"));
     const available=skillChoices.filter(s=>!unit.skills?.[s.key]&&(s.key!=="rerollOnesShooting"||hasRanged));
     const earnedStats=veteranStats.filter(s=>!(Number(unit.campaignStats?.[s.key])>0)).map(s=>({key:"veteran_"+s.key,label:s.label,description:"Earn a permanent +1 characteristic bonus through victory."}));
-    const choices=[...available,...(earnedStats.length?earnedStats:(!available.length?veteranStats.map(s=>({key:"veteran_"+s.key,label:s.label,description:"Permanent veteran improvement earned through survival."})):[])];
+    const fallbackStats=veteranStats.map(s=>({key:"veteran_"+s.key,label:s.label,description:"Permanent veteran improvement earned through survival."}));
+    const choices=[...available,...(earnedStats.length?earnedStats:(!available.length?fallbackStats:[]))];
     choices.forEach((s,j)=>{const label=document.createElement("label");label.className="campaign-choice";const radio=document.createElement("input");radio.type="radio";radio.name="rogue-skill-"+i;radio.value=s.key;const copy=document.createElement("span");copy.innerHTML="<b>"+s.label+"</b><small>"+(s.description||"")+"</small>";label.append(radio,copy);group.append(label);});
     card.append(group);skillsHost.append(card);
    });
