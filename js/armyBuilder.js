@@ -19,16 +19,22 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     {key:"I",label:"Initiative",unit:dwarf()?3:1,character:dwarf()?5:3},
     {key:"Ld",label:"Leadership",unit:1,character:3}
   ];
+  function earnedCampaignCost(u){
+    if(!campaignMode)return 0;
+    const e=elf(),d=dwarf(),m=u.models||1,character=isCharacterType(u.type),s=u.campaignStats||{};
+    const rates={M:character?(d?8:5):(d?4:2)*m,WS:character?(e?3:5):(e?1:2)*m,BS:character?(e?3:5):(e?1:2)*m,S:character?6:3*m,T:character?(d?5:e?10:8):(d?2:e?6:4)*m,I:character?(d?5:3):(d?3:1)*m,Ld:character?3:m};
+    return (s.S||0)*rates.S+(s.T||0)*rates.T+(s.WS||0)*rates.WS+(s.BS||0)*rates.BS+(s.Ld||0)*rates.Ld+(s.MI||0)*(rates.M+rates.I);
+  }
   function unitPoints(u){
     const e=elf(),d=dwarf(),m=u.models||1,character=isCharacterType(u.type),eagleKit=e&&(character||u.type==="cavalry")&&u.mountType==="eagle";
-    if(u.type==="cannon")return d?85:80;if(u.type==="boltThrower")return 60;if(u.type==="pegasusChampion")return 110;if(u.type==="dwarfKingHaldric")return 210;if(u.type==="youngDragon")return 140;if(u.type==="dragon")return 220;if(u.type==="ancientDragon")return 320;
+    if(u.type==="cannon")return (d?85:80)+earnedCampaignCost(u);if(u.type==="boltThrower")return 60+earnedCampaignCost(u);if(u.type==="pegasusChampion")return 110+earnedCampaignCost(u);if(u.type==="dwarfKingHaldric")return 210+earnedCampaignCost(u);if(u.type==="youngDragon")return 140+earnedCampaignCost(u);if(u.type==="dragon")return 220+earnedCampaignCost(u);if(u.type==="ancientDragon")return 320+earnedCampaignCost(u);
     const upgradeCost=statUpgrades.reduce((sum,s)=>{const elfRate=e&&(["WS","BS"].includes(s.key)?{unit:1,character:3}:s.key==="T"?{unit:6,character:10}:null),dwarfRate=d&&({M:{unit:4,character:8},T:{unit:2,character:5},I:{unit:3,character:5}}[s.key]);return sum+(u.upgrades&&u.upgrades[s.key]?(character?(dwarfRate?.character??elfRate?.character??s.character):(dwarfRate?.unit??elfRate?.unit??s.unit)*m):0);},0);
     const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3*(campaignMode?(character?1:m):1):0),0);
     const weapons=[...new Set([...(u.meleeWeapons||[]),u.weapon||"handWeapon"])];
     const ranged=u.rangedWeapon||(u.type==="archers"?"bow":null);
     const dwarfBase={dwarfInfantry:8};
     const rangedCost=ranged==="bow"?(eagleKit?0:e&&u.type==="cavalry"&&(u.freeCavalryOption||"bow")==="bow"?0:(e?3:2)*(character?1:m)):ranged==="crossbow"?3*(character?1:m):ranged==="firearm"?4*(character?1:m):ranged==="longRifle"?12*(character?1:m):0;
-    if(d&&dwarfBase[u.type]){const meleeCost=weapons.reduce((sum,w)=>sum+(w==="greatWeapon"?2*m:w==="halberd"?m:w==="spear"?m:0),0);return m*dwarfBase[u.type]+meleeCost+rangedCost+upgradeCost+skillCost+(u.heavyArmour?2*m:0)+(u.champion?6:0);}
+    if(d&&dwarfBase[u.type]){const meleeCost=weapons.reduce((sum,w)=>sum+(w==="greatWeapon"?2*m:w==="halberd"?m:w==="spear"?m:0),0);return m*dwarfBase[u.type]+meleeCost+rangedCost+upgradeCost+skillCost+(u.heavyArmour?2*m:0)+(u.champion?6:0)+earnedCampaignCost(u);}
     if(character){
       const meleeCost=weapons.reduce((sum,w)=>sum+(["halberd","greatWeapon"].includes(w)?4:w==="spear"&&u.mounted?(eagleKit?0:2):w==="lance"&&u.mounted?(eagleKit?2:4):0),0);
       return (u.type==="dwarfKingHaldric"?210:u.type==="pegasusChampion"?110:u.type==="legendaryLord"?160:u.type==="shadowElf"?165:u.type==="rifleman"?65:u.type==="captainWeiss"?70:u.type==="dwarfCaptain"?55:u.type==="dwarfLord"?100:(e?(u.type==="lord"?120:75):(u.type==="lord"?80:50)))+(u.heavyArmour&&!eagleKit&&!["legendaryLord","shadowElf"].includes(u.type)?4:0)+(u.magicArmour&&!eagleKit?10:0)+(u.weapon==="magicSword"?10:0)+meleeCost+ (u.mounted?({youngDragon:140,dragon:220,ancientDragon:320}[u.mountType]||8):0)+(u.mounted&&u.barding&&!eagleKit?4:0)+(u.shield&&u.type!=="legendaryLord"?2:0)+rangedCost+upgradeCost+skillCost;
