@@ -72,7 +72,7 @@ function load(){
  return starterData();
 }
 
-export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCampaign=()=>{}}){
+export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCampaign=()=>{},onRoguelike=()=>{},onResetCollection=()=>{}}){
  let data=load(),editingId=null;
  data.lootboxes=Number.isFinite(data.lootboxes)?Math.max(0,data.lootboxes):0;
  data.lastDailyClaim=data.lastDailyClaim||null;
@@ -279,7 +279,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  $("dev-lootbox").addEventListener("click",openDeveloperLootbox);
  $("dev-reset-collection").addEventListener("click",()=>{
   if(!window.confirm("Reset this device’s collection to the original 151 models? This permanently removes all added models, loose bits, lootboxes and developer bypass settings."))return;
-  data=starterData();editingId=null;save();renderAll();
+  data=starterData();editingId=null;save();onResetCollection();renderAll();
   $("lootbox-result").textContent="Collection reset complete: 100 Empire swordsmen, 50 Empire archers and 1 sword-only Empire hero (151 models total).";
  });
  $("mode-collection").addEventListener("click",()=>{$("mode-screen").hidden=true;$("collection-screen").hidden=false;renderAll();});
@@ -288,6 +288,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
   const mode=btn.dataset.mode;
   if(mode==="skirmish"){onSkirmish();return;}
   if(mode==="narrative"){onNarrativeCampaign();return;}
+   if(mode==="roguelike"){onRoguelike();return;}
   const info={
    grand:["Grand Campaign","Lead a faction across a living world. Expand territory, manage resources and fight battles with only the miniatures in your collection."],
    narrative:["Narrative Campaign","Fight a connected story of missions, choices and persistent rewards. Mission rewards can add specific models to your collection."],
@@ -296,7 +297,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
   $("mainmenu").hidden=true;$("mode-screen").hidden=false;$("mode-title").textContent=info[0];$("mode-description").textContent=info[1];
  }));
  renderAll();
- return {getInventory:()=>data.models.map(m=>({...m})),getBypass:()=>!!data.bypass,grantLootbox,open:()=>{ $("mainmenu").hidden=true;$("collection-screen").hidden=false;renderAll();}};
+ return {getInventory:()=>data.models.map(m=>({...m})),getBypass:()=>!!data.bypass,grantLootbox,grantRoguelikeModel,open:()=>{ $("mainmenu").hidden=true;$("collection-screen").hidden=false;renderAll();}};
 }
 export function getCollectionSnapshot(){
  try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");return d&&Array.isArray(d.models)?d:starterData();}catch{return starterData();}
