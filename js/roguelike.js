@@ -19,6 +19,7 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
  function open(){run=readRun()||blankRun();progress=readProgress();if(run.state==="battle"){run.state="ready";run.lastResult="The unfinished battle was abandoned. No casualties or rewards were recorded.";save();}show();render();}
  function stageForRound(round){if(round%5!==0)return {battleType:"skirmish",siegeRole:"attacker",baseAllowance:500+(round-1)*100,enemyAllowance:500+(round-1)*100};const siegeIndex=Math.floor(round/5);const siegeRole=siegeIndex%2===1?"attacker":"defender";const baseAllowance=500+(round-1)*100;return {battleType:"siege",siegeRole,baseAllowance,enemyAllowance:Math.round(baseAllowance*(siegeRole==="defender"?1.5:1/1.5))};}
  function render(){
+  el("roguelike-abandon").hidden=run.state==="setup"||run.state==="defeat";
   el("roguelike-title").textContent=run.state==="defeat"?"Expedition Lost":"Roguelike Expedition";
   const stage=stageForRound(run.round);
   el("roguelike-description").textContent=run.state==="setup"?"Choose a 1,000-point army from models you own. Enemy skirmish armies grow by 100 points per round, with sieges every fifth round.":run.state==="defeat"?"Your army has no surviving units. This run is over. Start a new expedition to try again.":"Round "+run.round+" · "+(stage.battleType==="siege"?"Siege — you are the "+stage.siegeRole+". ":"Skirmish. ")+"Reinforcement points: "+run.bank+" · Enemy allowance: "+stage.enemyAllowance+" points"+(stage.battleType==="siege"?" (base "+stage.baseAllowance+", adjusted for siege balance).":"")+".";
@@ -136,5 +137,6 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
  el("roguelike-start").addEventListener("click",()=>{if(run.state==="defeat")run=blankRun();chooseArmy();});
  el("roguelike-continue").addEventListener("click",()=>{if(run.state==="skills"){applySkills();return;}chooseArmy();});
  el("roguelike-menu").addEventListener("click",()=>{hide();onReturnMenu();});
+ el("roguelike-abandon").addEventListener("click",()=>{if(run.state==="setup"||run.state==="defeat")return;if(!window.confirm("Abandon this expedition? Your current army, earned skills, reinforcement points and round progress in this run will be lost. Collection unlocks and other collection progress will be kept."))return;run=blankRun();save();render();});
  return {open,onBattleFinished,beginBattle:startBattle,getLostModels:()=>run.lostModels||[],resetProgress:()=>{progress=freshProgress();run=blankRun();save();resetProgress?.();}};
 }
