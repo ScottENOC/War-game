@@ -172,6 +172,11 @@ h1{font-size:clamp(28px,6vw,44px);line-height:1.1;margin:10px 0 16px;letter-spac
 .grand-map-wrap{min-width:0;border:1px solid #ffffff22;border-radius:14px;background:#78949a;padding:8px;overflow:hidden}
 .grand-world-map{display:block;width:100%;height:auto;border-radius:9px;touch-action:manipulation}
 .grand-world-map .grand-city{cursor:pointer;outline:none}
+.grand-world-map .grand-city.other-faction{opacity:.42}
+.grand-world-map .grand-city.other-faction:hover{opacity:.72}
+.grand-city-dot.greenskins{background:#53783e;border-color:#d7e7b0}
+.grand-city-dot.undead{background:#78658d;border-color:#e6d8f2}
+.grand-city-dot.evilHumans{background:#8c4e49;border-color:#f0d0bd}
 .grand-world-map .grand-city circle{transition:stroke-width .12s,filter .12s}
 .grand-world-map .grand-city:hover circle,.grand-world-map .grand-city:focus circle,.grand-world-map .grand-city.selected circle{stroke:#fff4bf;stroke-width:5;filter:drop-shadow(0 0 5px #fff)}
 .grand-map-legend{display:flex;gap:12px;flex-wrap:wrap;padding:6px 5px 10px;color:#182c2e;font-size:11px;font-weight:800}
