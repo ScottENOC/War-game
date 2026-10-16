@@ -1,0 +1,85 @@
+const STORAGE_KEY="warGameRoguelikeV1";
+const skillChoices=[
+ {key:"rerollOnesMelee",label:"Melee Mastery",description:"Reroll natural 1s to hit in melee."},
+ {key:"rerollOnesShooting",label:"Marksman",description:"Reroll natural 1s to hit when shooting."},
+ {key:"steadfast",label:"Steadfast",description:"Ignore combat-result penalties on break tests."},
+ {key:"skirmish",label:"Skirmish",description:"Gain skirmisher movement and 360° shooting."}
+];
+const blankRun=()=>({round:1,bank:0,army:null,faction:"empire",state:"setup",pendingSkills:[],lastResult:null});
+const freshProgress=()=>({unlockedRounds:[]});
+export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantModel,grantLootbox,resetProgress}){
+ let progress=readProgress(),run=readRun()||blankRun();
+ const el=id=>$(id);
+ function readRun(){try{const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");return x&&typeof x==="object"?x:null;}catch{return null;}}
+ function readProgress(){try{const x=JSON.parse(localStorage.getItem(STORAGE_KEY+"Progress")||"null");return x&&Array.isArray(x.unlockedRounds)?x:freshProgress();}catch{return freshProgress();}}
+ const save=()=>{localStorage.setItem(STORAGE_KEY,JSON.stringify(run));localStorage.setItem(STORAGE_KEY+"Progress",JSON.stringify(progress));};
+ const hide=()=>{el("roguelike-screen").hidden=true;};
+ function show(){el("mainmenu").hidden=true;el("mode-screen").hidden=true;el("campaign-screen").hidden=true;el("collection-screen").hidden=true;el("armybuilder").hidden=true;el("game").hidden=true;el("roguelike-screen").hidden=false;}
+ function open(){run=readRun()||blankRun();progress=readProgress();show();render();}
+ function render(){
+  el("roguelike-title").textContent=run.state==="defeat"?"Expedition Lost":"Roguelike Expedition";
+  el("roguelike-description").textContent=run.state==="setup"?"Choose a 1,000-point army from models you own. Enemy skirmish armies grow by 100 points per round.":run.state==="defeat"?"Your army has no surviving units. This run is over. Start a new expedition to try again.":"Round "+run.round+" · Reinforcement points: "+run.bank+" · Enemy allowance: "+(500+(run.round-1)*100)+" points.";
+  const host=el("roguelike-content");host.replaceChildren();el("roguelike-skills").replaceChildren();
+  if(run.state==="setup"){
+   host.innerHTML='<p class="campaign-mission">Start with 1,000 points. Survivors retain their casualties, wounds and earned skills. You gain 50 reinforcement points after each victory.</p>';
+   el("roguelike-start").hidden=false;el("roguelike-start").textContent=run.army?"Resume army selection":"Choose Starting Army";el("roguelike-continue").hidden=true;return;
+  }
+  const army=Array.isArray(run.army)?run.army:[];
+  const roster=document.createElement("div");roster.className="campaign-roster";
+  army.forEach(u=>{const row=document.createElement("div");const name=document.createElement("b");name.textContent=u.name||u.type;const detail=document.createElement("span");detail.textContent=(u.models||0)+" models · "+Object.keys(u.skills||{}).filter(k=>u.skills[k]).join(", ");row.append(name,detail);roster.append(row);});
+  host.append(roster);
+  if(run.lastResult){const p=document.createElement("p");p.className="campaign-mission";p.textContent=run.lastResult;host.prepend(p);}
+  if(run.state==="skills"){
+   const skillsHost=el("roguelike-skills");
+   run.pendingSkills.forEach((unit,i)=>{
+    const card=document.createElement("section");card.className="campaign-upgrade-card";
+    const h=document.createElement("h2");h.textContent=unit.name||unit.type;card.append(h);
+    const group=document.createElement("div");group.className="campaign-choice-list";
+    const available=skillChoices.filter(s=>!unit.skills?.[s.key]);
+    (available.length?available:skillChoices).forEach((s,j)=>{const label=document.createElement("label");label.className="campaign-choice";const radio=document.createElement("input");radio.type="radio";radio.name="rogue-skill-"+i;radio.value=s.key;if(j===0)radio.checked=true;const copy=document.createElement("span");copy.innerHTML="<b>"+s.label+"</b><small>"+s.description+"</small>";label.append(radio,copy);group.append(label);});
+    card.append(group);skillsHost.append(card);
+   });
+   el("roguelike-start").hidden=true;el("roguelike-continue").hidden=false;el("roguelike-continue").textContent="Apply skills and prepare next round";return;
+  }
+  el("roguelike-start").hidden=false;el("roguelike-start").textContent=run.state==="defeat"?"Start New Expedition":"Reinforce / Change Army";el("roguelike-continue").hidden=true;
+ }
+ function chooseArmy(){
+  if(run.state==="defeat")run=blankRun();
+  const initial=run.army?run.army.map(u=>({...u,skills:{...(u.skills||{})},upgrades:{...(u.upgrades||{})},meleeWeapons:[...(u.meleeWeapons||[])]})):null;
+  const existingPoints=initial?initial.reduce((sum,u)=>sum+(Number(u.models)||1)*8,0):0;
+  const cap=run.state==="setup"&&!initial?1000:Math.max(0,existingPoints+run.bank);
+  save();hide();onBuildArmy(initial,cap,run.faction||"empire");
+ }
+ function startBattle(army,faction,armyPoints){
+  const previous=Array.isArray(run.army)?run.army:[],previousPoints=previous.reduce((s,u)=>s+(Number(u.models)||1)*8,0);
+  if(run.state==="setup"&&!previous.length&&armyPoints>1000){show();el("roguelike-description").textContent="Your starting army must not exceed 1,000 points.";return;}
+  const spend=Math.max(0,armyPoints-previousPoints);if(previous.length&&spend>run.bank){show();el("roguelike-description").textContent="That roster costs more than your available reinforcement points.";return;}
+  run.bank=Math.max(0,run.bank-spend);run.army=army.map((u,i)=>({...u,id:"rogue-"+i,skills:{...(u.skills||{})},upgrades:{...(u.upgrades||{})}}));run.faction=faction;run.state="battle";run.lastResult=null;save();onStartBattle(run.army,faction,run.round,500+(run.round-1)*100);
+ }
+ function onBattleFinished(won,units){
+  const surviving=run.army.map((cfg,i)=>{
+   const u=units.find(x=>x.id==="p"+(i+1));
+   if(!u||u.models<=0)return null;
+   return {...cfg,models:u.models,currentWounds:u.characterWounds??null,currentArtilleryWounds:u.artilleryWounds??null,skills:{...(cfg.skills||u.skills||{})},upgrades:{...(cfg.upgrades||{})}};
+  }).filter(Boolean);
+  run.army=surviving;
+  if(!surviving.length){run.state="defeat";run.lastResult="Defeat. No units survived; this expedition has ended.";save();show();render();return;}
+  if(!won){run.state="defeat";run.lastResult="Defeat. The surviving force has been lost with the expedition.";save();show();render();return;}
+  const completed=run.round,first=!progress.unlockedRounds.includes(completed);
+  let rewards=[];
+  if(first){const category=completed%10===0?"character":completed%5===0?"cavalry":"infantry";const reward=grantModel(category,completed);if(reward)rewards.push("Unlocked "+reward+" (first victory at round "+completed+").");progress.unlockedRounds.push(completed);}
+  if((completed<=10&&completed%2===0)||completed>10){grantLootbox("roguelike");rewards.push("One lootbox earned.");}
+  run.bank+=50;run.round++;run.state="skills";run.pendingSkills=surviving.map((u,i)=>({...u,_sourceIndex:i}));run.lastResult="Victory in round "+completed+". "+rewards.join(" ")+" Gained 50 reinforcement points.";
+  save();show();render();
+ }
+ function applySkills(){
+  const selected=[];
+  run.pendingSkills.forEach((u,i)=>{const radio=document.querySelector('input[name="rogue-skill-'+i+'"]:checked');if(radio)selected.push([u,radio.value]);});
+  for(const [unit,key] of selected){const target=run.army.find(x=>x.id===unit.id)||run.army[unit._sourceIndex];if(target){target.skills=target.skills||{};target.skills[key]=true;}}
+  run.pendingSkills=[];run.state="ready";save();render();
+ }
+ el("roguelike-start").addEventListener("click",()=>{if(run.state==="defeat")run=blankRun();chooseArmy();});
+ el("roguelike-continue").addEventListener("click",()=>{if(run.state==="skills"){applySkills();return;}chooseArmy();});
+ el("roguelike-menu").addEventListener("click",()=>{hide();onReturnMenu();});
+ return {open,onBattleFinished,beginBattle:startBattle,resetProgress:()=>{progress=freshProgress();run=blankRun();save();resetProgress?.();}};
+}
