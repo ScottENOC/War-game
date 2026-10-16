@@ -280,3 +280,15 @@ button,[role="button"]{
 #game .save-backup-controls > summary {
   background: rgba(23,28,32,.92);
 }
+
+/* On-device startup diagnostics for mobile Safari */
+#startup-diagnostics-toggle-wrap{position:fixed;right:8px;bottom:calc(env(safe-area-inset-bottom) + 8px);z-index:100000;pointer-events:auto}
+#startup-diagnostics-toggle{min-height:34px;padding:5px 10px;font-size:13px;background:#293238;border:1px solid #e0c276;border-radius:8px}
+#startup-diagnostics[hidden]{display:none!important}
+#startup-diagnostics{position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,.82);pointer-events:auto}
+#startup-diagnostics-card{width:100%;max-width:680px;max-height:90dvh;overflow:auto;background:#20282b;color:#f5f1e5;border:1px solid #e0c276;border-radius:14px;padding:16px;box-shadow:0 8px 40px #0009}
+#startup-diagnostics-card h2{font-size:21px;margin:0 0 8px}
+#startup-diagnostics-card p{font-size:14px;line-height:1.4}
+#startup-diagnostics-output{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:45dvh;overflow:auto;background:#101416;color:#ffe2a3;border-radius:8px;padding:12px;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;user-select:text;-webkit-user-select:text}
+.startup-diagnostics-actions{display:flex;gap:8px;flex-wrap:wrap}
+.startup-diagnostics-actions button{font-size:14px;min-height:42px;padding:8px 12px}
