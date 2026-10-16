@@ -5,7 +5,7 @@ const skillChoices=[
  {key:"steadfast",label:"Steadfast",description:"Ignore combat-result penalties on break tests."},
  {key:"skirmish",label:"Skirmish",description:"Gain skirmisher movement and 360° shooting."}
 ];
-const blankRun=()=>({round:1,bank:0,army:null,faction:"empire",state:"setup",pendingSkills:[],lastResult:null});
+const blankRun=()=>({round:1,bank:0,army:null,faction:"empire",state:"setup",pendingSkills:[],lastResult:null,lostModels:[]});
 const freshProgress=()=>({unlockedRounds:[]});
 const veteranStats=[{key:"S",label:"+1 Strength"},{key:"T",label:"+1 Toughness"},{key:"WS",label:"+1 Weapon Skill"},{key:"BS",label:"+1 Ballistic Skill"},{key:"Ld",label:"+1 Leadership"},{key:"MI",label:"+1 Movement and Initiative"}];
 export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantModel,grantLootbox,calculatePoints,resetProgress}){
@@ -60,6 +60,19 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
   run.bank=Math.max(0,run.bank-spend);run.army=army.map((u,i)=>({...u,id:"rogue-"+i,skills:{...(u.skills||{})},upgrades:{...(u.upgrades||{})}}));run.faction=faction;run.rosterPoints=armyPoints;run.state="battle";run.lastResult=null;save();onStartBattle(run.army,faction,run.round,500+(run.round-1)*100);
  }
  function onBattleFinished(won,units){
+  run.lostModels=Array.isArray(run.lostModels)?run.lostModels:[];
+  run.army.forEach((cfg,i)=>{
+   const id="p"+(i+1),u=units.find(x=>x.id===id);
+   if(!u||cfg.type==="cannon"||cfg.type==="boltThrower"||["youngDragon","dragon","ancientDragon"].includes(cfg.type))return;
+   let lost=Math.max(0,(Number(cfg.models)||1)-(Number(u.models)||0));
+   if(cfg.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(cfg.mountType)){const rider=units.find(x=>x.id===id+"r");lost=rider&&rider.models>0?0:1;}
+   if(!lost)return;
+   const character=["captain","lord","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric"].includes(cfg.type);
+   const kind=character?"character":cfg.type==="cavalry"?"cavalry":"infantry";
+   const loss={kind,faction:run.faction,type:cfg.type,mounted:!!cfg.mounted,mountType:cfg.mountType||(cfg.mounted?"horse":"none"),count:lost};
+   const same=run.lostModels.find(x=>x.kind===loss.kind&&x.faction===loss.faction&&x.type===loss.type&&x.mounted===loss.mounted&&x.mountType===loss.mountType);
+   if(same)same.count+=lost;else run.lostModels.push(loss);
+  });
   const surviving=run.army.map((cfg,i)=>{
    const id="p"+(i+1),u=units.find(x=>x.id===id);
    if(cfg.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(cfg.mountType)){
@@ -92,5 +105,5 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
  el("roguelike-start").addEventListener("click",()=>{if(run.state==="defeat")run=blankRun();chooseArmy();});
  el("roguelike-continue").addEventListener("click",()=>{if(run.state==="skills"){applySkills();return;}chooseArmy();});
  el("roguelike-menu").addEventListener("click",()=>{hide();onReturnMenu();});
- return {open,onBattleFinished,beginBattle:startBattle,resetProgress:()=>{progress=freshProgress();run=blankRun();save();resetProgress?.();}};
+ return {open,onBattleFinished,beginBattle:startBattle,getLostModels:()=>run.lostModels||[],resetProgress:()=>{progress=freshProgress();run=blankRun();save();resetProgress?.();}};
 }
