@@ -94,7 +94,6 @@ function aiSiegeLadder(u){
         }
         say(u.name+" cannot find a passable route to the castle stairway this turn.");return false;
       }
-      }
     }
     return false;
   }
