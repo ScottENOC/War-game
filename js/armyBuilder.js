@@ -1,6 +1,6 @@
 export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   let faction="empire";
-  let campaignMode=false,campaignLimit=null;
+  let campaignMode=false,campaignLimit=null,skirmishArmySnapshot=null;
   let army=[{type:"swordsmen",models:20,champion:false,championBonus:"A",upgrades:{},skills:{},lightArmour:false,heavyArmour:false,weapon:"handWeapon",spears:false,bow:false,barding:false,mounted:false,shield:false,freeCavalryOption:"bow"}];
   const list=$("army-list"),total=$("army-total"),addButton=$("add-unit"),startButton=$("begin-deployment"),battleType=$("battle-type"),siegeRole=$("siege-role"),siegeRoleWrap=$("siege-role-wrap");
   const elf=()=>faction==="highElves",dwarf=()=>faction==="dwarfs",isCharacterType=type=>["captain","lord","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric"].includes(type),fmt=n=>Number.isInteger(n)?String(n):n.toFixed(1);
@@ -134,12 +134,13 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   }
   $("faction-select").addEventListener("change",()=>{const next=$("faction-select").value;faction=["highElves","dwarfs"].includes(next)?next:"empire";army.forEach(u=>{if(dwarf()){if(["captain","dwarfCaptain","rifleman","captainWeiss","legendaryLord","shadowElf","pegasusChampion"].includes(u.type))u.type="dwarfCaptain";else if(["lord","dwarfLord"].includes(u.type))u.type="dwarfLord";else if(u.type!=="cannon")u.type="dwarfInfantry";}else if(faction==="highElves"){if(["legendaryLord","rifleman","captainWeiss","dwarfCaptain"].includes(u.type))u.type="captain";if(u.type==="dwarfLord")u.type="lord";if(["dwarfInfantry","dwarfWarriors","dwarfThunderers","dwarfQuarrellers","dwarfLongbeards","dwarfIronbreakers"].includes(u.type))u.type="swordsmen";}else{if(["shadowElf","pegasusChampion","dwarfCaptain"].includes(u.type))u.type="captain";if(u.type==="dwarfLord")u.type="lord";if(["dwarfInfantry","dwarfWarriors","dwarfThunderers","dwarfQuarrellers","dwarfLongbeards","dwarfIronbreakers"].includes(u.type))u.type="swordsmen";}defaults(u);});renderRows();});
   function configureCampaign(initialArmy,limit,initialFaction="empire"){
+    if(!campaignMode)skirmishArmySnapshot=army.map(u=>({...u,upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})},meleeWeapons:[...(u.meleeWeapons||[])],extraMeleeWeapons:[...(u.extraMeleeWeapons||[])]}));
     campaignMode=true;campaignLimit=limit;faction=["highElves","dwarfs"].includes(initialFaction)?initialFaction:"empire";$("faction-select").value=faction;
     if(Array.isArray(initialArmy)&&initialArmy.length){army=initialArmy.map(u=>({...u,upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})},meleeWeapons:[...(u.meleeWeapons||[])],extraMeleeWeapons:[...(u.extraMeleeWeapons||[])]}));}
     else{army=[{type:"swordsmen",models:20,champion:false,championBonus:"A",upgrades:{},skills:{},lightArmour:false,heavyArmour:false,weapon:"handWeapon",spears:false,bow:false,barding:false,mounted:false,shield:false,freeCavalryOption:"bow"}];defaults(army[0]);}
     renderRows();
   }
-  function configureSkirmish(){campaignMode=false;campaignLimit=null;if(battleType?.closest("label"))battleType.closest("label").hidden=false;renderRows();}
+  function configureSkirmish(){if(campaignMode&&skirmishArmySnapshot)army=skirmishArmySnapshot.map(u=>({...u,upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})},meleeWeapons:[...(u.meleeWeapons||[])],extraMeleeWeapons:[...(u.extraMeleeWeapons||[])]}));campaignMode=false;campaignLimit=null;if(battleType?.closest("label"))battleType.closest("label").hidden=false;renderRows();}
   function openBuilder(){ $("mainmenu").hidden=true;$("collection-screen").hidden=true;$("mode-screen").hidden=true;$("roguelike-screen").hidden=true;$("armybuilder").hidden=false;if(battleType?.closest("label"))battleType.closest("label").hidden=campaignMode;if(siegeRoleWrap)siegeRoleWrap.hidden=true;renderRows(); }
   $("builder-back").addEventListener("click",onBack);
   addButton.addEventListener("click",()=>{if(army.length>=6)return;const u={type:"swordsmen",models:20};defaults(u);army.push(u);renderRows();});
