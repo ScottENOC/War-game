@@ -1,8 +1,5 @@
 import { terrainShotEffect, terrainElevationAt, terrainRangeModifier } from "./terrain.js";
 import { captureMovementState, commitMovementAction, hasMovementUndo, undoMovementAction, canReverseTurn } from "./movementUndo.js?v=20261016-movement-undo-v1";
-import { terrainShotEffect, terrainElevationAt, terrainRangeModifier } from "./terrain.js";
-import { captureMovementState, commitMovementAction, hasMovementUndo, undoMovementAction } from "./movementUndo.js?v=20261016-movement-undo-v1";
-import { terrainShotEffect, terrainElevationAt, terrainRangeModifier } from "./terrain.js";
 export function createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, resolvePursuit, reset, validDeployment, canPlace, rallyUnit, rallyingCall, fleeFromCharge, startBattle, say, equipMeleeWeapon, setRangedMode, shape, PX_PER_IN, terrain = () => [], BATTLEFIELD_WIDTH_IN = 48 }) {
   const hasPriorityRuleForUI=u=>!!u&&(!!u.priorityActivation||!!u.reserveDeployRule||(u.attachedCharacters||[]).some(id=>S.units[id]?.priorityActivation));
   function nearestWallPoint(u){const wx=W(),hy=H();let best=null;for(const wall of terrain().filter(t=>(t.type==="wall"||t.type==="gate")&&(t.wounds??2)>0)){const ax=wall.x1*wx,ay=wall.y1*hy,bx=wall.x2*wx,by=wall.y2*hy,dx=bx-ax,dy=by-ay,len2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((u.x*wx-ax)*dx+(u.y*hy-ay)*dy)/len2)),x=ax+dx*t,y=ay+dy*t,d=Math.hypot(u.x*wx-x,u.y*hy-y);if(!best||d<best.d)best={wall,x:x/wx,y:y/hy,d};}return best;}
