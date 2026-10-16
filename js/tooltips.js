@@ -3,6 +3,7 @@ let pressTimer = null;
 let activeTooltip = null;
 let suppressNextClick = false;
 let suppressTimer = null;
+let pressOrigin = null;
 
 function removeTooltip() {
   if (activeTooltip) activeTooltip.remove();
@@ -39,6 +40,7 @@ document.addEventListener("pointerdown", event => {
   if (!message) return;
 
   clearTimeout(pressTimer);
+  pressOrigin = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
   pressTimer = setTimeout(() => {
     showTooltip(target, message);
     suppressNextClick = true;
@@ -50,11 +52,13 @@ document.addEventListener("pointerdown", event => {
 function cancelPress() {
   clearTimeout(pressTimer);
   pressTimer = null;
+  pressOrigin = null;
 }
 document.addEventListener("pointerup", cancelPress, true);
 document.addEventListener("pointercancel", cancelPress, true);
 document.addEventListener("pointermove", event => {
-  if (event.pointerType !== "mouse") cancelPress();
+  if (event.pointerType !== "mouse" && pressOrigin && event.pointerId === pressOrigin.pointerId &&
+      Math.hypot(event.clientX - pressOrigin.x, event.clientY - pressOrigin.y) > 12) cancelPress();
 }, true);
 
 document.addEventListener("click", event => {
