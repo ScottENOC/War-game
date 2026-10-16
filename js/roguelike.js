@@ -36,7 +36,8 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
     const card=document.createElement("section");card.className="campaign-upgrade-card";
     const h=document.createElement("h2");h.textContent=unit.name||unit.type;card.append(h);
     const group=document.createElement("div");group.className="campaign-choice-list";
-    const available=skillChoices.filter(s=>!unit.skills?.[s.key]);
+    const hasRanged=!!unit.rangedWeapon||unit.type==="archers"||unit.type==="shadowElf"||unit.type==="rifleman"||(unit.type==="cavalry"&&(unit.bow||unit.freeCavalryOption==="bow"));
+    const available=skillChoices.filter(s=>!unit.skills?.[s.key]&&(s.key!=="rerollOnesShooting"||hasRanged));
     const choices=available.length?available:veteranStats.map(s=>({key:"veteran_"+s.key,label:s.label,description:"Permanent veteran improvement earned through survival."}));
     choices.forEach((s,j)=>{const label=document.createElement("label");label.className="campaign-choice";const radio=document.createElement("input");radio.type="radio";radio.name="rogue-skill-"+i;radio.value=s.key;if(j===0)radio.checked=true;const copy=document.createElement("span");copy.innerHTML="<b>"+s.label+"</b><small>"+(s.description||"")+"</small>";label.append(radio,copy);group.append(label);});
     card.append(group);skillsHost.append(card);
