@@ -156,7 +156,17 @@ let roguelike=null;
 let campaignBattle=false,roguelikeBattle=false,roguelikeBuilderMode=false;
 function validateArmy(army,faction){
  if(collectionManager?.getBypass())return "";
- const owned=collectionManager?.getInventory()||[],used=new Set(),shortages=[];
+ const owned=(collectionManager?.getInventory()||[]).slice(),used=new Set(),shortages=[];
+ if(roguelikeBuilderMode){
+  for(const loss of roguelike?.getLostModels()||[]){
+   let remaining=Number(loss.count)||0;
+   for(let i=owned.length-1;i>=0&&remaining>0;i--){
+    const m=owned[i],mount=m.mountType||(m.mounted?"horse":"none");
+    const matches=m.faction===loss.faction&&(loss.kind==="infantry"?!m.mounted&&["swordsmen","archers","dwarfInfantry"].includes(m.type):loss.kind==="cavalry"?m.type==="cavalry"&&!!m.mounted&&mount===loss.mountType:m.type===loss.type&&!!m.mounted===!!loss.mounted&&mount===loss.mountType);
+    if(matches){owned.splice(i,1);remaining--;}
+   }
+  }
+ }
  for(const entry of army){
   if(entry.type==="cannon"||entry.type==="boltThrower"||["youngDragon","dragon","ancientDragon"].includes(entry.type)){if(entry.type==="cannon"&&faction==="highElves")shortages.push("Cannons are only available to the Empire.");if(entry.type==="boltThrower"&&faction!=="highElves")shortages.push("Bolt throwers are only available to the High Elves.");if(["youngDragon","dragon","ancientDragon"].includes(entry.type)&&faction!=="highElves")shortages.push("Dragons are only available to the High Elves.");continue;}
   const character=["captain","lord","legendaryLord","shadowElf","pegasusChampion","dwarfCaptain","dwarfLord","dwarfKingHaldric","rifleman","captainWeiss"].includes(entry.type),collectionType=entry.type;
