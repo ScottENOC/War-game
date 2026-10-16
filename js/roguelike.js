@@ -27,7 +27,7 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
   }
   const army=Array.isArray(run.army)?run.army:[];
   const roster=document.createElement("div");roster.className="campaign-roster";
-  army.forEach(u=>{const row=document.createElement("div");const name=document.createElement("b");name.textContent=u.name||u.type;const detail=document.createElement("span");detail.textContent=(u.models||0)+" models · "+Object.keys(u.skills||{}).filter(k=>u.skills[k]).join(", ");row.append(name,detail);roster.append(row);});
+  army.forEach(u=>{const row=document.createElement("div");const name=document.createElement("b");name.textContent=u.name||u.type;const detail=document.createElement("span");const learned=Object.keys(u.skills||{}).filter(k=>u.skills[k]);const stats=Object.entries(u.campaignStats||{}).filter(([,v])=>v).map(([k,v])=>"+"+v+" "+k);detail.textContent=(u.models||0)+" models"+(learned.length?" · "+learned.join(", "):"")+(stats.length?" · "+stats.join(", "):"");row.append(name,detail);roster.append(row);});
   host.append(roster);
   if(run.lastResult){const p=document.createElement("p");p.className="campaign-mission";p.textContent=run.lastResult;host.prepend(p);}
   if(run.state==="skills"){
@@ -48,7 +48,7 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
  function chooseArmy(){
   if(run.state==="defeat")run=blankRun();
   const initial=run.army?run.army.map(u=>({...u,skills:{...(u.skills||{})},upgrades:{...(u.upgrades||{})},meleeWeapons:[...(u.meleeWeapons||[])]})):null;
-  const existingPoints=initial?initial.reduce((sum,u)=>sum+(Number(u.models)||1)*8,0):0;
+  const existingPoints=Number(run.rosterPoints)||0;
   const cap=run.state==="setup"&&!initial?1000:Math.max(0,existingPoints+run.bank);
   save();hide();onBuildArmy(initial,cap,run.faction||"empire");
  }
