@@ -259,6 +259,51 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
   $("lootbox-result").textContent=source==="skirmish"?"Victory reward: one lootbox added to your collection.":"One lootbox added to your collection.";
   renderAll();
  }
+ function grantRoguelikeModel(category,round){
+  const pools={
+   infantry:[
+    {faction:"empire",type:"swordsmen",weapon:"handWeapon"},
+    {faction:"empire",type:"archers",weapon:"bow"},
+    {faction:"highElves",type:"swordsmen",weapon:"spear"},
+    {faction:"highElves",type:"archers",weapon:"bow"},
+    {faction:"dwarfs",type:"dwarfInfantry",weapon:"handWeapon"}
+   ],
+   cavalry:[
+    {faction:"empire",type:"cavalry",weapon:"spear",mounted:true,mountType:"horse"},
+    {faction:"highElves",type:"cavalry",weapon:"spear",mounted:true,mountType:"horse"},
+    {faction:"highElves",type:"cavalry",weapon:"spear",mounted:true,mountType:"eagle"},
+    {faction:"highElves",type:"pegasusChampion",weapon:"lance",mounted:true,mountType:"eagle",shield:true,namedCharacter:true,name:"Aelthir, the Dawnwing"}
+   ],
+   character:[
+    {faction:"empire",type:"captain",weapon:"handWeapon"},
+    {faction:"empire",type:"lord",weapon:"handWeapon"},
+    {faction:"highElves",type:"captain",weapon:"handWeapon"},
+    {faction:"highElves",type:"lord",weapon:"handWeapon"},
+    {faction:"dwarfs",type:"dwarfCaptain",weapon:"handWeapon"},
+    {faction:"dwarfs",type:"dwarfLord",weapon:"handWeapon"},
+    {faction:"empire",type:"legendaryLord",weapon:"handWeapon",namedCharacter:true,name:"Lord-Marshal Edric Voss"},
+    {faction:"empire",type:"legendaryLord",weapon:"handWeapon",mounted:true,mountType:"horse",namedCharacter:true,name:"Lord-Marshal Edric Voss · Mounted"},
+    {faction:"highElves",type:"shadowElf",weapon:"magicBow",namedCharacter:true,name:"Lethariel Starweaver"},
+    {faction:"highElves",type:"shadowElf",weapon:"magicBow",mounted:true,mountType:"horse",namedCharacter:true,name:"Lethariel Starweaver · Mounted"},
+    {faction:"highElves",type:"shadowElf",weapon:"magicBow",mounted:true,mountType:"eagle",namedCharacter:true,name:"Lethariel Starweaver · Pegasus"},
+    {faction:"dwarfs",type:"dwarfKingHaldric",weapon:"handWeapon",shield:true,namedCharacter:true,name:"King Haldric Stoneward"}
+   ]
+  };
+  const legendary=["legendaryLord","shadowElf","pegasusChampion","dwarfKingHaldric"].includes.bind(["legendaryLord","shadowElf","pegasusChampion","dwarfKingHaldric"]);
+  let pool=(pools[category]||pools.infantry).filter(p=>{
+   if(!legendary(p.type))return true;
+   const mount=p.mountType||(p.mounted?"horse":"none");
+   return !data.models.some(m=>m.type===p.type&&(m.mountType||(m.mounted?"horse":"none"))===mount);
+  });
+  if(!pool.length)pool=(pools[category]||pools.infantry).filter(p=>!legendary(p.type));
+  if(!pool.length)return null;
+  const p=pool[Math.floor(Math.random()*pool.length)];
+  const model=makeModel("rogue-"+data.nextId++,p.faction,p.type,p.weapon,{mounted:!!p.mounted,mountType:p.mountType||"none",shield:!!p.shield,name:p.name});
+  model.namedCharacter=!!p.namedCharacter;
+  if(p.type==="shadowElf"){model.offhandWeapon=true;model.components=[...model.components,"left_sword"];}
+  if(p.type==="pegasusChampion")model.components=["aelthir_dawnwing_body","lance","shield","eagle"];
+  data.models.push(model);save();renderAll();return modelLabel(model);
+ }
  function openDeveloperLootbox(){rollLootboxItem();}
  function renderDailyReward(){
   const button=$("claim-daily-lootbox"),status=$("daily-lootbox-status");
