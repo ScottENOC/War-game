@@ -323,9 +323,9 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  $("bypass-model-check").addEventListener("change",e=>{data.bypass=e.target.checked;save();});
  $("dev-lootbox").addEventListener("click",openDeveloperLootbox);
  $("dev-reset-collection").addEventListener("click",()=>{
-  if(!window.confirm("Reset this device’s collection to the original 151 models? This permanently removes all added models, loose bits, lootboxes and developer bypass settings."))return;
+  if(!window.confirm("Reset this device’s collection to the original 152 models? This permanently removes all added models, loose bits, lootboxes and developer bypass settings."))return;
   data=starterData();editingId=null;save();onResetCollection();renderAll();
-  $("lootbox-result").textContent="Collection reset complete: 100 Empire swordsmen, 50 Empire archers and 1 sword-only Empire hero (151 models total).";
+  $("lootbox-result").textContent="Collection reset complete: 100 Empire swordsmen, 50 Empire archers and 1 sword-only Empire hero (152 models total).";
  });
  $("mode-collection").addEventListener("click",()=>{$("mode-screen").hidden=true;$("collection-screen").hidden=false;renderAll();});
  $("mode-back").addEventListener("click",onMainMenu);
