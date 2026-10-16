@@ -23,7 +23,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     if(!campaignMode)return 0;
     const e=elf(),d=dwarf(),m=u.models||1,character=isCharacterType(u.type),s=u.campaignStats||{};
     const rates={M:character?(d?8:5):(d?4:2)*m,WS:character?(e?3:5):(e?1:2)*m,BS:character?(e?3:5):(e?1:2)*m,S:character?6:3*m,T:character?(d?5:e?10:8):(d?2:e?6:4)*m,I:character?(d?5:3):(d?3:1)*m,Ld:character?3:m};
-    return (s.S||0)*rates.S+(s.T||0)*rates.T+(s.WS||0)*rates.WS+(s.BS||0)*rates.BS+(s.Ld||0)*rates.Ld+(s.MI||0)*(rates.M+rates.I);
+    return (s.M||0)*rates.M+(s.WS||0)*rates.WS+(s.BS||0)*rates.BS+(s.S||0)*rates.S+(s.T||0)*rates.T+(s.I||0)*rates.I+(s.Ld||0)*rates.Ld+(s.MI||0)*(rates.M+rates.I);
   }
   function unitPoints(u){
     const e=elf(),d=dwarf(),m=u.models||1,character=isCharacterType(u.type),eagleKit=e&&(character||u.type==="cavalry")&&u.mountType==="eagle";
@@ -130,7 +130,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         options.append(skillBox);
       }}
       {
-        if(u.type!=="pegasusChampion"&&!["youngDragon","dragon","ancientDragon"].includes(u.type)){const upgradeBox=document.createElement("div");upgradeBox.className="stat-upgrades";
+        if(!campaignMode&&u.type!=="pegasusChampion"&&!["youngDragon","dragon","ancientDragon"].includes(u.type)){const upgradeBox=document.createElement("div");upgradeBox.className="stat-upgrades";
         const heading=document.createElement("p");heading.className="stat-upgrades-heading";heading.textContent="Stat upgrades · +1 each, once per stat";upgradeBox.append(heading);
         statUpgrades.forEach(s=>{const e=elf(),d=dwarf(),m=u.models||1,elfRate=e&&(["WS","BS"].includes(s.key)?{unit:1,character:3}:s.key==="T"?{unit:6,character:10}:null),dwarfRate=d&&({M:{unit:4,character:8},T:{unit:2,character:5},I:{unit:3,character:5}}[s.key]),cost=character?(dwarfRate?.character??elfRate?.character??s.character):(dwarfRate?.unit??elfRate?.unit??s.unit)*m;upgradeBox.append(check("+"+s.key+" "+s.label,{cost:"+"+cost+" pts",checked:!!u.upgrades?.[s.key],disabled:u.rangedWeapon==="firearm"&&s.key==="BS",onChange:v=>{u.upgrades={...(u.upgrades||{}),[s.key]:v};updateTotals();}}));});
         options.append(upgradeBox);
