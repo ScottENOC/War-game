@@ -68,13 +68,22 @@ function addBackupControls(parent, location) {
         throw new Error("The backup contains invalid save data.");
       }
       if (!window.confirm("Import this backup? It will replace War-game progress currently saved on this device.")) return;
-      const existing = [];
+      const previous = {};
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key?.startsWith(PREFIX)) existing.push(key);
+        if (key?.startsWith(PREFIX)) previous[key] = localStorage.getItem(key);
       }
-      existing.forEach(key => localStorage.removeItem(key));
-      entries.forEach(([key, value]) => localStorage.setItem(key, value));
+      try {
+        Object.keys(previous).forEach(key => localStorage.removeItem(key));
+        entries.forEach(([key, value]) => localStorage.setItem(key, value));
+      } catch (storageError) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key?.startsWith(PREFIX)) localStorage.removeItem(key);
+        }
+        Object.entries(previous).forEach(([key, value]) => { if (value !== null) localStorage.setItem(key, value); });
+        throw storageError;
+      }
       status.textContent = "Backup imported. Reloading your saved game…";
       window.location.reload();
     } catch (error) {
