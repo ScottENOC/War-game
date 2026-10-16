@@ -13,9 +13,13 @@ function buildBackup() {
 
 function addBackupControls(parent, location) {
   if (!parent || parent.querySelector("[data-save-backup-controls]")) return;
-  const wrap = document.createElement("div");
+  const wrap = document.createElement("details");
   wrap.className = "save-backup-controls";
   wrap.dataset.saveBackupControls = location;
+  const summary = document.createElement("summary");
+  summary.textContent = "Save backup";
+  const actions = document.createElement("div");
+  actions.className = "save-backup-actions";
   const exportButton = document.createElement("button");
   exportButton.type = "button";
   exportButton.className = "secondary-button";
@@ -77,7 +81,8 @@ function addBackupControls(parent, location) {
       status.textContent = error?.message || "Could not import this backup.";
     }
   });
-  wrap.append(exportButton, importButton, input, status);
+  actions.append(exportButton, importButton, input, status);
+  wrap.append(summary, actions);
   parent.append(wrap);
 }
 
