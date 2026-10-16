@@ -7,7 +7,7 @@ const skillChoices=[
 ];
 const blankRun=()=>({round:1,bank:0,army:null,faction:"empire",state:"setup",pendingSkills:[],lastResult:null});
 const freshProgress=()=>({unlockedRounds:[]});
-export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantModel,grantLootbox,resetProgress}){
+export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantModel,grantLootbox,calculatePoints,resetProgress}){
  let progress=readProgress(),run=readRun()||blankRun();
  const el=id=>$(id);
  function readRun(){try{const x=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");return x&&typeof x==="object"?x:null;}catch{return null;}}
@@ -51,10 +51,10 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
   save();hide();onBuildArmy(initial,cap,run.faction||"empire");
  }
  function startBattle(army,faction,armyPoints){
-  const previous=Array.isArray(run.army)?run.army:[],previousPoints=previous.reduce((s,u)=>s+(Number(u.models)||1)*8,0);
+  const previous=Array.isArray(run.army)?run.army:[],previousPoints=Number(run.rosterPoints)||0;
   if(run.state==="setup"&&!previous.length&&armyPoints>1000){show();el("roguelike-description").textContent="Your starting army must not exceed 1,000 points.";return;}
   const spend=Math.max(0,armyPoints-previousPoints);if(previous.length&&spend>run.bank){show();el("roguelike-description").textContent="That roster costs more than your available reinforcement points.";return;}
-  run.bank=Math.max(0,run.bank-spend);run.army=army.map((u,i)=>({...u,id:"rogue-"+i,skills:{...(u.skills||{})},upgrades:{...(u.upgrades||{})}}));run.faction=faction;run.state="battle";run.lastResult=null;save();onStartBattle(run.army,faction,run.round,500+(run.round-1)*100);
+  run.bank=Math.max(0,run.bank-spend);run.army=army.map((u,i)=>({...u,id:"rogue-"+i,skills:{...(u.skills||{})},upgrades:{...(u.upgrades||{})}}));run.faction=faction;run.rosterPoints=armyPoints;run.state="battle";run.lastResult=null;save();onStartBattle(run.army,faction,run.round,500+(run.round-1)*100);
  }
  function onBattleFinished(won,units){
   const surviving=run.army.map((cfg,i)=>{
@@ -64,12 +64,12 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
   }).filter(Boolean);
   run.army=surviving;
   if(!surviving.length){run.state="defeat";run.lastResult="Defeat. No units survived; this expedition has ended.";save();show();render();return;}
-  if(!won){run.state="defeat";run.lastResult="Defeat. The surviving force has been lost with the expedition.";save();show();render();return;}
+  if(!won){run.state="ready";run.rosterPoints=calculatePoints?calculatePoints(run.army,run.faction):run.rosterPoints;run.lastResult="Battle lost. Surviving troops retreat; no rewards are granted, and round "+run.round+" must still be won.";save();show();render();return;}
   const completed=run.round,first=!progress.unlockedRounds.includes(completed);
   let rewards=[];
   if(first){const category=completed%10===0?"character":completed%5===0?"cavalry":"infantry";const reward=grantModel(category,completed);if(reward)rewards.push("Unlocked "+reward+" (first victory at round "+completed+").");progress.unlockedRounds.push(completed);}
   if((completed<=10&&completed%2===0)||completed>10){grantLootbox("roguelike");rewards.push("One lootbox earned.");}
-  run.bank+=50;run.round++;run.state="skills";run.pendingSkills=surviving.map((u,i)=>({...u,_sourceIndex:i}));run.lastResult="Victory in round "+completed+". "+rewards.join(" ")+" Gained 50 reinforcement points.";
+  run.rosterPoints=calculatePoints?calculatePoints(run.army,run.faction):run.rosterPoints;run.bank+=50;run.round++;run.state="skills";run.pendingSkills=surviving.map((u,i)=>({...u,_sourceIndex:i}));run.lastResult="Victory in round "+completed+". "+rewards.join(" ")+" Gained 50 reinforcement points.";
   save();show();render();
  }
  function applySkills(){
