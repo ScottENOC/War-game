@@ -77,10 +77,12 @@ function addBackupControls(parent, location) {
         Object.keys(previous).forEach(key => localStorage.removeItem(key));
         entries.forEach(([key, value]) => localStorage.setItem(key, value));
       } catch (storageError) {
+        const currentKeys = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key?.startsWith(PREFIX)) localStorage.removeItem(key);
+          if (key?.startsWith(PREFIX)) currentKeys.push(key);
         }
+        currentKeys.forEach(key => localStorage.removeItem(key));
         Object.entries(previous).forEach(([key, value]) => { if (value !== null) localStorage.setItem(key, value); });
         throw storageError;
       }
