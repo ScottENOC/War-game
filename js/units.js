@@ -51,6 +51,8 @@ function buildUnit(template,config,faction,opposing=false) {
   
   const campaignStats=config.campaignStats||{};
   for(const key of ["WS","BS","S","T","Ld"])stats[key]+=Math.max(0,campaignStats[key]||0);
+  if(campaignStats.M)stats.M+=Math.max(0,campaignStats.M);
+  if(campaignStats.I)stats.I+=Math.max(0,campaignStats.I);
   if(campaignStats.MI){stats.M+=isSiegeEngine?campaignStats.MI*0.5:campaignStats.MI;stats.I+=campaignStats.MI;}
   // Halberds are infantry weapons; prevent stale or malformed mounted loadouts.
   if(mounted&&weapon==="halberd")weapon="handWeapon";
