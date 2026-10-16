@@ -114,7 +114,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         if(!dwarf())options.append(check("Shield",{cost:"+0.5/model, +1 front armour save",checked:!!u.shield,onChange:v=>{u.shield=v;updateTotals();}}));else options.append(check("Heavy armour",{cost:"+2 pts/model · no Move penalty for Dwarfs",checked:!!u.heavyArmour,onChange:v=>{u.heavyArmour=v;updateTotals();renderRows();}}));
       }
       {
-        if(u.type!=="pegasusChampion"&&!["youngDragon","dragon","ancientDragon"].includes(u.type)){const skillBox=document.createElement("div");skillBox.className="stat-upgrades";
+        if(!campaignMode&&u.type!=="pegasusChampion"&&!["youngDragon","dragon","ancientDragon"].includes(u.type)){const skillBox=document.createElement("div");skillBox.className="stat-upgrades";
         const skillHeading=document.createElement("p");skillHeading.className="stat-upgrades-heading";skillHeading.textContent="Special skills · 3 pts each";skillBox.append(skillHeading);
         skillBox.append(check("Melee Mastery",{cost:"+3 pts · reroll natural 1s to hit in melee",checked:!!u.skills?.rerollOnesMelee,onChange:v=>{u.skills={...(u.skills||{}),rerollOnesMelee:v};updateTotals();}}));
         const hasBow=u.type==="archers"||["bow","crossbow","firearm"].includes(u.weapon)||!!u.rangedWeapon||(u.type==="cavalry"&&(!!u.bow||!!u.rangedWeapon||(elf()&&(u.freeCavalryOption||"bow")==="bow")));
