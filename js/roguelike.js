@@ -16,7 +16,7 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
  const save=()=>{localStorage.setItem(STORAGE_KEY,JSON.stringify(run));localStorage.setItem(STORAGE_KEY+"Progress",JSON.stringify(progress));};
  const hide=()=>{el("roguelike-screen").hidden=true;};
  function show(){el("mainmenu").hidden=true;el("mode-screen").hidden=true;el("campaign-screen").hidden=true;el("collection-screen").hidden=true;el("armybuilder").hidden=true;el("game").hidden=true;el("roguelike-screen").hidden=false;}
- function open(){run=readRun()||blankRun();progress=readProgress();show();render();}
+ function open(){run=readRun()||blankRun();progress=readProgress();if(run.state==="battle"){run.state="ready";run.lastResult="The unfinished battle was abandoned. No casualties or rewards were recorded.";save();}show();render();}
  function render(){
   el("roguelike-title").textContent=run.state==="defeat"?"Expedition Lost":"Roguelike Expedition";
   el("roguelike-description").textContent=run.state==="setup"?"Choose a 1,000-point army from models you own. Enemy skirmish armies grow by 100 points per round.":run.state==="defeat"?"Your army has no surviving units. This run is over. Start a new expedition to try again.":"Round "+run.round+" · Reinforcement points: "+run.bank+" · Enemy allowance: "+(500+(run.round-1)*100)+" points.";
