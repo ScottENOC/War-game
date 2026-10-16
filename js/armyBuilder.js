@@ -1,5 +1,6 @@
 export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   let faction="empire";
+  let campaignMode=false,campaignLimit=null;
   let army=[{type:"swordsmen",models:20,champion:false,championBonus:"A",upgrades:{},skills:{},lightArmour:false,heavyArmour:false,weapon:"handWeapon",spears:false,bow:false,barding:false,mounted:false,shield:false,freeCavalryOption:"bow"}];
   const list=$("army-list"),total=$("army-total"),addButton=$("add-unit"),startButton=$("begin-deployment"),battleType=$("battle-type"),siegeRole=$("siege-role"),siegeRoleWrap=$("siege-role-wrap");
   const elf=()=>faction==="highElves",dwarf=()=>faction==="dwarfs",isCharacterType=type=>["captain","lord","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric"].includes(type),fmt=n=>Number.isInteger(n)?String(n):n.toFixed(1);
@@ -22,7 +23,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     const e=elf(),d=dwarf(),m=u.models||1,character=isCharacterType(u.type),eagleKit=e&&(character||u.type==="cavalry")&&u.mountType==="eagle";
     if(u.type==="cannon")return d?85:80;if(u.type==="boltThrower")return 60;if(u.type==="pegasusChampion")return 110;if(u.type==="dwarfKingHaldric")return 210;if(u.type==="youngDragon")return 140;if(u.type==="dragon")return 220;if(u.type==="ancientDragon")return 320;
     const upgradeCost=statUpgrades.reduce((sum,s)=>{const elfRate=e&&(["WS","BS"].includes(s.key)?{unit:1,character:3}:s.key==="T"?{unit:6,character:10}:null),dwarfRate=d&&({M:{unit:4,character:8},T:{unit:2,character:5},I:{unit:3,character:5}}[s.key]);return sum+(u.upgrades&&u.upgrades[s.key]?(character?(dwarfRate?.character??elfRate?.character??s.character):(dwarfRate?.unit??elfRate?.unit??s.unit)*m):0);},0);
-    const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3:0),0);
+    const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3*(character?1:m):0),0);
     const weapons=[...new Set([...(u.meleeWeapons||[]),u.weapon||"handWeapon"])];
     const ranged=u.rangedWeapon||(u.type==="archers"?"bow":null);
     const dwarfBase={dwarfInfantry:8};
@@ -47,7 +48,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   function weaponSlotsUsed(u){const melee=[...new Set([...(u.meleeWeapons||[]),u.weapon||"handWeapon"])].filter(w=>!["handWeapon","offhandWeapon"].includes(w));const ranged=u.rangedWeapon||(u.type==="archers"?"bow":null)||(u.type==="cavalry"&&elf()&&(u.freeCavalryOption||"bow")==="bow"?"bow":null);return melee.length+(ranged?1:0);}
   function addMeleeWeapon(u,weapon,enabled){const extras=new Set(u.extraMeleeWeapons||[]);if(enabled)extras.add(weapon);else extras.delete(weapon);u.extraMeleeWeapons=[...extras];u.meleeWeapons=[...new Set(["handWeapon",u.weapon||"handWeapon",...u.extraMeleeWeapons])];if(!enabled&&u.weapon===weapon)u.weapon="handWeapon";}
   function extraWeaponChecks(u,options,available){available.filter(w=>w!==u.weapon).forEach(w=>{const character=isCharacterType(u.type),cavalry=u.type==="cavalry",cost=w==="greatWeapon"?(character?"+4 pts":"+2/model"):w==="halberd"?(character?"+4 pts":"+1/model"):w==="lance"?(character?"+4 pts":"+2/model"):w==="spear"?(character?(u.mounted?"+2 pts":""):(elf()&&(u.type==="swordsmen"||(cavalry&&(u.freeCavalryOption||"bow")==="spear"))?"free":"+1/model")):"";const checked=(u.extraMeleeWeapons||[]).includes(w),disabled=!checked&&weaponSlotsUsed(u)>=2;options.append(check("Also equip "+({"spear":"spear","halberd":"halberd","greatWeapon":"great weapon","lance":"lance"}[w]||w),{cost,checked,disabled,onChange:v=>{if(v&&weaponSlotsUsed(u)>=2)return;addMeleeWeapon(u,w,v);updateTotals();renderRows();}}));});}
-  function updateTotals(){let sum=0;list.querySelectorAll(".army-row").forEach((row,i)=>{const cost=unitPoints(army[i]);sum+=cost;row.querySelector(".army-cost").textContent=fmt(cost)+" pts";});total.textContent=fmt(sum)+" pts";addButton.disabled=army.length>=6;addButton.textContent=army.length>=6?"6 / 6 Units":"＋ Add Unit ("+army.length+"/6)";const message=validateArmy(army,faction)||"";const note=$("roster-validation");if(note){note.textContent=message||"Every selected unit is available in your collection.";note.classList.toggle("invalid",!!message);note.classList.toggle("valid",!message);}startButton.disabled=!army.length||!!message;}
+  function updateTotals(){let sum=0;list.querySelectorAll(".army-row").forEach((row,i)=>{const cost=unitPoints(army[i]);sum+=cost;row.querySelector(".army-cost").textContent=fmt(cost)+" pts";});total.textContent=fmt(sum)+" pts"+(campaignMode&&campaignLimit!==null?" / "+fmt(campaignLimit)+" available":"");addButton.disabled=army.length>=6;addButton.textContent=army.length>=6?"6 / 6 Units":"＋ Add Unit ("+army.length+"/6)";const message=validateArmy(army,faction)||"";const note=$("roster-validation");if(note){note.textContent=message||"Every selected unit is available in your collection.";note.classList.toggle("invalid",!!message);note.classList.toggle("valid",!message);}startButton.disabled=!army.length||!!message||(campaignMode&&campaignLimit!==null&&sum>campaignLimit);if(campaignMode&&campaignLimit!==null&&sum>campaignLimit){note.textContent="Army costs "+fmt(sum-campaignLimit)+" points more than the available budget.";note.classList.add("invalid");note.classList.remove("valid");}}
   function renderRows(){
     list.replaceChildren();
     army.forEach((u,index)=>{
@@ -136,6 +137,6 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
   $("builder-back").addEventListener("click",onBack);
   addButton.addEventListener("click",()=>{if(army.length>=6)return;const u={type:"swordsmen",models:20};defaults(u);army.push(u);renderRows();});
   battleType?.addEventListener("change",()=>{if(siegeRoleWrap)siegeRoleWrap.hidden=battleType.value!=="siege";});
-  startButton.addEventListener("click",()=>{if(army.length&&!validateArmy(army,faction))onStart(army.map(u=>({...u})),faction,battleType?.value==="siege"?"siege":"skirmish",siegeRole?.value||"attacker");});
-  return {open:openBuilder,refresh:renderRows};
+  startButton.addEventListener("click",()=>{if(army.length&&!validateArmy(army,faction))onStart(army.map(u=>({...u})),faction,campaignMode?"skirmish":(battleType?.value==="siege"?"siege":"skirmish"),siegeRole?.value||"attacker",army.reduce((sum,u)=>sum+unitPoints(u),0));});
+  return {open:openBuilder,refresh:renderRows,configureCampaign,configureSkirmish};
 }
