@@ -136,7 +136,7 @@ function startRoguelikeBattle(army,faction,round,targetPoints){
  S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};
  $("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("roguelike-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;
  reset();
- army.forEach((cfg,i)=>{const u=S.units["p"+(i+1)];if(!u)return;if(cfg.currentWounds!=null&&u.isCharacter)u.characterWounds=Math.max(0,Math.min(u.stats.W,cfg.currentWounds));if(cfg.currentArtilleryWounds!=null&&u.isSiegeEngine)u.artilleryWounds=Math.max(0,Math.min(u.artilleryStartWounds,cfg.currentArtilleryWounds));});
+ army.forEach((cfg,i)=>{const id="p"+(i+1),u=S.units[id];if(!u)return;if(cfg.currentDamage!=null)u.damage=Math.max(0,Number(cfg.currentDamage)||0);if(cfg.currentWounds!=null&&u.isCharacter)u.characterWounds=Math.max(0,Math.min(u.stats.W,cfg.currentWounds));if(cfg.currentArtilleryWounds!=null&&u.isSiegeEngine)u.artilleryWounds=Math.max(0,Math.min(u.artilleryStartWounds,cfg.currentArtilleryWounds));if(cfg.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(cfg.mountType)){const rider=S.units[id+"r"];if(rider&&cfg.currentWounds!=null)rider.characterWounds=Math.max(0,Math.min(rider.stats.W,cfg.currentWounds));}});
  const actualEnemy=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);
  say("Roguelike · Round "+round+". Your army "+playerPoints+" pts; opponent "+actualEnemy+" pts (target "+targetPoints+").");setupCanvas();
 }
