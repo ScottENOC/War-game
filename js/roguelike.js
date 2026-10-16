@@ -17,9 +17,12 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
  const hide=()=>{el("roguelike-screen").hidden=true;};
  function show(){el("mainmenu").hidden=true;el("mode-screen").hidden=true;el("campaign-screen").hidden=true;el("collection-screen").hidden=true;el("armybuilder").hidden=true;el("game").hidden=true;el("roguelike-screen").hidden=false;}
  function open(){run=readRun()||blankRun();progress=readProgress();if(run.state==="battle"){run.state="ready";run.lastResult="The unfinished battle was abandoned. No casualties or rewards were recorded.";save();}show();render();}
+ function stageForRound(round){if(round%5!==0)return {battleType:"skirmish",siegeRole:"attacker",baseAllowance:500+(round-1)*100,enemyAllowance:500+(round-1)*100};const siegeIndex=Math.floor(round/5);const siegeRole=siegeIndex%2===1?"attacker":"defender";const baseAllowance=500+(round-1)*100;return {battleType:"siege",siegeRole,baseAllowance,enemyAllowance:Math.round(baseAllowance*(siegeRole==="defender"?1.5:1/1.5))};}
  function render(){
   el("roguelike-title").textContent=run.state==="defeat"?"Expedition Lost":"Roguelike Expedition";
-  el("roguelike-description").textContent=run.state==="setup"?"Choose a 1,000-point army from models you own. Enemy skirmish armies grow by 100 points per round.":run.state==="defeat"?"Your army has no surviving units. This run is over. Start a new expedition to try again.":"Round "+run.round+" · Reinforcement points: "+run.bank+" · Enemy allowance: "+(500+(run.round-1)*100)+" points.";
+  const stage=stageForRound(run.round);
+  el("roguelike-description").textContent=run.state==="setup"?"Choose a 1,000-point army from models you own. Enemy skirmish armies grow by 100 points per round, with sieges every fifth round.":run.state==="defeat"?"Your army has no surviving units. This run is over. Start a new expedition to try again.":"Round "+run.round+" · "+(stage.battleType==="siege"?"Siege — you are the "+stage.siegeRole+". ":"Skirmish. ")+"Reinforcement points: "+run.bank+" · Enemy allowance: "+stage.enemyAllowance+" points"+(stage.battleType==="siege"?" (base "+stage.baseAllowance+", adjusted for siege balance).":"")+".";
+
   const host=el("roguelike-content");host.replaceChildren();el("roguelike-skills").replaceChildren();
   if(run.state==="setup"){
    host.innerHTML='<p class="campaign-mission">Start with 1,000 points. Survivors retain their casualties, wounds and earned skills. You gain 50 reinforcement points after each victory.</p>';
@@ -81,7 +84,7 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
   const changeError=rosterChangeError(army,faction);if(changeError){const note=el("roster-validation");if(note){note.textContent=changeError;note.classList.add("invalid");note.classList.remove("valid");}return;}
   if(run.state==="setup"&&!previous.length&&armyPoints>1000){show();el("roguelike-description").textContent="Your starting army must not exceed 1,000 points.";return;}
   const spend=Math.max(0,armyPoints-previousPoints);if(previous.length&&spend>run.bank){show();el("roguelike-description").textContent="That roster costs more than your available reinforcement points.";return;}
-  run.bank=Math.max(0,run.bank-spend);run.army=army.map((u,i)=>({...u,id:"rogue-"+i,skills:{...(u.skills||{})},upgrades:{...(u.upgrades||{})}}));run.faction=faction;run.rosterPoints=armyPoints;run.state="battle";run.lastResult=null;save();onStartBattle(run.army,faction,run.round,500+(run.round-1)*100);
+  run.bank=Math.max(0,run.bank-spend);run.army=army.map((u,i)=>({...u,id:"rogue-"+i,skills:{...(u.skills||{})},upgrades:{...(u.upgrades||{})}}));run.faction=faction;run.rosterPoints=armyPoints;run.state="battle";run.lastResult=null;save();const stage=stageForRound(run.round);onStartBattle(run.army,faction,run.round,stage.baseAllowance,stage.battleType,stage.siegeRole);
  }
  function onBattleFinished(won,units){
   run.lostModels=Array.isArray(run.lostModels)?run.lostModels:[];
