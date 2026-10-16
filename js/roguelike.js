@@ -53,8 +53,31 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
   const cap=run.state==="setup"&&!initial?1000:Math.max(0,existingPoints+run.bank);
   save();hide();onBuildArmy(initial,cap,run.faction||"empire");
  }
+ function rosterChangeError(army,faction){
+  const previous=Array.isArray(run.army)?run.army:[];
+  if(!previous.length)return null;
+  if(faction!==run.faction)return "You cannot change faction during an expedition.";
+  if(army.length<previous.length)return "Veteran units cannot be dismissed. Casualties are permanent; add new units only with available points.";
+  for(let i=0;i<previous.length;i++){
+   const old=previous[i],next=army[i];
+   if(!next||next.type!==old.type)return "Existing units cannot be replaced or changed into a different unit type.";
+   if((Number(next.models)||1)<(Number(old.models)||1))return "You cannot remove surviving models from a veteran unit.";
+   for(const key of ["champion","lightArmour","heavyArmour","magicArmour","shield","barding","elvenArchery","bow","mounted"]){if(old[key]&&!next[key])return "Existing equipment and upgrades cannot be removed from a veteran unit.";}
+   for(const key of Object.keys(old.upgrades||{}))if(old.upgrades[key]&&!next.upgrades?.[key])return "Existing stat upgrades cannot be removed.";
+   for(const key of Object.keys(old.skills||{}))if(old.skills[key]&&!next.skills?.[key])return "Earned skills cannot be removed.";
+   if(old.rangedWeapon&&next.rangedWeapon!==old.rangedWeapon)return "Existing ranged weapons cannot be replaced.";
+   if(old.mounted&&next.mountType!==old.mountType)return "A veteran model's mount cannot be changed.";
+   if(old.type==="cavalry"&&run.faction==="highElves"&&old.freeCavalryOption&&next.freeCavalryOption!==old.freeCavalryOption)return "A veteran cavalry unit's free equipment cannot be changed.";
+   const oldWeapons=[...new Set([...(old.meleeWeapons||[]),...(old.weapon&&old.weapon!=="handWeapon"?[old.weapon]:[])])];
+   const nextWeapons=[...new Set([...(next.meleeWeapons||[]),...(next.weapon&&next.weapon!=="handWeapon"?[next.weapon]:[])])];
+   if(oldWeapons.some(w=>!nextWeapons.includes(w)))return "Existing melee weapons cannot be removed.";
+   if(calculatePoints&&calculatePoints([next],faction)<calculatePoints([old],faction))return "Existing units cannot be downgraded to recover points.";
+  }
+  return null;
+ }
  function startBattle(army,faction,armyPoints){
   const previous=Array.isArray(run.army)?run.army:[],previousPoints=Number(run.rosterPoints)||0;
+  const changeError=rosterChangeError(army,faction);if(changeError){const note=el("roster-validation");if(note){note.textContent=changeError;note.classList.add("invalid");note.classList.remove("valid");}return;}
   if(run.state==="setup"&&!previous.length&&armyPoints>1000){show();el("roguelike-description").textContent="Your starting army must not exceed 1,000 points.";return;}
   const spend=Math.max(0,armyPoints-previousPoints);if(previous.length&&spend>run.bank){show();el("roguelike-description").textContent="That roster costs more than your available reinforcement points.";return;}
   run.bank=Math.max(0,run.bank-spend);run.army=army.map((u,i)=>({...u,id:"rogue-"+i,skills:{...(u.skills||{})},upgrades:{...(u.upgrades||{})}}));run.faction=faction;run.rosterPoints=armyPoints;run.state="battle";run.lastResult=null;save();onStartBattle(run.army,faction,run.round,500+(run.round-1)*100);
