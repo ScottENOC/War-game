@@ -131,7 +131,7 @@ let persistenceReady = false;
 const BATTLE_SAVE_KEY = "warGameActiveBattleV1";
 const BATTLE_BACKUP_KEY = "warGameActiveBattleBackupV1";
 function clearBattleSave() {
- try { localStorage.removeItem(BATTLE_SAVE_KEY); } catch {}
+ try { localStorage.removeItem(BATTLE_SAVE_KEY); localStorage.removeItem(BATTLE_BACKUP_KEY); } catch {}
 }
 function saveBattleSnapshot() {
  if (!persistenceReady) return;
