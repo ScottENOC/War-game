@@ -1,7 +1,7 @@
-import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261015-terror-rules-v1";
+import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261016-roguelike-v1";
 import { createRoguelike } from "./roguelike.js?v=20261016-roguelike-v1";
-import { createArmyBuilder } from "./armyBuilder.js";
-import { createCollectionManager } from "./collection.js?v=20261015-infantry-names-v3";
+import { createArmyBuilder } from "./armyBuilder.js?v=20261016-roguelike-v1";
+import { createCollectionManager } from "./collection.js?v=20261016-roguelike-v1";
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js";
 import { createRules } from "./rules.js?v=20261015-fear-rules-v1";
