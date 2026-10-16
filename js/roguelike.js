@@ -62,7 +62,8 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
    const old=previous[i],next=army[i];
    if(!next||next.type!==old.type)return "Existing units cannot be replaced or changed into a different unit type.";
    if((Number(next.models)||1)<(Number(old.models)||1))return "You cannot remove surviving models from a veteran unit.";
-   for(const key of ["champion","lightArmour","heavyArmour","magicArmour","shield","barding","elvenArchery","bow","mounted"]){if(old[key]&&!next[key])return "Existing equipment and upgrades cannot be removed from a veteran unit.";}
+   for(const key of ["champion","lightArmour","heavyArmour","magicArmour","shield","barding","elvenArchery","bow","mounted"]){if(old[key]&&!next[key]&&!(key==="heavyArmour"&&next.magicArmour))return "Existing equipment and upgrades cannot be removed from a veteran unit.";}
+   if(old.champion&&old.championBonus&&next.championBonus!==old.championBonus)return "A veteran champion bonus cannot be changed.";
    for(const key of Object.keys(old.upgrades||{}))if(old.upgrades[key]&&!next.upgrades?.[key])return "Existing stat upgrades cannot be removed.";
    for(const key of Object.keys(old.skills||{}))if(old.skills[key]&&!next.skills?.[key])return "Earned skills cannot be removed.";
    if(old.rangedWeapon&&next.rangedWeapon!==old.rangedWeapon)return "Existing ranged weapons cannot be replaced.";
