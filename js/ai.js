@@ -37,7 +37,7 @@ function aiPivotAndAdvance(u,target){
   if(gap<=desiredGap+.15)return false;
   let route=findRoute(u,target,desiredGap),changedFormation=false;
   if(!route&&budget>=u.stats.M/2&&!u.isCharacter&&!u.isCavalry&&!u.isDragon&&!u.isSiegeEngine){
-    const original=Math.max(1,Math.floor(u.formationWidth||5)),maxWidth=Math.max(1,Math.min(u.models||1,12)),candidates=[original-1,original+1,original-2,original+2,1,3,5,7,maxWidth].filter((v,i,a)=>v>=1&&v<=maxWidth&&v!==original&&a.indexOf(v)===i);
+    const original=Math.max(1,Math.floor(u.formationWidth||5)),maxWidth=Math.max(1,Math.min(u.models||1,12)),candidates=[original-1,original+1,1,maxWidth].filter((v,i,a)=>v>=1&&v<=maxWidth&&v!==original&&a.indexOf(v)===i);
     for(const width of candidates){
       const old=u.formationWidth;u.formationWidth=width;
       if(canPlace(u,u.x,u.y,u.facing)){
