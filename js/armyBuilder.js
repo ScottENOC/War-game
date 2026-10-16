@@ -23,7 +23,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
     const e=elf(),d=dwarf(),m=u.models||1,character=isCharacterType(u.type),eagleKit=e&&(character||u.type==="cavalry")&&u.mountType==="eagle";
     if(u.type==="cannon")return d?85:80;if(u.type==="boltThrower")return 60;if(u.type==="pegasusChampion")return 110;if(u.type==="dwarfKingHaldric")return 210;if(u.type==="youngDragon")return 140;if(u.type==="dragon")return 220;if(u.type==="ancientDragon")return 320;
     const upgradeCost=statUpgrades.reduce((sum,s)=>{const elfRate=e&&(["WS","BS"].includes(s.key)?{unit:1,character:3}:s.key==="T"?{unit:6,character:10}:null),dwarfRate=d&&({M:{unit:4,character:8},T:{unit:2,character:5},I:{unit:3,character:5}}[s.key]);return sum+(u.upgrades&&u.upgrades[s.key]?(character?(dwarfRate?.character??elfRate?.character??s.character):(dwarfRate?.unit??elfRate?.unit??s.unit)*m):0);},0);
-    const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3*(character?1:m):0),0);
+    const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(u.skills&&u.skills[key]?3*(campaignMode?(character?1:m):1):0),0);
     const weapons=[...new Set([...(u.meleeWeapons||[]),u.weapon||"handWeapon"])];
     const ranged=u.rangedWeapon||(u.type==="archers"?"bow":null);
     const dwarfBase={dwarfInfantry:8};
