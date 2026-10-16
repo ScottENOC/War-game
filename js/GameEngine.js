@@ -104,7 +104,7 @@ function reformCombatPairs(){const pairs=[];units().filter(u=>u.engaged&&alive(u
 let render = () => {};
 const COMBAT = createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render: () => render(), endTurn, finishBattle, reformCombatPairs, pursueAfterBreak, panicNearby, leadership });
 const { resolveCombat, resolveBreak, continueBreakTests } = COMBAT;
-function checkSiegeDeadline(){if(S.battleType!=="siege"||S.turn<=10)return false;const castle=(S.terrain||[]).find(t=>t.type==="siegeCastle"),attackerSide=S.siegeRole==="attacker"?"player":"ai",breached=!!castle&&units().some(u=>u.side===attackerSide&&alive(u)&&!u.fled&&!u.wallLevel&&u.x>castle.left&&u.x<castle.right&&u.y>castle.top&&u.y<castle.bottom),playerAttacks=attackerSide==="player";finishBattle(breached?(playerAttacks?"Player wins the siege: the attackers have breached the castle.":"Opponent wins the siege: the attackers have breached the castle."):(playerAttacks?"Opponent wins the siege: the defenders hold the castle through turn 8.":"Player wins the siege: the defenders hold the castle through turn 8."));return true;}
+function checkSiegeDeadline(){if(S.battleType!=="siege"||S.turn<=10)return false;const castle=(S.terrain||[]).find(t=>t.type==="siegeCastle"),attackerSide=S.siegeRole==="attacker"?"player":"ai",breached=!!castle&&units().some(u=>u.side===attackerSide&&alive(u)&&!u.fled&&!u.wallLevel&&u.x>castle.left&&u.x<castle.right&&u.y>castle.top&&u.y<castle.bottom),playerAttacks=attackerSide==="player";finishBattle(breached?(playerAttacks?"Player wins the siege: the attackers have breached the castle.":"Opponent wins the siege: the attackers have breached the castle."):(playerAttacks?"Opponent wins the siege: the defenders hold the castle through turn 10.":"Player wins the siege: the defenders hold the castle through turn 10."));return true;}
 function endTurn(){S.combatResolved=false;units().forEach(u=>{u.charged=false;u.defendedWallCombat=false;if(!alive(u)||u.fled||!u.engagedWith||!alive(S.units[u.engagedWith])||S.units[u.engagedWith].fled){u.engaged=false;u.engagedWith=null;u.engagedSide=null;u.chargedSide=null;u.attackedFromSide=null;u.flankedBy=null;}});units().filter(u=>u.wallLevel&&!u.engaged&&u.wallSegment).forEach(u=>{u.cover="hard";u.wallDefence={wall:u.wallSegment,posture:"active",wasSkirmishing:true};});S.turn++;if(checkSiegeDeadline())return;say("Turn "+S.turn+" begins.");setPhase("charges");}
 function finishBattle(msg){
  if(S.finished)return;
@@ -142,16 +142,17 @@ function roguelikeUnitCost(config,faction){
  return base+(!fixed&&!character?skillCount*3*Math.max(0,models-1):0)+roguelikeCampaignStatCost(config,faction);
 }
 function roguelikeArmyPoints(army,faction){return army.reduce((sum,u)=>sum+roguelikeUnitCost(u,faction),0);}
-function startRoguelikeBattle(army,faction,round,targetPoints){
- campaignBattle=false;roguelikeBattle=true;S.battleType="skirmish";S.siegeRole="attacker";S.autoTerrain=true;S.terrainSeed=Date.now();
+function startRoguelikeBattle(army,faction,round,targetPoints,battleType="skirmish",siegeRole="attacker"){
+ campaignBattle=false;roguelikeBattle=true;S.battleType=battleType;S.siegeRole=siegeRole;S.autoTerrain=true;S.terrainSeed=Date.now();
  const playerForce=createUnitsFromArmy(army,faction),playerPoints=roguelikeArmyPoints(army,faction),basePoints=army.reduce((sum,u)=>sum+unitCost(u,faction),0);
- const aiRoster=buildOpponentArmy(army,faction,{budgetMultiplier:targetPoints/Math.max(1,basePoints)}),aiForce=createUnitsFromArmy(aiRoster,faction);
+ const siegeMultiplier=battleType==="siege"?(siegeRole==="defender"?1.5:1/1.5):1,enemyTarget=Math.round(targetPoints*siegeMultiplier);
+ const aiRoster=buildOpponentArmy(army,faction,{budgetMultiplier:enemyTarget/Math.max(1,basePoints),siege:battleType==="siege"}),aiForce=createUnitsFromArmy(aiRoster,faction);
  S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};
  $("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("roguelike-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;
  reset();
  army.forEach((cfg,i)=>{const id="p"+(i+1),u=S.units[id];if(!u)return;if(cfg.currentDamage!=null)u.damage=Math.max(0,Number(cfg.currentDamage)||0);if(cfg.currentWounds!=null&&u.isCharacter)u.characterWounds=Math.max(0,Math.min(u.stats.W,cfg.currentWounds));if(cfg.currentArtilleryWounds!=null&&u.isSiegeEngine)u.artilleryWounds=Math.max(0,Math.min(u.artilleryStartWounds,cfg.currentArtilleryWounds));if(cfg.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(cfg.mountType)){const rider=S.units[id+"r"];if(rider&&cfg.currentWounds!=null)rider.characterWounds=Math.max(0,Math.min(rider.stats.W,cfg.currentWounds));}});
  const actualEnemy=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);
- say("Roguelike · Round "+round+". Your army "+playerPoints+" pts; opponent "+actualEnemy+" pts (target "+targetPoints+").");setupCanvas();
+ say("Roguelike · Round "+round+" · "+(battleType==="siege"?"Siege — you are the "+siegeRole+". ":"Skirmish. ")+"Your army "+playerPoints+" pts; opponent "+actualEnemy+" pts (target "+enemyTarget+")."+(battleType==="siege"?" The attacker must breach the castle by the end of turn 10; otherwise the defender wins.":""));setupCanvas();
 }
 function startCampaignBattle(army,enemyConfig){
  S.autoTerrain=true;S.terrainSeed=Date.now();const playerUnits=createUnitsFromArmy(army,"empire");
