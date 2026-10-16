@@ -58,9 +58,17 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
  }
  function onBattleFinished(won,units){
   const surviving=run.army.map((cfg,i)=>{
-   const u=units.find(x=>x.id==="p"+(i+1));
+   const id="p"+(i+1),u=units.find(x=>x.id===id);
+   if(cfg.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(cfg.mountType)){
+    const rider=units.find(x=>x.id===id+"r");
+    const hostAlive=!!u&&u.models>0,riderAlive=!!rider&&rider.models>0;
+    if(hostAlive&&riderAlive)return {...cfg,models:1,currentDamage:u.damage||0,currentWounds:rider.characterWounds??rider.stats.W,currentArtilleryWounds:null,skills:{...(cfg.skills||{})},upgrades:{...(cfg.upgrades||{})}};
+    if(hostAlive&&!riderAlive)return {...cfg,type:cfg.mountType,models:1,mounted:false,mountType:"none",currentDamage:u.damage||0,currentWounds:null,currentArtilleryWounds:null,skills:{},upgrades:{}};
+    if(!hostAlive&&riderAlive)return {...cfg,mounted:false,mountType:"none",models:1,currentDamage:0,currentWounds:rider.characterWounds??rider.stats.W,currentArtilleryWounds:null,skills:{...(cfg.skills||{})},upgrades:{...(cfg.upgrades||{})}};
+    return null;
+   }
    if(!u||u.models<=0)return null;
-   return {...cfg,models:u.models,currentWounds:u.characterWounds??null,currentArtilleryWounds:u.artilleryWounds??null,skills:{...(cfg.skills||u.skills||{})},upgrades:{...(cfg.upgrades||{})}};
+   return {...cfg,models:u.models,currentDamage:u.damage||0,currentWounds:u.isCharacter?(u.characterWounds??u.stats.W):null,currentArtilleryWounds:u.isSiegeEngine?(u.artilleryWounds??null):null,skills:{...(cfg.skills||u.skills||{})},upgrades:{...(cfg.upgrades||{})}};
   }).filter(Boolean);
   run.army=surviving;
   if(!surviving.length){run.state="defeat";run.lastResult="Defeat. No units survived; this expedition has ended.";save();show();render();return;}
@@ -76,7 +84,7 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
   const selected=[];
   run.pendingSkills.forEach((u,i)=>{const radio=document.querySelector('input[name="rogue-skill-'+i+'"]:checked');if(radio)selected.push([u,radio.value]);});
   for(const [unit,key] of selected){const target=run.army.find(x=>x.id===unit.id)||run.army[unit._sourceIndex];if(target){target.skills=target.skills||{};target.skills[key]=true;}}
-  run.pendingSkills=[];run.state="ready";save();render();
+  run.pendingSkills=[];run.state="ready";run.rosterPoints=calculatePoints?calculatePoints(run.army,run.faction):run.rosterPoints;save();render();
  }
  el("roguelike-start").addEventListener("click",()=>{if(run.state==="defeat")run=blankRun();chooseArmy();});
  el("roguelike-continue").addEventListener("click",()=>{if(run.state==="skills"){applySkills();return;}chooseArmy();});
