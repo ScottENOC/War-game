@@ -8,3 +8,7 @@ export function hasMovementUndo(S,u){const e=u&&S.movementUndoByUnit?.[u.id];ret
 export function undoMovementAction(S,u){if(!hasMovementUndo(S,u))return false;const e=S.movementUndoByUnit[u.id],last=e.stack.pop();restore(u,last.before);return true;}
 
 export function canReverseTurn(S,u,direction){const e=u&&S.movementUndoByUnit?.[u.id],p=e&&e.turn===S.turn&&e.phase===S.phase?e.stack[e.stack.length-1]:null;if(!p)return false;const opposite=direction==="left"?"turn-right":"turn-left";if(p.label!==opposite)return false;const current=captureMovementState(u),candidate={...current,facing:current.facing+(direction==="left"?-Math.PI/4:Math.PI/4)};return sameGeometry(current,p.after)&&sameGeometry(candidate,p.before);}
+
+export function getLastMovementAction(S,u){const e=u&&S.movementUndoByUnit?.[u.id];return e&&e.turn===S.turn&&e.phase===S.phase?e.stack[e.stack.length-1]||null:null;}
+export function sameMovementGeometry(a,b){return sameGeometry(a,b);}
+export function restoreMovementState(u,s){if(u&&s)restore(u,s);}
