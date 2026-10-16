@@ -79,9 +79,21 @@ function aiSiegeLadder(u){
         for(const wall of walls){const ax=wall.x1*BATTLEFIELD_WIDTH_IN,ay=wall.y1*fieldHeightIn(),bx=wall.x2*BATTLEFIELD_WIDTH_IN,by=wall.y2*fieldHeightIn(),dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy||1,p=Math.max(0,Math.min(1,((stair.x*BATTLEFIELD_WIDTH_IN-ax)*dx+(stair.y*fieldHeightIn()-ay)*dy)/l2)),x=(ax+dx*p)/BATTLEFIELD_WIDTH_IN,y=(ay+dy*p)/fieldHeightIn(),dd=Math.hypot((stair.x-x)*BATTLEFIELD_WIDTH_IN,(stair.y-y)*fieldHeightIn());if(!near||dd<near.d)near={wall,x,y,d:dd};}
         if(near){u.x=near.x;u.y=near.y;u.wallLevel=true;u.wallSegment=near.wall;u.cover="hard";u.wallDefence={wall:near.wall,posture:"active",wasSkirmishing:!!u.skirmishing};u.skirmishing=true;u.moveUsed=u.stats.M;u.moved=true;say(u.name+" climbs the inner stairs to the battlements.");return true;}
       }else{
-        const dx=(stair.x-u.x)*BATTLEFIELD_WIDTH_IN,dy=(stair.y-u.y)*fieldHeightIn(),length=Math.hypot(dx,dy)||1,travel=Math.min(Math.max(0,u.stats.M-u.moveUsed),d),steps=Math.max(1,Math.ceil(travel/.1));let best=0;
-        for(let i=1;i<=steps;i++){const n=travel*i/steps,x=u.x+dx/length*n/BATTLEFIELD_WIDTH_IN,y=u.y+dy/length*n/fieldHeightIn();if(!canPlace(u,x,y,u.facing))break;best=n;}
-        if(best>0){u.x+=dx/length*best/BATTLEFIELD_WIDTH_IN;u.y+=dy/length*best/fieldHeightIn();u.moveUsed+=best;u.moved=true;say(u.name+" moves toward the castle stairway.");return true;}
+        const route=findRoute(u,stair,2.2);
+        if(route&&route.length){
+          const frontIn=shape(u).front/PX_PER_IN();let travelled=0;
+          for(const point of route){
+            const angle=point.dir*Math.PI/4,turn=normalizeTurn(angle-u.facing),turnCost=Math.abs(turn)*frontIn;
+            if(u.moveUsed+turnCost>u.stats.M+.001)break;
+            if(turnCost>.02&&!canPlace(u,u.x,u.y,angle))break;
+            const moveCost=terrainMovementCost(terrain(),u.x,u.y,point.x,point.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
+            if(u.moveUsed+turnCost+moveCost>u.stats.M+.001||!canPlace(u,point.x,point.y,angle))break;
+            u.facing=angle;u.moveUsed+=turnCost;u.x=point.x;u.y=point.y;u.moveUsed+=moveCost;u.moved=true;travelled+=moveCost;
+          }
+          if(travelled>0){say(u.name+" takes a passable route toward "+(stair.label||"the castle stairway")+".");return true;}
+        }
+        say(u.name+" cannot find a passable route to the castle stairway this turn.");return false;
+      }
       }
     }
     return false;
