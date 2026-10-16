@@ -128,11 +128,19 @@ const UI = createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget,
 render = UI.render;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, fireCannon, breathAttack, declareCharge, render, draw, $, say, dist, finishActivation, terrain:()=>S.terrain, rallyingCall });
 
-function startBattleWithArmy(army,faction,battleType="skirmish",siegeRole="attacker"){if(roguelikeBuilderMode){roguelikeBuilderMode=false;roguelike?.beginBattle(army,faction,army.reduce((sum,u)=>sum+unitCost(u,faction),0));return;}campaignBattle=false;S.battleType=battleType;S.siegeRole=siegeRole;S.autoTerrain=true;S.terrainSeed=Date.now();const budgetMultiplier=battleType==="siege"?(siegeRole==="attacker"?1/1.5:1.5):1;const playerForce=createUnitsFromArmy(army,faction),aiRoster=buildOpponentArmy(army,faction,{budgetMultiplier,siege:battleType==="siege"}),aiForce=createUnitsFromArmy(aiRoster,faction);S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};if(battleType==="siege"){const castle={left:.29,right:.71,top:.22,bottom:.78};Object.values(S.units).forEach(u=>{if(u.side==="player"){u.x=siegeRole==="defender"?.5:.12;u.y=.5;}else{u.x=siegeRole==="defender"?.12:.5;u.y=.5;}u.facing=u.side==="player"?(siegeRole==="defender"?0:0):Math.PI;});}const playerPoints=units().filter(u=>u.side==="player").reduce((sum,u)=>sum+(u.points||0),0),aiPoints=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();say((battleType==="siege"?"Siege · you are the "+siegeRole+". ":"Skirmish · ")+"Your army "+playerPoints+" pts; opponent "+aiPoints+" pts ("+(aiPoints>=playerPoints?"+"+(aiPoints-playerPoints):"−"+(playerPoints-aiPoints))+" pts). "+(battleType==="siege"?"The attacker receives 50% more budget; castle walls are T10/10 W and gates T8/6 W.":""));setupCanvas();}
+function startBattleWithArmy(army,faction,battleType="skirmish",siegeRole="attacker"){if(roguelikeBuilderMode){roguelikeBuilderMode=false;roguelike?.beginBattle(army,faction,roguelikeArmyPoints(army,faction));return;}campaignBattle=false;S.battleType=battleType;S.siegeRole=siegeRole;S.autoTerrain=true;S.terrainSeed=Date.now();const budgetMultiplier=battleType==="siege"?(siegeRole==="attacker"?1/1.5:1.5):1;const playerForce=createUnitsFromArmy(army,faction),aiRoster=buildOpponentArmy(army,faction,{budgetMultiplier,siege:battleType==="siege"}),aiForce=createUnitsFromArmy(aiRoster,faction);S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};if(battleType==="siege"){const castle={left:.29,right:.71,top:.22,bottom:.78};Object.values(S.units).forEach(u=>{if(u.side==="player"){u.x=siegeRole==="defender"?.5:.12;u.y=.5;}else{u.x=siegeRole==="defender"?.12:.5;u.y=.5;}u.facing=u.side==="player"?(siegeRole==="defender"?0:0):Math.PI;});}const playerPoints=units().filter(u=>u.side==="player").reduce((sum,u)=>sum+(u.points||0),0),aiPoints=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();say((battleType==="siege"?"Siege · you are the "+siegeRole+". ":"Skirmish · ")+"Your army "+playerPoints+" pts; opponent "+aiPoints+" pts ("+(aiPoints>=playerPoints?"+"+(aiPoints-playerPoints):"−"+(playerPoints-aiPoints))+" pts). "+(battleType==="siege"?"The attacker receives 50% more budget; castle walls are T10/10 W and gates T8/6 W.":""));setupCanvas();}
+function roguelikeUnitCost(config,faction){
+ const base=unitCost(config,faction),type=config.type,models=config.models||1;
+ const fixed=["cannon","boltThrower","youngDragon","dragon","ancientDragon","pegasusChampion","dwarfKingHaldric"].includes(type);
+ const character=["captain","lord","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric"].includes(type);
+ const skillCount=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].filter(key=>config.skills?.[key]).length;
+ return base+(!fixed&&!character?skillCount*3*Math.max(0,models-1):0);
+}
+function roguelikeArmyPoints(army,faction){return army.reduce((sum,u)=>sum+roguelikeUnitCost(u,faction),0);}
 function startRoguelikeBattle(army,faction,round,targetPoints){
  campaignBattle=false;roguelikeBattle=true;S.battleType="skirmish";S.siegeRole="attacker";S.autoTerrain=true;S.terrainSeed=Date.now();
- const playerForce=createUnitsFromArmy(army,faction),playerPoints=army.reduce((sum,u)=>sum+unitCost(u,faction),0);
- const aiRoster=buildOpponentArmy(army,faction,{budgetMultiplier:targetPoints/Math.max(1,playerPoints)}),aiForce=createUnitsFromArmy(aiRoster,faction);
+ const playerForce=createUnitsFromArmy(army,faction),playerPoints=roguelikeArmyPoints(army,faction),basePoints=army.reduce((sum,u)=>sum+unitCost(u,faction),0);
+ const aiRoster=buildOpponentArmy(army,faction,{budgetMultiplier:targetPoints/Math.max(1,basePoints)}),aiForce=createUnitsFromArmy(aiRoster,faction);
  S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};
  $("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("roguelike-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;
  reset();
@@ -190,7 +198,7 @@ roguelike=createRoguelike({
  onReturnMenu:showMainMenu,
  grantModel:(category,round)=>collectionManager?.grantRoguelikeModel(category,round),
  grantLootbox:source=>collectionManager?.grantLootbox(source),
- calculatePoints:(army,faction)=>army.reduce((sum,u)=>sum+unitCost(u,faction),0),
+ calculatePoints:roguelikeArmyPoints,
  resetProgress:()=>{}
 });
 $("battle-return").addEventListener("click",()=>{ $("battle-return").hidden=true;showCollection();collectionManager?.open();});
