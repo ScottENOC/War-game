@@ -103,5 +103,41 @@
 <p class="subtle">Your opponent builds its own mixed-arms roster and aims to stay within 10% of its target budget. Human armies can field a cannon; cannons can breach walls and penetrate multiple targets.</p>
 </div></section>
 <div id="game" hidden><canvas id="field" aria-label="Full-screen battlefield"></canvas><button id="battle-return" class="primary-button" hidden>Return to Collection</button><div id="hud"><div class="cards" id="enemycards" aria-label="Opponent units"></div><div id="battle-points" aria-live="polite"></div><div id="actions" aria-label="Battle actions"></div><div class="cards" id="playercards" aria-label="Your units"></div></div><button id="logtoggle" aria-label="Battle log" title="Battle log">▤</button><section id="logpanel" aria-label="Battle log"><div id="loghead"><button id="logclose" aria-label="Close log">×</button></div><div id="log"></div></section><section id="rollview" aria-label="Melee combat dice log" aria-live="polite"><button id="rollclose" aria-label="Close dice log">×</button><div id="rollcontent"></div></section></div>
-<script type="module" src="js/main.js?v=20261016-ai-pathfinding-v3"></script>
+<script>
+(function(){
+ var records=[];
+ function report(message){
+  records.push(message);
+  var panel=document.getElementById("startup-diagnostics");
+  var output=document.getElementById("startup-diagnostics-output");
+  if(output)output.textContent=records.slice(-10).map(function(x,i){return (i+1)+". "+x;}).join("\n\n");
+  if(panel)panel.hidden=false;
+  var toggle=document.getElementById("startup-diagnostics-toggle");
+  if(toggle)toggle.textContent="Diagnostics ("+records.length+")";
+ }
+ window.addEventListener("error",function(e){
+  if(e.target&&e.target!==window){report("Failed resource: "+(e.target.src||e.target.href||e.target.tagName||"unknown"));return;}
+  report("JavaScript error: "+(e.message||"unknown")+"\nFile: "+(e.filename||"unknown")+"\nLine: "+(e.lineno||"?")+", column: "+(e.colno||"?"));
+ },true);
+ window.addEventListener("unhandledrejection",function(e){
+  var r=e.reason;report("Unhandled promise rejection: "+(r&&(r.stack||r.message)||String(r||"unknown")));
+ });
+ window.addEventListener("DOMContentLoaded",function(){
+  document.getElementById("startup-diagnostics-toggle").addEventListener("click",function(){var p=document.getElementById("startup-diagnostics");p.hidden=!p.hidden;});
+  document.getElementById("startup-diagnostics-close").addEventListener("click",function(){document.getElementById("startup-diagnostics").hidden=true;});
+  window.setTimeout(function(){if(!window.__warGameStartupReady&&records.length===0)report("Startup did not finish within 8 seconds. A JavaScript module may have failed to load or initialisation may have stopped early.");},8000);
+ });
+ window.__warGameStartupReady=false;
+})();
+</script>
+<div id="startup-diagnostics-toggle-wrap"><button id="startup-diagnostics-toggle" type="button">Diagnostics</button></div>
+<section id="startup-diagnostics" role="alert" aria-live="assertive" hidden>
+ <div id="startup-diagnostics-card">
+  <h2>Game diagnostics</h2>
+  <p>If the game will not start, screenshot these details and send them in ChatGPT.</p>
+  <pre id="startup-diagnostics-output"></pre>
+  <div class="startup-diagnostics-actions"><button id="startup-diagnostics-close" type="button">Close</button></div>
+ </div>
+</section>
+\n<script type="module" src="js/main.js?v=20261017-startup-diagnostics-v1"></script>
 </body></html>
