@@ -5,7 +5,7 @@ const skillChoices=[
  {key:"steadfast",label:"Steadfast",description:"Ignore combat-result penalties on break tests."},
  {key:"skirmish",label:"Skirmish",description:"Gain skirmisher movement and 360° shooting."}
 ];
-const blankRun=()=>({round:1,bank:0,army:null,faction:"empire",state:"setup",pendingSkills:[],lastResult:null,lostModels:[]});
+const blankRun=()=>({round:1,bank:0,army:null,faction:"empire",state:"setup",pendingSkills:[],lastResult:null,lostModels:[],completedFights:0});
 const freshProgress=()=>({unlockedRounds:[]});
 const veteranStats=[{key:"S",label:"+1 Strength"},{key:"T",label:"+1 Toughness"},{key:"WS",label:"+1 Weapon Skill"},{key:"BS",label:"+1 Ballistic Skill"},{key:"Ld",label:"+1 Leadership"},{key:"MI",label:"+1 Movement and Initiative"}];
 export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantModel,grantLootbox,calculatePoints,resetProgress}){
@@ -115,7 +115,8 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
   const completed=run.round,first=!progress.unlockedRounds.includes(completed);
   let rewards=[];
   if(first){const category=completed%10===0?"character":completed%5===0?"cavalry":"infantry";const reward=grantModel(category,completed);if(reward)rewards.push("Unlocked "+reward+" (first victory at round "+completed+").");progress.unlockedRounds.push(completed);}
-  if((completed<=10&&completed%2===0)||completed>10){grantLootbox("roguelike");rewards.push("One lootbox earned.");}
+  const completedFight=(Number(run.completedFights)||0)+1;run.completedFights=completedFight;
+  if((completedFight<=10&&completedFight%2===0)||completedFight>10){grantLootbox("roguelike");rewards.push("One lootbox earned.");}
   run.rosterPoints=calculatePoints?calculatePoints(run.army,run.faction):run.rosterPoints;run.bank+=50;run.round++;run.state="skills";run.pendingSkills=surviving.map((u,i)=>({...u,_sourceIndex:i}));run.lastResult="Victory in round "+completed+". "+rewards.join(" ")+" Gained 50 reinforcement points.";
   save();show();render();
  }
