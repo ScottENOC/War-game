@@ -1,6 +1,6 @@
 import { terrainMovementCost, pointSegmentDistance } from "./terrain.js";
 import { captureMovementState, commitMovementAction, hasMovementUndo, getLastMovementAction, sameMovementGeometry, restoreMovementState } from "./movementUndo.js?v=20261016-movement-undo-v1";
-import { captureMovementState, commitMovementAction } from "./movementUndo.js?v=20261016-movement-undo-v1";
+
 export function createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, fireCannon, breathAttack, declareCharge, render, draw, $, say, dist, finishActivation, terrain = () => [], rallyingCall }) {
   let drag=null;const pointers=new Map();let pinch=null;
 const canJoin=(hero,host)=>!!hero&&!!host&&hero.isCharacter&&!host.isCharacter&&!!hero.mounted===!!host.isCavalry;
