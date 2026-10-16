@@ -7,6 +7,7 @@ const skillChoices=[
 ];
 const blankRun=()=>({round:1,bank:0,army:null,faction:"empire",state:"setup",pendingSkills:[],lastResult:null});
 const freshProgress=()=>({unlockedRounds:[]});
+const veteranStats=[{key:"S",label:"+1 Strength"},{key:"T",label:"+1 Toughness"},{key:"WS",label:"+1 Weapon Skill"},{key:"BS",label:"+1 Ballistic Skill"},{key:"Ld",label:"+1 Leadership"},{key:"MI",label:"+1 Movement and Initiative"}];
 export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantModel,grantLootbox,calculatePoints,resetProgress}){
  let progress=readProgress(),run=readRun()||blankRun();
  const el=id=>$(id);
@@ -36,7 +37,8 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
     const h=document.createElement("h2");h.textContent=unit.name||unit.type;card.append(h);
     const group=document.createElement("div");group.className="campaign-choice-list";
     const available=skillChoices.filter(s=>!unit.skills?.[s.key]);
-    (available.length?available:skillChoices).forEach((s,j)=>{const label=document.createElement("label");label.className="campaign-choice";const radio=document.createElement("input");radio.type="radio";radio.name="rogue-skill-"+i;radio.value=s.key;if(j===0)radio.checked=true;const copy=document.createElement("span");copy.innerHTML="<b>"+s.label+"</b><small>"+s.description+"</small>";label.append(radio,copy);group.append(label);});
+    const choices=available.length?available:veteranStats.map(s=>({key:"veteran_"+s.key,label:s.label,description:"Permanent veteran improvement earned through survival."}));
+    choices.forEach((s,j)=>{const label=document.createElement("label");label.className="campaign-choice";const radio=document.createElement("input");radio.type="radio";radio.name="rogue-skill-"+i;radio.value=s.key;if(j===0)radio.checked=true;const copy=document.createElement("span");copy.innerHTML="<b>"+s.label+"</b><small>"+(s.description||"")+"</small>";label.append(radio,copy);group.append(label);});
     card.append(group);skillsHost.append(card);
    });
    el("roguelike-start").hidden=true;el("roguelike-continue").hidden=false;el("roguelike-continue").textContent="Apply skills and prepare next round";return;
@@ -83,7 +85,7 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
  function applySkills(){
   const selected=[];
   run.pendingSkills.forEach((u,i)=>{const radio=document.querySelector('input[name="rogue-skill-'+i+'"]:checked');if(radio)selected.push([u,radio.value]);});
-  for(const [unit,key] of selected){const target=run.army.find(x=>x.id===unit.id)||run.army[unit._sourceIndex];if(target){target.skills=target.skills||{};target.skills[key]=true;}}
+  for(const [unit,key] of selected){const target=run.army.find(x=>x.id===unit.id)||run.army[unit._sourceIndex];if(!target)continue;if(key.startsWith("veteran_")){const stat=key.slice(8);target.campaignStats=target.campaignStats||{};if(stat==="MI")target.campaignStats.MI=(target.campaignStats.MI||0)+1;else target.campaignStats[stat]=(target.campaignStats[stat]||0)+1;}else{target.skills=target.skills||{};target.skills[key]=true;}}
   run.pendingSkills=[];run.state="ready";run.rosterPoints=calculatePoints?calculatePoints(run.army,run.faction):run.rosterPoints;save();render();
  }
  el("roguelike-start").addEventListener("click",()=>{if(run.state==="defeat")run=blankRun();chooseArmy();});
