@@ -170,7 +170,17 @@ function validateArmy(army,faction){
 let armyBuilder=null;
 armyBuilder=createArmyBuilder({ $, onStart:startBattleWithArmy, onBack:showCollection, validateArmy });
 narrativeCampaign=createNarrativeCampaign({$,onStartBattle:startCampaignBattle,onReturnMenu:showMainMenu});
-collectionManager=createCollectionManager({$,onSkirmish:showSkirmishBuilder,onMainMenu:showMainMenu,onNarrativeCampaign:()=>narrativeCampaign.open()});
+collectionManager=createCollectionManager({$,onSkirmish:showSkirmishBuilder,onMainMenu:showMainMenu,onNarrativeCampaign:()=>narrativeCampaign.open(),onRoguelike:()=>roguelike?.open(),onResetCollection:()=>roguelike?.resetProgress()});
+roguelike=createRoguelike({
+ $,
+ onBuildArmy:(army,limit,faction)=>{roguelikeBuilderMode=true;armyBuilder.configureCampaign(army,limit,faction);armyBuilder.open();},
+ onStartBattle:(army,faction,round,targetPoints)=>startRoguelikeBattle(army,faction,round,targetPoints),
+ onReturnMenu:showMainMenu,
+ grantModel:(category,round)=>collectionManager?.grantRoguelikeModel(category,round),
+ grantLootbox:source=>collectionManager?.grantLootbox(source),
+ calculatePoints:(army,faction)=>army.reduce((sum,u)=>sum+unitCost(u,faction),0),
+ resetProgress:()=>{}
+});
 $("battle-return").addEventListener("click",()=>{ $("battle-return").hidden=true;showCollection();collectionManager?.open();});
 })();
 }
