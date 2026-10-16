@@ -6,13 +6,13 @@ function aiTargetScore(u,t,preferRanged){const dx=(t.x-u.x)*BATTLEFIELD_WIDTH_IN
 function aiBestTarget(u,targets,preferRanged){return targets.slice().sort((a,b)=>aiTargetScore(u,a,preferRanged)-aiTargetScore(u,b,preferRanged))[0]||null;}
 function normalizeTurn(a){while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;return a;}
 function findRoute(u,target,desiredGap){
-  const step=.025,frontIn=shape(u).front/PX_PER_IN(),minX=Math.ceil((-.0-u.x)/step),maxX=Math.floor((1-u.x)/step),minY=Math.ceil((-.0-u.y)/step),maxY=Math.floor((1-u.y)/step),dirs=Array.from({length:8},(_,i)=>i*Math.PI/4);
+  const step=.035,frontIn=shape(u).front/PX_PER_IN(),minX=Math.ceil((-.0-u.x)/step),maxX=Math.floor((1-u.x)/step),minY=Math.ceil((-.0-u.y)/step),maxY=Math.floor((1-u.y)/step),dirs=Array.from({length:8},(_,i)=>i*Math.PI/4);
   const position=(ix,iy)=>({x:u.x+ix*step,y:u.y+iy*step}),key=(ix,iy,d)=>ix+","+iy+","+d;
   const startDir=((Math.round((normalizeTurn(u.facing)+Math.PI*2)%(Math.PI*2)/(Math.PI/4)))%8),start={ix:0,iy:0,dir:startDir,g:0,f:Math.max(0,dist(u,target)-desiredGap),parent:null},best=new Map([[key(0,0,startDir),0]]);
   if(dist(u,target)<=desiredGap+.15)return [];
   const heap=[];const push=n=>{heap.push(n);let i=heap.length-1;while(i>0){const p=(i-1)>>1;if(heap[p].f<=heap[i].f)break;heap[i]=heap[p];i=p;}heap[i]=n;};const pop=()=>{const root=heap[0],last=heap.pop();if(heap.length){let i=0;while(true){let l=i*2+1,r=l+1;if(l>=heap.length)break;let m=r<heap.length&&heap[r].f<heap[l].f?r:l;if(heap[m].f>=last.f)break;heap[i]=heap[m];i=m;}heap[i]=last;}return root;};push(start);
   let found=null,expanded=0;
-  while(heap.length&&expanded<1800){
+  while(heap.length&&expanded<3200){
     const node=pop(),k=key(node.ix,node.iy,node.dir);if(node.g>(best.get(k)??Infinity)+1e-6)continue;expanded++;
     const p=position(node.ix,node.iy);
     if((node.ix!==0||node.iy!==0)&&dist(p,target)<=desiredGap+.18){found=node;break;}
