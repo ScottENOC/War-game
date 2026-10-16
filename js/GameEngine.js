@@ -112,7 +112,8 @@ function finishBattle(msg){
  const won=msg.toLowerCase().includes("player wins");
  if(won&&collectionManager&&!campaignBattle&&!roguelikeBattle){collectionManager.grantLootbox("skirmish");say("Skirmish victory reward: one lootbox added to your collection.");}
  say('<b>'+msg+'</b>');
- if(campaignBattle){campaignBattle=false;narrativeCampaign?.onBattleFinished(won);$("battle-return").hidden=true;return;}\n if(roguelikeBattle){roguelikeBattle=false;roguelike?.onBattleFinished(won,units().filter(u=>u.side==="player"));$("battle-return").hidden=true;return;}
+ if(campaignBattle){campaignBattle=false;narrativeCampaign?.onBattleFinished(won);$("battle-return").hidden=true;return;}
+ if(roguelikeBattle){roguelikeBattle=false;roguelike?.onBattleFinished(won,units().filter(u=>u.side==="player"));$("battle-return").hidden=true;return;}
  $("battle-return").hidden=false;
  render();
 }
@@ -151,7 +152,7 @@ function showCollection(){$("game").hidden=true;$("armybuilder").hidden=true;$("
 function showSkirmishBuilder(){$("game").hidden=true;$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=false;armyBuilder?.open();}
 let collectionManager=null;
 let narrativeCampaign=null;
-let campaignBattle=false;
+let roguelike=null;\nlet campaignBattle=false,roguelikeBattle=false,roguelikeBuilderMode=false;
 function validateArmy(army,faction){
  if(collectionManager?.getBypass())return "";
  const owned=collectionManager?.getInventory()||[],used=new Set(),shortages=[];
