@@ -167,7 +167,7 @@ function startBattleWithArmy(army,faction,battleType="skirmish",siegeRole="attac
 function roguelikeCampaignStatCost(config,faction){
  const m=config.models||1,dwarf=faction==="dwarfs",elf=faction==="highElves",character=["captain","lord","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric"].includes(config.type),s=config.campaignStats||{};
  const rate={M:character?(dwarf?8:5):(dwarf?4:2)*m,WS:character?(elf?3:5):(elf?1:2)*m,BS:character?(elf?3:5):(elf?1:2)*m,S:character?6:3*m,T:character?(dwarf?5:elf?10:8):(dwarf?2:elf?6:4)*m,I:character?(dwarf?5:3):(dwarf?3:1)*m,Ld:character?3:m};
- return (s.S||0)*rate.S+(s.T||0)*rate.T+(s.WS||0)*rate.WS+(s.BS||0)*rate.BS+(s.Ld||0)*rate.Ld+(s.MI||0)*(rate.M+rate.I);
+ return (s.M||0)*rate.M+(s.S||0)*rate.S+(s.T||0)*rate.T+(s.WS||0)*rate.WS+(s.BS||0)*rate.BS+(s.I||0)*rate.I+(s.Ld||0)*rate.Ld+(s.MI||0)*(rate.M+rate.I);
 }
 function roguelikeUnitCost(config,faction){
  const base=unitCost(config,faction),type=config.type,models=config.models||1;
