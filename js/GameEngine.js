@@ -193,8 +193,9 @@ function startRoguelikeBattle(army,faction,round,targetPoints,battleType="skirmi
 function startPoliticalCampaignBattle({army, faction="empire", enemyArmy, enemyFaction="empire", onComplete}){
  if(!Array.isArray(army)||!army.length||!Array.isArray(enemyArmy)||!enemyArmy.length)return false;
  S.battleType="skirmish";S.siegeRole="attacker";S.autoTerrain=true;S.terrainSeed=Date.now();
- const playerForce=createUnitsFromArmy(army,faction),enemyForce=createUnitsFromArmy(enemyArmy,enemyFaction);
- S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(enemyForce).filter(([id])=>id.startsWith("a")))};
+ const playerForce=createUnitsFromArmy(army,faction),enemySource=createUnitsFromArmy(enemyArmy,enemyFaction),enemyForce={};
+ for(const [oldId,unit] of Object.entries(enemySource).filter(([id])=>id.startsWith("p"))){const id=oldId.replace(/^p/,"a");const copy={...unit,id,side:"ai",attachedCharacters:(unit.attachedCharacters||[]).map(characterId=>characterId.replace(/^p/,"a")),attachedTo:unit.attachedTo?unit.attachedTo.replace(/^p/,"a"):null};enemyForce[id]=copy;}
+ S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...enemyForce};
  campaignBattle=false;roguelikeBattle=false;grandCampaignBattle=true;grandCampaignBattleComplete=onComplete;
  $("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("roguelike-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("grand-campaign-screen").hidden=true;$("game").hidden=false;$("battle-return").hidden=true;
  reset();say("Grand campaign battle · "+faction+" against "+enemyFaction+". Victory or defeat will change the campaign.");setupCanvas();return true;
