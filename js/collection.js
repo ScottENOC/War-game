@@ -57,7 +57,7 @@ function load(){
     const type=legacyTypes[m.type]||m.type||"swordsmen";
     const faction=["empire","highElves","dwarfs"].includes(m.faction)?m.faction:"empire";
     const weapon=typeof m.weapon==="string"&&m.weapon?m.weapon:"handWeapon";
-    const safe={...m,id:typeof m.id==="string"&&m.id?m.id:"recovered-"+(i+1),faction,type,weapon,shield:!!m.shield,mounted:!!m.mounted,mountType:m.mountType||(m.mounted?"horse":"none"),backWeapons:Array.isArray(m.backWeapons)?m.backWeapons.filter(w=>typeof w==="string"):[],components:Array.isArray(m.components)?m.components:[]};
+    const safe={...m,id:typeof m.id==="string"&&m.id?m.id:"recovered-"+(i+1),faction,type,weapon:faction==="dwarfs"&&weapon==="bow"?"crossbow":weapon,shield:!!m.shield,mounted:!!m.mounted,mountType:m.mountType||(m.mounted?"horse":"none"),backWeapons:Array.isArray(m.backWeapons)?m.backWeapons.filter(w=>typeof w==="string").map(w=>faction==="dwarfs"&&w==="bow"?"crossbow":w):[],components:Array.isArray(m.components)?m.components.map(x=>faction==="dwarfs"&&x==="both_bow"?"both_crossbow":faction==="dwarfs"&&x==="back_bow"?"back_crossbow":x):[]};
     if(typeof safe.name!=="string"||!safe.name.trim()){
      const typeLabel=labels[type]||String(type).replace(/([a-z])([A-Z])/g,"$1 $2");
      safe.name=(faction==="empire"?"Empire ":faction==="dwarfs"?"Dwarf ":"High Elf ")+typeLabel+" · "+(labels[weapon]||weapon);
@@ -84,6 +84,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  const modelLabel=m=>(m.name==="Aelthir, the Dawnwing"?"Aelthir, the Dawnwing":(m.faction==="empire"?"Empire ":m.faction==="dwarfs"?"Dwarf ":"High Elf ")+title(m.type))+" · "+title(m.weapon)+(m.offhandWeapon?" + Off-hand sword":"")+(m.shield?" + Shield":"")+((m.backWeapons||[]).length?" · Back: "+m.backWeapons.map(title).join(", "):"")+(m.mountType==="eagle"?" · Pegasus":m.mounted?" · Mounted":"");
  const canUseBit=(m,id)=>{
    const b=bitDefs.find(x=>x.id===id);if(!b)return false;
+   if(m.faction==="dwarfs"&&b.weapon==="bow")return false;
    if(b.kind==="backWeapon")return m.weapon!==b.weapon&&!(m.backWeapons||[]).includes(b.weapon);
    if(b.kind==="shield")return !m.shield&&(!["greatWeapon","halberd","bow"].includes(m.weapon)||m.faction==="dwarfs");
    if(b.kind==="mount")return (m.type==="captain"||m.type==="lord"||m.type==="dwarfCaptain"||m.type==="dwarfLord"||m.type==="cavalry")&&!m.mounted&&m.weapon!=="halberd"&&(id!=="eagle"||m.faction==="highElves")&&m.faction!=="dwarfs";
@@ -345,5 +346,8 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  return {getInventory:()=>data.models.map(m=>({...m})),getBypass:()=>!!data.bypass,grantLootbox,grantRoguelikeModel,open:()=>{ $("mainmenu").hidden=true;$("collection-screen").hidden=false;renderAll();}};
 }
 export function getCollectionSnapshot(){
- try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");return d&&Array.isArray(d.models)?d:starterData();}catch{return starterData();}
+ try{
+  const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(!d||!Array.isArray(d.models))return starterData();
+  return {...d,models:d.models.map(m=>m?.faction==="dwarfs"?{...m,weapon:m.weapon==="bow"?"crossbow":m.weapon,backWeapons:(m.backWeapons||[]).map(w=>w==="bow"?"crossbow":w),components:(m.components||[]).map(x=>x==="both_bow"?"both_crossbow":x==="back_bow"?"back_crossbow":x)}:m)};
+ }catch{return starterData();}
 }
