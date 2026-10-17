@@ -55,7 +55,7 @@ function commanderForFaction(f){
  const models=ownedModels(),owned=ownedCharacterIds();
  for(const c of LEGENDARY[f]||[])if(owned.has(c.id)){const m=models.find(x=>modelHas(x,c));return {id:c.id,name:c.name,kind:"legendary",modelId:m?.id||null};}
  if(LEGENDARY[f])return null;
- const m=models.find(x=>["captain","lord","dwarfCaptain","dwarfLord","dwarfKingHaldric","legendaryLord","shadowElf","pegasusChampion"].includes(x.type));
+ const m=models.find(x=>["captain","lord","dwarfCaptain","dwarfLord"].includes(x.type));
  return m?{id:"generic-"+m.id,name:m.name||"Generic Hero",kind:"generic",modelId:m.id}:null;
 }
 function gateText(f){return LEGENDARY[f]?(LEGENDARY[f].map(c=>c.name).join(" or ")):"a generic hero in your collection";}
