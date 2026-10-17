@@ -366,7 +366,46 @@ function renderCampaignMap(){
  const n=nodes[activeCampaign.commander.nodeId];const settlementRegion=activeCampaign.regions.find(r=>r.id===n.region);byId("grand-campaign-turn").textContent="TURN "+activeCampaign.turn;byId("grand-campaign-treasury").textContent=activeCampaign.treasury+" gold";
  byId("grand-campaign-commander").innerHTML="<strong>"+activeCampaign.commander.name+"</strong><span>"+(activeCampaign.commander.kind==="legendary"?"Legendary commander":"Generic hero")+"</span><span>Movement "+activeCampaign.commander.movement+"/"+activeCampaign.commander.maxMovement+"</span><span>Location: "+(CITIES.find(c=>c.id===n.region)?.name||"Road")+"</span>";
  byId("grand-campaign-node-detail").innerHTML="<strong>"+n.label+"</strong><span>"+({city:"City and regional seat",crossroads:"Road junction",port:"Port and sea route",river:"River crossing",border:"Regional border"}[n.type]||"Road")+"</span><span>"+(n.type==="river"?"Crossing costs 2 movement points.":"Move along connected roads to highlighted places.")+"</span>"+(n.type==="city"&&settlementRegion?.settlement?("<span>Ruler: "+(FACTION_BY_ID[settlementRegion.ownerFaction]?.name||FACTIONS[settlementRegion.ownerFaction]?.name||settlementRegion.ownerFaction)+"</span><span>Native culture: "+settlementRegion.nativeCulture+"</span><span>Population: "+Math.round(settlementRegion.settlement.population.total).toLocaleString()+"</span><span>Historic tier: "+settlementRegion.settlement.historicalTier+" · Fort: "+settlementRegion.settlement.fortification.style+" ("+Math.round(settlementRegion.settlement.fortification.condition)+"% condition)</span>"):"");
+ const battleRegion=n.type==="city"?activeCampaign.regions.find(r=>r.id===n.region):null;
+ const playerId=activeCampaign.playerPoliticalFaction,defenderId=battleRegion&&politicalOwner(battleRegion);
+ if(battleRegion&&defenderId&&defenderId!==playerId&&activeCampaign.factionStates.some(f=>f.id===defenderId&&f.alive)){
+  const battleButton=document.createElement("button");battleButton.type="button";battleButton.className="primary-button grand-campaign-battle-button";battleButton.textContent="Fight for "+battleRegion.name;battleButton.addEventListener("click",()=>launchCampaignBattle(battleRegion));byId("grand-campaign-node-detail").append(battleButton);
+ }
  byId("grand-campaign-event").textContent=activeCampaign.lastEvent||"Select a highlighted place connected by road.";if(firstRender||host.scrollWidth>host.clientWidth){const scale=map.clientWidth/1300;host.scrollLeft=Math.max(0,current.x*scale-host.clientWidth/2);}
+}
+function launchCampaignBattle(region){
+ if(!activeCampaign||!region||typeof window.startPoliticalCampaignBattle!=="function")return;
+ const playerId=activeCampaign.playerPoliticalFaction,enemyId=politicalOwner(region);
+ if(!enemyId||enemyId===playerId)return;
+ const playerArmy=factionArmy(activeCampaign,playerId),enemyArmy=factionArmy(activeCampaign,enemyId);
+ if(!playerArmy?.roster?.length||!enemyArmy?.roster?.length){activeCampaign.lastEvent="Cannot muster a valid army for this battle.";renderCampaignMap();return;}
+ const playerFaction=playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId),enemyFaction=enemyArmy.rosterFaction||rosterFactionForPoliticalFaction(enemyId);
+ const started=window.startPoliticalCampaignBattle({army:playerArmy.roster,faction:playerFaction,enemyArmy:enemyArmy.roster,enemyFaction,onComplete:result=>{
+  const survivors=(result.playerUnits||[]).filter(u=>u.models>0);
+  const enemySurvivors=(result.enemyUnits||[]).filter(u=>u.models>0);
+  playerArmy.roster=playerArmy.roster.map((config,i)=>({...config,models:Math.max(0,survivors[i]?.models??0),currentDamage:survivors[i]?.damage||0,currentWounds:survivors[i]?.characterWounds})).filter(config=>config.models>0);
+  enemyArmy.roster=enemyArmy.roster.map((config,i)=>({...config,models:Math.max(0,enemySurvivors[i]?.models??0),currentDamage:enemySurvivors[i]?.damage||0,currentWounds:enemySurvivors[i]?.characterWounds})).filter(config=>config.models>0);
+  playerArmy.points=Math.max(0,Math.round(playerArmy.roster.reduce((sum,u)=>sum+unitCost(u,playerFaction),0)));
+  enemyArmy.points=Math.max(0,Math.round(enemyArmy.roster.reduce((sum,u)=>sum+unitCost(u,enemyFaction),0)));
+  const playerState=activeCampaign.factionStates.find(f=>f.id===playerId),enemyState=activeCampaign.factionStates.find(f=>f.id===enemyId);
+  if(result.won){
+   const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:"occupy"});
+   playerArmy.region=region.id;playerArmy.nodeId="city-"+region.id;activeCampaign.commander.region=region.id;activeCampaign.commander.nodeId="city-"+region.id;
+   if(!playerArmy.roster.length){const reinforcements=createCampaignArmyRoster(playerId,250);playerArmy.roster=reinforcements.roster;playerArmy.points=reinforcements.points;}
+   activeCampaign.lastEvent="Victory at "+region.name+". "+outcome.summary;
+   if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
+  }else{
+   const home=playerState?.homeRegion||activeCampaign.startingRegion,homeNode="city-"+home;
+   activeCampaign.commander.region=home;activeCampaign.commander.nodeId=homeNode;playerArmy.region=home;playerArmy.nodeId=homeNode;
+   if(!playerArmy.roster.length){const reinforcements=createCampaignArmyRoster(playerId,250);playerArmy.roster=reinforcements.roster;playerArmy.points=reinforcements.points;}
+   activeCampaign.lastEvent="Defeat at "+region.name+". Your surviving forces retreat to "+(CITIES.find(c=>c.id===home)?.name||"your capital")+".";
+   if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
+  }
+  if(playerState){playerState.armyPoints=playerArmy.points;playerState.roster=playerArmy.roster;}
+  if(enemyState){enemyState.armyPoints=enemyArmy.points;enemyState.roster=enemyArmy.roster;}
+  saveCampaign();byId("grand-campaign-screen").hidden=false;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();
+ }});
+ if(!started){activeCampaign.lastEvent="The tactical battle could not be started.";renderCampaignMap();}
 }
 function moveCommander(id){
  if(!activeCampaign)return;const from=activeCampaign.commander.nodeId,n=activeCampaign.graph.nodes[id],edge=(activeCampaign.graph.edges[from]||[]).find(e=>e.to===id);
