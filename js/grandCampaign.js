@@ -158,6 +158,7 @@ function initialSettlement(city){
  return {historicalTier:p.tier,prosperity:p.prosperity,unrest:0,population:{total:pop,groups:[{culture:CULTURE_BY_FACTION[city.faction]||"Local",count:pop}],displaced:0},buildings:p.buildings.map(id=>({id,condition:100})),fortification:{...p.fortification,condition:100,damage:0,upgrades:[]},infrastructureCondition:100,occupationPolicy:"local-administration",monthsUnderOccupation:0};
 }
 function ensureSettlementState(campaign){
+ const oldSchemaVersion=Number(campaign.schemaVersion)||0;
  for(const region of campaign.regions||[]){
   const city=CITIES.find(c=>c.id===region.id);if(!city)continue;
   if(!region.settlement)region.settlement=initialSettlement(city);
@@ -173,9 +174,20 @@ function ensureSettlementState(campaign){
   if(!Array.isArray(region.settlement.buildings))region.settlement.buildings=initialSettlement(city).buildings;
   if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
  }
- campaign.schemaVersion=5;
+ campaign.schemaVersion=6;
  if(!campaign.factionStates){campaign.factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id),generated=createCampaignArmyRoster(profile.id,profile.id===campaign.playerPoliticalFaction?1000:500);return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:generated.faction,roster:generated.roster,homeRegion:home.id,alive:true,treasury:profile.id===campaign.playerPoliticalFaction?Number(campaign.treasury)||500:300,income:100,armyPoints:profile.id===campaign.playerPoliticalFaction?1000:500,turnsTaken:0,relations:{}};});campaign.factionTurnOrder=campaign.factionStates.map(f=>f.id);campaign.playerPoliticalFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[1].id;campaign.activeFaction=campaign.activeFaction||campaign.playerPoliticalFaction;}
  for(const state of campaign.factionStates){if(!Array.isArray(state.roster)||!state.roster.length){const generated=createCampaignArmyRoster(state.id,state.armyPoints||500);state.rosterFaction=generated.faction;state.roster=generated.roster;}}
+ if(oldSchemaVersion<6){
+  const previousArmies=campaign.armies||[];
+  campaign.armies=campaign.factionStates.map(state=>{
+   const previous=previousArmies.find(a=>a.owner===state.id||a.factionId===state.id||a.id===state.id+"-main");
+   const isPlayer=state.id===campaign.playerPoliticalFaction;
+   const generated=createCampaignArmyRoster(state.id,state.armyPoints||500,{player:isPlayer,commander:isPlayer?campaign.commander:null});
+   state.rosterFaction=generated.faction;state.roster=generated.roster;state.armyPoints=generated.points;state.income=campaignCityIncome(campaign.regions.find(r=>r.id===state.homeRegion));state.upkeep=campaignArmyUpkeep({roster:generated.roster,rosterFaction:generated.faction});
+   return {id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:generated.faction,roster:generated.roster,region:previous?.region||state.homeRegion,nodeId:previous?.nodeId||"city-"+state.homeRegion,points:generated.points};
+  });
+  const player=campaign.factionStates.find(f=>f.id===campaign.playerPoliticalFaction);if(player)campaign.treasury=player.treasury;
+ }
  return campaign;
 }
 function addDisplacedPeople(settlement,culture,count){
@@ -241,11 +253,17 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
 
 const MAP_ID="shattered-realms-v4";
 function createInitialCampaignState(faction,city,commander){
- const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
- const factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id),army=createCampaignArmyRoster(profile.id,profile.id===FACTION_PROFILES[city.id].id?1000:500);return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,treasury:profile.id===FACTION_PROFILES[city.id].id?500:300,income:100,armyPoints:Math.max(profile.id===FACTION_PROFILES[city.id].id?1000:500,army.points),turnsTaken:0,relations:{}};});
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
+ const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
+ const factionStates=Object.values(FACTION_PROFILES).map(profile=>{
+  const home=CITIES.find(x=>FACTION_PROFILES[x.id].id===profile.id),isPlayer=profile.id===playerPoliticalFaction;
+  const army=createCampaignArmyRoster(profile.id,isPlayer?1000:500,{player:isPlayer,commander:isPlayer?commander:null});
+  return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,treasury:isPlayer?500:300,income:campaignCityIncome(regions.find(r=>r.id===home.id)),upkeep:Math.ceil(army.points*.04),armyPoints:army.points,turnsTaken:0,relations:{}};
+ });
  const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;const pa=FACTION_BY_ID[a.id],pb=FACTION_BY_ID[b.id],base=RACES[pa.race].attitudes[pb.race]??0;diplomacy[a.id][b.id]=base+(pa.race===pb.race?10:0);}}
- return {schemaVersion:5,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:500,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},armies:factionStates.map(f=>({id:f.id+"-main",owner:f.id,factionId:f.id,rosterFaction:f.rosterFaction,roster:f.roster.map(u=>({...u})),region:f.homeRegion,nodeId:"city-"+f.homeRegion,points:f.armyPoints})),lastEvent:commander.name+" begins the campaign at "+city.name+"."};
+ const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints}));
+ const playerState=factionStates.find(f=>f.id===playerPoliticalFaction);
+ return {schemaVersion:6,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},armies,lastEvent:commander.name+" begins the campaign at "+city.name+"."};
 }
 let selectedFaction="empire",selectedPoliticalFaction="valedorn",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
