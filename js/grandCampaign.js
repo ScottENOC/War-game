@@ -101,18 +101,24 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
   const models=collectionModels(),count=(type,weaponFilter=null)=>models.filter(m=>m.faction===faction&&m.type===type&&(!weaponFilter||weaponFilter(m))).length;
   const meleeAvailable=count(basicType,m=>m.weapon==="handWeapon");
   const rangedAvailable=race==="dwarf"?count("dwarfInfantry",m=>m.weapon==="crossbow"):count("archers",m=>m.weapon==="bow");
-  const addStartingGroups=(type,total,rangedWeapon=null)=>{
-   // One unit for 5-9 models; at 10, split into two balanced units.
-   // Keep two units thereafter, with their sizes differing by at most one.
-   const deployed=Math.min(30,total);
-   if(deployed<5)return;
-   const sizes=deployed<10?[deployed]:[Math.floor(deployed/2),Math.ceil(deployed/2)];
-   for(const n of sizes){
-    roster.push({type,models:n,weapon:"handWeapon",meleeWeapons:["handWeapon"],...(rangedWeapon?{rangedWeapon}:{}),champion:false,upgrades:{},skills:{}});
-   }
+  const pushStartingUnit=(type,models,rangedWeapon=null)=>{
+   roster.push({type,models,weapon:"handWeapon",meleeWeapons:["handWeapon"],...(rangedWeapon?{rangedWeapon}:{}),champion:false,upgrades:{},skills:{}});
   };
-  addStartingGroups(basicType,meleeAvailable);
-  addStartingGroups(rangedType,rangedAvailable,race==="dwarf"?"crossbow":"bow");
+  // The player's starter army has at most two melee units, balanced to within
+  // one model. Infantry units may contain 5-30 models each.
+  const meleeDeployed=Math.min(60,meleeAvailable);
+  if(meleeDeployed>=5){
+   if(meleeDeployed<10)pushStartingUnit(basicType,meleeDeployed);
+   else{
+    const first=Math.floor(meleeDeployed/2),second=Math.ceil(meleeDeployed/2);
+    pushStartingUnit(basicType,first);
+    pushStartingUnit(basicType,second);
+   }
+  }
+  // Ranged models form one separate unit, which appears as soon as five
+  // compatible archers (or dwarf crossbowmen) are owned.
+  const rangedDeployed=Math.min(30,rangedAvailable);
+  if(rangedDeployed>=5)pushStartingUnit(rangedType,rangedDeployed,race==="dwarf"?"crossbow":"bow");
   if(commander)roster.push(character);
  }else{
   roster=[
