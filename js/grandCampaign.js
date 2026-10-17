@@ -39,10 +39,114 @@ const REGION_NEIGHBORS = {
  15:[12,14,16,18],16:[12,15,18,22],17:[2,6,20],18:[5,15,16,20,22,23],
  19:[21,22],20:[4,5,17,18,23],21:[3,10,14,19,22],22:[16,18,19,21,23],23:[4,18,20,22]
 };
-const MAP_ID="shattered-realms-v3";
+
+const CITY_PROFILES = {
+ 1:{tier:4,population:110000,prosperity:78,fortification:{style:"human-layered",material:"stone",circuits:3,gates:3,wounds:100},buildings:["royal-citadel","great-market","river-port","waterworks"]},
+ 2:{tier:2,population:24000,prosperity:65,fortification:{style:"human-layered",material:"stone-and-timber",circuits:1,gates:2,wounds:45},buildings:["market","mill","river-crossing"]},
+ 3:{tier:3,population:62000,prosperity:75,fortification:{style:"human-layered",material:"stone",circuits:2,gates:3,wounds:70},buildings:["grain-market","guildhall","granaries"]},
+ 4:{tier:3,population:38000,prosperity:70,fortification:{style:"human-layered",material:"stone",circuits:2,gates:2,wounds:80},buildings:["bridgeworks","tollhouse","barracks"]},
+ 5:{tier:3,population:31000,prosperity:72,fortification:{style:"human-layered",material:"stone",circuits:2,gates:2,wounds:75},buildings:["harbour","customs-house","shipyards"]},
+ 6:{tier:5,population:68000,prosperity:82,fortification:{style:"elven-star-fort",material:"enchanted-stone",circuits:1,gates:3,wounds:85},buildings:["ancient-groves","star-bastions","arcane-archive","great-harbour"]},
+ 7:{tier:4,population:34000,prosperity:76,fortification:{style:"elven-star-fort",material:"pale-stone",circuits:1,gates:2,wounds:70},buildings:["island-harbour","star-bastions","moon-shrine"]},
+ 8:{tier:3,population:46000,prosperity:80,fortification:{style:"elven-star-fort",material:"pale-stone",circuits:1,gates:3,wounds:65},buildings:["deep-harbour","admiralty","arcane-archive"]},
+ 9:{tier:5,population:52000,prosperity:80,fortification:{style:"dwarven-heavy",material:"deep-cut-stone",circuits:1,gates:1,wounds:180,cannonPlatforms:8},buildings:["deep-mines","great-forges","cannon-galleries","deep-roads"]},
+ 10:{tier:3,population:29000,prosperity:72,fortification:{style:"dwarven-heavy",material:"deep-cut-stone",circuits:1,gates:1,wounds:140,cannonPlatforms:6},buildings:["deep-mines","forges","ore-lifts"]},
+ 11:{tier:3,population:27000,prosperity:38,fortification:{style:"greenskin-palisade",material:"timber",circuits:1,gates:1,wounds:24},buildings:["warboss-hall","scrap-pits"]},
+ 12:{tier:2,population:18000,prosperity:34,fortification:{style:"greenskin-palisade",material:"timber",circuits:1,gates:1,wounds:14},buildings:["war-camp","stock-pens"]},
+ 13:{tier:2,population:15000,prosperity:32,fortification:{style:"greenskin-palisade",material:"timber",circuits:1,gates:1,wounds:22},buildings:["cave-holds","scrap-pits"]},
+ 14:{tier:2,population:12000,prosperity:35,fortification:{style:"greenskin-palisade",material:"timber",circuits:1,gates:1,wounds:12},buildings:["pass-camp","watch-platforms"]},
+ 15:{tier:1,population:9000,prosperity:28,fortification:{style:"greenskin-palisade",material:"timber",circuits:1,gates:1,wounds:10},buildings:["mud-huts","stock-pens"]},
+ 16:{tier:1,population:11000,prosperity:30,fortification:{style:"greenskin-palisade",material:"timber",circuits:1,gates:1,wounds:10},buildings:["war-camp","bone-piles"]},
+ 17:{tier:3,population:17000,prosperity:25,fortification:{style:"human-layered",material:"weathered-stone",circuits:1,gates:2,wounds:55},buildings:["barrow-complex","old-walls"]},
+ 18:{tier:2,population:9000,prosperity:18,fortification:{style:"human-layered",material:"weathered-stone-and-timber",circuits:1,gates:1,wounds:28},buildings:["sunken-shrines","causeways"]},
+ 19:{tier:4,population:21000,prosperity:22,fortification:{style:"human-layered",material:"ancient-stone",circuits:2,gates:2,wounds:70},buildings:["necropolis","ancient-vaults","old-walls"]},
+ 20:{tier:3,population:28000,prosperity:55,fortification:{style:"human-layered",material:"stone",circuits:2,gates:2,wounds:65},buildings:["fortified-manor","market","barracks"]},
+ 21:{tier:3,population:22000,prosperity:43,fortification:{style:"human-layered",material:"stone",circuits:2,gates:2,wounds:72},buildings:["march-fort","barracks","road-station"]},
+ 22:{tier:2,population:19000,prosperity:60,fortification:{style:"human-layered",material:"stone-and-timber",circuits:1,gates:2,wounds:42},buildings:["market","mercenary-yard"]},
+ 23:{tier:2,population:16000,prosperity:52,fortification:{style:"human-layered",material:"stone",circuits:1,gates:2,wounds:50},buildings:["river-crossing","tollhouse","market"]}
+};
+const CULTURE_BY_FACTION = {empire:"Human",highElves:"High Elf",dwarfs:"Dwarf",greenskins:"Greenskin",undead:"Undead",evilHumans:"Human"};
+const FACTION_SPECIES = {empire:"human",highElves:"elf",dwarfs:"dwarf",greenskins:"greenskin",undead:"undead",evilHumans:"human"};
+function initialSettlement(city){
+ const p=CITY_PROFILES[city.id]||{tier:1,population:10000,prosperity:40,fortification:{style:"human-layered",material:"stone",circuits:1,gates:1,wounds:30},buildings:[]};
+ const pop=p.population;
+ return {historicalTier:p.tier,prosperity:p.prosperity,unrest:0,population:{total:pop,groups:[{culture:CULTURE_BY_FACTION[city.faction]||"Local",count:pop}],displaced:0},buildings:p.buildings.map(id=>({id,condition:100})),fortification:{...p.fortification,condition:100,damage:0,upgrades:[]},infrastructureCondition:100,occupationPolicy:"local-administration",monthsUnderOccupation:0};
+}
+function ensureSettlementState(campaign){
+ for(const region of campaign.regions||[]){
+  const city=CITIES.find(c=>c.id===region.id);if(!city)continue;
+  if(!region.settlement)region.settlement=initialSettlement(city);
+  if(!region.ownerFaction)region.ownerFaction=region.owner==="player"?campaign.playerFaction:(region.owner||city.faction);
+  if(!region.nativeFaction)region.nativeFaction=city.faction;
+  if(!region.nativeCulture)region.nativeCulture=CULTURE_BY_FACTION[city.faction]||"Local";
+  if(!region.settlement.population)region.settlement.population=initialSettlement(city).population;
+  if(!Array.isArray(region.settlement.buildings))region.settlement.buildings=initialSettlement(city).buildings;
+  if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
+ }
+ campaign.schemaVersion=3;
+ return campaign;
+}
+function addDisplacedPeople(settlement,culture,count){
+ if(count<=0)return;
+ const group=settlement.population.groups.find(g=>g.culture===culture);
+ if(group)group.count+=count;else settlement.population.groups.push({culture,count});
+ settlement.population.total+=count;
+}
+function removePopulation(settlement,group,count){
+ const lost=Math.min(group.count,Math.max(0,Math.round(count)));
+ group.count-=lost;settlement.population.total=Math.max(0,settlement.population.total-lost);
+ return lost;
+}
+/**
+ * Resolves political conquest without replacing the city's native architecture or culture.
+ * options: {outcome:"occupy"|"sack"|"raze", fleeFraction:0..1, preserveCivilians:boolean}
+ */
+export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options={}){
+ ensureSettlementState(campaign);
+ const region=campaign.regions.find(r=>r.id===Number(regionId)),city=CITIES.find(c=>c.id===Number(regionId));
+ if(!region||!city||!FACTIONS[conquerorFaction])throw new Error("Unknown region or conquering faction.");
+ const previousOwner=region.ownerFaction||region.owner||region.nativeFaction;
+ if(previousOwner===conquerorFaction)return {region,summary:city.name+" is already under this faction's control."};
+ const settlement=region.settlement,outcome=options.outcome||"occupy";
+ const fleeFraction=Math.max(0,Math.min(1,Number.isFinite(options.fleeFraction)?options.fleeFraction:0.2));
+ let fled=0,killed=0;
+ for(const group of settlement.population.groups){
+  if(group.count<=0)continue;
+  const culture=group.culture.toLowerCase();
+  const isDwarf=culture.includes("dwarf");
+  const greenskinDwarfMassacre=conquerorFaction==="greenskins"&&isDwarf;
+  const fleeing=Math.round(group.count*fleeFraction);
+  if(fleeing){removePopulation(settlement,group,fleeing);settlement.population.displaced+=fleeing;fled+=fleeing;}
+  if(greenskinDwarfMassacre){
+   const remaining=group.count;killed+=removePopulation(settlement,group,remaining);
+  }else if(outcome==="massacre"){
+   killed+=removePopulation(settlement,group,group.count);
+  }else if(outcome==="sack"){
+   const casualties=Math.round(group.count*0.12);killed+=removePopulation(settlement,group,casualties);
+  }
+ }
+ const sameSpecies=FACTION_SPECIES[conquerorFaction]===FACTION_SPECIES[region.nativeFaction];
+ const preserve=options.preserveCivilians??(sameSpecies&&outcome==="occupy");
+ settlement.prosperity=Math.max(0,settlement.prosperity-(outcome==="raze"?65:outcome==="sack"?35:preserve?5:18));
+ settlement.unrest=Math.min(100,settlement.unrest+(preserve?10:outcome==="massacre"?65:40));
+ const buildingDamage=outcome==="raze"?100:outcome==="sack"?45:preserve?5:20;
+ for(const building of settlement.buildings)building.condition=Math.max(0,building.condition-buildingDamage);
+ settlement.fortification.damage=Math.min(100,settlement.fortification.damage+(outcome==="raze"?90:outcome==="sack"?40:outcome==="massacre"?25:10));
+ settlement.fortification.condition=Math.max(0,100-settlement.fortification.damage);
+ settlement.infrastructureCondition=Math.max(0,settlement.infrastructureCondition-(outcome==="raze"?90:outcome==="sack"?40:preserve?5:20));
+ if(outcome==="raze"){settlement.historicalTier=Math.max(1,settlement.historicalTier);settlement.ruins=true;}
+ region.ownerFaction=conquerorFaction;region.owner=conquerorFaction;region.occupationPolicy=preserve?"local-administration":"military-occupation";settlement.occupationPolicy=region.occupationPolicy;settlement.monthsUnderOccupation=0;
+ const factionName=FACTIONS[conquerorFaction].name;
+ const special=conquerorFaction==="greenskins"&&region.nativeFaction==="dwarfs"?" Orcs slaughtered the dwarves who could not escape; surviving escapees are displaced.":"";
+ const summary=city.name+" falls to "+factionName+". "+fled.toLocaleString()+" inhabitants flee; "+killed.toLocaleString()+" are killed."+special+" Its "+settlement.fortification.style+" fortifications remain in place, damaged but not replaced.";
+ campaign.lastEvent=summary;
+ return {region,summary,fled,killed,previousOwner,conquerorFaction};
+}
+
+const MAP_ID="shattered-realms-v4";
 function createInitialCampaignState(faction,city,commander){
- const regions=CITIES.map(r=>({id:r.id,name:r.name,faction:r.faction,owner:r.id===city.id?"player":r.faction,terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status}));
- return {schemaVersion:2,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:500,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},diplomacy:{},armies:[{id:"player-main",owner:"player",region:city.id,nodeId:"city-"+city.id,points:1000}],lastEvent:commander.name+" begins the campaign at "+city.name+"."};
+ const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,owner:r.id===city.id?faction:r.faction,ownerFaction:r.id===city.id?faction:r.faction,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
+ return {schemaVersion:3,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:500,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},diplomacy:{},armies:[{id:"player-main",owner:"player",region:city.id,nodeId:"city-"+city.id,points:1000}],lastEvent:commander.name+" begins the campaign at "+city.name+"."};
 }
 let selectedFaction="empire",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
@@ -92,6 +196,22 @@ function createMovementGraph(){
 }
 function svgEl(name,attrs={}){const el=document.createElementNS("http://www.w3.org/2000/svg",name);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el;}
 function saveCampaign(){try{localStorage.setItem("warGameGrandCampaignStateV1",JSON.stringify(activeCampaign));}catch{}}
+function settleMonthlyPopulation(campaign){
+ for(const region of campaign.regions||[]){
+  const s=region.settlement;if(!s||!s.population)continue;
+  const atWar=campaign.warRegions?.includes(region.id)||campaign.regions.some(r=>r.id!==region.id&&r.ownerFaction!==region.ownerFaction&&r.neighbors?.includes(region.id)&&r.neighbors?.includes(region.id)&&campaign.activeWars?.includes([region.ownerFaction,r.ownerFaction].sort().join(":")));
+  const occupationPenalty=region.ownerFaction!==region.nativeFaction?0.001:0;
+  let rate=s.prosperity>=70&&s.unrest<20&&!atWar?0.002:(!atWar&&s.prosperity>=40&&s.unrest<40?0.001:atWar?-0.002:-0.0005);
+  if(occupationPenalty)rate-=occupationPenalty;
+  const totalDelta=Math.round(s.population.total*rate);
+  if(totalDelta>0){s.population.total+=totalDelta;const largest=[...s.population.groups].sort((a,b)=>b.count-a.count)[0];if(largest)largest.count+=totalDelta;}
+  else if(totalDelta<0){let remaining=-totalDelta;for(const group of [...s.population.groups].sort((a,b)=>b.count-a.count)){const loss=Math.min(remaining,group.count);group.count-=loss;remaining-=loss;if(!remaining)break;}s.population.total=Math.max(0,s.population.total+totalDelta);}
+  if(region.ownerFaction!==region.nativeFaction){
+   s.monthsUnderOccupation=(s.monthsUnderOccupation||0)+1;
+   if(region.ownerFaction==="greenskins"&&region.nativeFaction==="dwarfs"){s.infrastructureCondition=Math.max(0,s.infrastructureCondition-0.35);s.fortification.condition=Math.max(0,s.fortification.condition-0.2);}
+  }
+ }
+}
 function nodeCost(n){return n.type==="river"?2:1;}
 function renderCampaignMap(){
  if(!activeCampaign)return;const host=byId("grand-map-live-wrap");let map=byId("grand-campaign-world-map");
@@ -104,9 +224,9 @@ function renderCampaignMap(){
  map.querySelector("#grand-city-markers").after(layer);
  const current=nodes[activeCampaign.commander.nodeId];token.append(svgEl("circle",{cx:current.x,cy:current.y-17,r:11,class:"commander-token"}));const initials=activeCampaign.commander.name.split(/\\s+/).map(s=>s[0]).join("").slice(0,2).toUpperCase(),label=svgEl("text",{x:current.x,y:current.y-13,"text-anchor":"middle",class:"commander-initials"});label.textContent=initials;token.append(label);map.append(token);
  layer.querySelectorAll("[data-node]").forEach(g=>{const move=()=>moveCommander(g.dataset.node);g.addEventListener("click",move);g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();move();}});});
- const n=nodes[activeCampaign.commander.nodeId];byId("grand-campaign-turn").textContent="TURN "+activeCampaign.turn;byId("grand-campaign-treasury").textContent=activeCampaign.treasury+" gold";
+ const n=nodes[activeCampaign.commander.nodeId];const settlementRegion=activeCampaign.regions.find(r=>r.id===n.region);byId("grand-campaign-turn").textContent="TURN "+activeCampaign.turn;byId("grand-campaign-treasury").textContent=activeCampaign.treasury+" gold";
  byId("grand-campaign-commander").innerHTML="<strong>"+activeCampaign.commander.name+"</strong><span>"+(activeCampaign.commander.kind==="legendary"?"Legendary commander":"Generic hero")+"</span><span>Movement "+activeCampaign.commander.movement+"/"+activeCampaign.commander.maxMovement+"</span><span>Location: "+(CITIES.find(c=>c.id===n.region)?.name||"Road")+"</span>";
- byId("grand-campaign-node-detail").innerHTML="<strong>"+n.label+"</strong><span>"+({city:"City and regional seat",crossroads:"Road junction",port:"Port and sea route",river:"River crossing",border:"Regional border"}[n.type]||"Road")+"</span><span>"+(n.type==="river"?"Crossing costs 2 movement points.":"Move along connected roads to highlighted places.")+"</span>";
+ byId("grand-campaign-node-detail").innerHTML="<strong>"+n.label+"</strong><span>"+({city:"City and regional seat",crossroads:"Road junction",port:"Port and sea route",river:"River crossing",border:"Regional border"}[n.type]||"Road")+"</span><span>"+(n.type==="river"?"Crossing costs 2 movement points.":"Move along connected roads to highlighted places.")+"</span>"+(n.type==="city"&&settlementRegion?.settlement?("<span>Ruler: "+(FACTIONS[settlementRegion.ownerFaction]?.name||settlementRegion.ownerFaction)+"</span><span>Native culture: "+settlementRegion.nativeCulture+"</span><span>Population: "+Math.round(settlementRegion.settlement.population.total).toLocaleString()+"</span><span>Historic tier: "+settlementRegion.settlement.historicalTier+" · Fort: "+settlementRegion.settlement.fortification.style+" ("+Math.round(settlementRegion.settlement.fortification.condition)+"% condition)</span>"):"");
  byId("grand-campaign-event").textContent=activeCampaign.lastEvent||"Select a highlighted place connected by road.";if(firstRender||host.scrollWidth>host.clientWidth){const scale=map.clientWidth/1300;host.scrollLeft=Math.max(0,current.x*scale-host.clientWidth/2);}
 }
 function moveCommander(id){
@@ -116,12 +236,12 @@ function moveCommander(id){
  activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement-=cost;const army=activeCampaign.armies.find(a=>a.id==="player-main");if(army){army.nodeId=id;army.region=n.region;}
  activeCampaign.lastEvent=activeCampaign.commander.name+" moves to "+n.label+". "+activeCampaign.commander.movement+" movement remaining.";saveCampaign();renderCampaignMap();
 }
-function endCampaignTurn(){if(!activeCampaign)return;activeCampaign.turn++;activeCampaign.commander.movement=activeCampaign.commander.maxMovement;activeCampaign.treasury+=100;activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Treasury +100 gold; movement replenished.";saveCampaign();renderCampaignMap();}
+function endCampaignTurn(){if(!activeCampaign)return;ensureSettlementState(activeCampaign);settleMonthlyPopulation(activeCampaign);activeCampaign.turn++;activeCampaign.commander.movement=activeCampaign.commander.maxMovement;activeCampaign.treasury+=100;activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Treasury +100 gold; movement replenished. Population and infrastructure updated for the month.";saveCampaign();renderCampaignMap();}
 function showCampaignWorld(c){activeCampaign=c;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();}
 export function startGrandCampaign(){
  try{const s=JSON.parse(localStorage.getItem("warGameGrandCampaignStart")||"null");if(s&&FACTIONS[s.faction]){selectedFaction=s.faction;if(CITIES.some(c=>c.id===s.selectedCity))selectedCity=s.selectedCity;}}catch{}
  const screen=byId("grand-campaign-screen"),menu=byId("mainmenu");if(!screen||!menu)return;
- document.addEventListener("click",event=>{const target=event.target instanceof Element?event.target.closest('[data-mode="grand"]'):null;if(!target)return;event.preventDefault();event.stopPropagation();screen.hidden=false;menu.hidden=true;let saved=null;try{saved=JSON.parse(localStorage.getItem("warGameGrandCampaignStateV1")||"null");}catch{}if(saved?.graph?.nodes&&saved?.commander)showCampaignWorld(saved);else{byId("grand-campaign-setup").hidden=false;byId("grand-campaign-world").hidden=true;renderFaction();}},true);
+ document.addEventListener("click",event=>{const target=event.target instanceof Element?event.target.closest('[data-mode="grand"]'):null;if(!target)return;event.preventDefault();event.stopPropagation();screen.hidden=false;menu.hidden=true;let saved=null;try{saved=JSON.parse(localStorage.getItem("warGameGrandCampaignStateV1")||"null");}catch{}if(saved?.graph?.nodes&&saved?.commander)showCampaignWorld(ensureSettlementState(saved));else{byId("grand-campaign-setup").hidden=false;byId("grand-campaign-world").hidden=true;renderFaction();}},true);
  byId("grand-campaign-back").addEventListener("click",()=>{screen.hidden=true;menu.hidden=false;});byId("grand-world-back").addEventListener("click",()=>{byId("grand-campaign-world").hidden=true;byId("grand-campaign-setup").hidden=false;renderFaction();});byId("grand-world-menu").addEventListener("click",()=>{screen.hidden=true;menu.hidden=false;});byId("grand-campaign-end-turn").addEventListener("click",endCampaignTurn);
  byId("grand-faction-choices").querySelectorAll("[data-faction]").forEach(b=>b.addEventListener("click",()=>{selectedFaction=b.dataset.faction;ensureValidCity();renderFaction();saveSelection();}));
  byId("grand-world-map").querySelectorAll(".grand-city").forEach(m=>{const select=()=>{const c=CITIES.find(x=>x.id===Number(m.dataset.city));if(!c||c.faction!==selectedFaction||!commanderForFaction(selectedFaction))return;selectedCity=c.id;saveSelection();renderCity();};m.addEventListener("click",select);m.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select();}});});
