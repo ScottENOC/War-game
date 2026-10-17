@@ -108,7 +108,10 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
  const previousOwner=region.ownerFaction||region.owner||region.nativeFaction;
  if(previousOwner===conquerorFaction)return {region,summary:city.name+" is already under this faction's control."};
  const settlement=region.settlement,outcome=options.outcome||"occupy";
- const fleeFraction=Math.max(0,Math.min(1,Number.isFinite(options.fleeFraction)?options.fleeFraction:0.2));
+ const sameSpecies=FACTION_SPECIES[conquerorFaction]===FACTION_SPECIES[region.nativeFaction];
+ const isGreenskinDwarfConquest=conquerorFaction==="greenskins"&&region.nativeFaction==="dwarfs";
+ const defaultFleeFraction=isGreenskinDwarfConquest?0.2:(sameSpecies?0.05:0.15);
+ const fleeFraction=Math.max(0,Math.min(1,Number.isFinite(options.fleeFraction)?options.fleeFraction:defaultFleeFraction));
  let fled=0,killed=0;
  for(const group of settlement.population.groups){
   if(group.count<=0)continue;
@@ -125,8 +128,7 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
    const casualties=Math.round(group.count*0.12);killed+=removePopulation(settlement,group,casualties);
   }
  }
- const sameSpecies=FACTION_SPECIES[conquerorFaction]===FACTION_SPECIES[region.nativeFaction];
- const preserve=options.preserveCivilians??(sameSpecies&&outcome==="occupy");
+ const preserve=options.preserveCivilians??(outcome==="occupy"&&!isGreenskinDwarfConquest);
  settlement.prosperity=Math.max(0,settlement.prosperity-(outcome==="raze"?65:outcome==="sack"?35:preserve?5:18));
  settlement.unrest=Math.min(100,settlement.unrest+(preserve?10:outcome==="massacre"?65:40));
  const buildingDamage=outcome==="raze"?100:outcome==="sack"?45:preserve?5:20;
@@ -239,6 +241,7 @@ function moveCommander(id){
 function endCampaignTurn(){if(!activeCampaign)return;ensureSettlementState(activeCampaign);settleMonthlyPopulation(activeCampaign);activeCampaign.turn++;activeCampaign.commander.movement=activeCampaign.commander.maxMovement;activeCampaign.treasury+=100;activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Treasury +100 gold; movement replenished. Population and infrastructure updated for the month.";saveCampaign();renderCampaignMap();}
 function showCampaignWorld(c){activeCampaign=c;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();}
 export function startGrandCampaign(){
+ window.resolveGrandCampaignConquest=resolveGrandCampaignConquest;
  try{const s=JSON.parse(localStorage.getItem("warGameGrandCampaignStart")||"null");if(s&&FACTIONS[s.faction]){selectedFaction=s.faction;if(CITIES.some(c=>c.id===s.selectedCity))selectedCity=s.selectedCity;}}catch{}
  const screen=byId("grand-campaign-screen"),menu=byId("mainmenu");if(!screen||!menu)return;
  document.addEventListener("click",event=>{const target=event.target instanceof Element?event.target.closest('[data-mode="grand"]'):null;if(!target)return;event.preventDefault();event.stopPropagation();screen.hidden=false;menu.hidden=true;let saved=null;try{saved=JSON.parse(localStorage.getItem("warGameGrandCampaignStateV1")||"null");}catch{}if(saved?.graph?.nodes&&saved?.commander)showCampaignWorld(ensureSettlementState(saved));else{byId("grand-campaign-setup").hidden=false;byId("grand-campaign-world").hidden=true;renderFaction();}},true);
