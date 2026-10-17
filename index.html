@@ -42,7 +42,7 @@
 
 <section id="grand-campaign-screen" class="screen builder-screen" hidden><div class="builder-panel grand-campaign-panel">
 <header class="builder-header"><div><div class="eyebrow">Grand campaign · persistent world</div><h1>The Shattered Realms</h1></div><button id="grand-campaign-back" class="secondary-button">Main Menu</button></header>
-<p class="builder-intro">A fixed world map, with old kingdoms, rival lords and contested borders. This map is authored as campaign data: reopening the game will not generate a different world.</p>
+
 <div class="grand-campaign-layout"><section class="grand-map-wrap"><div class="grand-map-legend"><span>◆ Cities</span><span>♟ Mountains</span><span>♣ Forests</span><span>≈ Rivers</span></div><svg id="grand-world-map" class="grand-world-map" viewBox="0 0 1300 760" role="img" aria-label="The Shattered Realms, expanded fantasy campaign map with six factions and twenty-three settlements">
 <defs><pattern id="map-paper" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="3" cy="5" r="1" fill="#7e916a" opacity=".18"/><circle cx="18" cy="16" r=".8" fill="#7e916a" opacity=".15"/></pattern></defs>
 <rect width="1000" height="620" fill="#78949a"/><rect width="1000" height="620" fill="url(#map-paper)"/>
@@ -91,10 +91,10 @@
 <g class="grand-city evilHumans" data-city="22" tabindex="0" role="button" aria-label="Varkesh, evil human settlement" transform="translate(846 680)"><circle r="10" fill="#8c4e49" stroke="#f0d0bd" stroke-width="3"/><text x="-40" y="25">Varkesh</text></g>
 <g class="grand-city evilHumans" data-city="23" tabindex="0" role="button" aria-label="Ashenford, evil human settlement" transform="translate(629 642)"><circle r="10" fill="#8c4e49" stroke="#f0d0bd" stroke-width="3"/><text x="-48" y="-15">Ashenford</text></g>
 </g>
-</svg><p class="subtle">Map v2 · expanded eastern mountain-and-plains frontier, southern borderlands, scattered undead enclaves and additional human principalities. Geography is fixed in campaign data.</p></section>
-<aside class="grand-campaign-sidebar"><h2>Choose a realm</h2><p class="subtle">Each people has several cities and rival power centres. Choosing a faction gives you a political starting position—not ownership of every city of that race.</p><div id="grand-faction-choices" class="grand-faction-choices">
+</svg><p class="grand-map-hint">Tap a city on the map, or choose a starting region below.</p></section>
+<aside class="grand-campaign-sidebar"><h2>Faction</h2><div id="grand-faction-choices" class="grand-faction-choices">
 <button class="grand-faction-choice active" data-faction="empire"><b>Human Realms</b><small>Most territory · five cities · fractured crowns</small></button><button class="grand-faction-choice" data-faction="highElves"><b>High Elves</b><small>Forests and islands · three cities · divided courts</small></button><button class="grand-faction-choice" data-faction="dwarfs"><b>Dwarfs</b><small>Mountain holds only · two cities · rival clans</small></button><button class="grand-faction-choice" data-faction="greenskins"><b>Greenskin Hordes</b><small>Plains and mountains · six territories</small></button><button class="grand-faction-choice" data-faction="undead"><b>The Undying Courts</b><small>Scattered necropolises · three enclaves</small></button><button class="grand-faction-choice" data-faction="evilHumans"><b>Blackened Principalities</b><small>Hostile human realms · four territories</small></button>
-</div><div id="grand-faction-detail" class="grand-faction-detail" aria-live="polite"></div><h2>Selected settlement</h2><div id="grand-city-detail" class="grand-city-detail">Tap a city marker to inspect its ruler and strategic position.</div><button id="grand-campaign-begin" class="primary-button" disabled>Campaign setup coming next</button></aside></div>
+</div><div id="grand-faction-detail" class="grand-faction-detail" aria-live="polite"></div><h2>Starting region</h2><p class="grand-region-hint">Choose one of the highlighted regions.</p><div id="grand-region-choices" class="grand-region-choices"></div><div id="grand-city-detail" class="grand-city-detail" aria-live="polite"></div><button id="grand-campaign-begin" class="primary-button" disabled>Start campaign</button></aside></div>
 </div></section>
 
 <section id="collection-screen" class="screen builder-screen" hidden><div class="builder-panel collection-panel">
