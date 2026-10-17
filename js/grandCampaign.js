@@ -1,5 +1,5 @@
-import { getCollectionSnapshot } from "./collection.js?v=20261018-campaign-economy-v2";
-import { unitCost } from "./units.js?v=20261018-campaign-economy-v2";
+import { getCollectionSnapshot } from "./collection.js?v=20261018-campaign-economy-v3";
+import { unitCost } from "./units.js?v=20261018-campaign-economy-v3";
 const FACTIONS = {
  empire:{name:"Human Realms",summary:"The largest and most populous realm, but not a unified kingdom.",strengths:"Broad territory, fertile river valleys, trade roads and the largest pool of settlements.",politics:"Crownfall and Westmere recognise your court. Goldhaven, Stonebridge and Southwatch answer to rival human lords.",playerCities:["Crownfall","Westmere"],armyFaction:"empire"},
  highElves:{name:"High Elves",summary:"An old maritime people whose courts cluster around ancient forests and island harbours.",strengths:"Defensible islands, forest resources, sea access and compact but valuable settlements.",politics:"Aelthir recognises your court. Moonspire and Silvershade retain their own power and may resist your claims.",playerCities:["Aelthir"],armyFaction:"highElves"},
@@ -99,7 +99,7 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
  let roster=[];
  if(player){
   const models=collectionModels(),count=(type,weaponFilter=null)=>models.filter(m=>m.faction===faction&&m.type===type&&(!weaponFilter||weaponFilter(m))).length;
-  let meleeAvailable=count(basicType,m=>!["bow","crossbow","firearm","longRifle","magicBow"].includes(m.weapon));
+  let meleeAvailable=count(basicType,m=>m.weapon==="handWeapon");
   let rangedAvailable=race==="dwarf"?count("dwarfInfantry",m=>m.weapon==="crossbow"):count("archers",m=>m.weapon==="bow");
   for(let i=0;i<2&&meleeAvailable>=5;i++){
    const n=Math.min(15,meleeAvailable);if(n<5)break;
@@ -152,7 +152,7 @@ function recruitPlayerArmyFromCollection(army,faction,budget,commander=null){
   if(budget>=price){army.roster.push(character);spent+=price;}
  }
  const categories=[
-  {type:race==="dwarf"?"dwarfInfantry":"swordsmen",ranged:null,match:m=>m.type===(race==="dwarf"?"dwarfInfantry":"swordsmen")&&!["bow","crossbow","firearm","longRifle","magicBow"].includes(m.weapon)},
+  {type:race==="dwarf"?"dwarfInfantry":"swordsmen",ranged:null,match:m=>m.type===(race==="dwarf"?"dwarfInfantry":"swordsmen")&&m.weapon==="handWeapon"},
   {type:race==="dwarf"?"dwarfInfantry":"archers",ranged:race==="dwarf"?"crossbow":"bow",match:m=>m.type===(race==="dwarf"?"dwarfInfantry":"archers")&&m.weapon===(race==="dwarf"?"crossbow":"bow")}
  ];
  for(const cat of categories){
@@ -530,14 +530,12 @@ function launchCampaignBattle(region){
   if(result.won){
    const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:"occupy"});
    playerArmy.region=region.id;playerArmy.nodeId="city-"+region.id;activeCampaign.commander.region=region.id;activeCampaign.commander.nodeId="city-"+region.id;
-   if(!playerArmy.roster.length)activeCampaign.lastEvent="Victory at "+region.name+", but your army has been destroyed. Rebuild from your remaining miniatures and treasury.";
-   activeCampaign.lastEvent="Victory at "+region.name+". "+outcome.summary;
+   activeCampaign.lastEvent=!playerArmy.roster.length?"Victory at "+region.name+", but your army has been destroyed. Rebuild from your remaining miniatures and treasury.":"Victory at "+region.name+". "+outcome.summary;
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
   }else{
    const home=playerState?.homeRegion||activeCampaign.startingRegion,homeNode="city-"+home;
    activeCampaign.commander.region=home;activeCampaign.commander.nodeId=homeNode;playerArmy.region=home;playerArmy.nodeId=homeNode;
-   if(!playerArmy.roster.length)activeCampaign.lastEvent="Defeat at "+region.name+". Your army has been destroyed; rebuild from your remaining miniatures and treasury.";
-   activeCampaign.lastEvent="Defeat at "+region.name+". Your surviving forces retreat to "+(CITIES.find(c=>c.id===home)?.name||"your capital")+".";
+   activeCampaign.lastEvent=!playerArmy.roster.length?"Defeat at "+region.name+". Your army has been destroyed; rebuild from your remaining miniatures and treasury.":"Defeat at "+region.name+". Your surviving forces retreat to "+(CITIES.find(c=>c.id===home)?.name||"your capital")+".";
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
   }
   if(playerState){playerState.armyPoints=playerArmy.points;playerState.roster=playerArmy.roster;}
@@ -596,7 +594,7 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  const winArmy=factionArmy(campaign,winner.id),loseArmy=factionArmy(campaign,loser.id);
  applyStrategicArmyLosses(winArmy,winner===attacker?.72:.82);
  applyStrategicArmyLosses(loseArmy,winner===attacker?.42:.55);
- for(const state of campaign.factionStates){const army=state.id===winner.id?winArmy:state.id===loser.id?loseArmy:null;if(army){state.armyPoints=army.points;state.roster=army.roster;}}
+ for(const state of campaign.factionStates){const army=state.id===winner.id?winArmy:state.id===loser.id?loseArmy:null;if(army){state.armyPoints=army.points;state.roster=army.roster;if(!army.roster.length)state.alive=false;}}
  if(winner===attacker){
   const result=resolveGrandCampaignConquest(campaign,target.id,attacker.id,{outcome:"occupy"});
   if(attacking){attacking.region=target.id;attacking.nodeId="city-"+target.id;}
