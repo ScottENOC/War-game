@@ -406,7 +406,7 @@ function renderCampaignMap(){
  if(battleRegion&&defenderId&&defenderId!==playerId&&activeCampaign.factionStates.some(f=>f.id===defenderId&&f.alive)){
   const battleButton=document.createElement("button");battleButton.type="button";battleButton.className="primary-button grand-campaign-battle-button";battleButton.textContent="Fight for "+battleRegion.name;battleButton.addEventListener("click",()=>launchCampaignBattle(battleRegion));byId("grand-campaign-node-detail").append(battleButton);
  }
- byId("grand-campaign-event").textContent=activeCampaign.lastEvent||"Select a highlighted place connected by road.";if(firstRender||host.scrollWidth>host.clientWidth){const scale=map.clientWidth/1300;host.scrollLeft=Math.max(0,current.x*scale-host.clientWidth/2);}
+ byId("grand-campaign-event").textContent=activeCampaign.lastEvent||"Select a highlighted place connected by road.";if(firstRender){const scale=map.clientWidth/1300;host.scrollLeft=Math.max(0,current.x*scale-host.clientWidth/2);host.scrollTop=Math.max(0,current.y*scale-host.clientHeight/2);}
 }
 function launchCampaignBattle(region){
  if(!activeCampaign||!region||typeof window.startPoliticalCampaignBattle!=="function")return;
