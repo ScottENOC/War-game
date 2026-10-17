@@ -330,3 +330,6 @@ button,[role="button"]{
 
 .campaign-node .campaign-node-hit{fill:transparent!important;stroke:transparent!important;stroke-width:0;pointer-events:all}.campaign-node .campaign-node-visible{pointer-events:none}
 @media(max-width:850px){.grand-map-live-wrap{overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y}.grand-map-live-wrap .grand-world-map{width:900px;max-width:none;min-width:900px}}
+
+/* Grand campaign now selects individual political factions, not broad racial blocs. */
+.grand-faction-choices{max-height:42vh;overflow-y:auto;overscroll-behavior:contain;display:grid;grid-template-columns:1fr;gap:.45rem;padding-right:.25rem}.grand-faction-choice{border-left:4px solid var(--faction-colour,#8E2636)}.grand-faction-choice.active{outline:2px solid var(--faction-colour,#8E2636);background:rgba(180,160,110,.14)}.grand-faction-choice small{display:block;opacity:.78}
