@@ -32,6 +32,29 @@ const CITIES = [
 {id:22,name:"Varkesh",faction:"evilHumans",ruler:"The Prince of Varkesh",status:"Independent principality",terrain:"Far southern plains",description:"A distant human principality with fertile plains, mercenary companies and ambitions of conquest.",requiredCharacters:[]},
 {id:23,name:"Ashenford",faction:"evilHumans",ruler:"The Ashen Council",status:"Independent principality",terrain:"Southern river crossing",description:"A fortified crossing ruled by a council of rival nobles who cooperate only when threatened.",requiredCharacters:[]}
 ];
+const REGION_NEIGHBORS = {
+ 1:[2,3,4,6],2:[1,6,17],3:[1,8,10,12,21],4:[1,5,9,20,23],5:[4,8,18,20],
+ 6:[1,2,7,17],7:[6,8],8:[3,5,7,10],9:[4,10,13,14],10:[3,8,9,13,14,21],
+ 11:[13,14],12:[3,14,15,16],13:[9,10,11,14],14:[9,10,11,12,13,15,21],
+ 15:[12,14,16,18],16:[12,15,18,22],17:[2,6,20],18:[5,15,16,20,22,23],
+ 19:[21,22],20:[4,5,17,18,23],21:[3,10,14,19,22],22:[16,18,19,21,23],23:[4,18,20,22]
+};
+const MAP_ID="shattered-realms-v3";
+function createInitialCampaignState(faction,city){
+ const regions=CITIES.map(region=>({
+  id:region.id,name:region.name,faction:region.faction,
+  owner:region.id===city.id?"player":region.faction,
+  terrain:region.terrain,neighbors:[...(REGION_NEIGHBORS[region.id]||[])],
+  ruler:region.ruler,status:region.status
+ }));
+ return {
+  schemaVersion:1,mapId:MAP_ID,turn:1,phase:"player",
+  playerFaction:faction,armyFaction:FACTIONS[faction].armyFaction,
+  startingRegion:city.id,treasury:500,regions,
+  diplomacy:{},armies:[{id:"player-main",owner:"player",region:city.id,points:1000}],
+  lastEvent:"Your expedition begins at "+city.name+"."
+ };
+}
 let selectedFaction="empire",selectedCity=1;
 const byId=id=>document.getElementById(id);
 function availableCities(faction=selectedFaction){const owned=ownedCharacterIds();return CITIES.filter(c=>c.faction===faction&&(c.requiredCharacters||[]).every(id=>owned.has(id)));}
@@ -69,8 +92,8 @@ export function startGrandCampaign(){
  const screen=byId("grand-campaign-screen"),menu=byId("mainmenu");if(!screen||!menu)return;
  document.addEventListener("click",event=>{const target=event.target instanceof Element?event.target.closest('[data-mode="grand"]'):null;if(!target)return;event.preventDefault();event.stopPropagation();screen.hidden=false;menu.hidden=true;renderFaction();},true);
  byId("grand-campaign-back").addEventListener("click",()=>{screen.hidden=true;menu.hidden=false;});
- function saveSelection(){try{const f=FACTIONS[selectedFaction],city=CITIES.find(c=>c.id===selectedCity);localStorage.setItem("warGameGrandCampaignStart",JSON.stringify({schemaVersion:2,mapId:"shattered-realms-v2",faction:selectedFaction,selectedCity,startingCities:availableCities().map(c=>c.name),armyFaction:f.armyFaction,requiredCharacters:city?.requiredCharacters||[],selectionUpdatedAt:new Date().toISOString()}));}catch{}}
+ function saveSelection(){try{const f=FACTIONS[selectedFaction],city=CITIES.find(c=>c.id===selectedCity);localStorage.setItem("warGameGrandCampaignStart",JSON.stringify({schemaVersion:2,mapId:MAP_ID,faction:selectedFaction,selectedCity,startingCities:availableCities().map(c=>c.name),armyFaction:f.armyFaction,requiredCharacters:city?.requiredCharacters||[],selectionUpdatedAt:new Date().toISOString()}));}catch{}}
  byId("grand-faction-choices").querySelectorAll("[data-faction]").forEach(b=>b.addEventListener("click",()=>{selectedFaction=b.dataset.faction;ensureValidCity();renderFaction();saveSelection();}));
  byId("grand-world-map").querySelectorAll(".grand-city").forEach(m=>{const select=()=>{const city=CITIES.find(c=>c.id===Number(m.dataset.city));if(!city||city.faction!==selectedFaction)return;selectedCity=city.id;saveSelection();renderCity();};m.addEventListener("click",select);m.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select();}});});
- byId("grand-campaign-begin").addEventListener("click",()=>{const f=FACTIONS[selectedFaction],city=CITIES.find(c=>c.id===selectedCity);if(!city||!availableCities().some(c=>c.id===city.id))return;const state={schemaVersion:2,mapId:"shattered-realms-v2",faction:selectedFaction,selectedCity,startingCities:availableCities().map(c=>c.name),armyFaction:f.armyFaction,requiredCharacters:city.requiredCharacters||[],startingRegion:city.name};try{localStorage.setItem("warGameGrandCampaignStart",JSON.stringify(state));}catch{}byId("grand-faction-detail").insertAdjacentHTML("beforeend",'<p class="grand-saved-note" role="status">Starting region recorded: '+city.name+'. Campaign turn mechanics, AI rulers, armies, diplomacy and settlement actions remain future work.</p>');byId("grand-campaign-begin").textContent="Region selected ✓";});
+ byId("grand-campaign-begin").addEventListener("click",()=>{const f=FACTIONS[selectedFaction],city=CITIES.find(c=>c.id===selectedCity);if(!city||!availableCities().some(c=>c.id===city.id))return;const selection={schemaVersion:3,mapId:MAP_ID,faction:selectedFaction,selectedCity,startingCities:availableCities().map(c=>c.name),armyFaction:f.armyFaction,requiredCharacters:city.requiredCharacters||[],startingRegion:city.name};const campaign=createInitialCampaignState(selectedFaction,city);try{localStorage.setItem("warGameGrandCampaignStart",JSON.stringify(selection));localStorage.setItem("warGameGrandCampaignStateV1",JSON.stringify(campaign));}catch{}byId("grand-faction-detail").insertAdjacentHTML("beforeend",'<p class="grand-saved-note" role="status">Campaign foundation saved: '+city.name+' is your first region. The map now records region adjacency, initial ownership, turn 1, treasury and a starting army; playable turn actions and border rendering are the next layer.</p>');byId("grand-campaign-begin").textContent="Campaign foundation saved ✓";});
 }
