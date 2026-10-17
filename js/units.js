@@ -10,7 +10,8 @@ export function unitCost(config, faction) {
   const upgrades=[{key:"M",unit:dwarf?4:2,character:dwarf?8:5},{key:"WS",unit:elf?1:2,character:elf?3:5},{key:"BS",unit:elf?1:2,character:elf?3:5},{key:"S",unit:3,character:6},{key:"T",unit:dwarf?2:elf?6:4,character:dwarf?5:elf?10:8},{key:"I",unit:dwarf?3:1,character:dwarf?5:3},{key:"Ld",unit:1,character:3}].reduce((sum,s)=>sum+(config.upgrades&&config.upgrades[s.key]?(character?s.character:s.unit*models):0),0);
   const skillCost=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].reduce((sum,key)=>sum+(config.skills&&config.skills[key]?3:0),0);
   const weapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])];
-  const ranged=config.rangedWeapon||(["bow","crossbow","firearm","longRifle"].includes(config.weapon)?config.weapon:(type==="archers"?"bow":config.bow?"bow":null));
+  const rangedRaw=config.rangedWeapon||(["bow","crossbow","firearm","longRifle"].includes(config.weapon)?config.weapon:(type==="archers"?"bow":config.bow?"bow":null));
+  const ranged=dwarf&&rangedRaw==="bow"?"crossbow":rangedRaw;
   const rangedCost=ranged==="bow"?(eagleKit?0:elf&&type==="cavalry"&&(config.freeCavalryOption||"bow")==="bow"?0:(elf?3:2)*(character?1:models)):ranged==="crossbow"?3*(character?1:models):ranged==="firearm"?4*(character?1:models):ranged==="longRifle"?12*(character?1:models):0;
   if(dwarfBase[type]){const meleeCost=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])].reduce((sum,w)=>sum+(w==="greatWeapon"?2*models:w==="halberd"||w==="spear"?models:0),0);return models*dwarfBase[type]+meleeCost+rangedCost+upgrades+skillCost+(config.heavyArmour?2*models:0)+(config.champion?6:0);}
   if(character){
@@ -28,6 +29,9 @@ export function unitCost(config, faction) {
   return models*(elf?12:8)+meleeCost+rangedCost+(config.elvenArchery&&elf&&ranged==="bow"?2*models:0)+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0)+upgrades+skillCost;
 }
 function buildUnit(template,config,faction,opposing=false) {
+  if(faction==="dwarfs"&&(config.rangedWeapon==="bow"||config.weapon==="bow"||config.bow)){
+    config={...config,rangedWeapon:"crossbow",weapon:config.weapon==="bow"?"handWeapon":config.weapon,bow:false};
+  }
   const elf=faction==="highElves"&&!opposing,dwarf=faction==="dwarfs"&&!opposing,stats={...template.stats};
   const isCannon=config.type==="cannon",isBoltThrower=config.type==="boltThrower",isSiegeEngine=isCannon||isBoltThrower,isDragon=!!template.isDragon;
   const isCharacter=["captain","lord","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric"].includes(config.type),isCavalry=config.type==="cavalry"||isDragon,mountType=config.type==="pegasusChampion"?"eagle":(config.mountType||(config.mounted?"horse":"none")),mounted=(isCavalry&&!isDragon)||(isCharacter&&mountType!=="none"),isEagleMounted=elf&&mountType==="eagle"&&(isCharacter||isCavalry),hasHeavyArmour=!!config.heavyArmour&&(!isEagleMounted||config.type==="pegasusChampion"),hasMagicArmour=!!config.magicArmour&&!isEagleMounted,hasBarding=!!config.barding&&!isEagleMounted;
@@ -39,7 +43,7 @@ function buildUnit(template,config,faction,opposing=false) {
   if(isCharacter&&!mounted&&hasHeavyArmour&&!hasMagicArmour&&!elf&&!dwarf)stats.M=Math.max(1,stats.M-1);
   const lightArmour=isBoltThrower||dwarf|| (isCavalry||isCharacter?(!hasHeavyArmour):(elf||!!config.lightArmour));
   const meleeWeapons=[...new Set([...(config.meleeWeapons||[]),config.weapon||"handWeapon"])].filter(w=>!["bow","crossbow","firearm","longRifle"].includes(w)),ownsShield=!!config.shield||dwarf;if(!meleeWeapons.includes("handWeapon"))meleeWeapons.unshift("handWeapon");const spears=config.weapon==="spear"&&meleeWeapons.includes("spear");
-  const rangedWeapon=isCannon?null:(isBoltThrower?"bow":(config.rangedWeapon||(["bow","crossbow","firearm","longRifle","magicBow"].includes(config.weapon)?config.weapon:(config.type==="archers"?"bow":(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"))?"bow":null)))));
+  const rangedWeapon=isCannon?null:(isBoltThrower?"bow":(config.rangedWeapon||(["bow","crossbow","firearm","longRifle","magicBow"].includes(config.weapon)?config.weapon:(config.type==="archers"?(faction==="dwarfs"?"crossbow":"bow"):(isCavalry&&(!!config.bow||(elf&&(config.freeCavalryOption||"bow")==="bow"))?"bow":null)))));
   const hasBow=rangedWeapon==="bow"||rangedWeapon==="magicBow";
   let weapon=(isCharacter||isCavalry||["swordsmen","dwarfInfantry"].includes(config.type))?(["bow","crossbow","firearm","longRifle"].includes(config.weapon)?"handWeapon":(config.weapon||"handWeapon")):"handWeapon";
   const factionName=opposing?"Opposing":faction==="highElves"?"High Elf":faction==="dwarfs"?"Dwarf":"Empire";
