@@ -1,5 +1,5 @@
-import { getCollectionSnapshot } from "./collection.js?v=20261018-campaign-economy-v1";
-import { unitCost } from "./units.js?v=20261018-campaign-economy-v1";
+import { getCollectionSnapshot } from "./collection.js?v=20261018-campaign-economy-v2";
+import { unitCost } from "./units.js?v=20261018-campaign-economy-v2";
 const FACTIONS = {
  empire:{name:"Human Realms",summary:"The largest and most populous realm, but not a unified kingdom.",strengths:"Broad territory, fertile river valleys, trade roads and the largest pool of settlements.",politics:"Crownfall and Westmere recognise your court. Goldhaven, Stonebridge and Southwatch answer to rival human lords.",playerCities:["Crownfall","Westmere"],armyFaction:"empire"},
  highElves:{name:"High Elves",summary:"An old maritime people whose courts cluster around ancient forests and island harbours.",strengths:"Defensible islands, forest resources, sea access and compact but valuable settlements.",politics:"Aelthir recognises your court. Moonspire and Silvershade retain their own power and may resist your claims.",playerCities:["Aelthir"],armyFaction:"highElves"},
@@ -124,7 +124,7 @@ function campaignCityIncome(region){
  const s=region?.settlement;if(!s)return 0;
  const tier=Math.max(1,Number(s.historicalTier)||1),prosperity=Math.max(0,Math.min(100,Number(s.prosperity)||0));
  const population=Math.max(0,Number(s.population?.total)||0),buildings=(s.buildings||[]).reduce((sum,b)=>sum+Math.max(0,Math.min(100,Number(b.condition)||0)),0);
- const infrastructure=Math.max(.25,Math.min(1,(Number(s.infrastructureCondition)||100)/100));
+ const infrastructureValue=Number(s.infrastructureCondition),infrastructure=Math.max(.25,Math.min(1,Number.isFinite(infrastructureValue)?infrastructureValue/100:1));
  return Math.round((10+tier*10+prosperity*.35+Math.log10(Math.max(1,population))*6+buildings*.04)*infrastructure);
 }
 function campaignArmyCost(army){
@@ -664,7 +664,7 @@ function endCampaignTurn(){
   player.treasury=Math.max(0,(player.treasury||0)+player.income-player.upkeep);
   activeCampaign.treasury=player.treasury;
   if(playerArmy){
-   const recruitmentBudget=Math.min(Math.max(0,player.treasury-100),Math.max(0,Math.floor(player.income*.25)));
+   const recruitmentBudget=Math.min(Math.max(0,player.treasury-100),Math.max(0,Math.floor(Math.max(player.income*.5,player.treasury*.25))));
    const recruitment=recruitPlayerArmyFromCollection(playerArmy,playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId),recruitmentBudget,activeCampaign.commander);
    player.treasury=Math.max(0,player.treasury-recruitment.spent);activeCampaign.treasury=player.treasury;
    playerArmy.points=campaignArmyCost(playerArmy);player.armyPoints=playerArmy.points;player.roster=playerArmy.roster;
