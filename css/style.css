@@ -174,6 +174,8 @@ h1{font-size:clamp(28px,6vw,44px);line-height:1.1;margin:10px 0 16px;letter-spac
 .grand-world-map .grand-city{cursor:pointer;outline:none}
 .grand-world-map .grand-city.other-faction{opacity:.42}
 .grand-world-map .grand-city.other-faction:hover{opacity:.72}
+.grand-world-map .grand-city.character-locked circle{stroke-dasharray:3 2;opacity:.78}
+.grand-world-map .grand-city.character-locked text::after{content:" · locked"}
 .grand-city-dot.greenskins{background:#53783e;border-color:#d7e7b0}
 .grand-city-dot.undead{background:#78658d;border-color:#e6d8f2}
 .grand-city-dot.evilHumans{background:#8c4e49;border-color:#f0d0bd}
