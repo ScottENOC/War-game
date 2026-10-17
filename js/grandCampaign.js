@@ -1,4 +1,5 @@
 import { getCollectionSnapshot } from "./collection.js";
+import { unitCost } from "./units.js?v=20261016-victory-upgrades-v2";
 const FACTIONS = {
  empire:{name:"Human Realms",summary:"The largest and most populous realm, but not a unified kingdom.",strengths:"Broad territory, fertile river valleys, trade roads and the largest pool of settlements.",politics:"Crownfall and Westmere recognise your court. Goldhaven, Stonebridge and Southwatch answer to rival human lords.",playerCities:["Crownfall","Westmere"],armyFaction:"empire"},
  highElves:{name:"High Elves",summary:"An old maritime people whose courts cluster around ancient forests and island harbours.",strengths:"Defensible islands, forest resources, sea access and compact but valuable settlements.",politics:"Aelthir recognises your court. Moonspire and Silvershade retain their own power and may resist your claims.",playerCities:["Aelthir"],armyFaction:"highElves"},
@@ -42,6 +43,55 @@ const FACTION_PROFILES = {
  23:{id:"ashenCouncil",name:"The Ashen Council",race:"human",colours:{main:"#68645B",accent:"#B66A35"},emblem:"gate"}
 };
 const FACTION_BY_ID = Object.fromEntries(Object.values(FACTION_PROFILES).map(f=>[f.id,f]));
+
+const FACTION_ROSTER_OVERRIDES={
+ valedorn:{roster:"empire",units:["swordsmen","archers","captain","cavalry"]},
+ merrow:{roster:"empire",units:["swordsmen","archers","cavalry","cannon"]},
+ kest:{roster:"empire",units:["swordsmen","cavalry","archers","captain"]},
+ vane:{roster:"empire",units:["swordsmen","archers","cannon","captain"]},
+ caedmon:{roster:"empire",units:["swordsmen","cavalry","cannon","archers"]},
+ verdantCourt:{roster:"highElves",units:["swordsmen","archers","cavalry","boltThrower"]},
+ moonlitPrinces:{roster:"highElves",units:["swordsmen","archers","cavalry","captain"]},
+ silverAdmiralty:{roster:"highElves",units:["archers","cavalry","swordsmen","boltThrower"]},
+ barakdur:{roster:"dwarfs",units:["dwarfInfantry","dwarfInfantry","dwarfCaptain","cannon"]},
+ kazrinn:{roster:"dwarfs",units:["dwarfInfantry","dwarfCaptain","cannon"]},
+ grinholdCouncil:{roster:"empire",units:["swordsmen","swordsmen","cavalry","captain"]},
+ redfang:{roster:"empire",units:["swordsmen","cavalry","cavalry","archers"]},
+ cragBosses:{roster:"empire",units:["swordsmen","swordsmen","archers","cannon"]},
+ ironjaw:{roster:"empire",units:["swordsmen","cavalry","swordsmen","captain"]},
+ mudgut:{roster:"empire",units:["cavalry","swordsmen","cavalry","archers"]},
+ bonefield:{roster:"empire",units:["swordsmen","archers","cavalry","captain"]},
+ paleRegent:{roster:"empire",units:["swordsmen","swordsmen","archers","lord"]},
+ fenCourt:{roster:"empire",units:["swordsmen","archers","cavalry","captain"]},
+ ashenSepulchre:{roster:"empire",units:["swordsmen","archers","cannon","lord"]},
+ blackthorn:{roster:"empire",units:["swordsmen","archers","cavalry","captain"]},
+ ironMarshal:{roster:"empire",units:["swordsmen","cannon","archers","captain"]},
+ varkesh:{roster:"empire",units:["swordsmen","cavalry","archers","lord"]},
+ ashenCouncil:{roster:"empire",units:["swordsmen","archers","cannon","captain"]}
+};
+function rosterFactionForPoliticalFaction(id){
+ const profile=FACTION_BY_ID[id];return FACTION_ROSTER_OVERRIDES[id]?.roster||RACES[profile?.race]?.defaultRoster||"empire";
+}
+function createCampaignArmyRoster(id,targetPoints=500){
+ const faction=rosterFactionForPoliticalFaction(id),profile=FACTION_BY_ID[id];
+ const fallback=faction==="dwarfs"?["dwarfInfantry","dwarfInfantry","dwarfCaptain","cannon"]:faction==="highElves"?["swordsmen","archers","cavalry","boltThrower"]:["swordsmen","archers","cavalry","captain"];
+ const types=(FACTION_ROSTER_OVERRIDES[id]?.units||fallback).filter(type=>type!=="youngDragon"&&type!=="dragon"&&type!=="ancientDragon").slice(0,5);
+ const roster=types.map(type=>({type,models:type==="cavalry"?5:type==="cannon"?3:type==="boltThrower"?2:["captain","lord","dwarfCaptain","dwarfLord"].includes(type)?1:type==="archers"?10:20,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}}));
+ if(!roster.length)roster.push({type:faction==="dwarfs"?"dwarfInfantry":"swordsmen",models:20,weapon:"handWeapon"});
+ const cost=()=>roster.reduce((sum,u)=>sum+unitCost(u,faction),0);
+ while(cost()<targetPoints*.9&&roster.length<6){
+  const troop=roster.find(u=>["swordsmen","dwarfInfantry","archers","cavalry"].includes(u.type)&&u.models<(u.type==="cavalry"?15:30));
+  if(troop){troop.models++;continue;}
+  const type=faction==="dwarfs"?"dwarfInfantry":faction==="highElves"?"swordsmen":"swordsmen";
+  roster.push({type,models:Math.min(30,Math.max(5,Math.ceil((targetPoints-cost())/(faction==="highElves"?12:faction==="dwarfs"?8:8))),),weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}});
+ }
+ while(roster.length>1&&cost()>targetPoints*1.1){
+  const troop=[...roster].reverse().find(u=>["swordsmen","dwarfInfantry","archers","cavalry"].includes(u.type)&&u.models>(u.type==="cavalry"?5:5));
+  if(!troop)break;troop.models--;
+ }
+ return {faction,roster,points:cost(),politicalFactionId:id};
+}
+
 const CITIES = [
 {id:1,name:"Crownfall",faction:"empire",ruler:"House Valedorn",status:"Player court",terrain:"River confluence; fertile plains",description:"The old human capital sits where two navigable rivers meet. Roads from western farms and central lowlands converge here.",requiredCharacters:["edric_voss"]},
 {id:2,name:"Westmere",faction:"empire",ruler:"House Merrow",status:"Player court",terrain:"Western forest edge and river crossing",description:"A prosperous river town guarding the western approach and timber trade.",requiredCharacters:[]},
@@ -124,7 +174,8 @@ function ensureSettlementState(campaign){
   if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
  }
  campaign.schemaVersion=5;
- if(!campaign.factionStates){campaign.factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id);return {id:profile.id,name:profile.name,race:profile.race,homeRegion:home.id,alive:true,treasury:profile.id===campaign.playerPoliticalFaction?Number(campaign.treasury)||500:300,income:100,armyPoints:profile.id===campaign.playerPoliticalFaction?1000:500,turnsTaken:0,relations:{}};});campaign.factionTurnOrder=campaign.factionStates.map(f=>f.id);campaign.playerPoliticalFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[1].id;campaign.activeFaction=campaign.activeFaction||campaign.playerPoliticalFaction;}
+ if(!campaign.factionStates){campaign.factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id),generated=createCampaignArmyRoster(profile.id,profile.id===campaign.playerPoliticalFaction?1000:500);return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:generated.faction,roster:generated.roster,homeRegion:home.id,alive:true,treasury:profile.id===campaign.playerPoliticalFaction?Number(campaign.treasury)||500:300,income:100,armyPoints:profile.id===campaign.playerPoliticalFaction?1000:500,turnsTaken:0,relations:{}};});campaign.factionTurnOrder=campaign.factionStates.map(f=>f.id);campaign.playerPoliticalFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[1].id;campaign.activeFaction=campaign.activeFaction||campaign.playerPoliticalFaction;}
+ for(const state of campaign.factionStates){if(!Array.isArray(state.roster)||!state.roster.length){const generated=createCampaignArmyRoster(state.id,state.armyPoints||500);state.rosterFaction=generated.faction;state.roster=generated.roster;}}
  return campaign;
 }
 function addDisplacedPeople(settlement,culture,count){
@@ -191,10 +242,10 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
 const MAP_ID="shattered-realms-v4";
 function createInitialCampaignState(faction,city,commander){
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
- const factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id);return {id:profile.id,name:profile.name,race:profile.race,homeRegion:home.id,alive:true,treasury:profile.id===FACTION_PROFILES[city.id].id?500:300,income:100,armyPoints:profile.id===FACTION_PROFILES[city.id].id?1000:500,turnsTaken:0,relations:{}};});
+ const factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id),army=createCampaignArmyRoster(profile.id,profile.id===FACTION_PROFILES[city.id].id?1000:500);return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,treasury:profile.id===FACTION_PROFILES[city.id].id?500:300,income:100,armyPoints:Math.max(profile.id===FACTION_PROFILES[city.id].id?1000:500,army.points),turnsTaken:0,relations:{}};});
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;const pa=FACTION_BY_ID[a.id],pb=FACTION_BY_ID[b.id],base=RACES[pa.race].attitudes[pb.race]??0;diplomacy[a.id][b.id]=base+(pa.race===pb.race?10:0);}}
- return {schemaVersion:5,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:500,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},armies:factionStates.map(f=>({id:f.id+"-main",owner:f.id,region:f.homeRegion,nodeId:"city-"+f.homeRegion,points:f.id===playerPoliticalFaction?1000:500})),lastEvent:commander.name+" begins the campaign at "+city.name+"."};
+ return {schemaVersion:5,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:500,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},armies:factionStates.map(f=>({id:f.id+"-main",owner:f.id,factionId:f.id,rosterFaction:f.rosterFaction,roster:f.roster.map(u=>({...u})),region:f.homeRegion,nodeId:"city-"+f.homeRegion,points:f.armyPoints})),lastEvent:commander.name+" begins the campaign at "+city.name+"."};
 }
 let selectedFaction="empire",selectedPoliticalFaction="valedorn",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
@@ -340,7 +391,8 @@ function setCampaignRelation(campaign,a,b,value){
 }
 function factionArmy(campaign,id){
  let army=campaign.armies.find(a=>a.owner===id||a.factionId===id||a.id===id+"-main");
- if(!army){const state=campaign.factionStates.find(f=>f.id===id);if(!state)return null;army={id:id+"-main",owner:id,factionId:id,region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:Math.max(100,state.armyPoints||500)};campaign.armies.push(army);}
+ if(!army){const state=campaign.factionStates.find(f=>f.id===id);if(!state)return null;const generated=createCampaignArmyRoster(id,Math.max(100,state.armyPoints||500));army={id:id+"-main",owner:id,factionId:id,rosterFaction:generated.faction,roster:generated.roster,region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:Math.max(100,state.armyPoints||500)};campaign.armies.push(army);}
+ if(!Array.isArray(army.roster)||!army.roster.length){const state=campaign.factionStates.find(f=>f.id===id),generated=createCampaignArmyRoster(id,Math.max(100,army.points||state?.armyPoints||500));army.rosterFaction=generated.faction;army.roster=generated.roster;}
  army.owner=id;army.factionId=id;return army;
 }
 function resolveStrategicBattle(campaign,attacker,defender,target){
@@ -374,6 +426,7 @@ function runAIFactionTurn(campaign,faction){
  if(army.points<targetStrength&&faction.treasury>=100){
   const recruit=Math.min(targetStrength-army.points,Math.floor(faction.treasury/2),350);
   army.points+=recruit;faction.armyPoints=army.points;faction.treasury-=recruit*2;
+  const troop=army.roster?.find(u=>["swordsmen","dwarfInfantry","archers","cavalry"].includes(u.type)&&u.models<(u.type==="cavalry"?15:30));if(troop)troop.models=Math.min(troop.type==="cavalry"?15:30,troop.models+Math.max(1,Math.floor(recruit/(troop.type==="cavalry"?24:troop.type==="archers"?10:8))));
  }
  const region=campaign.regions.find(r=>r.id===army.region)||campaign.regions.find(r=>r.id===faction.homeRegion);
  if(!region)return faction.name+" could not locate its army.";
