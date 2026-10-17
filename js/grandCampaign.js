@@ -143,13 +143,18 @@ function recruitArmyModels(army,faction,budget){
  army.points=campaignArmyCost(army);
  return {spent,added};
 }
-function recruitPlayerArmyFromCollection(army,faction,budget){
+function recruitPlayerArmyFromCollection(army,faction,budget,commander=null){
  const models=collectionModels(),profile=FACTION_BY_ID[army.factionId||army.owner],race=profile?.race||"human";
+ let spent=0,added=0;
+ const characterTypes=["captain","lord","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric"];
+ if(commander&&!(army.roster||[]).some(u=>characterTypes.includes(u.type))){
+  const character=campaignCharacterConfig(army.factionId||army.owner,commander),price=unitCost(character,faction);
+  if(budget>=price){army.roster.push(character);spent+=price;}
+ }
  const categories=[
   {type:race==="dwarf"?"dwarfInfantry":"swordsmen",ranged:null,match:m=>m.type===(race==="dwarf"?"dwarfInfantry":"swordsmen")&&!["bow","crossbow","firearm","longRifle","magicBow"].includes(m.weapon)},
   {type:race==="dwarf"?"dwarfInfantry":"archers",ranged:race==="dwarf"?"crossbow":"bow",match:m=>m.type===(race==="dwarf"?"dwarfInfantry":"archers")&&m.weapon===(race==="dwarf"?"crossbow":"bow")}
  ];
- let spent=0,added=0;
  for(const cat of categories){
   const available=models.filter(m=>m.faction===faction&&cat.match(m)).length;
   let deployed=(army.roster||[]).filter(u=>u.type===cat.type&&(cat.ranged?u.rangedWeapon===cat.ranged:!u.rangedWeapon)).reduce((sum,u)=>sum+(u.models||0),0);
@@ -525,13 +530,13 @@ function launchCampaignBattle(region){
   if(result.won){
    const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:"occupy"});
    playerArmy.region=region.id;playerArmy.nodeId="city-"+region.id;activeCampaign.commander.region=region.id;activeCampaign.commander.nodeId="city-"+region.id;
-   if(!playerArmy.roster.length){const reinforcements=createCampaignArmyRoster(playerId,250,{player:true,commander:activeCampaign.commander});playerArmy.roster=reinforcements.roster;playerArmy.points=reinforcements.points;}
+   if(!playerArmy.roster.length)activeCampaign.lastEvent="Victory at "+region.name+", but your army has been destroyed. Rebuild from your remaining miniatures and treasury.";
    activeCampaign.lastEvent="Victory at "+region.name+". "+outcome.summary;
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
   }else{
    const home=playerState?.homeRegion||activeCampaign.startingRegion,homeNode="city-"+home;
    activeCampaign.commander.region=home;activeCampaign.commander.nodeId=homeNode;playerArmy.region=home;playerArmy.nodeId=homeNode;
-   if(!playerArmy.roster.length){const reinforcements=createCampaignArmyRoster(playerId,250,{player:true,commander:activeCampaign.commander});playerArmy.roster=reinforcements.roster;playerArmy.points=reinforcements.points;}
+   if(!playerArmy.roster.length)activeCampaign.lastEvent="Defeat at "+region.name+". Your army has been destroyed; rebuild from your remaining miniatures and treasury.";
    activeCampaign.lastEvent="Defeat at "+region.name+". Your surviving forces retreat to "+(CITIES.find(c=>c.id===home)?.name||"your capital")+".";
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
   }
@@ -566,7 +571,7 @@ function factionArmy(campaign,id){
  let army=campaign.armies.find(a=>a.owner===id||a.factionId===id||a.id===id+"-main");
  const state=campaign.factionStates.find(f=>f.id===id),isPlayer=id===campaign.playerPoliticalFaction;
  if(!army){if(!state)return null;const generated=createCampaignArmyRoster(id,Math.max(100,state.armyPoints||500),{player:isPlayer,commander:isPlayer?campaign.commander:null});army={id:id+"-main",owner:id,factionId:id,rosterFaction:generated.faction,roster:generated.roster,region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:generated.points};campaign.armies.push(army);}
- if(!Array.isArray(army.roster)||!army.roster.length){const generated=createCampaignArmyRoster(id,Math.max(100,army.points||state?.armyPoints||500),{player:isPlayer,commander:isPlayer?campaign.commander:null});army.rosterFaction=generated.faction;army.roster=generated.roster;army.points=generated.points;}
+ if(!Array.isArray(army.roster)){const generated=createCampaignArmyRoster(id,Math.max(100,army.points||state?.armyPoints||500),{player:isPlayer,commander:isPlayer?campaign.commander:null});army.rosterFaction=generated.faction;army.roster=generated.roster;army.points=generated.points;}
  army.owner=id;army.factionId=id;return army;
 }
 function applyStrategicArmyLosses(army,remainingFraction){
@@ -660,7 +665,7 @@ function endCampaignTurn(){
   activeCampaign.treasury=player.treasury;
   if(playerArmy){
    const recruitmentBudget=Math.min(Math.max(0,player.treasury-100),Math.max(0,Math.floor(player.income*.25)));
-   const recruitment=recruitPlayerArmyFromCollection(playerArmy,playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId),recruitmentBudget);
+   const recruitment=recruitPlayerArmyFromCollection(playerArmy,playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId),recruitmentBudget,activeCampaign.commander);
    player.treasury=Math.max(0,player.treasury-recruitment.spent);activeCampaign.treasury=player.treasury;
    playerArmy.points=campaignArmyCost(playerArmy);player.armyPoints=playerArmy.points;player.roster=playerArmy.roster;
   }
