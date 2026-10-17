@@ -113,7 +113,8 @@ function ensureSettlementState(campaign){
   if(!region.settlement)region.settlement=initialSettlement(city);
   if(!region.ownerFaction)region.ownerFaction=region.owner==="player"?(campaign.playerPoliticalFaction||campaign.playerFaction):(region.owner||FACTION_PROFILES[region.id]?.id||city.faction);
   if((campaign.schemaVersion||0)<5&&region.ownerFaction===city.faction)region.ownerFaction=FACTION_PROFILES[region.id]?.id||region.ownerFaction;
-  if((campaign.schemaVersion||0)<5&&region.ownerFaction==="player")region.ownerFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[region.id]?.id;
+  if((campaign.schemaVersion||0)<5&&(region.ownerFaction==="player"||region.ownerFaction===campaign.playerFaction))region.ownerFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[region.id]?.id;
+  if((campaign.schemaVersion||0)<5&&FACTIONS[region.ownerFaction]&&region.ownerFaction!==city.faction)region.ownerFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[region.id]?.id;
   region.politicalFactionId=region.ownerFaction;region.owner=region.ownerFaction;
   if(!region.nativeFaction)region.nativeFaction=city.faction;
   if(!region.politicalFactionId)region.politicalFactionId=FACTION_PROFILES[region.id]?.id||FACTION_PROFILES[city.id]?.id;
@@ -319,7 +320,7 @@ function moveCommander(id){
  if(!activeCampaign)return;const from=activeCampaign.commander.nodeId,n=activeCampaign.graph.nodes[id],edge=(activeCampaign.graph.edges[from]||[]).find(e=>e.to===id);
  if(!n||!edge){activeCampaign.lastEvent="You can only move along a connected road.";renderCampaignMap();return;}
  const cost=edge.cost+nodeCost(n)-1;if(cost>activeCampaign.commander.movement){activeCampaign.lastEvent="Not enough movement remaining to reach "+n.label+".";renderCampaignMap();return;}
- activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement-=cost;const army=activeCampaign.armies.find(a=>a.id==="player-main");if(army){army.nodeId=id;army.region=n.region;}
+ activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement-=cost;const army=activeCampaign.armies.find(a=>a.owner===activeCampaign.playerPoliticalFaction||a.id==="player-main");if(army){army.nodeId=id;army.region=n.region;}
  activeCampaign.lastEvent=activeCampaign.commander.name+" moves to "+n.label+". "+activeCampaign.commander.movement+" movement remaining.";saveCampaign();renderCampaignMap();
 }
 function politicalOwner(region){return region?.ownerFaction||region?.politicalFactionId||FACTION_PROFILES[region?.id]?.id;}
@@ -358,6 +359,7 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
   const old=campaign.regions.find(r=>r.id===attacker.homeRegion);
   campaign.lastEvent=attacker.name+" defeats "+defender.name+" at "+target.name+" and captures the settlement. "+result.summary;
  }else{
+  if(attacking){attacking.region=attacker.homeRegion;attacking.nodeId="city-"+attacker.homeRegion;}
   campaign.lastEvent=defender.name+" repels "+attacker.name+" at "+target.name+". Both armies suffer losses.";
  }
 }
