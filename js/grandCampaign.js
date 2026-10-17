@@ -112,7 +112,7 @@ function ensureSettlementState(campaign){
   const city=CITIES.find(c=>c.id===region.id);if(!city)continue;
   if(!region.settlement)region.settlement=initialSettlement(city);
   if(!region.ownerFaction)region.ownerFaction=region.owner==="player"?campaign.playerFaction:(region.owner||city.faction);
-  if(!region.nativeFaction)region.nativeFaction=city.faction;
+  if(!region.nativeFaction)region.nativeFaction=city.faction;\n  if(!region.politicalFactionId)region.politicalFactionId=FACTION_PROFILES[region.id]?.id||FACTION_PROFILES[city.id]?.id;
   if(!region.nativeCulture)region.nativeCulture=CULTURE_BY_FACTION[city.faction]||"Local";
   if(!region.settlement.population)region.settlement.population=initialSettlement(city).population;
   if(!Array.isArray(region.settlement.buildings))region.settlement.buildings=initialSettlement(city).buildings;
