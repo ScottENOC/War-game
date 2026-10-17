@@ -1,3 +1,4 @@
+import { getCollectionSnapshot } from "./collection.js";
 const FACTIONS = {
  empire:{name:"Human Realms",summary:"The largest and most populous realm, but not a unified kingdom.",strengths:"Broad territory, fertile river valleys, trade roads and the largest pool of settlements.",politics:"Crownfall and Westmere recognise your court. Goldhaven, Stonebridge and Southwatch answer to rival human lords.",playerCities:["Crownfall","Westmere"],armyFaction:"empire"},
  highElves:{name:"High Elves",summary:"An old maritime people whose courts cluster around ancient forests and island harbours.",strengths:"Defensible islands, forest resources, sea access and compact but valuable settlements.",politics:"Aelthir recognises your court. Moonspire and Silvershade retain their own power and may resist your claims.",playerCities:["Aelthir"],armyFaction:"highElves"},
@@ -7,15 +8,15 @@ const FACTIONS = {
  evilHumans:{name:"The Blackened Principalities",summary:"Human tyrants, fallen noble houses and militarised border states that reject the old crowns.",strengths:"Fortified roads, hard country and several independent principalities.",politics:"The princes share enemies more readily than they share authority. Choose which lord's domain begins your campaign.",playerCities:["Blackthorn","Dreadmarch","Varkesh","Ashenford"],armyFaction:"empire"}
 };
 const CITIES = [
-{id:1,name:"Crownfall",faction:"empire",ruler:"House Valedorn",status:"Player court",terrain:"River confluence; fertile plains",description:"The old human capital sits where two navigable rivers meet. Roads from western farms and central lowlands converge here.",requiredCharacters:[]},
+{id:1,name:"Crownfall",faction:"empire",ruler:"House Valedorn",status:"Player court",terrain:"River confluence; fertile plains",description:"The old human capital sits where two navigable rivers meet. Roads from western farms and central lowlands converge here.",requiredCharacters:["edric_voss"]},
 {id:2,name:"Westmere",faction:"empire",ruler:"House Merrow",status:"Player court",terrain:"Western forest edge and river crossing",description:"A prosperous river town guarding the western approach and timber trade.",requiredCharacters:[]},
 {id:3,name:"Goldhaven",faction:"empire",ruler:"Prince Odran of House Kest",status:"Rival human lord",terrain:"Eastern grain belt",description:"A rich market city whose prince commands much of the eastern farmland and dislikes Crownfall's taxes.",requiredCharacters:[]},
 {id:4,name:"Stonebridge",faction:"empire",ruler:"Duchess Elira Vane",status:"Rival human lord",terrain:"Southern river crossing",description:"A fortified bridge-city controlling the safest crossing into the southern continent. Its duchess bargains as an equal.",requiredCharacters:[]},
 {id:5,name:"Southwatch",faction:"empire",ruler:"Lord-Marshal Caedmon",status:"Rival human lord",terrain:"Southern coast and trade road",description:"A coastal fortress and customs port, rich from sea trade and wary of central authority.",requiredCharacters:[]},
-{id:6,name:"Aelthir",faction:"highElves",ruler:"The Verdant Court",status:"Player court",terrain:"Ancient forest, north-west coast",description:"An old elven city among giant trees beside a sheltered harbour. Its influence reaches the western woodland.",requiredCharacters:[]},
-{id:7,name:"Moonspire",faction:"highElves",ruler:"The Moonlit Princes",status:"Rival elven court",terrain:"Wooded Greyward Isles",description:"A secluded island court guarding wooded isles and a valuable sea lane.",requiredCharacters:[]},
+{id:6,name:"Aelthir",faction:"highElves",ruler:"The Verdant Court",status:"Player court",terrain:"Ancient forest, north-west coast",description:"An old elven city among giant trees beside a sheltered harbour. Its influence reaches the western woodland.",requiredCharacters:["aelthir_dawnwing"]},
+{id:7,name:"Moonspire",faction:"highElves",ruler:"The Moonlit Princes",status:"Rival elven court",terrain:"Wooded Greyward Isles",description:"A secluded island court guarding wooded isles and a valuable sea lane.",requiredCharacters:["lethariel_starweaver"]},
 {id:8,name:"Silvershade",faction:"highElves",ruler:"The Silver Admiralty",status:"Autonomous elven court",terrain:"Eastern island forest and deep harbour",description:"A wealthy harbour-city whose admirals command the eastern island passages.",requiredCharacters:[]},
-{id:9,name:"Ironhold",faction:"dwarfs",ruler:"Clan Barakdur",status:"Player clan",terrain:"High mountains; iron and silver mines",description:"A deep mountain hold behind a narrow pass. Its mines and forges make it strategically valuable.",requiredCharacters:[]},
+{id:9,name:"Ironhold",faction:"dwarfs",ruler:"Clan Barakdur",status:"Player clan",terrain:"High mountains; iron and silver mines",description:"A deep mountain hold behind a narrow pass. Its mines and forges make it strategically valuable.",requiredCharacters:["haldric_stoneward"]},
 {id:10,name:"Deepdelve",faction:"dwarfs",ruler:"Clan Kazrinn",status:"Rival thane",terrain:"Eastern mountain range; deep ore",description:"A fortified hold on the eastern range. Its thane recognises the high council but keeps his own army and treasury.",requiredCharacters:[]},
 {id:11,name:"Grinhold",faction:"greenskins",ruler:"The Grinhold warboss council",status:"Greenskin stronghold",terrain:"Eastern highlands; mountain caves",description:"A sprawling orc-and-goblin stronghold built into a broken mountain ridge.",requiredCharacters:[]},
 {id:12,name:"Redfang Plain",faction:"greenskins",ruler:"Redfang warband",status:"Tribal territory",terrain:"Open eastern grassland",description:"A vast grazing plain used by roaming greenskin warbands and ogre bands.",requiredCharacters:[]},
@@ -33,21 +34,34 @@ const CITIES = [
 ];
 let selectedFaction="empire",selectedCity=1;
 const byId=id=>document.getElementById(id);
-function availableCities(faction=selectedFaction){return CITIES.filter(c=>c.faction===faction&&(c.requiredCharacters||[]).every(id=>ownedCharacterIds().includes(id)));}
-function ownedCharacterIds(){try{const raw=JSON.parse(localStorage.getItem("warGameCollectionV1")||"null");const models=Array.isArray(raw)?raw:(raw?.models||raw?.ownedModels||[]);return models.filter(m=>m&&m.isCharacter!==false&&(["character","namedCharacter"].includes(m.kind)||m.isCharacter||m.namedCharacter)).map(m=>m.characterId||m.id||m.name);}catch{return [];}}
+function availableCities(faction=selectedFaction){const owned=ownedCharacterIds();return CITIES.filter(c=>c.faction===faction&&(c.requiredCharacters||[]).every(id=>owned.has(id)));}
+function ownedCharacterIds(){
+ const owned=new Set();
+ try{
+  const models=getCollectionSnapshot()?.models||[];
+  for(const m of models){if(!m||typeof m!=="object")continue;
+   const type=String(m.type||"").toLowerCase(),name=String(m.name||"").toLowerCase(),components=Array.isArray(m.components)?m.components.map(x=>String(x).toLowerCase()):[];
+   if(type==="legendarylord"||name.includes("edric voss")||components.includes("edric_voss_body"))owned.add("edric_voss");
+   if(type==="shadowelf"||name.includes("lethariel starweaver")||components.includes("lethariel_starweaver_body"))owned.add("lethariel_starweaver");
+   if(type==="pegasuschampion"||name.includes("aelthir")||components.includes("aelthir_dawnwing_body"))owned.add("aelthir_dawnwing");
+   if(type==="dwarfkinghaldric"||name.includes("haldric stoneward")||components.includes("haldric_stoneward_body"))owned.add("haldric_stoneward");
+  }
+ }catch{}
+ return owned;
+}
 function ensureValidCity(){const valid=availableCities();if(!valid.some(c=>c.id===selectedCity))selectedCity=valid[0]?.id??CITIES[0].id;}
 function renderCity(){
  const city=CITIES.find(c=>c.id===selectedCity);if(!city)return;
  const valid=availableCities().some(c=>c.id===city.id);
- const gate=(city.requiredCharacters||[]).filter(id=>!ownedCharacterIds().includes(id));
+ const owned=ownedCharacterIds();const gate=(city.requiredCharacters||[]).filter(id=>!owned.has(id));
  byId("grand-city-detail").innerHTML='<div class="grand-city-heading"><span class="grand-city-dot '+city.faction+'"></span><div><h3>'+city.name+'</h3><small>'+FACTIONS[city.faction].name+'</small></div></div><p>'+city.description+'</p><div class="grand-stat"><b>Ruler</b><span>'+city.ruler+'</span></div><div class="grand-stat"><b>Political status</b><span>'+city.status+'</span></div><div class="grand-stat"><b>Location</b><span>'+city.terrain+'</span></div>'+(gate.length?'<p class="subtle">Starting here requires these named characters in your collection: '+gate.join(", ")+'.</p>':"")+(valid?'<p class="subtle">Available as a starting region for '+FACTIONS[selectedFaction].name+'.</p>':'<p class="subtle">Select this settlement’s faction to start here.</p>');
- byId("grand-world-map").querySelectorAll(".grand-city").forEach(m=>{const active=Number(m.dataset.city)===city.id,belongs=CITIES.find(c=>c.id===Number(m.dataset.city))?.faction===selectedFaction;m.classList.toggle("selected",active);m.classList.toggle("other-faction",!belongs);m.setAttribute("aria-pressed",String(active));m.setAttribute("aria-disabled",String(!belongs));});
+ byId("grand-world-map").querySelectorAll(".grand-city").forEach(m=>{const active=Number(m.dataset.city)===city.id,belongs=CITIES.find(c=>c.id===Number(m.dataset.city))?.faction===selectedFaction;m.classList.toggle("selected",active);m.classList.toggle("other-faction",!belongs);const locked=(CITIES.find(c=>c.id===Number(m.dataset.city))?.requiredCharacters||[]).some(id=>!ownedCharacterIds().has(id));m.classList.toggle("character-locked",locked);m.setAttribute("aria-pressed",String(active));m.setAttribute("aria-disabled",String(!belongs||locked));});
  byId("grand-campaign-begin").disabled=!valid;
 }
 function renderFaction(){
  const f=FACTIONS[selectedFaction];ensureValidCity();
  byId("grand-faction-choices").querySelectorAll("[data-faction]").forEach(b=>{const active=b.dataset.faction===selectedFaction;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active));});
- byId("grand-faction-detail").innerHTML='<div class="grand-faction-kicker">YOUR PEOPLE</div><h3>'+f.name+'</h3><p>'+f.summary+'</p><div class="grand-stat"><b>Regions to start from</b><span>'+availableCities().length+'</span></div><div class="grand-stat"><b>Army list placeholder</b><span>'+(f.armyFaction==="empire"?"Human / Empire roster":f.name+" roster")+'</span></div><p><b>Strategic character:</b> '+f.strengths+'</p><p><b>Internal politics:</b> '+f.politics+'</p><p class="subtle">Choose a settlement belonging to this faction. Named-character starting restrictions are supported in the campaign data; none are assigned to the three new factions yet.</p>';
+ byId("grand-faction-detail").innerHTML='<div class="grand-faction-kicker">YOUR PEOPLE</div><h3>'+f.name+'</h3><p>'+f.summary+'</p><div class="grand-stat"><b>Regions to start from</b><span>'+availableCities().length+'</span></div><div class="grand-stat"><b>Army list placeholder</b><span>'+(f.armyFaction==="empire"?"Human / Empire roster":f.name+" roster")+'</span></div><p><b>Strategic character:</b> '+f.strengths+'</p><p><b>Internal politics:</b> '+f.politics+'</p><p class="subtle">Choose a settlement belonging to this faction. Some lore-linked capitals require their named character to be in your collection. The new factions have no named-character gates yet.</p>';
  byId("grand-campaign-begin").textContent="Start from selected region →";renderCity();
 }
 export function startGrandCampaign(){
