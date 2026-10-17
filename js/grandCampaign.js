@@ -249,6 +249,41 @@ function createInitialCampaignState(faction,city,commander){
 }
 let selectedFaction="empire",selectedPoliticalFaction="valedorn",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
+ const campaignMapNav=new WeakMap();
+ function installCampaignMapNavigation(host,map){
+  if(!host||!map||campaignMapNav.has(host))return;
+  const state={scale:Math.max(host.clientWidth,900)/1300,min:Math.max(host.clientWidth,900)/1300,max:Math.max(host.clientWidth,900)/1300*3,startDistance:0,startScale:1,startX:0,startY:0,anchorX:0,anchorY:0};
+  const sizeMap=scale=>{state.scale=Math.max(state.min,Math.min(state.max,scale));map.style.width=(1300*state.scale)+"px";map.style.height=(760*state.scale)+"px";};
+  sizeMap(state.scale);
+  const distance=(a,b)=>Math.hypot(b.clientX-a.clientX,b.clientY-a.clientY);
+  host.addEventListener("touchstart",e=>{
+   if(e.touches.length!==2)return;
+   const a=e.touches[0],b=e.touches[1],rect=host.getBoundingClientRect();
+   state.startDistance=distance(a,b);state.startScale=state.scale;
+   state.anchorX=(a.clientX+b.clientX)/2-rect.left+host.scrollLeft;
+   state.anchorY=(a.clientY+b.clientY)/2-rect.top+host.scrollTop;
+  },{passive:true});
+  host.addEventListener("touchmove",e=>{
+   if(e.touches.length!==2||!state.startDistance)return;
+   e.preventDefault();
+   const a=e.touches[0],b=e.touches[1],rect=host.getBoundingClientRect(),ratio=distance(a,b)/state.startDistance;
+   const oldScale=state.scale,midX=(a.clientX+b.clientX)/2-rect.left,midY=(a.clientY+b.clientY)/2-rect.top;
+   sizeMap(state.startScale*ratio);
+   const factor=state.scale/oldScale;
+   host.scrollLeft=Math.max(0,(state.anchorX*factor)-midX);
+   host.scrollTop=Math.max(0,(state.anchorY*factor)-midY);
+  },{passive:false});
+  const reset=()=>{state.startDistance=0;};
+  host.addEventListener("touchend",reset,{passive:true});host.addEventListener("touchcancel",reset,{passive:true});
+  host.addEventListener("wheel",e=>{
+   if(!e.ctrlKey&&!e.metaKey)return;
+   e.preventDefault();
+   const rect=host.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top,old=state.scale;
+   sizeMap(old*Math.exp(-e.deltaY*.004));
+   const factor=state.scale/old;host.scrollLeft=(host.scrollLeft+x)*factor-x;host.scrollTop=(host.scrollTop+y)*factor-y;
+  },{passive:false});
+  campaignMapNav.set(host,state);
+ }
 const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[160,142],7:[541,182],8:[793,207],9:[515,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1207,515],20:[548,602],21:[944,462],22:[846,680],23:[629,642]};
 const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
 function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
@@ -353,7 +388,7 @@ function settleMonthlyPopulation(campaign){
 function nodeCost(n){return n.type==="river"?2:1;}
 function renderCampaignMap(){
  if(!activeCampaign)return;const host=byId("grand-map-live-wrap");let map=byId("grand-campaign-world-map");
- const firstRender=!map;if(!map){map=byId("grand-world-map").cloneNode(true);map.id="grand-campaign-world-map";map.querySelectorAll(".grand-city").forEach(m=>m.classList.remove("other-faction","selected","character-locked"));host.replaceChildren(map);}
+ const firstRender=!map;if(!map){map=byId("grand-world-map").cloneNode(true);map.id="grand-campaign-world-map";map.querySelectorAll(".grand-city").forEach(m=>m.classList.remove("other-faction","selected","character-locked"));host.replaceChildren(map);installCampaignMapNavigation(host,map);}
  map.querySelectorAll("#campaign-road-layer,#campaign-node-layer,#campaign-commander-layer").forEach(e=>e.remove());
  const road=svgEl("g",{id:"campaign-road-layer","pointer-events":"none"}),layer=svgEl("g",{id:"campaign-node-layer"}),token=svgEl("g",{id:"campaign-commander-layer","pointer-events":"none"}),{nodes,edges}=activeCampaign.graph;
  for(const [id,list] of Object.entries(edges))for(const e of list){if(id.localeCompare(e.to)>=0)continue;const a=nodes[id],b=nodes[e.to];road.append(svgEl("path",{d:"M "+a.x+" "+a.y+" L "+b.x+" "+b.y,class:"campaign-road"+(a.type==="river"||b.type==="river"?" river-road":"")}));}
