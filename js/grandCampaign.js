@@ -7,6 +7,41 @@ const FACTIONS = {
  undead:{name:"The Undying Courts",summary:"Scattered barrow kingdoms, haunted marshes and ancient necropolises separated by long stretches of hostile country.",strengths:"Widely separated strongholds and defensible ruins; influence is dispersed rather than continuous.",politics:"Each necropolis is a power centre in its own right. No single ruler controls every undead settlement.",playerCities:["Barrowmere","Nightfen","Sepulchre"],armyFaction:"empire"},
  evilHumans:{name:"The Blackened Principalities",summary:"Human tyrants, fallen noble houses and militarised border states that reject the old crowns.",strengths:"Fortified roads, hard country and several independent principalities.",politics:"The princes share enemies more readily than they share authority. Choose which lord's domain begins your campaign.",playerCities:["Blackthorn","Dreadmarch","Varkesh","Ashenford"],armyFaction:"empire"}
 };
+// Race rules are shared defaults; political factions are the actual campaign actors.
+// Individual factions may override their race's roster, diplomacy and economic traits.
+const RACES = {
+ human:{name:"Human",defaultRoster:"empire",attitudes:{greenskin:-55,undead:-45,elf:0,dwarf:0,human:0}},
+ elf:{name:"High Elf",defaultRoster:"highElves",attitudes:{greenskin:-65,undead:-60,human:0,dwarf:-20,elf:15}},
+ dwarf:{name:"Dwarf",defaultRoster:"dwarfs",attitudes:{greenskin:-75,undead:-50,elf:-35,human:5,dwarf:15}},
+ greenskin:{name:"Greenskin",defaultRoster:"empire",attitudes:{human:-65,elf:-70,dwarf:-75,undead:-10,greenskin:10}},
+ undead:{name:"Undead",defaultRoster:"empire",attitudes:{human:-45,elf:-55,dwarf:-45,greenskin:-10,undead:15}}
+};
+const FACTION_PROFILES = {
+ 1:{id:"valedorn",name:"House Valedorn",race:"human",colours:{main:"#8E2636",accent:"#D6B56D"},emblem:"crown"},
+ 2:{id:"merrow",name:"House Merrow",race:"human",colours:{main:"#244B55",accent:"#D6B56D"},emblem:"tower"},
+ 3:{id:"kest",name:"House Kest",race:"human",colours:{main:"#B57B25",accent:"#5D1724"},emblem:"hawk"},
+ 4:{id:"vane",name:"House Vane",race:"human",colours:{main:"#5A4A7D",accent:"#D9D2C2"},emblem:"bridge"},
+ 5:{id:"caedmon",name:"Southwatch March",race:"human",colours:{main:"#344B36",accent:"#C5A35C"},emblem:"fortress"},
+ 6:{id:"verdantCourt",name:"The Verdant Court",race:"elf",colours:{main:"#172B55",accent:"#D7E0EC"},emblem:"star"},
+ 7:{id:"moonlitPrinces",name:"The Moonlit Princes",race:"elf",colours:{main:"#3D477D",accent:"#D8D4F2"},emblem:"crescent"},
+ 8:{id:"silverAdmiralty",name:"The Silver Admiralty",race:"elf",colours:{main:"#176A78",accent:"#D7E0EC"},emblem:"swan"},
+ 9:{id:"barakdur",name:"Clan Barakdur",race:"dwarf",colours:{main:"#245A59",accent:"#AD7945"},emblem:"hammer"},
+ 10:{id:"kazrinn",name:"Clan Kazrinn",race:"dwarf",colours:{main:"#454B57",accent:"#C9B78A"},emblem:"anvil"},
+ 11:{id:"grinholdCouncil",name:"Grinhold Warboss Council",race:"greenskin",colours:{main:"#526B3A",accent:"#A62E2E"},emblem:"tusk"},
+ 12:{id:"redfang",name:"Redfang Warband",race:"greenskin",colours:{main:"#A62E2E",accent:"#D8CFB6"},emblem:"fang"},
+ 13:{id:"cragBosses",name:"The Crag Bosses",race:"greenskin",colours:{main:"#343A32",accent:"#C7A84B"},emblem:"skull"},
+ 14:{id:"ironjaw",name:"Ironjaw Tribe",race:"greenskin",colours:{main:"#6D7737",accent:"#292929"},emblem:"jaw"},
+ 15:{id:"mudgut",name:"Mudgut Clans",race:"greenskin",colours:{main:"#69513C",accent:"#A62E2E"},emblem:"boar"},
+ 16:{id:"bonefield",name:"Bonefield Warband",race:"greenskin",colours:{main:"#292929",accent:"#D8CFB6"},emblem:"bones"},
+ 17:{id:"paleRegent",name:"The Pale Regent",race:"undead",colours:{main:"#29272F",accent:"#D8D0C2"},emblem:"skull"},
+ 18:{id:"fenCourt",name:"The Fen Court",race:"undead",colours:{main:"#4B5550",accent:"#74617D"},emblem:"reed"},
+ 19:{id:"ashenSepulchre",name:"The Ashen Sepulchre",race:"undead",colours:{main:"#45334F",accent:"#A7A19A"},emblem:"crypt"},
+ 20:{id:"blackthorn",name:"House Blackthorn",race:"human",colours:{main:"#581F2A",accent:"#98999A"},emblem:"thorn"},
+ 21:{id:"ironMarshal",name:"The Iron Marshal",race:"human",colours:{main:"#29292D",accent:"#B66A35"},emblem:"spear"},
+ 22:{id:"varkesh",name:"The Principality of Varkesh",race:"human",colours:{main:"#7C342D",accent:"#D6B77B"},emblem:"sun"},
+ 23:{id:"ashenCouncil",name:"The Ashen Council",race:"human",colours:{main:"#68645B",accent:"#B66A35"},emblem:"gate"}
+};
+const FACTION_BY_ID = Object.fromEntries(Object.values(FACTION_PROFILES).map(f=>[f.id,f]));
 const CITIES = [
 {id:1,name:"Crownfall",faction:"empire",ruler:"House Valedorn",status:"Player court",terrain:"River confluence; fertile plains",description:"The old human capital sits where two navigable rivers meet. Roads from western farms and central lowlands converge here.",requiredCharacters:["edric_voss"]},
 {id:2,name:"Westmere",faction:"empire",ruler:"House Merrow",status:"Player court",terrain:"Western forest edge and river crossing",description:"A prosperous river town guarding the western approach and timber trade.",requiredCharacters:[]},
@@ -83,7 +118,7 @@ function ensureSettlementState(campaign){
   if(!Array.isArray(region.settlement.buildings))region.settlement.buildings=initialSettlement(city).buildings;
   if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
  }
- campaign.schemaVersion=3;
+ campaign.schemaVersion=4;\n if(!campaign.factionStates){campaign.factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id);return {id:profile.id,name:profile.name,race:profile.race,homeRegion:home.id,alive:true,treasury:profile.id===campaign.playerPoliticalFaction?Number(campaign.treasury)||500:300,income:100,armyPoints:profile.id===campaign.playerPoliticalFaction?1000:500,turnsTaken:0,relations:{}};});campaign.factionTurnOrder=campaign.factionStates.map(f=>f.id);campaign.playerPoliticalFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[1].id;campaign.activeFaction=campaign.activeFaction||campaign.playerPoliticalFaction;}
  return campaign;
 }
 function addDisplacedPeople(settlement,culture,count){
@@ -148,7 +183,7 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
 const MAP_ID="shattered-realms-v4";
 function createInitialCampaignState(faction,city,commander){
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,owner:r.id===city.id?faction:r.faction,ownerFaction:r.id===city.id?faction:r.faction,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
- return {schemaVersion:3,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:500,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},diplomacy:{},armies:[{id:"player-main",owner:"player",region:city.id,nodeId:"city-"+city.id,points:1000}],lastEvent:commander.name+" begins the campaign at "+city.name+"."};
+ const factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id);return {id:profile.id,name:profile.name,race:profile.race,homeRegion:home.id,alive:true,treasury:profile.id===FACTION_PROFILES[city.id].id?500:300,income:100,armyPoints:profile.id===FACTION_PROFILES[city.id].id?1000:500,turnsTaken:0,relations:{}};});\n const playerPoliticalFaction=FACTION_PROFILES[city.id].id;\n const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;const pa=FACTION_BY_ID[a.id],pb=FACTION_BY_ID[b.id],base=RACES[pa.race].attitudes[pb.race]??0;diplomacy[a.id][b.id]=base+(pa.race===pb.race?10:0);}}\n return {schemaVersion:4,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:500,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},diplomacy:{},armies:[{id:"player-main",owner:"player",region:city.id,nodeId:"city-"+city.id,points:1000}],lastEvent:commander.name+" begins the campaign at "+city.name+"."};
 }
 let selectedFaction="empire",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
