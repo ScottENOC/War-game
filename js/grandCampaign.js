@@ -182,7 +182,7 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
 
 const MAP_ID="shattered-realms-v4";
 function createInitialCampaignState(faction,city,commander){
- const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,owner:r.id===city.id?faction:r.faction,ownerFaction:r.id===city.id?faction:r.faction,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
+ const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:r.id===city.id?FACTION_PROFILES[city.id].id:FACTION_PROFILES[r.id].id,owner:r.id===city.id?faction:r.faction,ownerFaction:r.id===city.id?faction:r.faction,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
  const factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id);return {id:profile.id,name:profile.name,race:profile.race,homeRegion:home.id,alive:true,treasury:profile.id===FACTION_PROFILES[city.id].id?500:300,income:100,armyPoints:profile.id===FACTION_PROFILES[city.id].id?1000:500,turnsTaken:0,relations:{}};});\n const playerPoliticalFaction=FACTION_PROFILES[city.id].id;\n const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;const pa=FACTION_BY_ID[a.id],pb=FACTION_BY_ID[b.id],base=RACES[pa.race].attitudes[pb.race]??0;diplomacy[a.id][b.id]=base+(pa.race===pb.race?10:0);}}\n return {schemaVersion:4,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:500,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},diplomacy:{},armies:[{id:"player-main",owner:"player",region:city.id,nodeId:"city-"+city.id,points:1000}],lastEvent:commander.name+" begins the campaign at "+city.name+"."};
 }
 let selectedFaction="empire",selectedCity=1,activeCampaign=null;
@@ -273,7 +273,33 @@ function moveCommander(id){
  activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement-=cost;const army=activeCampaign.armies.find(a=>a.id==="player-main");if(army){army.nodeId=id;army.region=n.region;}
  activeCampaign.lastEvent=activeCampaign.commander.name+" moves to "+n.label+". "+activeCampaign.commander.movement+" movement remaining.";saveCampaign();renderCampaignMap();
 }
-function endCampaignTurn(){if(!activeCampaign)return;ensureSettlementState(activeCampaign);settleMonthlyPopulation(activeCampaign);activeCampaign.turn++;activeCampaign.commander.movement=activeCampaign.commander.maxMovement;activeCampaign.treasury+=100;activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Treasury +100 gold; movement replenished. Population and infrastructure updated for the month.";saveCampaign();renderCampaignMap();}
+function endCampaignTurn(){
+ if(!activeCampaign)return;
+ ensureSettlementState(activeCampaign);settleMonthlyPopulation(activeCampaign);
+ const order=activeCampaign.factionTurnOrder||[],states=activeCampaign.factionStates||[];
+ // The player ends their own faction's turn; each surviving AI faction then receives its own income and turn.
+ let currentIndex=order.indexOf(activeCampaign.activeFaction||activeCampaign.playerPoliticalFaction);
+ if(currentIndex<0)currentIndex=0;
+ const playerId=activeCampaign.playerPoliticalFaction||FACTION_PROFILES[activeCampaign.startingRegion]?.id;
+ const processed=[];
+ for(let step=1;step<=order.length;step++){
+  const id=order[(currentIndex+step)%order.length],f=states.find(x=>x.id===id);
+  if(!f||!f.alive)continue;
+  f.turnsTaken=(f.turnsTaken||0)+1;f.treasury=(f.treasury||0)+(f.income||100);
+  const owned=activeCampaign.regions.filter(r=>(r.politicalFactionId||FACTION_PROFILES[r.id]?.id)===id);
+  // Keep the faction's income grounded in its currently controlled settlements.
+  f.income=Math.max(50,owned.length*50);
+  processed.push(f.name);
+  if(id===playerId)break;
+ }
+ const player=states.find(f=>f.id===playerId);
+ if(player)activeCampaign.treasury=player.treasury;
+ activeCampaign.turn++;
+ activeCampaign.activeFaction=playerId;
+ activeCampaign.commander.movement=activeCampaign.commander.maxMovement;
+ activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. "+(processed.length?processed.join(", ")+" completed their faction turns. ":"")+"Faction treasuries and settlement populations updated; your movement is replenished.";
+ saveCampaign();renderCampaignMap();
+}
 function showCampaignWorld(c){activeCampaign=c;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();}
 export function startGrandCampaign(){
  window.resolveGrandCampaignConquest=resolveGrandCampaignConquest;
