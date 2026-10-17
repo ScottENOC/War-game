@@ -415,3 +415,8 @@ button,[role="button"]{
  #grand-campaign-world .grand-world-sidebar{max-height:31dvh}
  #grand-campaign-world .grand-world-header h1{display:none}
 }
+
+
+/* Keep the campaign map scrollable on both axes; two-finger pinch is handled in JS. */
+#grand-campaign-world .grand-map-live-wrap{overflow:auto;touch-action:pan-x pan-y;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#grand-campaign-world .grand-map-live-wrap::-webkit-scrollbar{display:none}
