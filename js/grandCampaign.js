@@ -99,15 +99,20 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
  let roster=[];
  if(player){
   const models=collectionModels(),count=(type,weaponFilter=null)=>models.filter(m=>m.faction===faction&&m.type===type&&(!weaponFilter||weaponFilter(m))).length;
-  let meleeAvailable=count(basicType,m=>m.weapon==="handWeapon");
-  let rangedAvailable=race==="dwarf"?count("dwarfInfantry",m=>m.weapon==="crossbow"):count("archers",m=>m.weapon==="bow");
-  for(let i=0;i<2&&meleeAvailable>=5;i++){
-   const n=Math.min(15,meleeAvailable);if(n<5)break;
-   roster.push({type:basicType,models:n,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}});
-   meleeAvailable-=n;
-  }
-  const rangedCount=Math.min(10,rangedAvailable);
-  if(rangedCount>=5)roster.push({type:rangedType,models:rangedCount,weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:race==="dwarf"?"crossbow":"bow",champion:false,upgrades:{},skills:{}});
+  const meleeAvailable=count(basicType,m=>m.weapon==="handWeapon");
+  const rangedAvailable=race==="dwarf"?count("dwarfInfantry",m=>m.weapon==="crossbow"):count("archers",m=>m.weapon==="bow");
+  const addStartingGroups=(type,total,rangedWeapon=null)=>{
+   // Starting campaign groups use a practical 10-model floor, even though
+   // skirmish army-building permits smaller units.
+   const deployed=Math.min(30,total);
+   if(deployed<10)return;
+   const sizes=deployed<20?[deployed]:[Math.floor(deployed/2),Math.ceil(deployed/2)];
+   for(const n of sizes){
+    roster.push({type,models:n,weapon:"handWeapon",meleeWeapons:["handWeapon"],...(rangedWeapon?{rangedWeapon}:{}),champion:false,upgrades:{},skills:{}});
+   }
+  };
+  addStartingGroups(basicType,meleeAvailable);
+  addStartingGroups(rangedType,rangedAvailable,race==="dwarf"?"crossbow":"bow");
   if(commander)roster.push(character);
  }else{
   roster=[
