@@ -112,6 +112,9 @@ function ensureSettlementState(campaign){
   const city=CITIES.find(c=>c.id===region.id);if(!city)continue;
   if(!region.settlement)region.settlement=initialSettlement(city);
   if(!region.ownerFaction)region.ownerFaction=region.owner==="player"?(campaign.playerPoliticalFaction||campaign.playerFaction):(region.owner||FACTION_PROFILES[region.id]?.id||city.faction);
+  if((campaign.schemaVersion||0)<5&&region.ownerFaction===city.faction)region.ownerFaction=FACTION_PROFILES[region.id]?.id||region.ownerFaction;
+  if((campaign.schemaVersion||0)<5&&region.ownerFaction==="player")region.ownerFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[region.id]?.id;
+  region.politicalFactionId=region.ownerFaction;region.owner=region.ownerFaction;
   if(!region.nativeFaction)region.nativeFaction=city.faction;
   if(!region.politicalFactionId)region.politicalFactionId=FACTION_PROFILES[region.id]?.id||FACTION_PROFILES[city.id]?.id;
   if(!region.nativeCulture)region.nativeCulture=CULTURE_BY_FACTION[city.faction]||"Local";
@@ -119,7 +122,7 @@ function ensureSettlementState(campaign){
   if(!Array.isArray(region.settlement.buildings))region.settlement.buildings=initialSettlement(city).buildings;
   if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
  }
- campaign.schemaVersion=4;
+ campaign.schemaVersion=5;
  if(!campaign.factionStates){campaign.factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id);return {id:profile.id,name:profile.name,race:profile.race,homeRegion:home.id,alive:true,treasury:profile.id===campaign.playerPoliticalFaction?Number(campaign.treasury)||500:300,income:100,armyPoints:profile.id===campaign.playerPoliticalFaction?1000:500,turnsTaken:0,relations:{}};});campaign.factionTurnOrder=campaign.factionStates.map(f=>f.id);campaign.playerPoliticalFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[1].id;campaign.activeFaction=campaign.activeFaction||campaign.playerPoliticalFaction;}
  return campaign;
 }
@@ -141,12 +144,14 @@ function removePopulation(settlement,group,count){
 export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options={}){
  ensureSettlementState(campaign);
  const region=campaign.regions.find(r=>r.id===Number(regionId)),city=CITIES.find(c=>c.id===Number(regionId));
- if(!region||!city||!FACTIONS[conquerorFaction])throw new Error("Unknown region or conquering faction.");
+ if(!region||!city||(!FACTIONS[conquerorFaction]&&!FACTION_BY_ID[conquerorFaction]))throw new Error("Unknown region or conquering faction.");
  const previousOwner=region.ownerFaction||region.owner||region.nativeFaction;
- if(previousOwner===conquerorFaction)return {region,summary:city.name+" is already under this faction's control."};
+ const conquerorId=FACTION_BY_ID[conquerorFaction]?.id||conquerorFaction;
+ if(previousOwner===conquerorId)return {region,summary:city.name+" is already under this faction's control."};
  const settlement=region.settlement,outcome=options.outcome||"occupy";
- const sameSpecies=FACTION_SPECIES[conquerorFaction]===FACTION_SPECIES[region.nativeFaction];
- const isGreenskinDwarfConquest=conquerorFaction==="greenskins"&&region.nativeFaction==="dwarfs";
+ const conquerorRace=FACTION_BY_ID[conquerorId]?.race||FACTION_SPECIES[conquerorFaction];
+ const sameSpecies=conquerorRace===(FACTION_PROFILES[region.id]?.race||FACTION_SPECIES[region.nativeFaction]);
+ const isGreenskinDwarfConquest=(conquerorId==="greenskins"||FACTION_BY_ID[conquerorId]?.race==="greenskin")&&region.nativeFaction==="dwarfs";
  const defaultFleeFraction=isGreenskinDwarfConquest?0.2:(sameSpecies?0.05:0.15);
  const fleeFraction=Math.max(0,Math.min(1,Number.isFinite(options.fleeFraction)?options.fleeFraction:defaultFleeFraction));
  let fled=0,killed=0;
@@ -174,9 +179,9 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
  settlement.fortification.condition=Math.max(0,100-settlement.fortification.damage);
  settlement.infrastructureCondition=Math.max(0,settlement.infrastructureCondition-(outcome==="raze"?90:outcome==="sack"?40:preserve?5:20));
  if(outcome==="raze"){settlement.historicalTier=Math.max(1,settlement.historicalTier);settlement.ruins=true;}
- region.ownerFaction=FACTION_BY_ID[conquerorFaction]?.id||conquerorFaction;region.politicalFactionId=region.ownerFaction;region.owner=region.ownerFaction;region.occupationPolicy=preserve?"local-administration":"military-occupation";settlement.occupationPolicy=region.occupationPolicy;settlement.monthsUnderOccupation=0;
+ region.ownerFaction=conquerorId;region.politicalFactionId=conquerorId;region.owner=conquerorId;region.occupationPolicy=preserve?"local-administration":"military-occupation";settlement.occupationPolicy=region.occupationPolicy;settlement.monthsUnderOccupation=0;
  const factionName=FACTIONS[conquerorFaction].name;
- const special=conquerorFaction==="greenskins"&&region.nativeFaction==="dwarfs"?" Orcs slaughtered the dwarves who could not escape; surviving escapees are displaced.":"";
+ const special=(conquerorId==="greenskins"||FACTION_BY_ID[conquerorId]?.race==="greenskin")&&region.nativeFaction==="dwarfs"?" Orcs slaughtered the dwarves who could not escape; surviving escapees are displaced.":"";
  const summary=city.name+" falls to "+factionName+". "+fled.toLocaleString()+" inhabitants flee; "+killed.toLocaleString()+" are killed."+special+" Its "+settlement.fortification.style+" fortifications remain in place, damaged but not replaced.";
  campaign.lastEvent=summary;
  return {region,summary,fled,killed,previousOwner,conquerorFaction};
@@ -229,14 +234,14 @@ function paintFactionBanners(map,campaign=null){
  }
 }
 function renderCity(){
- const city=CITIES.find(c=>c.id===selectedCity);if(!city)return;const commander=commanderForFaction(selectedFaction),valid=availableCities().some(c=>c.id===city.id),owned=ownedCharacterIds(),missing=(city.requiredCharacters||[]).filter(id=>!owned.has(id));
+ const city=CITIES.find(c=>c.id===selectedCity);if(!city)return;const commander=commanderForFaction(selectedFaction),valid=availableCities().some(c=>c.id===city.id),owned=ownedCharacterIds(),missing=(city.requiredCharacters||[]).filter(id=>!owned.has(id)),political=FACTION_BY_ID[selectedPoliticalFaction];
  byId("grand-city-detail").innerHTML='<div class="grand-city-heading"><span class="grand-city-dot '+city.faction+'"></span><div><h3>'+city.name+'</h3><small>'+FACTIONS[city.faction].name+'</small></div></div><p>'+city.description+'</p><div class="grand-stat"><b>Ruler</b><span>'+city.ruler+'</span></div><div class="grand-stat"><b>Location</b><span>'+city.terrain+'</span></div>'+(missing.length?'<p class="subtle">Requires '+missing.join(", ")+'.</p>':"")+(commander?'<p class="subtle">Commander: '+commander.name+'</p>':'<p class="subtle">Faction locked: collect '+gateText(selectedFaction)+' to command this campaign.</p>');
  byId("grand-world-map").querySelectorAll(".grand-city").forEach(m=>{const id=Number(m.dataset.city),c=CITIES.find(x=>x.id===id);m.classList.toggle("selected",id===city.id);m.classList.toggle("other-faction",c?.faction!==selectedFaction);m.classList.toggle("character-locked",(c?.requiredCharacters||[]).some(x=>!ownedCharacterIds().has(x)));m.setAttribute("aria-pressed",String(id===city.id));});
  byId("grand-campaign-begin").disabled=!valid||!commander;renderRegionChoices();
 }
 function renderRegionChoices(){
- const host=byId("grand-region-choices");if(!host)return;const owned=ownedCharacterIds(),commander=commanderForFaction(selectedFaction);
- host.innerHTML=CITIES.filter(c=>c.faction===selectedFaction).map(c=>{const missing=(c.requiredCharacters||[]).filter(id=>!owned.has(id)),chosen=c.id===selectedCity,locked=!commander||missing.length;return '<button type="button" class="grand-region-choice'+(chosen?' active':'')+(locked?' locked':'')+'" data-region="'+c.id+'" '+(locked?'disabled':'')+'><span class="grand-region-choice-name">'+c.name+'</span><span class="grand-region-choice-meta">'+(!commander?'Requires '+gateText(selectedFaction):missing.length?'Requires '+missing.join(', '):c.status)+'</span>'+(chosen?'<span class="grand-region-selected">SELECTED</span>':'')+'</button>';}).join('');
+ const host=byId("grand-region-choices");if(!host)return;const owned=ownedCharacterIds(),commander=commanderForFaction(selectedFaction),homeId=Number(Object.keys(FACTION_PROFILES).find(id=>FACTION_PROFILES[id].id===selectedPoliticalFaction));
+ host.innerHTML=CITIES.filter(c=>c.id===homeId).map(c=>{const missing=(c.requiredCharacters||[]).filter(id=>!owned.has(id)),chosen=c.id===selectedCity,locked=!commander||missing.length;return '<button type="button" class="grand-region-choice'+(chosen?' active':'')+(locked?' locked':'')+'" data-region="'+c.id+'" '+(locked?'disabled':'')+'><span class="grand-region-choice-name">'+c.name+'</span><span class="grand-region-choice-meta">'+(!commander?'Requires '+gateText(selectedFaction):missing.length?'Requires '+missing.join(', '):c.status)+'</span>'+(chosen?'<span class="grand-region-selected">SELECTED</span>':'')+'</button>';}).join('');
  host.querySelectorAll("[data-region]").forEach(b=>b.addEventListener("click",()=>{selectedCity=Number(b.dataset.region);saveSelection();renderCity();}));
 }
 function saveSelection(){try{const f=FACTIONS[selectedFaction],c=CITIES.find(x=>x.id===selectedCity);localStorage.setItem("warGameGrandCampaignStart",JSON.stringify({schemaVersion:5,mapId:MAP_ID,faction:selectedFaction,politicalFactionId:selectedPoliticalFaction,selectedCity,armyFaction:f.armyFaction,startingRegion:c?.name}));}catch{}}
@@ -261,7 +266,7 @@ function renderFaction(){
   saveSelection();renderFaction();
  }));
  byId("grand-faction-detail").innerHTML='<h3>'+profile.name+'</h3><p>'+(home?.description||"An independent political faction in the Shattered Realms.")+'</p><div class="grand-stat"><b>Race</b><span>'+(RACES[profile.race]?.name||profile.race)+'</span></div><div class="grand-stat"><b>Capital</b><span>'+(home?.name||"Unknown")+'</span></div><div class="grand-stat"><b>Commander</b><span>'+(commander?commander.name:"Locked")+'</span></div><p class="subtle">'+(commander?(commander.kind==="legendary"?"Legendary commander unlocked.":"Generic hero unlocked."):"Collect "+gateText(selectedFaction)+" to unlock this faction.")+'</p>';
- ensureValidCity();byId("grand-campaign-begin").textContent="Start campaign";renderCity();
+ byId("grand-campaign-begin").textContent="Start campaign";renderCity();
 }
 function createMovementGraph(){
  const nodes={},edges={},add=n=>{nodes[n.id]=n;edges[n.id]=edges[n.id]||[];},link=(a,b,cost=1)=>{if(!edges[a]||!edges[b])return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost});};
@@ -303,7 +308,7 @@ function renderCampaignMap(){
  map.querySelector("#grand-city-markers").before(road);
  for(const n of Object.values(nodes)){const isCurrent=n.id===activeCampaign.commander.nodeId,reach=(edges[activeCampaign.commander.nodeId]||[]).some(e=>e.to===n.id&&e.cost+nodeCost(n)-1<=activeCampaign.commander.movement),g=svgEl("g",{class:"campaign-node "+n.type+(isCurrent?" current":"")+(reach?" reachable":""),tabindex:reach?"0":"-1",role:"button","aria-label":n.label,transform:"translate("+n.x+" "+n.y+")","data-node":n.id});g.append(svgEl("circle",{r:16,class:"campaign-node-hit"}));g.append(svgEl("circle",{r:n.type==="city"?5:n.type==="crossroads"?3.5:5.5,class:"campaign-node-visible"}));if(n.type==="port")g.append(svgEl("path",{d:"M-3 0 L3 0 M0 -4 L0 2 M-4 2 L4 2"}));layer.append(g);}
  map.querySelector("#grand-city-markers").after(layer);
- const current=nodes[activeCampaign.commander.nodeId];token.append(svgEl("circle",{cx:current.x,cy:current.y-17,r:11,class:"commander-token"}));const initials=activeCampaign.commander.name.split(/\\s+/).map(s=>s[0]).join("").slice(0,2).toUpperCase(),label=svgEl("text",{x:current.x,y:current.y-13,"text-anchor":"middle",class:"commander-initials"});label.textContent=initials;token.append(label);map.append(token);
+ const current=nodes[activeCampaign.commander.nodeId];token.append(svgEl("circle",{cx:current.x,cy:current.y-17,r:11,class:"commander-token"}));const initials=activeCampaign.commander.name.split(/\s+/).map(s=>s[0]).join("").slice(0,2).toUpperCase(),label=svgEl("text",{x:current.x,y:current.y-13,"text-anchor":"middle",class:"commander-initials"});label.textContent=initials;token.append(label);map.append(token);
  layer.querySelectorAll("[data-node]").forEach(g=>{const move=()=>moveCommander(g.dataset.node);g.addEventListener("click",move);g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();move();}});});
  const n=nodes[activeCampaign.commander.nodeId];const settlementRegion=activeCampaign.regions.find(r=>r.id===n.region);byId("grand-campaign-turn").textContent="TURN "+activeCampaign.turn;byId("grand-campaign-treasury").textContent=activeCampaign.treasury+" gold";
  byId("grand-campaign-commander").innerHTML="<strong>"+activeCampaign.commander.name+"</strong><span>"+(activeCampaign.commander.kind==="legendary"?"Legendary commander":"Generic hero")+"</span><span>Movement "+activeCampaign.commander.movement+"/"+activeCampaign.commander.maxMovement+"</span><span>Location: "+(CITIES.find(c=>c.id===n.region)?.name||"Road")+"</span>";
