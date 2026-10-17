@@ -143,6 +143,35 @@ function recruitArmyModels(army,faction,budget){
  army.points=campaignArmyCost(army);
  return {spent,added};
 }
+function recruitPlayerArmyFromCollection(army,faction,budget){
+ const models=collectionModels(),profile=FACTION_BY_ID[army.factionId||army.owner],race=profile?.race||"human";
+ const categories=[
+  {type:race==="dwarf"?"dwarfInfantry":"swordsmen",ranged:null,match:m=>m.type===(race==="dwarf"?"dwarfInfantry":"swordsmen")&&!["bow","crossbow","firearm","longRifle","magicBow"].includes(m.weapon)},
+  {type:race==="dwarf"?"dwarfInfantry":"archers",ranged:race==="dwarf"?"crossbow":"bow",match:m=>m.type===(race==="dwarf"?"dwarfInfantry":"archers")&&m.weapon===(race==="dwarf"?"crossbow":"bow")}
+ ];
+ let spent=0,added=0;
+ for(const cat of categories){
+  const available=models.filter(m=>m.faction===faction&&cat.match(m)).length;
+  let deployed=(army.roster||[]).filter(u=>u.type===cat.type&&(cat.ranged?u.rangedWeapon===cat.ranged:!u.rangedWeapon)).reduce((sum,u)=>sum+(u.models||0),0);
+  let remaining=Math.max(0,available-deployed);
+  while(remaining>0&&added<5){
+   let unit=(army.roster||[]).find(u=>u.type===cat.type&&(cat.ranged?u.rangedWeapon===cat.ranged:!u.rangedWeapon)&&u.models<30);
+   if(!unit){
+    if(army.roster.length>=6||remaining<5)break;
+    const fresh={type:cat.type,models:5,weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:cat.ranged,champion:false,upgrades:{},skills:{}};
+    const price=unitCost(fresh,faction);
+    if(budget-spent<price)break;
+    army.roster.push(fresh);spent+=price;added+=5;remaining-=5;continue;
+   }
+   const before=unitCost({...unit,models:unit.models},faction),after=unitCost({...unit,models:unit.models+1},faction),price=Math.max(1,after-before);
+   if(budget-spent<price)break;
+   unit.models++;spent+=price;added++;remaining--;deployed++;
+  }
+  if(added>=5)break;
+ }
+ army.points=campaignArmyCost(army);
+ return {spent,added};
+}
 
 const CITIES = [
 {id:1,name:"Crownfall",faction:"empire",ruler:"House Valedorn",status:"Player court",terrain:"River confluence; fertile plains",description:"The old human capital sits where two navigable rivers meet. Roads from western farms and central lowlands converge here.",requiredCharacters:["edric_voss"]},
