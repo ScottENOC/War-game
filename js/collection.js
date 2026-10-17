@@ -348,6 +348,11 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
 export function getCollectionSnapshot(){
  try{
   const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");if(!d||!Array.isArray(d.models))return starterData();
-  return {...d,models:d.models.map(m=>m?.faction==="dwarfs"?{...m,weapon:m.weapon==="bow"?"crossbow":m.weapon,backWeapons:(m.backWeapons||[]).map(w=>w==="bow"?"crossbow":w),components:(m.components||[]).map(x=>x==="both_bow"?"both_crossbow":x==="back_bow"?"back_crossbow":x)}:m)};
+  const legacyTypes={dwarfWarriors:"dwarfInfantry",dwarfThunderers:"dwarfInfantry",dwarfQuarrellers:"dwarfInfantry",dwarfLongbeards:"dwarfInfantry",dwarfIronbreakers:"dwarfInfantry"};
+  return {...d,models:d.models.map(m=>{
+   if(!m||typeof m!=="object")return m;
+   const type=legacyTypes[m.type]||m.type;
+   return m.faction==="dwarfs"?{...m,type,weapon:m.weapon==="bow"?"crossbow":m.weapon,backWeapons:(m.backWeapons||[]).map(w=>w==="bow"?"crossbow":w),components:(m.components||[]).map(x=>x==="both_bow"?"both_crossbow":x==="back_bow"?"back_crossbow":x)}:{...m,type};
+  })};
  }catch{return starterData();}
 }
