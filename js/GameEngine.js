@@ -7,7 +7,7 @@ import { createAI } from "./ai.js?v=20261016-ai-pathfinding-v2";
 import { createRules } from "./rules.js?v=20261015-fear-rules-v1";
 import { createShooting } from "./shooting.js";
 import { createCombat } from "./combat.js?v=20261015-fear-rules-v1";
-import { createRendering } from "./rendering.js";
+import { createRendering } from "./rendering.js?v=20261017-faction-colours-v1";
 import { createInput } from "./input.js?v=20261017-import-fix-v1";
 import { createUI } from "./ui.js?v=20261016-ai-pathfinding-v2";
 import { createPhases } from "./phases.js?v=20261015-terror-rules-v1";
