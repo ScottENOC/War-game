@@ -113,6 +113,7 @@ function finishBattle(msg){
  const won=msg.toLowerCase().includes("player wins");
  if(won&&collectionManager&&!campaignBattle&&!roguelikeBattle){collectionManager.grantLootbox("skirmish");say("Skirmish victory reward: one lootbox added to your collection.");}
  say('<b>'+msg+'</b>');
+ if(grandCampaignBattle){grandCampaignBattle=false;$("battle-return").hidden=true;const result={won,playerUnits:units().filter(u=>u.side==="player").map(u=>({id:u.id,type:u.type,models:u.models,damage:u.damage,characterWounds:u.characterWounds,points:u.points})),enemyUnits:units().filter(u=>u.side==="ai").map(u=>({id:u.id,type:u.type,models:u.models,damage:u.damage,characterWounds:u.characterWounds,points:u.points}))};const complete=grandCampaignBattleComplete;grandCampaignBattleComplete=null;try{complete?.(result);}catch(error){console.error("Campaign battle result handling failed",error);}$("game").hidden=true;const campaignScreen=$("grand-campaign-screen");if(campaignScreen)campaignScreen.hidden=false;return;}
  if(campaignBattle){campaignBattle=false;narrativeCampaign?.onBattleFinished(won);$("battle-return").hidden=true;return;}
  if(roguelikeBattle){roguelikeBattle=false;roguelike?.onBattleFinished(won,units().filter(u=>u.side==="player"));$("battle-return").hidden=true;return;}
  $("battle-return").hidden=false;
@@ -189,6 +190,16 @@ function startRoguelikeBattle(army,faction,round,targetPoints,battleType="skirmi
  const actualEnemy=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);
  say("Roguelike · Round "+round+" · "+(battleType==="siege"?"Siege — you are the "+siegeRole+". ":"Skirmish. ")+"Your army "+playerPoints+" pts; opponent "+actualEnemy+" pts (target "+enemyTarget+")."+(battleType==="siege"?" The attacker must breach the castle by the end of turn 10; otherwise the defender wins.":""));setupCanvas();
 }
+function startPoliticalCampaignBattle({army, faction="empire", enemyArmy, enemyFaction="empire", onComplete}){
+ if(!Array.isArray(army)||!army.length||!Array.isArray(enemyArmy)||!enemyArmy.length)return false;
+ S.battleType="skirmish";S.siegeRole="attacker";S.autoTerrain=true;S.terrainSeed=Date.now();
+ const playerForce=createUnitsFromArmy(army,faction),enemyForce=createUnitsFromArmy(enemyArmy,enemyFaction);
+ S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(enemyForce).filter(([id])=>id.startsWith("a")))};
+ campaignBattle=false;roguelikeBattle=false;grandCampaignBattle=true;grandCampaignBattleComplete=onComplete;
+ $("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("roguelike-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("grand-campaign-screen").hidden=true;$("game").hidden=false;$("battle-return").hidden=true;
+ reset();say("Grand campaign battle · "+faction+" against "+enemyFaction+". Victory or defeat will change the campaign.");setupCanvas();return true;
+}
+window.startPoliticalCampaignBattle=startPoliticalCampaignBattle;
 function startCampaignBattle(army,enemyConfig){
  S.autoTerrain=true;S.terrainSeed=Date.now();const playerUnits=createUnitsFromArmy(army,"empire");
  const enemyPair=createUnitsFromArmy([{type:"swordsmen",models:20,weapon:"handWeapon",champion:false}], "empire");
@@ -202,7 +213,7 @@ function showSkirmishBuilder(){$("game").hidden=true;$("mainmenu").hidden=true;$
 let collectionManager=null;
 let narrativeCampaign=null;
 let roguelike=null;
-let campaignBattle=false,roguelikeBattle=false,roguelikeBuilderMode=false;
+let campaignBattle=false,grandCampaignBattle=false,grandCampaignBattleComplete=null,roguelikeBattle=false,roguelikeBuilderMode=false;
 function validateArmy(army,faction){
  if(collectionManager?.getBypass())return "";
  const owned=(collectionManager?.getInventory()||[]).slice(),used=new Set(),shortages=[];
