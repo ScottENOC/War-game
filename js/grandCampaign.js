@@ -102,11 +102,11 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
   const meleeAvailable=count(basicType,m=>m.weapon==="handWeapon");
   const rangedAvailable=race==="dwarf"?count("dwarfInfantry",m=>m.weapon==="crossbow"):count("archers",m=>m.weapon==="bow");
   const addStartingGroups=(type,total,rangedWeapon=null)=>{
-   // Starting campaign groups use a practical 10-model floor, even though
-   // skirmish army-building permits smaller units.
+   // One unit for 5-9 models; at 10, split into two balanced units.
+   // Keep two units thereafter, with their sizes differing by at most one.
    const deployed=Math.min(30,total);
-   if(deployed<10)return;
-   const sizes=deployed<20?[deployed]:[Math.floor(deployed/2),Math.ceil(deployed/2)];
+   if(deployed<5)return;
+   const sizes=deployed<10?[deployed]:[Math.floor(deployed/2),Math.ceil(deployed/2)];
    for(const n of sizes){
     roster.push({type,models:n,weapon:"handWeapon",meleeWeapons:["handWeapon"],...(rangedWeapon?{rangedWeapon}:{}),champion:false,upgrades:{},skills:{}});
    }
