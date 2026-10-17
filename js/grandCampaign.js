@@ -569,6 +569,17 @@ function factionArmy(campaign,id){
  if(!Array.isArray(army.roster)||!army.roster.length){const generated=createCampaignArmyRoster(id,Math.max(100,army.points||state?.armyPoints||500),{player:isPlayer,commander:isPlayer?campaign.commander:null});army.rosterFaction=generated.faction;army.roster=generated.roster;army.points=generated.points;}
  army.owner=id;army.factionId=id;return army;
 }
+function applyStrategicArmyLosses(army,remainingFraction){
+ if(!army)return;
+ for(const unit of army.roster||[]){
+  const models=Math.max(0,Number(unit.models)||0);
+  if(models<=1){
+   if(models===1&&remainingFraction<.6&&Math.random()>(remainingFraction+.2))unit.models=0;
+  }else unit.models=Math.max(0,Math.round(models*remainingFraction));
+ }
+ army.roster=(army.roster||[]).filter(u=>u.models>0);
+ army.points=campaignArmyCost(army);
+}
 function resolveStrategicBattle(campaign,attacker,defender,target){
  const attacking=factionArmy(campaign,attacker.id),defending=factionArmy(campaign,defender.id);
  const defenderRegion=campaign.regions.find(r=>r.id===target.id);
@@ -578,12 +589,12 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  const defencePower=Math.max(1,defending?.points||250)*(.8+Math.random()*.4)*(1+defenceBonus);
  const winner=attackPower>=defencePower?attacker:defender,loser=winner===attacker?defender:attacker;
  const winArmy=factionArmy(campaign,winner.id),loseArmy=factionArmy(campaign,loser.id);
- if(winArmy)winArmy.points=Math.max(100,Math.round(winArmy.points*(winner===attacker?.72:.82)));
- if(loseArmy)loseArmy.points=Math.max(0,Math.round(loseArmy.points*(winner===attacker?.42:.55)));
+ applyStrategicArmyLosses(winArmy,winner===attacker?.72:.82);
+ applyStrategicArmyLosses(loseArmy,winner===attacker?.42:.55);
+ for(const state of campaign.factionStates){const army=state.id===winner.id?winArmy:state.id===loser.id?loseArmy:null;if(army){state.armyPoints=army.points;state.roster=army.roster;}}
  if(winner===attacker){
   const result=resolveGrandCampaignConquest(campaign,target.id,attacker.id,{outcome:"occupy"});
   if(attacking){attacking.region=target.id;attacking.nodeId="city-"+target.id;}
-  const old=campaign.regions.find(r=>r.id===attacker.homeRegion);
   campaign.lastEvent=attacker.name+" defeats "+defender.name+" at "+target.name+" and captures the settlement. "+result.summary;
  }else{
   if(attacking){attacking.region=attacker.homeRegion;attacking.nodeId="city-"+attacker.homeRegion;}
