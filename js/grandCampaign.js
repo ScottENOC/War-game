@@ -40,72 +40,90 @@ const REGION_NEIGHBORS = {
  19:[21,22],20:[4,5,17,18,23],21:[3,10,14,19,22],22:[16,18,19,21,23],23:[4,18,20,22]
 };
 const MAP_ID="shattered-realms-v3";
-function createInitialCampaignState(faction,city){
- const regions=CITIES.map(region=>({
-  id:region.id,name:region.name,faction:region.faction,
-  owner:region.id===city.id?"player":region.faction,
-  terrain:region.terrain,neighbors:[...(REGION_NEIGHBORS[region.id]||[])],
-  ruler:region.ruler,status:region.status
- }));
- return {
-  schemaVersion:1,mapId:MAP_ID,turn:1,phase:"player",
-  playerFaction:faction,armyFaction:FACTIONS[faction].armyFaction,
-  startingRegion:city.id,treasury:500,regions,
-  diplomacy:{},armies:[{id:"player-main",owner:"player",region:city.id,points:1000}],
-  lastEvent:"Your expedition begins at "+city.name+"."
- };
+function createInitialCampaignState(faction,city,commander){
+ const regions=CITIES.map(r=>({id:r.id,name:r.name,faction:r.faction,owner:r.id===city.id?"player":r.faction,terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status}));
+ return {schemaVersion:2,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:500,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},diplomacy:{},armies:[{id:"player-main",owner:"player",region:city.id,nodeId:"city-"+city.id,points:1000}],lastEvent:commander.name+" begins the campaign at "+city.name+"."};
 }
-let selectedFaction="empire",selectedCity=1;
+let selectedFaction="empire",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
-function availableCities(faction=selectedFaction){const owned=ownedCharacterIds();return CITIES.filter(c=>c.faction===faction&&(c.requiredCharacters||[]).every(id=>owned.has(id)));}
-function ownedCharacterIds(){
- const owned=new Set();
- try{
-  const models=getCollectionSnapshot()?.models||[];
-  for(const m of models){if(!m||typeof m!=="object")continue;
-   const type=String(m.type||"").toLowerCase(),name=String(m.name||"").toLowerCase(),components=Array.isArray(m.components)?m.components.map(x=>String(x).toLowerCase()):[];
-   if(type==="legendarylord"||name.includes("edric voss")||components.includes("edric_voss_body"))owned.add("edric_voss");
-   if(type==="shadowelf"||name.includes("lethariel starweaver")||components.includes("lethariel_starweaver_body"))owned.add("lethariel_starweaver");
-   if(type==="pegasuschampion"||name.includes("aelthir")||components.includes("aelthir_dawnwing_body"))owned.add("aelthir_dawnwing");
-   if(type==="dwarfkinghaldric"||name.includes("haldric stoneward")||components.includes("haldric_stoneward_body"))owned.add("haldric_stoneward");
-  }
- }catch{}
- return owned;
+const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[160,142],7:[541,182],8:[793,207],9:[515,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1207,515],20:[548,602],21:[944,462],22:[846,680],23:[629,642]};
+const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
+function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
+function modelHas(m,c){const name=String(m.name||"").toLowerCase(),parts=Array.isArray(m.components)?m.components:[];return m.type===c.type||name.includes(c.name.toLowerCase())||parts.includes(c.id+"_body");}
+function ownedCharacterIds(){const s=new Set();for(const m of ownedModels())for(const cs of Object.values(LEGENDARY))for(const c of cs)if(modelHas(m,c))s.add(c.id);return s;}
+function commanderForFaction(f){
+ const models=ownedModels(),owned=ownedCharacterIds();
+ for(const c of LEGENDARY[f]||[])if(owned.has(c.id)){const m=models.find(x=>modelHas(x,c));return {id:c.id,name:c.name,kind:"legendary",modelId:m?.id||null};}
+ if(LEGENDARY[f])return null;
+ const m=models.find(x=>["captain","lord","dwarfCaptain","dwarfLord","dwarfKingHaldric","legendaryLord","shadowElf","pegasusChampion"].includes(x.type));
+ return m?{id:"generic-"+m.id,name:m.name||"Generic Hero",kind:"generic",modelId:m.id}:null;
 }
-function ensureValidCity(){const valid=availableCities();if(!valid.some(c=>c.id===selectedCity))selectedCity=valid[0]?.id??CITIES[0].id;}
+function gateText(f){return LEGENDARY[f]?(LEGENDARY[f].map(c=>c.name).join(" or ")):"a generic hero in your collection";}
+function availableCities(f=selectedFaction){if(!commanderForFaction(f))return [];const owned=ownedCharacterIds();return CITIES.filter(c=>c.faction===f&&(c.requiredCharacters||[]).every(id=>owned.has(id)));}
+function ensureValidCity(){const valid=availableCities();if(!valid.some(c=>c.id===selectedCity))selectedCity=valid[0]?.id??(CITIES.find(c=>c.faction===selectedFaction)?.id||1);}
 function renderCity(){
- const city=CITIES.find(c=>c.id===selectedCity);if(!city)return;
- const valid=availableCities().some(c=>c.id===city.id);
- const owned=ownedCharacterIds();const gate=(city.requiredCharacters||[]).filter(id=>!owned.has(id));
- byId("grand-city-detail").innerHTML='<div class="grand-city-heading"><span class="grand-city-dot '+city.faction+'"></span><div><h3>'+city.name+'</h3><small>'+FACTIONS[city.faction].name+'</small></div></div><p>'+city.description+'</p><div class="grand-stat"><b>Ruler</b><span>'+city.ruler+'</span></div><div class="grand-stat"><b>Political status</b><span>'+city.status+'</span></div><div class="grand-stat"><b>Location</b><span>'+city.terrain+'</span></div>'+(gate.length?'<p class="subtle">Starting here requires these named characters in your collection: '+gate.join(", ")+'.</p>':"")+(valid?'<p class="subtle">Available as a starting region for '+FACTIONS[selectedFaction].name+'.</p>':'<p class="subtle">Select this settlement’s faction to start here.</p>');
- byId("grand-world-map").querySelectorAll(".grand-city").forEach(m=>{const active=Number(m.dataset.city)===city.id,belongs=CITIES.find(c=>c.id===Number(m.dataset.city))?.faction===selectedFaction;m.classList.toggle("selected",active);m.classList.toggle("other-faction",!belongs);const locked=(CITIES.find(c=>c.id===Number(m.dataset.city))?.requiredCharacters||[]).some(id=>!ownedCharacterIds().has(id));m.classList.toggle("character-locked",locked);m.setAttribute("aria-pressed",String(active));m.setAttribute("aria-disabled",String(!belongs||locked));});
- byId("grand-campaign-begin").disabled=!valid;
- renderRegionChoices();
+ const city=CITIES.find(c=>c.id===selectedCity);if(!city)return;const commander=commanderForFaction(selectedFaction),valid=availableCities().some(c=>c.id===city.id),owned=ownedCharacterIds(),missing=(city.requiredCharacters||[]).filter(id=>!owned.has(id));
+ byId("grand-city-detail").innerHTML='<div class="grand-city-heading"><span class="grand-city-dot '+city.faction+'"></span><div><h3>'+city.name+'</h3><small>'+FACTIONS[city.faction].name+'</small></div></div><p>'+city.description+'</p><div class="grand-stat"><b>Ruler</b><span>'+city.ruler+'</span></div><div class="grand-stat"><b>Location</b><span>'+city.terrain+'</span></div>'+(missing.length?'<p class="subtle">Requires '+missing.join(", ")+'.</p>':"")+(commander?'<p class="subtle">Commander: '+commander.name+'</p>':'<p class="subtle">Faction locked: collect '+gateText(selectedFaction)+' to command this campaign.</p>');
+ byId("grand-world-map").querySelectorAll(".grand-city").forEach(m=>{const id=Number(m.dataset.city),c=CITIES.find(x=>x.id===id);m.classList.toggle("selected",id===city.id);m.classList.toggle("other-faction",c?.faction!==selectedFaction);m.classList.toggle("character-locked",(c?.requiredCharacters||[]).some(x=>!ownedCharacterIds().has(x)));m.setAttribute("aria-pressed",String(id===city.id));});
+ byId("grand-campaign-begin").disabled=!valid||!commander;renderRegionChoices();
 }
 function renderRegionChoices(){
- const host=byId("grand-region-choices");if(!host)return;
- const owned=ownedCharacterIds();
- host.innerHTML=CITIES.filter(c=>c.faction===selectedFaction).map(c=>{
-  const missing=(c.requiredCharacters||[]).filter(id=>!owned.has(id));
-  const chosen=c.id===selectedCity;
-  return '<button type="button" class="grand-region-choice'+(chosen?' active':'')+(missing.length?' locked':'')+'" data-region="'+c.id+'" '+(missing.length?'disabled':'')+'><span class="grand-region-choice-name">'+c.name+'</span><span class="grand-region-choice-meta">'+(missing.length?'Requires '+missing.join(', '):c.status)+'</span>'+(chosen?'<span class="grand-region-selected">SELECTED</span>':'')+'</button>';
- }).join('');
- host.querySelectorAll('[data-region]').forEach(button=>button.addEventListener('click',()=>{selectedCity=Number(button.dataset.region);saveCurrentSelection();renderCity();}));
+ const host=byId("grand-region-choices");if(!host)return;const owned=ownedCharacterIds(),commander=commanderForFaction(selectedFaction);
+ host.innerHTML=CITIES.filter(c=>c.faction===selectedFaction).map(c=>{const missing=(c.requiredCharacters||[]).filter(id=>!owned.has(id)),chosen=c.id===selectedCity,locked=!commander||missing.length;return '<button type="button" class="grand-region-choice'+(chosen?' active':'')+(locked?' locked':'')+'" data-region="'+c.id+'" '+(locked?'disabled':'')+'><span class="grand-region-choice-name">'+c.name+'</span><span class="grand-region-choice-meta">'+(!commander?'Requires '+gateText(selectedFaction):missing.length?'Requires '+missing.join(', '):c.status)+'</span>'+(chosen?'<span class="grand-region-selected">SELECTED</span>':'')+'</button>';}).join('');
+ host.querySelectorAll("[data-region]").forEach(b=>b.addEventListener("click",()=>{selectedCity=Number(b.dataset.region);saveSelection();renderCity();}));
 }
-function saveCurrentSelection(){try{const f=FACTIONS[selectedFaction],city=CITIES.find(c=>c.id===selectedCity);localStorage.setItem("warGameGrandCampaignStart",JSON.stringify({schemaVersion:3,mapId:MAP_ID,faction:selectedFaction,selectedCity,startingCities:availableCities().map(c=>c.name),armyFaction:f.armyFaction,requiredCharacters:city?.requiredCharacters||[],selectionUpdatedAt:new Date().toISOString()}));}catch{}}
+function saveSelection(){try{const f=FACTIONS[selectedFaction],c=CITIES.find(x=>x.id===selectedCity);localStorage.setItem("warGameGrandCampaignStart",JSON.stringify({schemaVersion:4,mapId:MAP_ID,faction:selectedFaction,selectedCity,armyFaction:f.armyFaction,startingRegion:c?.name}));}catch{}}
 function renderFaction(){
- const f=FACTIONS[selectedFaction];ensureValidCity();
- byId("grand-faction-choices").querySelectorAll("[data-faction]").forEach(b=>{const active=b.dataset.faction===selectedFaction;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active));});
- byId("grand-faction-detail").innerHTML='<h3>'+f.name+'</h3><p>'+f.summary+'</p><div class="grand-stat"><b>Starting regions</b><span>'+availableCities().length+' available</span></div><div class="grand-stat"><b>Army list</b><span>'+(f.armyFaction==="empire"?"Human roster (placeholder)":f.name+" (placeholder)")+'</span></div>';
+ const f=FACTIONS[selectedFaction],commander=commanderForFaction(selectedFaction);ensureValidCity();
+ byId("grand-faction-choices").querySelectorAll("[data-faction]").forEach(b=>{const active=b.dataset.faction===selectedFaction,locked=!commander;b.classList.toggle("active",active);b.classList.toggle("faction-locked",locked);b.title=locked?"Requires "+gateText(selectedFaction):"";});
+ byId("grand-faction-detail").innerHTML='<h3>'+f.name+'</h3><p>'+f.summary+'</p><div class="grand-stat"><b>Commander</b><span>'+(commander?commander.name:"Locked")+'</span></div><div class="grand-stat"><b>Starting regions</b><span>'+availableCities().length+' available</span></div><p class="subtle">'+(commander?(commander.kind==="legendary"?"Legendary commander unlocked.":"Generic hero unlocked."):"Collect "+gateText(selectedFaction)+" to unlock this faction.")+'</p>';
  byId("grand-campaign-begin").textContent="Start campaign";renderCity();
 }
+function createMovementGraph(){
+ const nodes={},edges={},add=n=>{nodes[n.id]=n;edges[n.id]=edges[n.id]||[];},link=(a,b,cost=1)=>{if(!edges[a]||!edges[b])return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost});};
+ for(const c of CITIES){const [x,y]=CITY_POSITIONS[c.id];add({id:"city-"+c.id,region:c.id,type:"city",label:c.name,x,y});}
+ const seen=new Set(),features=[
+ {id:"port-5",region:5,type:"port",label:"Southwatch harbour",x:625,y:515,city:5},{id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:135,y:126,city:6},{id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:561,y:163,city:7},{id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:817,y:190,city:8},
+ {id:"river-1",region:1,type:"river",label:"Crownfall river ford",x:226,y:239,city:1},{id:"river-4",region:4,type:"river",label:"Stonebridge crossing",x:450,y:447,city:4},{id:"river-23",region:23,type:"river",label:"Ashenford crossing",x:608,y:665,city:23}];
+ for(const c of CITIES){const [x,y]=CITY_POSITIONS[c.id],ns=REGION_NEIGHBORS[c.id]||[],avg=ns.reduce((p,id)=>({x:p.x+CITY_POSITIONS[id][0]/ns.length,y:p.y+CITY_POSITIONS[id][1]/ns.length}),{x:0,y:0}),jx=Math.max(30,Math.min(1270,x+(avg.x-x)*.12)),jy=Math.max(30,Math.min(720,y+(avg.y-y)*.12));add({id:"crossroads-"+c.id,region:c.id,type:"crossroads",label:c.name+" crossroads",x:jx,y:jy});link("city-"+c.id,"crossroads-"+c.id);}
+ for(const c of CITIES)for(const other of REGION_NEIGHBORS[c.id]||[]){const key=[c.id,other].sort((a,b)=>a-b).join("-");if(seen.has(key))continue;seen.add(key);const [x,y]=CITY_POSITIONS[c.id],[ox,oy]=CITY_POSITIONS[other],id="road-"+key,type=([c.id,other].some(n=>[4,23].includes(n))?"river":"border");add({id,region:c.id,type,label:type==="river"?"River crossing":c.name+"–"+CITIES.find(x=>x.id===other).name+" border",x:(x+ox)/2,y:(y+oy)/2});link("crossroads-"+c.id,id);link("crossroads-"+other,id);}
+ for(const n of features){add(n);link("city-"+n.city,n.id);}
+ return {nodes,edges};
+}
+function svgEl(name,attrs={}){const el=document.createElementNS("http://www.w3.org/2000/svg",name);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el;}
+function saveCampaign(){try{localStorage.setItem("warGameGrandCampaignStateV1",JSON.stringify(activeCampaign));}catch{}}
+function nodeCost(n){return n.type==="river"?2:1;}
+function renderCampaignMap(){
+ if(!activeCampaign)return;const host=byId("grand-map-live-wrap");let map=byId("grand-campaign-world-map");
+ if(!map){map=byId("grand-world-map").cloneNode(true);map.id="grand-campaign-world-map";host.replaceChildren(map);}
+ map.querySelectorAll("#campaign-road-layer,#campaign-node-layer,#campaign-commander-layer").forEach(e=>e.remove());
+ const road=svgEl("g",{id:"campaign-road-layer","pointer-events":"none"}),layer=svgEl("g",{id:"campaign-node-layer"}),token=svgEl("g",{id:"campaign-commander-layer","pointer-events":"none"}),{nodes,edges}=activeCampaign.graph;
+ for(const [id,list] of Object.entries(edges))for(const e of list){if(id.localeCompare(e.to)>=0)continue;const a=nodes[id],b=nodes[e.to];road.append(svgEl("path",{d:"M "+a.x+" "+a.y+" L "+b.x+" "+b.y,class:"campaign-road"+(a.type==="river"||b.type==="river"?" river-road":"")}));}
+ map.querySelector("#grand-city-markers").before(road);
+ for(const n of Object.values(nodes)){const isCurrent=n.id===activeCampaign.commander.nodeId,reach=(edges[activeCampaign.commander.nodeId]||[]).some(e=>e.to===n.id&&e.cost+nodeCost(n)-1<=activeCampaign.commander.movement),g=svgEl("g",{class:"campaign-node "+n.type+(isCurrent?" current":"")+(reach?" reachable":""),tabindex:reach?"0":"-1",role:"button","aria-label":n.label,transform:"translate("+n.x+" "+n.y+")","data-node":n.id});g.append(svgEl("circle",{r:n.type==="city"?5:n.type==="crossroads"?3.5:5.5}));if(n.type==="port")g.append(svgEl("path",{d:"M-3 0 L3 0 M0 -4 L0 2 M-4 2 L4 2"}));layer.append(g);}
+ map.querySelector("#grand-city-markers").after(layer);
+ const current=nodes[activeCampaign.commander.nodeId];token.append(svgEl("circle",{cx:current.x,cy:current.y-17,r:11,class:"commander-token"}));const initials=activeCampaign.commander.name.split(/\\s+/).map(s=>s[0]).join("").slice(0,2).toUpperCase(),label=svgEl("text",{x:current.x,y:current.y-13,"text-anchor":"middle",class:"commander-initials"});label.textContent=initials;token.append(label);map.append(token);
+ layer.querySelectorAll("[data-node]").forEach(g=>{const move=()=>moveCommander(g.dataset.node);g.addEventListener("click",move);g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();move();}});});
+ const n=nodes[activeCampaign.commander.nodeId];byId("grand-campaign-turn").textContent="TURN "+activeCampaign.turn;byId("grand-campaign-treasury").textContent=activeCampaign.treasury+" gold";
+ byId("grand-campaign-commander").innerHTML="<strong>"+activeCampaign.commander.name+"</strong><span>"+(activeCampaign.commander.kind==="legendary"?"Legendary commander":"Generic hero")+"</span><span>Movement "+activeCampaign.commander.movement+"/"+activeCampaign.commander.maxMovement+"</span><span>Location: "+(CITIES.find(c=>c.id===n.region)?.name||"Road")+"</span>";
+ byId("grand-campaign-node-detail").innerHTML="<strong>"+n.label+"</strong><span>"+({city:"City and regional seat",crossroads:"Road junction",port:"Port and sea route",river:"River crossing",border:"Regional border"}[n.type]||"Road")+"</span><span>"+(n.type==="river"?"Crossing costs 2 movement points.":"Move along connected roads to highlighted places.")+"</span>";
+ byId("grand-campaign-event").textContent=activeCampaign.lastEvent||"Select a highlighted place connected by road.";
+}
+function moveCommander(id){
+ if(!activeCampaign)return;const from=activeCampaign.commander.nodeId,n=activeCampaign.graph.nodes[id],edge=(activeCampaign.graph.edges[from]||[]).find(e=>e.to===id);
+ if(!n||!edge){activeCampaign.lastEvent="You can only move along a connected road.";renderCampaignMap();return;}
+ const cost=edge.cost+nodeCost(n)-1;if(cost>activeCampaign.commander.movement){activeCampaign.lastEvent="Not enough movement remaining to reach "+n.label+".";renderCampaignMap();return;}
+ activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement-=cost;const army=activeCampaign.armies.find(a=>a.id==="player-main");if(army){army.nodeId=id;army.region=n.region;}
+ activeCampaign.lastEvent=activeCampaign.commander.name+" moves to "+n.label+". "+activeCampaign.commander.movement+" movement remaining.";saveCampaign();renderCampaignMap();
+}
+function endCampaignTurn(){if(!activeCampaign)return;activeCampaign.turn++;activeCampaign.commander.movement=activeCampaign.commander.maxMovement;activeCampaign.treasury+=100;activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Treasury +100 gold; movement replenished.";saveCampaign();renderCampaignMap();}
+function showCampaignWorld(c){activeCampaign=c;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();}
 export function startGrandCampaign(){
- try{const saved=JSON.parse(localStorage.getItem("warGameGrandCampaignStart")||"null");if(saved&&FACTIONS[saved.faction]){selectedFaction=saved.faction;if(CITIES.some(city=>city.id===saved.selectedCity))selectedCity=saved.selectedCity;}}catch{}
+ try{const s=JSON.parse(localStorage.getItem("warGameGrandCampaignStart")||"null");if(s&&FACTIONS[s.faction]){selectedFaction=s.faction;if(CITIES.some(c=>c.id===s.selectedCity))selectedCity=s.selectedCity;}}catch{}
  const screen=byId("grand-campaign-screen"),menu=byId("mainmenu");if(!screen||!menu)return;
- document.addEventListener("click",event=>{const target=event.target instanceof Element?event.target.closest('[data-mode="grand"]'):null;if(!target)return;event.preventDefault();event.stopPropagation();screen.hidden=false;menu.hidden=true;renderFaction();},true);
- byId("grand-campaign-back").addEventListener("click",()=>{screen.hidden=true;menu.hidden=false;});
- function saveSelection(){saveCurrentSelection();}
+ document.addEventListener("click",event=>{const target=event.target instanceof Element?event.target.closest('[data-mode="grand"]'):null;if(!target)return;event.preventDefault();event.stopPropagation();screen.hidden=false;menu.hidden=true;let saved=null;try{saved=JSON.parse(localStorage.getItem("warGameGrandCampaignStateV1")||"null");}catch{}if(saved?.graph?.nodes&&saved?.commander)showCampaignWorld(saved);else{byId("grand-campaign-setup").hidden=false;byId("grand-campaign-world").hidden=true;renderFaction();}},true);
+ byId("grand-campaign-back").addEventListener("click",()=>{screen.hidden=true;menu.hidden=false;});byId("grand-world-back").addEventListener("click",()=>{byId("grand-campaign-world").hidden=true;byId("grand-campaign-setup").hidden=false;renderFaction();});byId("grand-world-menu").addEventListener("click",()=>{screen.hidden=true;menu.hidden=false;});byId("grand-campaign-end-turn").addEventListener("click",endCampaignTurn);
  byId("grand-faction-choices").querySelectorAll("[data-faction]").forEach(b=>b.addEventListener("click",()=>{selectedFaction=b.dataset.faction;ensureValidCity();renderFaction();saveSelection();}));
- byId("grand-world-map").querySelectorAll(".grand-city").forEach(m=>{const select=()=>{const city=CITIES.find(c=>c.id===Number(m.dataset.city));if(!city||city.faction!==selectedFaction)return;selectedCity=city.id;saveCurrentSelection();renderCity();};m.addEventListener("click",select);m.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select();}});});
- byId("grand-campaign-begin").addEventListener("click",()=>{const f=FACTIONS[selectedFaction],city=CITIES.find(c=>c.id===selectedCity);if(!city||!availableCities().some(c=>c.id===city.id))return;const selection={schemaVersion:3,mapId:MAP_ID,faction:selectedFaction,selectedCity,startingCities:availableCities().map(c=>c.name),armyFaction:f.armyFaction,requiredCharacters:city.requiredCharacters||[],startingRegion:city.name};const campaign=createInitialCampaignState(selectedFaction,city);try{localStorage.setItem("warGameGrandCampaignStart",JSON.stringify(selection));localStorage.setItem("warGameGrandCampaignStateV1",JSON.stringify(campaign));}catch{}byId("grand-campaign-begin").textContent="Campaign saved ✓";});
+ byId("grand-world-map").querySelectorAll(".grand-city").forEach(m=>{const select=()=>{const c=CITIES.find(x=>x.id===Number(m.dataset.city));if(!c||c.faction!==selectedFaction||!commanderForFaction(selectedFaction))return;selectedCity=c.id;saveSelection();renderCity();};m.addEventListener("click",select);m.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select();}});});
+ byId("grand-campaign-begin").addEventListener("click",()=>{const f=FACTIONS[selectedFaction],city=CITIES.find(c=>c.id===selectedCity),commander=commanderForFaction(selectedFaction);if(!city||!availableCities().some(c=>c.id===city.id)||!commander)return;const campaign=createInitialCampaignState(selectedFaction,city,commander);try{localStorage.setItem("warGameGrandCampaignStart",JSON.stringify({schemaVersion:4,mapId:MAP_ID,faction:selectedFaction,selectedCity,startingRegion:city.name,commander}));localStorage.setItem("warGameGrandCampaignStateV1",JSON.stringify(campaign));}catch{}showCampaignWorld(campaign);});
 }
