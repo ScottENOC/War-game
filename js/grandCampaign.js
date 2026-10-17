@@ -1,4 +1,4 @@
-import { getCollectionSnapshot } from "./collection.js";
+import { getCollectionSnapshot } from "./collection.js?v=20261018-campaign-economy-v1";
 import { unitCost } from "./units.js?v=20261018-campaign-economy-v1";
 const FACTIONS = {
  empire:{name:"Human Realms",summary:"The largest and most populous realm, but not a unified kingdom.",strengths:"Broad territory, fertile river valleys, trade roads and the largest pool of settlements.",politics:"Crownfall and Westmere recognise your court. Goldhaven, Stonebridge and Southwatch answer to rival human lords.",playerCities:["Crownfall","Westmere"],armyFaction:"empire"},
@@ -525,13 +525,13 @@ function launchCampaignBattle(region){
   if(result.won){
    const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:"occupy"});
    playerArmy.region=region.id;playerArmy.nodeId="city-"+region.id;activeCampaign.commander.region=region.id;activeCampaign.commander.nodeId="city-"+region.id;
-   if(!playerArmy.roster.length){const reinforcements=createCampaignArmyRoster(playerId,250);playerArmy.roster=reinforcements.roster;playerArmy.points=reinforcements.points;}
+   if(!playerArmy.roster.length){const reinforcements=createCampaignArmyRoster(playerId,250,{player:true,commander:activeCampaign.commander});playerArmy.roster=reinforcements.roster;playerArmy.points=reinforcements.points;}
    activeCampaign.lastEvent="Victory at "+region.name+". "+outcome.summary;
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
   }else{
    const home=playerState?.homeRegion||activeCampaign.startingRegion,homeNode="city-"+home;
    activeCampaign.commander.region=home;activeCampaign.commander.nodeId=homeNode;playerArmy.region=home;playerArmy.nodeId=homeNode;
-   if(!playerArmy.roster.length){const reinforcements=createCampaignArmyRoster(playerId,250);playerArmy.roster=reinforcements.roster;playerArmy.points=reinforcements.points;}
+   if(!playerArmy.roster.length){const reinforcements=createCampaignArmyRoster(playerId,250,{player:true,commander:activeCampaign.commander});playerArmy.roster=reinforcements.roster;playerArmy.points=reinforcements.points;}
    activeCampaign.lastEvent="Defeat at "+region.name+". Your surviving forces retreat to "+(CITIES.find(c=>c.id===home)?.name||"your capital")+".";
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
   }
