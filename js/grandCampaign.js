@@ -72,24 +72,76 @@ const FACTION_ROSTER_OVERRIDES={
 function rosterFactionForPoliticalFaction(id){
  const profile=FACTION_BY_ID[id];return FACTION_ROSTER_OVERRIDES[id]?.roster||RACES[profile?.race]?.defaultRoster||"empire";
 }
-function createCampaignArmyRoster(id,targetPoints=500){
- const faction=rosterFactionForPoliticalFaction(id),profile=FACTION_BY_ID[id];
- const fallback=faction==="dwarfs"?["dwarfInfantry","dwarfInfantry","dwarfCaptain","cannon"]:faction==="highElves"?["swordsmen","archers","cavalry","boltThrower"]:["swordsmen","archers","cavalry","captain"];
- const types=(FACTION_ROSTER_OVERRIDES[id]?.units||fallback).filter(type=>type!=="youngDragon"&&type!=="dragon"&&type!=="ancientDragon").slice(0,5);
- const roster=types.map(type=>({type,models:type==="cavalry"?5:type==="cannon"?3:type==="boltThrower"?2:["captain","lord","dwarfCaptain","dwarfLord"].includes(type)?1:type==="archers"?10:20,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}}));
- if(!roster.length)roster.push({type:faction==="dwarfs"?"dwarfInfantry":"swordsmen",models:20,weapon:"handWeapon"});
- const cost=()=>roster.reduce((sum,u)=>sum+unitCost(u,faction),0);
- while(cost()<targetPoints*.9&&roster.length<6){
-  const troop=roster.find(u=>["swordsmen","dwarfInfantry","archers","cavalry"].includes(u.type)&&u.models<(u.type==="cavalry"?15:30));
-  if(troop){troop.models++;continue;}
-  const type=faction==="dwarfs"?"dwarfInfantry":faction==="highElves"?"swordsmen":"swordsmen";
-  roster.push({type,models:Math.min(30,Math.max(5,Math.ceil((targetPoints-cost())/(faction==="highElves"?12:faction==="dwarfs"?8:8))),),weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}});
+function collectionModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
+function campaignCharacterConfig(id,commander=null){
+ const profile=FACTION_BY_ID[id],race=profile?.race||"human";
+ let type=race==="dwarf"?"dwarfCaptain":"captain",model=null;
+ if(commander){
+  const models=collectionModels();model=models.find(m=>m.id===commander.modelId)||models.find(m=>m.name===commander.name);
+  if(commander.id==="edric_voss")type="legendaryLord";
+  else if(commander.id==="aelthir_dawnwing")type="pegasusChampion";
+  else if(commander.id==="lethariel_starweaver")type="shadowElf";
+  else if(commander.id==="haldric_stoneward")type="dwarfKingHaldric";
+  else if(model?.type)type=model.type;
  }
- while(roster.length>1&&cost()>targetPoints*1.1){
-  const troop=[...roster].reverse().find(u=>["swordsmen","dwarfInfantry","archers","cavalry"].includes(u.type)&&u.models>(u.type==="cavalry"?5:5));
-  if(!troop)break;troop.models--;
+ const config={type,models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}};
+ if(type==="legendaryLord"){config.heavyArmour=true;config.shield=true;}
+ if(type==="pegasusChampion"){config.mounted=true;config.mountType="eagle";config.weapon="lance";config.meleeWeapons=["handWeapon","lance"];config.heavyArmour=true;config.shield=true;}
+ if(type==="shadowElf"){config.heavyArmour=true;config.weapon="handWeapon";config.meleeWeapons=["handWeapon","offhandWeapon"];config.rangedWeapon="magicBow";config.skills={skirmish:true};}
+ if(type==="dwarfKingHaldric"){config.shield=true;config.magicArmour=true;}
+ if(model?.weapon&&type!=="pegasusChampion"&&type!=="shadowElf"&&type!=="dwarfKingHaldric")config.weapon=model.weapon;
+ return config;
+}
+function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=null}={}){
+ const faction=rosterFactionForPoliticalFaction(id),profile=FACTION_BY_ID[id],race=profile?.race||"human";
+ const basicType=race==="dwarf"?"dwarfInfantry":"swordsmen",rangedType=race==="dwarf"?"dwarfInfantry":"archers";
+ const character=campaignCharacterConfig(id,player?commander:null);
+ let roster=[];
+ if(player){
+  const models=collectionModels(),count=(type,weaponFilter=null)=>models.filter(m=>m.faction===faction&&m.type===type&&(!weaponFilter||weaponFilter(m))).length;
+  let meleeAvailable=count(basicType,m=>!["bow","crossbow","firearm","longRifle","magicBow"].includes(m.weapon));
+  let rangedAvailable=race==="dwarf"?count("dwarfInfantry",m=>m.weapon==="crossbow"):count("archers",m=>m.weapon==="bow");
+  for(let i=0;i<2&&meleeAvailable>=5;i++){
+   const n=Math.min(15,meleeAvailable);if(n<5)break;
+   roster.push({type:basicType,models:n,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}});
+   meleeAvailable-=n;
+  }
+  const rangedCount=Math.min(10,rangedAvailable);
+  if(rangedCount>=5)roster.push({type:rangedType,models:rangedCount,weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:race==="dwarf"?"crossbow":"bow",champion:false,upgrades:{},skills:{}});
+  if(commander)roster.push(character);
+ }else{
+  roster=[
+   {type:basicType,models:15,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
+   {type:basicType,models:15,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
+   {type:rangedType,models:10,weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:race==="dwarf"?"crossbow":"bow",champion:false,upgrades:{},skills:{}},
+   character
+  ];
  }
- return {faction,roster,points:cost(),politicalFactionId:id};
+ const points=roster.reduce((sum,u)=>sum+unitCost(u,faction),0);
+ return {faction,roster,points,politicalFactionId:id};
+}
+function campaignCityIncome(region){
+ const s=region?.settlement;if(!s)return 0;
+ const tier=Math.max(1,Number(s.historicalTier)||1),prosperity=Math.max(0,Math.min(100,Number(s.prosperity)||0));
+ const population=Math.max(0,Number(s.population?.total)||0),buildings=(s.buildings||[]).reduce((sum,b)=>sum+Math.max(0,Math.min(100,Number(b.condition)||0)),0);
+ const infrastructure=Math.max(.25,Math.min(1,(Number(s.infrastructureCondition)||100)/100));
+ return Math.round((10+tier*10+prosperity*.35+Math.log10(Math.max(1,population))*6+buildings*.04)*infrastructure);
+}
+function campaignArmyCost(army){
+ return Math.max(0,Math.round((army?.roster||[]).reduce((sum,u)=>sum+unitCost(u,army.rosterFaction||"empire"),0)));
+}
+function campaignArmyUpkeep(army){return Math.ceil(campaignArmyCost(army)*.04);}
+function recruitArmyModels(army,faction,budget){
+ let spent=0,added=0;
+ while(added<5&&budget-spent>0){
+  const unit=(army.roster||[]).find(u=>["swordsmen","dwarfInfantry","archers"].includes(u.type)&&u.models<30);
+  if(!unit)break;
+  const before=unitCost({...unit,models:unit.models},faction),after=unitCost({...unit,models:unit.models+1},faction),price=Math.max(1,after-before);
+  if(budget-spent<price)break;
+  unit.models++;spent+=price;added++;
+ }
+ army.points=campaignArmyCost(army);
+ return {spent,added};
 }
 
 const CITIES = [
