@@ -202,6 +202,28 @@ function commanderForFaction(f){
 function gateText(f){return LEGENDARY[f]?(LEGENDARY[f].map(c=>c.name).join(" or ")):"a generic hero in your collection";}
 function availableCities(f=selectedFaction){if(!commanderForFaction(f))return [];const owned=ownedCharacterIds();return CITIES.filter(c=>c.faction===f&&(c.requiredCharacters||[]).every(id=>owned.has(id)));}
 function ensureValidCity(){const valid=availableCities();if(!valid.some(c=>c.id===selectedCity))selectedCity=valid[0]?.id??(CITIES.find(c=>c.faction===selectedFaction)?.id||1);}
+function paintFactionBanners(map,campaign=null){
+ if(!map)return;
+ map.querySelectorAll(".political-faction-banner").forEach(n=>n.remove());
+ for(const marker of map.querySelectorAll(".grand-city")){
+  const id=Number(marker.dataset.city),profile=FACTION_PROFILES[id];if(!profile)continue;
+  const region=campaign?.regions?.find(r=>r.id===id),politicalId=region?.politicalFactionId||profile.id,owner=FACTION_BY_ID[politicalId]||profile;
+  const g=svgEl("g",{class:"political-faction-banner","pointer-events":"none",transform:"translate(0 -25)"});
+  // Tiny pennant: distinct faction colours and an abstract, text-free heraldic mark.
+  g.append(svgEl("path",{d:"M-8 -8 L8 -8 L8 5 L0 1 L-8 5 Z",fill:owner.colours.main,stroke:owner.colours.accent,"stroke-width":1.3,"stroke-linejoin":"round"}));
+  const emblem=owner.emblem;
+  if(["star","hawk","swan","sun"].includes(emblem)){
+   g.append(svgEl("path",{d:"M0 -6 L1.5 -2 L5 -2 L2 0 L3 3 L0 1 L-3 3 L-2 0 L-5 -2 L-1.5 -2 Z",fill:owner.colours.accent,stroke:"none"}));
+  }else if(["hammer","anvil","tower","fortress","gate","bridge","spear"].includes(emblem)){
+   g.append(svgEl("path",{d:"M-4 -4 L4 -4 L4 -2 L1 -2 L1 3 L-1 3 L-1 -2 L-4 -2 Z",fill:owner.colours.accent}));
+  }else if(["crescent","reed","thorn"].includes(emblem)){
+   g.append(svgEl("path",{d:"M2 -5 A5 5 0 1 0 2 3 A3.5 3.5 0 1 1 2 -5 Z",fill:owner.colours.accent}));
+  }else{
+   g.append(svgEl("path",{d:"M-4 -4 L-1 -1 L0 -4 L1 -1 L4 -4 L3 2 L0 4 L-3 2 Z",fill:owner.colours.accent}));
+  }
+  marker.append(g);
+ }
+}
 function renderCity(){
  const city=CITIES.find(c=>c.id===selectedCity);if(!city)return;const commander=commanderForFaction(selectedFaction),valid=availableCities().some(c=>c.id===city.id),owned=ownedCharacterIds(),missing=(city.requiredCharacters||[]).filter(id=>!owned.has(id));
  byId("grand-city-detail").innerHTML='<div class="grand-city-heading"><span class="grand-city-dot '+city.faction+'"></span><div><h3>'+city.name+'</h3><small>'+FACTIONS[city.faction].name+'</small></div></div><p>'+city.description+'</p><div class="grand-stat"><b>Ruler</b><span>'+city.ruler+'</span></div><div class="grand-stat"><b>Location</b><span>'+city.terrain+'</span></div>'+(missing.length?'<p class="subtle">Requires '+missing.join(", ")+'.</p>':"")+(commander?'<p class="subtle">Commander: '+commander.name+'</p>':'<p class="subtle">Faction locked: collect '+gateText(selectedFaction)+' to command this campaign.</p>');
@@ -256,7 +278,7 @@ function renderCampaignMap(){
  map.querySelectorAll("#campaign-road-layer,#campaign-node-layer,#campaign-commander-layer").forEach(e=>e.remove());
  const road=svgEl("g",{id:"campaign-road-layer","pointer-events":"none"}),layer=svgEl("g",{id:"campaign-node-layer"}),token=svgEl("g",{id:"campaign-commander-layer","pointer-events":"none"}),{nodes,edges}=activeCampaign.graph;
  for(const [id,list] of Object.entries(edges))for(const e of list){if(id.localeCompare(e.to)>=0)continue;const a=nodes[id],b=nodes[e.to];road.append(svgEl("path",{d:"M "+a.x+" "+a.y+" L "+b.x+" "+b.y,class:"campaign-road"+(a.type==="river"||b.type==="river"?" river-road":"")}));}
- map.querySelector("#grand-city-markers").before(road);
+ paintFactionBanners(map,activeCampaign);\n map.querySelector("#grand-city-markers").before(road);
  for(const n of Object.values(nodes)){const isCurrent=n.id===activeCampaign.commander.nodeId,reach=(edges[activeCampaign.commander.nodeId]||[]).some(e=>e.to===n.id&&e.cost+nodeCost(n)-1<=activeCampaign.commander.movement),g=svgEl("g",{class:"campaign-node "+n.type+(isCurrent?" current":"")+(reach?" reachable":""),tabindex:reach?"0":"-1",role:"button","aria-label":n.label,transform:"translate("+n.x+" "+n.y+")","data-node":n.id});g.append(svgEl("circle",{r:16,class:"campaign-node-hit"}));g.append(svgEl("circle",{r:n.type==="city"?5:n.type==="crossroads"?3.5:5.5,class:"campaign-node-visible"}));if(n.type==="port")g.append(svgEl("path",{d:"M-3 0 L3 0 M0 -4 L0 2 M-4 2 L4 2"}));layer.append(g);}
  map.querySelector("#grand-city-markers").after(layer);
  const current=nodes[activeCampaign.commander.nodeId];token.append(svgEl("circle",{cx:current.x,cy:current.y-17,r:11,class:"commander-token"}));const initials=activeCampaign.commander.name.split(/\\s+/).map(s=>s[0]).join("").slice(0,2).toUpperCase(),label=svgEl("text",{x:current.x,y:current.y-13,"text-anchor":"middle",class:"commander-initials"});label.textContent=initials;token.append(label);map.append(token);
