@@ -286,14 +286,14 @@ function saveCampaign(){try{localStorage.setItem("warGameGrandCampaignStateV1",J
 function settleMonthlyPopulation(campaign){
  for(const region of campaign.regions||[]){
   const s=region.settlement;if(!s||!s.population)continue;
-  const atWar=campaign.warRegions?.includes(region.id)||campaign.regions.some(r=>r.id!==region.id&&r.ownerFaction!==region.ownerFaction&&r.neighbors?.includes(region.id)&&r.neighbors?.includes(region.id)&&campaign.activeWars?.includes([region.ownerFaction,r.ownerFaction].sort().join(":")));
-  const occupationPenalty=region.ownerFaction!==region.nativeFaction?0.001:0;
+  const atWar=campaign.warRegions?.includes(region.id)||campaign.regions.some(r=>r.id!==region.id&&r.ownerFaction!==region.ownerFaction&&region.neighbors?.includes(r.id)&&campaign.activeWars?.includes([region.ownerFaction,r.ownerFaction].sort().join(":")));
+  const occupationPenalty=region.ownerFaction!==FACTION_PROFILES[region.id]?.id?0.001:0;
   let rate=s.prosperity>=70&&s.unrest<20&&!atWar?0.002:(!atWar&&s.prosperity>=40&&s.unrest<40?0.001:atWar?-0.002:-0.0005);
   if(occupationPenalty)rate-=occupationPenalty;
   const totalDelta=Math.round(s.population.total*rate);
   if(totalDelta>0){s.population.total+=totalDelta;const largest=[...s.population.groups].sort((a,b)=>b.count-a.count)[0];if(largest)largest.count+=totalDelta;}
   else if(totalDelta<0){let remaining=-totalDelta;for(const group of [...s.population.groups].sort((a,b)=>b.count-a.count)){const loss=Math.min(remaining,group.count);group.count-=loss;remaining-=loss;if(!remaining)break;}s.population.total=Math.max(0,s.population.total+totalDelta);}
-  if(region.ownerFaction!==region.nativeFaction){
+  if(region.ownerFaction!==FACTION_PROFILES[region.id]?.id){
    s.monthsUnderOccupation=(s.monthsUnderOccupation||0)+1;
    if(region.ownerFaction==="greenskins"&&region.nativeFaction==="dwarfs"){s.infrastructureCondition=Math.max(0,s.infrastructureCondition-0.35);s.fortification.condition=Math.max(0,s.fortification.condition-0.2);}
   }
