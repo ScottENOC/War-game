@@ -401,18 +401,20 @@ const byId=id=>document.getElementById(id);
  }
 const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[160,142],7:[541,182],8:[793,207],9:[515,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1207,515],20:[548,602],21:[944,462],22:[846,680],23:[629,642]};
 const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
+function collectionBypassEnabled(){try{return getCollectionSnapshot()?.bypass===true;}catch{return false;}}
 function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
 function modelHas(m,c){const name=String(m.name||"").toLowerCase(),parts=Array.isArray(m.components)?m.components:[];return m.type===c.type||name.includes(c.name.toLowerCase())||parts.includes(c.id+"_body");}
 function ownedCharacterIds(){const s=new Set();for(const m of ownedModels())for(const cs of Object.values(LEGENDARY))for(const c of cs)if(modelHas(m,c))s.add(c.id);return s;}
 function commanderForFaction(f){
  const models=ownedModels(),owned=ownedCharacterIds();
+ if(collectionBypassEnabled())return {id:"dev-commander-"+f,name:"Developer Commander",kind:"generic",modelId:null};
  for(const c of LEGENDARY[f]||[])if(owned.has(c.id)){const m=models.find(x=>modelHas(x,c));return {id:c.id,name:c.name,kind:"legendary",modelId:m?.id||null};}
  if(LEGENDARY[f])return null;
  const m=models.find(x=>["captain","lord","dwarfCaptain","dwarfLord"].includes(x.type));
  return m?{id:"generic-"+m.id,name:m.name||"Generic Hero",kind:"generic",modelId:m.id}:null;
 }
 function gateText(f){return LEGENDARY[f]?(LEGENDARY[f].map(c=>c.name).join(" or ")):"a generic hero in your collection";}
-function availableCities(f=selectedFaction){if(!commanderForFaction(f))return [];const owned=ownedCharacterIds();const homeId=Number(Object.keys(FACTION_PROFILES).find(id=>FACTION_PROFILES[id].id===selectedPoliticalFaction));return CITIES.filter(c=>(homeId?c.id===homeId:c.faction===f)&&(c.requiredCharacters||[]).every(id=>owned.has(id)));}
+function availableCities(f=selectedFaction){if(!commanderForFaction(f))return [];const homeId=Number(Object.keys(FACTION_PROFILES).find(id=>FACTION_PROFILES[id].id===selectedPoliticalFaction));if(collectionBypassEnabled())return CITIES.filter(c=>homeId?c.id===homeId:c.faction===f);const owned=ownedCharacterIds();return CITIES.filter(c=>(homeId?c.id===homeId:c.faction===f)&&(c.requiredCharacters||[]).every(id=>owned.has(id)));}
 function ensureValidCity(){const valid=availableCities();if(!valid.some(c=>c.id===selectedCity))selectedCity=valid[0]?.id??(CITIES.find(c=>c.faction===selectedFaction)?.id||1);}
 function paintFactionBanners(map,campaign=null){
  if(!map)return;
@@ -437,10 +439,10 @@ function paintFactionBanners(map,campaign=null){
  }
 }
 function renderCity(){
- const city=CITIES.find(c=>c.id===selectedCity);if(!city)return;const commander=commanderForFaction(selectedFaction),valid=availableCities().some(c=>c.id===city.id),owned=ownedCharacterIds(),missing=(city.requiredCharacters||[]).filter(id=>!owned.has(id)),political=FACTION_BY_ID[selectedPoliticalFaction];
+ const city=CITIES.find(c=>c.id===selectedCity);if(!city)return;const commander=commanderForFaction(selectedFaction),bypass=collectionBypassEnabled(),valid=availableCities().some(c=>c.id===city.id),owned=ownedCharacterIds(),missing=bypass?[]:(city.requiredCharacters||[]).filter(id=>!owned.has(id)),political=FACTION_BY_ID[selectedPoliticalFaction];
  byId("grand-city-detail").innerHTML='<div class="grand-city-heading"><span class="grand-city-dot '+city.faction+'"></span><div><h3>'+city.name+'</h3><small>'+(political?.name||FACTIONS[city.faction].name)+'</small></div></div><p>'+city.description+'</p><div class="grand-stat"><b>Ruler</b><span>'+city.ruler+'</span></div><div class="grand-stat"><b>Location</b><span>'+city.terrain+'</span></div>'+(missing.length?'<p class="subtle">Requires '+missing.join(", ")+'.</p>':"")+(commander?'<p class="subtle">Commander: '+commander.name+'</p>':'<p class="subtle">Faction locked: collect '+gateText(selectedFaction)+' to command this campaign.</p>');
- byId("grand-world-map").querySelectorAll(".grand-city").forEach(m=>{const id=Number(m.dataset.city),c=CITIES.find(x=>x.id===id);m.classList.toggle("selected",id===city.id);m.classList.toggle("other-faction",c?.faction!==selectedFaction);m.classList.toggle("character-locked",(c?.requiredCharacters||[]).some(x=>!ownedCharacterIds().has(x)));m.setAttribute("aria-pressed",String(id===city.id));});
- byId("grand-campaign-begin").disabled=!valid||!commander;renderRegionChoices();
+ byId("grand-world-map").querySelectorAll(".grand-city").forEach(m=>{const id=Number(m.dataset.city),c=CITIES.find(x=>x.id===id);m.classList.toggle("selected",id===city.id);m.classList.toggle("other-faction",c?.faction!==selectedFaction);m.classList.toggle("character-locked",!bypass&&(c?.requiredCharacters||[]).some(x=>!ownedCharacterIds().has(x)));m.setAttribute("aria-pressed",String(id===city.id));});
+ byId("grand-campaign-begin").disabled=!(bypass?!!city:valid&&!!commander);renderRegionChoices();
 }
 function renderRegionChoices(){
  const host=byId("grand-region-choices");if(!host)return;const owned=ownedCharacterIds(),commander=commanderForFaction(selectedFaction),homeId=Number(Object.keys(FACTION_PROFILES).find(id=>FACTION_PROFILES[id].id===selectedPoliticalFaction));
@@ -468,7 +470,7 @@ function renderFaction(){
   selectedCity=id;selectedFaction=CITIES.find(c=>c.id===id)?.faction||"empire";
   saveSelection();renderFaction();
  }));
- byId("grand-faction-detail").innerHTML='<h3>'+profile.name+'</h3><p>'+(home?.description||"An independent political faction in the Shattered Realms.")+'</p><div class="grand-stat"><b>Race</b><span>'+(RACES[profile.race]?.name||profile.race)+'</span></div><div class="grand-stat"><b>Capital</b><span>'+(home?.name||"Unknown")+'</span></div><div class="grand-stat"><b>Commander</b><span>'+(commander?commander.name:"Locked")+'</span></div><p class="subtle">'+(commander?(commander.kind==="legendary"?"Legendary commander unlocked.":"Generic hero unlocked."):"Collect "+gateText(selectedFaction)+" to unlock this faction.")+'</p>';
+ byId("grand-faction-detail").innerHTML='<h3>'+profile.name+'</h3><p>'+(home?.description||"An independent political faction in the Shattered Realms.")+'</p><div class="grand-stat"><b>Race</b><span>'+(RACES[profile.race]?.name||profile.race)+'</span></div><div class="grand-stat"><b>Capital</b><span>'+(home?.name||"Unknown")+'</span></div><div class="grand-stat"><b>Commander</b><span>'+(commander?commander.name:"Locked")+'</span></div><p class="subtle">'+(collectionBypassEnabled()?"Developer bypass active — model and character ownership requirements are ignored.":commander?(commander.kind==="legendary"?"Legendary commander unlocked.":"Generic hero unlocked."):"Collect "+gateText(selectedFaction)+" to unlock this faction.")+'</p>';
  byId("grand-campaign-begin").textContent="Start campaign";renderCity();
 }
 function createMovementGraph(){
