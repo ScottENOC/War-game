@@ -670,6 +670,12 @@ function renderCampaignMap(){
  if(battleRegion&&defenderId&&defenderId!==playerId&&activeCampaign.factionStates.some(f=>f.id===defenderId&&f.alive)){
   const battleButton=document.createElement("button");battleButton.type="button";battleButton.className="primary-button grand-campaign-battle-button";battleButton.textContent="Fight for "+battleRegion.name;battleButton.addEventListener("click",()=>launchCampaignBattle(battleRegion));byId("grand-campaign-node-detail").append(battleButton);
  }
+ if(battleRegion&&politicalOwner(battleRegion)===playerId&&battleRegion.settlement&&!battleRegion.settlement.besiegedBy){
+  const st=battleRegion.settlement,stockButton=document.createElement("button");stockButton.type="button";stockButton.className="secondary-button";stockButton.textContent="Stock city provisions · 40 gold";
+  stockButton.disabled=(st.foodStores||0)>=12||(selectedFactionTreasury()?.treasury||0)<40;
+  stockButton.addEventListener("click",()=>{const funds=selectedFactionTreasury();if(!funds||funds.treasury<40){campaignMessage("Not enough gold to stock city provisions.");return;}if(st.besiegedBy){campaignMessage("A besieged city cannot receive provisions.");return;}funds.treasury-=40;st.maxFoodStores=12;st.foodStores=Math.min(12,(st.foodStores||0)+3);campaignMessage(battleRegion.name+" stores provisions for "+st.foodStores+" siege turns.");});
+  byId("grand-campaign-node-detail").append(stockButton);
+ }
  byId("grand-campaign-event").textContent=activeCampaign.lastEvent||"Select a highlighted place connected by road.";renderArmyManagement();if(firstRender){const scale=map.clientWidth/1300;host.scrollLeft=Math.max(0,current.x*scale-host.clientWidth/2);host.scrollTop=Math.max(0,current.y*scale-host.clientHeight/2);}
 }
 function launchCampaignBattle(region){
