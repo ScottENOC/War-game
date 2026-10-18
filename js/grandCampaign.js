@@ -501,6 +501,76 @@ function settleMonthlyPopulation(campaign){
  }
 }
 function nodeCost(n){return n.type==="river"?2:1;}
+function playerArmies(){const id=activeCampaign?.playerPoliticalFaction;return (activeCampaign?.armies||[]).filter(a=>a.owner===id||a.factionId===id);}
+function selectedPlayerArmy(){
+ const armies=playerArmies();if(!armies.length)return null;
+ const army=armies.find(a=>a.id===activeCampaign.selectedArmyId)||armies.find(a=>a.id===activeCampaign.playerPoliticalFaction+"-main")||armies[0];
+ activeCampaign.selectedArmyId=army.id;army.name=army.name||(army.id===activeCampaign.playerPoliticalFaction+"-main"?"Main army":"Army "+(armies.indexOf(army)+1));
+ if(!army.nodeId)army.nodeId=activeCampaign.commander.nodeId||"city-"+(army.region||activeCampaign.startingRegion);
+ if(!Number.isFinite(army.region))army.region=activeCampaign.graph.nodes[army.nodeId]?.region||activeCampaign.startingRegion;
+ if(!Number.isFinite(army.movement))army.movement=army.id===activeCampaign.playerPoliticalFaction+"-main"?(activeCampaign.commander.movement??activeCampaign.commander.maxMovement):0;
+ return army;
+}
+function recruitCatalog(){
+ const race=FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race||"human",basic=race==="dwarf"?"dwarfInfantry":"swordsmen";
+ const options=[
+  {key:"melee",label:race==="dwarf"?"Dwarf melee infantry":"Melee infantry",type:basic,weapon:"handWeapon",min:5,max:30,modelType:basic,modelWeapon:"handWeapon"},
+  ...(race==="dwarf"?[{key:"crossbows",label:"Dwarf crossbowmen",type:"dwarfInfantry",weapon:"handWeapon",rangedWeapon:"crossbow",min:5,max:30,modelType:"dwarfInfantry",modelWeapon:"crossbow"}]:[{key:"archers",label:"Archers",type:"archers",weapon:"handWeapon",rangedWeapon:"bow",min:5,max:30,modelType:"archers",modelWeapon:"bow"}]),
+  ...(race!=="dwarf"?[{key:"cavalry",label:race==="elf"?"High Elf cavalry":"Cavalry",type:"cavalry",weapon:"handWeapon",min:5,max:15,modelType:"cavalry"}]:[]),
+  {key:"artillery",label:race==="elf"?"Bolt thrower":race==="dwarf"?"Dwarf cannon":"Cannon",type:race==="elf"?"boltThrower":"cannon",weapon:"handWeapon",min:race==="elf"?2:3,max:race==="elf"?2:3,modelType:race==="elf"?"boltThrower":"cannon",fixed:true},
+  ...(race==="dwarf"?[
+   {key:"dwarfCaptain",label:"Dwarf thane",type:"dwarfCaptain",weapon:"handWeapon",min:1,max:1,modelType:"dwarfCaptain",character:true},
+   {key:"dwarfLord",label:"Dwarf lord",type:"dwarfLord",weapon:"handWeapon",min:1,max:1,modelType:"dwarfLord",character:true},
+   {key:"dwarfKingHaldric",label:"King Haldric Stoneward",type:"dwarfKingHaldric",weapon:"handWeapon",min:1,max:1,modelType:"dwarfKingHaldric",character:true}
+  ]:[
+   {key:"captain",label:race==="elf"?"High Elf hero":"Human captain",type:"captain",weapon:"handWeapon",min:1,max:1,modelType:"captain",character:true},
+   {key:"lord",label:race==="elf"?"High Elf lord":"Human lord",type:"lord",weapon:"handWeapon",min:1,max:1,modelType:"lord",character:true},
+   ...(race==="elf"?[
+    {key:"shadowElf",label:"Lethariel Starweaver",type:"shadowElf",weapon:"handWeapon",rangedWeapon:"magicBow",min:1,max:1,modelType:"shadowElf",character:true},
+    {key:"pegasusChampion",label:"Aelthir, the Dawnwing",type:"pegasusChampion",weapon:"lance",min:1,max:1,modelType:"pegasusChampion",character:true},
+    ...["youngDragon","dragon","ancientDragon"].map(type=>({key:type,label:type==="youngDragon"?"Young dragon":type==="dragon"?"Dragon":"Ancient dragon",type,weapon:"handWeapon",min:1,max:1,modelType:type,character:true}))
+   ]:[
+    {key:"legendaryLord",label:"Lord-Marshal Edric Voss",type:"legendaryLord",weapon:"handWeapon",min:1,max:1,modelType:"legendaryLord",character:true},
+    {key:"rifleman",label:"Imperial marksman",type:"rifleman",weapon:"handWeapon",rangedWeapon:"longRifle",min:1,max:1,modelType:"rifleman",character:true},
+    {key:"captainWeiss",label:"Captain Marta Weiss",type:"captainWeiss",weapon:"handWeapon",min:1,max:1,modelType:"captainWeiss",character:true}
+   ])
+  ])
+ ];
+ return options;
+}
+function optionMatchesModel(o,m){return m?.faction===rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction)&&m.type===o.modelType&&(!o.modelWeapon||m.weapon===o.modelWeapon);}
+function deployedForOption(o){return playerArmies().reduce((sum,a)=>sum+(a.roster||[]).filter(u=>u.type===o.type&&(o.rangedWeapon?u.rangedWeapon===o.rangedWeapon:!u.rangedWeapon)).reduce((n,u)=>n+(u.models||0),0),0);}
+function availableForOption(o){return Math.max(0,collectionModels().filter(m=>optionMatchesModel(o,m)).length-deployedForOption(o));}
+function optionConfig(o,models){
+ const config={type:o.type,models,weapon:o.weapon||"handWeapon",meleeWeapons:[o.weapon||"handWeapon"],champion:false,upgrades:{},skills:{}};
+ if(o.rangedWeapon)config.rangedWeapon=o.rangedWeapon;
+ if(o.type==="cavalry"){config.mounted=true;config.mountType="horse";}
+ if(o.type==="dwarfKingHaldric"){config.shield=true;config.magicArmour=true;}
+ if(o.type==="legendaryLord"||o.type==="shadowElf"||o.type==="pegasusChampion")return campaignCharacterConfig(activeCampaign.playerPoliticalFaction,{id:o.type==="legendaryLord"?"edric_voss":o.type==="shadowElf"?"lethariel_starweaver":"aelthir_dawnwing"});
+ return config;
+}
+function selectedFactionTreasury(){return activeCampaign?.factionStates?.find(f=>f.id===activeCampaign.playerPoliticalFaction);}
+function idMainArmy(){return activeCampaign?.playerPoliticalFaction+"-main";}
+function syncPlayerArmyState(){
+ const p=selectedFactionTreasury();if(!p)return;const armies=playerArmies();
+ p.armyPoints=armies.reduce((sum,a)=>sum+campaignArmyCost(a),0);p.roster=(armies.find(a=>a.id===idMainArmy())||armies[0])?.roster||[];
+ p.upkeep=armies.reduce((sum,a)=>sum+campaignArmyUpkeep(a),0);activeCampaign.treasury=p.treasury;
+}
+function campaignMessage(message){activeCampaign.lastEvent=message;saveCampaign();renderCampaignMap();}
+function renderArmyManagement(){
+ const host=byId("grand-army-management");if(!host||!activeCampaign)return;
+ const armies=playerArmies(),army=selectedPlayerArmy();if(!army){host.textContent="No field army.";return;}
+ const faction=army.rosterFaction||rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction),treasury=selectedFactionTreasury(),catalog=recruitCatalog();
+ const labels={swordsmen:"Melee infantry",archers:"Archers",dwarfInfantry:"Dwarf infantry",cavalry:"Cavalry",cannon:"Cannon",boltThrower:"Bolt thrower",captain:"Captain",lord:"Lord",dwarfCaptain:"Dwarf thane",dwarfLord:"Dwarf lord",dwarfKingHaldric:"King Haldric",legendaryLord:"Edric Voss",shadowElf:"Lethariel Starweaver",pegasusChampion:"Aelthir, the Dawnwing",rifleman:"Marksman",captainWeiss:"Marta Weiss",youngDragon:"Young dragon",dragon:"Dragon",ancientDragon:"Ancient dragon"};
+ const options=catalog.map(o=>{const available=availableForOption(o),config=optionConfig(o,o.min),price=unitCost(config,faction);return '<option value="'+o.key+'" '+(available<o.min?'disabled':'')+'>'+o.label+' · '+available+' available · '+price+' gold minimum</option>';}).join("");
+ const roster=(army.roster||[]).map((u,i)=>{const label=labels[u.type]||u.type,o=catalog.find(x=>x.type===u.type&&(x.rangedWeapon?x.rangedWeapon===u.rangedWeapon:!u.rangedWeapon)),can=!!o&&!o.character&&!o.fixed&&u.models<o.max&&availableForOption(o)>0;return '<div class="grand-army-unit"><span><b>'+label+'</b><small>'+u.models+' models · '+unitCost(u,faction)+' gold</small></span><button type="button" class="secondary-button" data-replenish="'+i+'" '+(!can?'disabled':'')+'>Replenish +1</button></div>';}).join("");
+ host.innerHTML='<div class="grand-army-management-head"><h3>Armies &amp; recruitment</h3><button type="button" class="secondary-button" id="grand-create-army">＋ Form army</button></div><label class="grand-army-field">Selected army<select id="grand-select-army">'+armies.map(a=>'<option value="'+a.id+'" '+(a.id===army.id?'selected':'')+'>'+(a.name||"Army")+' · '+(CITIES.find(c=>c.id===a.region)?.name||"Field")+'</option>').join("")+'</select></label><div class="grand-army-summary">'+(army.roster||[]).length+' / 6 units · '+(army.points||0)+' pts · '+(army.movement||0)+' movement left</div>'+(roster||'<p class="subtle">This army has no troops yet. Recruit a unit below.</p>')+'<div class="grand-recruit-box"><label class="grand-army-field">Recruit a new unit<select id="grand-recruit-type">'+options+'</select></label><label class="grand-army-field">Models<input id="grand-recruit-count" type="number" min="1" max="30" value="5"></label><button type="button" class="primary-button" id="grand-recruit-unit" '+((army.roster||[]).length>=6?'disabled':'')+'>Recruit unit</button><small>Recruitment costs gold and requires compatible miniatures you own. Models already deployed in any of your armies cannot be recruited again.</small></div>';
+ byId("grand-select-army").addEventListener("change",e=>{activeCampaign.selectedArmyId=e.target.value;const selected=selectedPlayerArmy();activeCampaign.commander.nodeId=selected.nodeId;activeCampaign.commander.region=selected.region;activeCampaign.commander.movement=selected.movement;campaignMessage("Selected "+selected.name+".");});
+ byId("grand-create-army").addEventListener("click",()=>{const id=activeCampaign.playerPoliticalFaction,base=selectedPlayerArmy(),number=playerArmies().length+1,armyId=id+"-army-"+activeCampaign.turn+"-"+number,fresh={id:armyId,owner:id,factionId:id,name:"Army "+number,rosterFaction:rosterFactionForPoliticalFaction(id),roster:[],region:base.region,nodeId:base.nodeId,points:0,movement:0};activeCampaign.armies.push(fresh);activeCampaign.selectedArmyId=armyId;activeCampaign.commander.nodeId=fresh.nodeId;activeCampaign.commander.region=fresh.region;activeCampaign.commander.movement=0;campaignMessage("Formed "+fresh.name+". Recruit troops to build it.");});
+ host.querySelectorAll("[data-replenish]").forEach(button=>button.addEventListener("click",()=>{const unit=army.roster[Number(button.dataset.replenish)],o=catalog.find(x=>x.type===unit?.type&&(x.rangedWeapon?x.rangedWeapon===unit.rangedWeapon:!unit?.rangedWeapon));if(!unit||!o||o.character||o.fixed){campaignMessage("That unit cannot be replenished as ordinary rank-and-file.");return;}if(unit.models>=o.max||availableForOption(o)<1){campaignMessage("No compatible unassigned model is available.");return;}const price=Math.max(1,unitCost({...unit,models:unit.models+1},faction)-unitCost(unit,faction));if((treasury?.treasury||0)<price){campaignMessage("Not enough gold to replenish that unit.");return;}unit.models++;treasury.treasury-=price;army.points=campaignArmyCost(army);syncPlayerArmyState();campaignMessage("Replenished "+(labels[unit.type]||unit.type)+" by one model for "+price+" gold.");}));
+ byId("grand-recruit-type").addEventListener("change",()=>{const o=catalog.find(x=>x.key===byId("grand-recruit-type").value);if(o){const input=byId("grand-recruit-count");input.min=o.min;input.max=o.max;input.value=o.min;}});
+ byId("grand-recruit-unit").addEventListener("click",()=>{const o=catalog.find(x=>x.key===byId("grand-recruit-type").value);if(!o){campaignMessage("Choose a troop type first.");return;}if((army.roster||[]).length>=6){campaignMessage("This army already has six units.");return;}const count=o.fixed?o.min:Math.max(o.min,Math.min(o.max,Math.floor(Number(byId("grand-recruit-count").value)||o.min))),available=availableForOption(o);if(available<count){campaignMessage("You need "+count+" compatible unassigned models; only "+available+" are available.");return;}const config=optionConfig(o,count),price=unitCost(config,faction);if((treasury?.treasury||0)<price){campaignMessage("Not enough gold. This unit costs "+price+".");return;}army.roster.push(config);treasury.treasury-=price;army.points=campaignArmyCost(army);syncPlayerArmyState();campaignMessage("Recruited "+o.label+" ("+count+" models) for "+price+" gold.");});
+}
 function renderCampaignMap(){
  if(!activeCampaign)return;const host=byId("grand-map-live-wrap");let map=byId("grand-campaign-world-map");
  const firstRender=!map;if(!map){map=byId("grand-world-map").cloneNode(true);map.id="grand-campaign-world-map";map.querySelectorAll(".grand-city").forEach(m=>m.classList.remove("other-faction","selected","character-locked"));host.replaceChildren(map);installCampaignMapNavigation(host,map);}
