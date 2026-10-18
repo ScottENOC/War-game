@@ -539,7 +539,7 @@ function recruitCatalog(){
  return options;
 }
 function optionMatchesModel(o,m){return m?.faction===rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction)&&m.type===o.modelType&&(!o.modelWeapon||m.weapon===o.modelWeapon);}
-function deployedForOption(o){return playerArmies().reduce((sum,a)=>sum+(a.roster||[]).filter(u=>u.type===o.type&&(o.character|| (o.rangedWeapon?u.rangedWeapon===o.rangedWeapon:!u.rangedWeapon))).reduce((n,u)=>n+(u.models||0),0),0);}
+function deployedForOption(o){return playerArmies().reduce((sum,a)=>sum+(a.roster||[]).filter(u=>u.type===o.type&&(o.character||o.key==="cavalry"||(o.rangedWeapon?u.rangedWeapon===o.rangedWeapon:!u.rangedWeapon))).reduce((n,u)=>n+(u.models||0),0),0);}
 function availableModelsForOption(o){return collectionModels().filter(m=>optionMatchesModel(o,m)).slice(deployedForOption(o));}
 function availableForOption(o){return availableModelsForOption(o).length;}
 function optionConfig(o,models){
