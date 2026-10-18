@@ -252,7 +252,7 @@ const FACTION_SPECIES = {empire:"human",highElves:"elf",dwarfs:"dwarf",greenskin
 function initialSettlement(city){
  const p=CITY_PROFILES[city.id]||{tier:1,population:10000,prosperity:40,fortification:{style:"human-layered",material:"stone",circuits:1,gates:1,wounds:30},buildings:[]};
  const pop=p.population;
- return {historicalTier:p.tier,prosperity:p.prosperity,unrest:0,population:{total:pop,groups:[{culture:CULTURE_BY_FACTION[city.faction]||"Local",count:pop}],displaced:0},buildings:p.buildings.map(id=>({id,condition:100})),fortification:{...p.fortification,condition:100,damage:0,upgrades:[]},infrastructureCondition:100,occupationPolicy:"local-administration",monthsUnderOccupation:0};
+ return {historicalTier:p.tier,prosperity:p.prosperity,unrest:0,foodStores:8,maxFoodStores:8,siegeTurns:0,besiegedBy:null,population:{total:pop,groups:[{culture:CULTURE_BY_FACTION[city.faction]||"Local",count:pop}],displaced:0},buildings:p.buildings.map(id=>({id,condition:100})),fortification:{...p.fortification,condition:100,damage:0,upgrades:[]},infrastructureCondition:100,occupationPolicy:"local-administration",monthsUnderOccupation:0};
 }
 function ensureSettlementState(campaign){
  const oldSchemaVersion=Number(campaign.schemaVersion)||0;
@@ -358,9 +358,9 @@ function createInitialCampaignState(faction,city,commander){
   return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,treasury:isPlayer?500:300,income:campaignCityIncome(regions.find(r=>r.id===home.id)),upkeep:Math.ceil(army.points*.04),armyPoints:army.points,turnsTaken:0,relations:{}};
  });
  const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;const pa=FACTION_BY_ID[a.id],pb=FACTION_BY_ID[b.id],base=RACES[pa.race].attitudes[pb.race]??0;diplomacy[a.id][b.id]=base+(pa.race===pb.race?10:0);}}
- const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints}));
+ const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0}));
  const playerState=factionStates.find(f=>f.id===playerPoliticalFaction);
- return {schemaVersion:6,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},armies,lastEvent:commander.name+" begins the campaign at "+city.name+"."};
+ return {schemaVersion:7,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},armies,lastEvent:commander.name+" begins the campaign at "+city.name+"."};
 }
 let selectedFaction="empire",selectedPoliticalFaction="valedorn",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
@@ -501,6 +501,59 @@ function settleMonthlyPopulation(campaign){
  }
 }
 function nodeCost(n){return n.type==="river"?2:1;}
+function supplyOwnerAtNode(campaign,nodeId){const n=campaign.graph?.nodes?.[nodeId];if(!n)return null;const region=campaign.regions.find(r=>r.id===n.region);return region?politicalOwner(region):null;}
+function campaignSupplyPath(campaign,army){
+ if(!army||!campaign.graph?.nodes||!campaign.graph?.edges)return [];
+ const owner=army.owner||army.factionId,start=army.nodeId;if(!start||!campaign.graph.nodes[start])return [];
+ const friendly=id=>supplyOwnerAtNode(campaign,id)===owner;
+ const queue=[],previous=new Map();for(const r of campaign.regions||[]){if(politicalOwner(r)===owner){const id="city-"+r.id;if(campaign.graph.nodes[id]){queue.push(id);previous.set(id,null);}}}
+ while(queue.length){const at=queue.shift();if(at===start){const path=[];let cur=at;while(cur!==null){path.push(cur);cur=previous.get(cur);}return path.reverse();}
+  for(const e of campaign.graph.edges[at]||[]){if(previous.has(e.to))continue;if(e.to!==start&&!friendly(e.to))continue;previous.set(e.to,at);queue.push(e.to);}
+ }
+ return [];
+}
+function ensureLogisticsState(campaign){
+ for(const army of campaign.armies||[]){if(!Number.isFinite(army.supplies))army.supplies=3;if(!Number.isFinite(army.maxSupplies))army.maxSupplies=3;if(!Number.isFinite(army.supplyRaidedUntilTurn))army.supplyRaidedUntilTurn=0;}
+ for(const region of campaign.regions||[]){if(!region.settlement)continue;const st=region.settlement;if(!Number.isFinite(st.foodStores))st.foodStores=8;if(!Number.isFinite(st.maxFoodStores))st.maxFoodStores=8;if(!Number.isFinite(st.siegeTurns))st.siegeTurns=0;}
+}
+function processCampaignLogistics(campaign){
+ ensureLogisticsState(campaign);
+ const armies=campaign.armies||[],regions=campaign.regions||[],events=[];
+ for(const army of armies){
+  if(!army.roster?.length)continue;
+  const path=campaignSupplyPath(campaign,army),connected=path.length>0,raided=(army.supplyRaidedUntilTurn||0)>=campaign.turn;
+  if(connected&&!raided)army.supplies=army.maxSupplies||3;
+  else army.supplies=Math.max(0,(army.supplies||0)-1);
+  army.supplyStatus=connected&&!raided?"supplied":raided?"raided":army.supplies>0?"low":"starving";
+  if(army.supplies===0){
+   const before=army.roster.reduce((n,u)=>n+(u.models||0),0);
+   for(const unit of army.roster){if(unit.models>1)unit.models=Math.max(1,Math.floor(unit.models*.9));}
+   army.roster=army.roster.filter(u=>u.models>0);army.points=campaignArmyCost(army);
+   const lost=before-army.roster.reduce((n,u)=>n+(u.models||0),0);
+   if(lost>0)events.push((army.name||army.owner+" army")+" loses "+lost+" models to starvation.");
+  }
+ }
+ for(const region of regions){
+  const st=region.settlement;if(!st)continue;
+  const owner=politicalOwner(region),besieger=armies.find(a=>a.roster?.length&&a.nodeId==="city-"+region.id&&(a.owner||a.factionId)!==owner);
+  const relief=armies.some(a=>a.roster?.length&&a.nodeId==="city-"+region.id&&(a.owner||a.factionId)===owner);
+  if(besieger&&!relief){
+   st.siegeTurns=(st.siegeTurns||0)+1;st.foodStores=Math.max(0,(st.foodStores||0)-1);st.besiegedBy=besieger.owner||besieger.factionId;
+   if(st.foodStores===0&&st.siegeTurns%2===0){st.prosperity=Math.max(0,(st.prosperity||0)-2);st.unrest=Math.min(100,(st.unrest||0)+5);st.fortification.condition=Math.max(0,(st.fortification?.condition||0)-1);events.push(region.name+" is starving under siege; unrest rises and fortifications deteriorate.");}
+  }else{st.siegeTurns=0;st.besiegedBy=null;if(!besieger)st.foodStores=Math.min(st.maxFoodStores||8,(st.foodStores||0)+1);}
+ }
+ for(const state of campaign.factionStates||[]){const army=armies.find(a=>(a.owner||a.factionId)===state.id);if(army){state.roster=army.roster;state.armyPoints=army.points;}}
+ return events;
+}
+function raidEnemySupplyLine(){
+ const army=selectedPlayerArmy();if(!army||!activeCampaign)return;
+ const graph=activeCampaign.graph,at=army.nodeId,near=new Set([at,...(graph.edges[at]||[]).map(e=>e.to)]);
+ const targets=playerArmies().length>=0?(activeCampaign.armies||[]).filter(a=>(a.owner||a.factionId)!==activeCampaign.playerPoliticalFaction&&a.roster?.length&&campaignSupplyPath(activeCampaign,a).some(n=>near.has(n))):[];
+ if(!targets.length){campaignMessage("No enemy supply line is within raiding range. Move beside a road feeding an enemy army.");return;}
+ targets.sort((a,b)=>((b.supplies||0)-(a.supplies||0)));
+ const target=targets[0];target.supplyRaidedUntilTurn=activeCampaign.turn+2;target.supplies=Math.max(0,(target.supplies||0)-1);target.supplyStatus="raided";
+ campaignMessage("Supply line raided! "+(target.name||target.owner+" army")+" loses one supply turn and cannot replenish supplies for two campaign turns.");
+}
 function playerArmies(){const id=activeCampaign?.playerPoliticalFaction;return (activeCampaign?.armies||[]).filter(a=>a.owner===id||a.factionId===id);}
 function selectedPlayerArmy(){
  const armies=playerArmies();if(!armies.length)return null;
@@ -580,13 +633,14 @@ function syncPlayerArmyState(){
 }
 function campaignMessage(message){activeCampaign.lastEvent=message;saveCampaign();renderCampaignMap();}
 function renderArmyManagement(){
- const host=byId("grand-army-management");if(!host||!activeCampaign)return;
+ const host=byId("grand-army-management");if(!host||!activeCampaign)return;ensureLogisticsState(activeCampaign);
  const armies=playerArmies(),army=selectedPlayerArmy();if(!army){host.textContent="No field army.";return;}
  const faction=army.rosterFaction||rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction),treasury=selectedFactionTreasury(),catalog=recruitCatalog();
  const labels={swordsmen:"Melee infantry",archers:"Archers",dwarfInfantry:"Dwarf infantry",cavalry:"Cavalry",cannon:"Cannon",boltThrower:"Bolt thrower",captain:"Captain",lord:"Lord",dwarfCaptain:"Dwarf thane",dwarfLord:"Dwarf lord",dwarfKingHaldric:"King Haldric",legendaryLord:"Edric Voss",shadowElf:"Lethariel Starweaver",pegasusChampion:"Aelthir, the Dawnwing",rifleman:"Marksman",captainWeiss:"Marta Weiss",youngDragon:"Young dragon",dragon:"Dragon",ancientDragon:"Ancient dragon"};
  const options=catalog.map(o=>{const available=availableForOption(o),config=optionConfig(o,o.min),price=unitCost(config,faction);return '<option value="'+o.key+'" '+(available<o.min?'disabled':'')+'>'+o.label+' · '+available+' available · '+price+' gold minimum</option>';}).join("");
  const roster=(army.roster||[]).map((u,i)=>{const label=labels[u.type]||u.type,o=optionForUnit(u,catalog),can=!!o&&!o.character&&!o.fixed&&u.models<o.max&&availableForOption(o)>0;return '<div class="grand-army-unit"><span><b>'+label+'</b><small>'+u.models+' models · '+unitCost(u,faction)+' gold</small></span><div class="grand-army-unit-actions"><button type="button" class="secondary-button" data-replenish="'+i+'" '+(!can?'disabled':'')+'>Replenish +1</button><button type="button" class="secondary-button grand-disband-button" data-disband="'+i+'">Disband</button></div></div>';}).join("");
- host.innerHTML='<div class="grand-army-management-head"><h3>Armies &amp; recruitment</h3><button type="button" class="secondary-button" id="grand-create-army">＋ Form army</button></div><label class="grand-army-field">Selected army<select id="grand-select-army">'+armies.map(a=>'<option value="'+a.id+'" '+(a.id===army.id?'selected':'')+'>'+(a.name||"Army")+' · '+(CITIES.find(c=>c.id===a.region)?.name||"Field")+'</option>').join("")+'</select></label><div class="grand-army-summary">'+(army.roster||[]).length+' / 6 units · '+(army.points||0)+' pts · '+(army.movement||0)+' movement left</div>'+(roster||'<p class="subtle">This army has no troops yet. Recruit a unit below.</p>')+'<div class="grand-recruit-box"><label class="grand-army-field">Recruit a new unit<select id="grand-recruit-type">'+options+'</select></label><label class="grand-army-field">Models<input id="grand-recruit-count" type="number" min="1" max="30" value="5"></label><button type="button" class="primary-button" id="grand-recruit-unit" '+((army.roster||[]).length>=6?'disabled':'')+'>Recruit unit</button><small>Recruitment costs gold and requires compatible miniatures you own. Models already deployed in any of your armies cannot be recruited again.</small></div>';
+ host.innerHTML='<div class="grand-army-management-head"><h3>Armies &amp; recruitment</h3><button type="button" class="secondary-button" id="grand-create-army">＋ Form army</button></div><label class="grand-army-field">Selected army<select id="grand-select-army">'+armies.map(a=>'<option value="'+a.id+'" '+(a.id===army.id?'selected':'')+'>'+(a.name||"Army")+' · '+(CITIES.find(c=>c.id===a.region)?.name||"Field")+'</option>').join("")+'</select></label><div class="grand-army-summary">'+(army.roster||[]).length+' / 6 units · '+(army.points||0)+' pts · '+(army.movement||0)+' movement left</div>'+(roster||'<p class="subtle">This army has no troops yet. Recruit a unit below.</p>')+'<button type="button" class="secondary-button" id="grand-raid-supply">Raid enemy supply line</button><small class="grand-supply-note">Supplies refill while connected to friendly settlements. Cut off armies consume reserves; at zero, starvation causes losses.</small><div class="grand-recruit-box"><label class="grand-army-field">Recruit a new unit<select id="grand-recruit-type">'+options+'</select></label><label class="grand-army-field">Models<input id="grand-recruit-count" type="number" min="1" max="30" value="5"></label><button type="button" class="primary-button" id="grand-recruit-unit" '+((army.roster||[]).length>=6?'disabled':'')+'>Recruit unit</button><small>Recruitment costs gold and requires compatible miniatures you own. Models already deployed in any of your armies cannot be recruited again.</small></div>';
+ byId("grand-raid-supply").addEventListener("click",raidEnemySupplyLine);
  byId("grand-select-army").addEventListener("change",e=>{activeCampaign.selectedArmyId=e.target.value;const selected=selectedPlayerArmy();activeCampaign.commander.nodeId=selected.nodeId;activeCampaign.commander.region=selected.region;activeCampaign.commander.movement=selected.movement;campaignMessage("Selected "+selected.name+".");});
  byId("grand-create-army").addEventListener("click",()=>{const id=activeCampaign.playerPoliticalFaction,base=selectedPlayerArmy(),number=playerArmies().length+1,armyId=id+"-army-"+activeCampaign.turn+"-"+number,fresh={id:armyId,owner:id,factionId:id,name:"Army "+number,rosterFaction:rosterFactionForPoliticalFaction(id),roster:[],region:base.region,nodeId:base.nodeId,points:0,movement:0};activeCampaign.armies.push(fresh);activeCampaign.selectedArmyId=armyId;activeCampaign.commander.nodeId=fresh.nodeId;activeCampaign.commander.region=fresh.region;activeCampaign.commander.movement=0;campaignMessage("Formed "+fresh.name+". Recruit troops to build it.");});
  host.querySelectorAll("[data-disband]").forEach(button=>button.addEventListener("click",()=>{const index=Number(button.dataset.disband),unit=army.roster[index];if(!unit)return;const label=labels[unit.type]||unit.type;if(!window.confirm("Disband "+label+" ("+unit.models+" models)? The models return to your available collection. Recruitment gold is not refunded."))return;army.roster.splice(index,1);army.points=campaignArmyCost(army);syncPlayerArmyState();campaignMessage("Disbanded "+label+"; "+unit.models+" models are available for recruitment again. No gold was refunded.");}));
@@ -610,7 +664,7 @@ function renderCampaignMap(){
  layer.querySelectorAll("[data-node]").forEach(g=>{const move=()=>moveCommander(g.dataset.node);g.addEventListener("click",move);g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();move();}});});
  const n=nodes[activeCampaign.commander.nodeId];const settlementRegion=activeCampaign.regions.find(r=>r.id===n.region);byId("grand-campaign-turn").textContent="TURN "+activeCampaign.turn;const playerState=activeCampaign.factionStates.find(f=>f.id===activeCampaign.playerPoliticalFaction);if(playerState)playerState.upkeep=playerArmies().reduce((sum,a)=>sum+campaignArmyUpkeep(a),0);byId("grand-campaign-treasury").textContent=activeCampaign.treasury+" gold · +"+(playerState?.income||0)+" / −"+(playerState?.upkeep||0);
  byId("grand-campaign-commander").innerHTML="<strong>♟ "+activeCampaign.commander.name+"</strong><span>"+(activeCampaign.commander.kind==="legendary"?"Legendary":"Commander")+" · "+activeCampaign.commander.movement+"/"+activeCampaign.commander.maxMovement+" MP</span>";
- byId("grand-campaign-node-detail").innerHTML="<strong>"+(n.type==="city"?"⌂ ":"◆ ")+n.label+"</strong>"+(n.type==="city"&&settlementRegion?.settlement?("<span>"+(FACTION_BY_ID[settlementRegion.ownerFaction]?.name||FACTIONS[settlementRegion.ownerFaction]?.name||settlementRegion.ownerFaction)+" · "+Math.round(settlementRegion.settlement.population.total).toLocaleString()+"</span>"):"<span>"+({crossroads:"Road junction",port:"Port",river:"River crossing",border:"Border"}[n.type]||"Road")+"</span>");
+ byId("grand-campaign-node-detail").innerHTML="<strong>"+(n.type==="city"?"⌂ ":"◆ ")+n.label+"</strong>"+(n.type==="city"&&settlementRegion?.settlement?("<span>"+(FACTION_BY_ID[settlementRegion.ownerFaction]?.name||FACTIONS[settlementRegion.ownerFaction]?.name||settlementRegion.ownerFaction)+" · "+Math.round(settlementRegion.settlement.population.total).toLocaleString()+" · Food "+(settlementRegion.settlement.foodStores??8)+"/"+(settlementRegion.settlement.maxFoodStores||8)+(settlementRegion.settlement.besiegedBy?" · BESIEGED":"")+"</span>"):"<span>"+({crossroads:"Road junction",port:"Port",river:"River crossing",border:"Border"}[n.type]||"Road")+"</span>");
  const battleRegion=n.type==="city"?activeCampaign.regions.find(r=>r.id===n.region):null;
  const playerId=activeCampaign.playerPoliticalFaction,defenderId=battleRegion&&politicalOwner(battleRegion);
  if(battleRegion&&defenderId&&defenderId!==playerId&&activeCampaign.factionStates.some(f=>f.id===defenderId&&f.alive)){
@@ -759,6 +813,7 @@ function endCampaignTurn(){
   if(!f||!f.alive)continue;
   processed.push(runAIFactionTurn(activeCampaign,f));
  }
+ const logisticsEvents=processCampaignLogistics(activeCampaign);
  const player=states.find(f=>f.id===playerId);
  if(player){
   const owned=activeCampaign.regions.filter(r=>politicalOwner(r)===playerId);
@@ -773,7 +828,7 @@ function endCampaignTurn(){
  activeCampaign.turn++;activeCampaign.activeFaction=playerId;
  for(const army of playerArmies())army.movement=activeCampaign.commander.maxMovement;
  const activeArmy=selectedPlayerArmy();if(activeArmy){activeCampaign.commander.nodeId=activeArmy.nodeId;activeCampaign.commander.region=activeArmy.region;activeCampaign.commander.movement=activeArmy.movement;}
- activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Cities provide income; armies cost upkeep. "+processed.length+" AI faction turns completed. "+(processed.slice(0,2).join(" ")||"The realms consolidate their positions.")+" Your movement is replenished.";
+ activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Cities provide income; armies cost upkeep and supplies. "+processed.length+" AI faction turns completed. "+(logisticsEvents.slice(0,2).join(" ")+" ") +(processed.slice(0,2).join(" ")||"The realms consolidate their positions.")+" Your movement is replenished.";
  saveCampaign();renderCampaignMap();
 }
 function showCampaignWorld(c){activeCampaign=c;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();}
