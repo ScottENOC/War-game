@@ -491,6 +491,11 @@ function settleMonthlyPopulation(campaign){
   const occupationPenalty=region.ownerFaction!==FACTION_PROFILES[region.id]?.id?0.001:0;
   let rate=s.prosperity>=70&&s.unrest<20&&!atWar?0.002:(!atWar&&s.prosperity>=40&&s.unrest<40?0.001:atWar?-0.002:-0.0005);
   if(occupationPenalty)rate-=occupationPenalty;
+  if(rate>0){
+   const race=FACTION_BY_ID[politicalOwner(region)]?.race||campaign.factionStates?.find(f=>f.id===politicalOwner(region))?.race||"human";
+   const growthMultiplier=race==="elf"?0.25:race==="dwarf"?0.5:race==="greenskin"?2:1;
+   rate*=growthMultiplier;
+  }
   const totalDelta=Math.round(s.population.total*rate);
   if(totalDelta>0){s.population.total+=totalDelta;const largest=[...s.population.groups].sort((a,b)=>b.count-a.count)[0];if(largest)largest.count+=totalDelta;}
   else if(totalDelta<0){let remaining=-totalDelta;for(const group of [...s.population.groups].sort((a,b)=>b.count-a.count)){const loss=Math.min(remaining,group.count);group.count-=loss;remaining-=loss;if(!remaining)break;}s.population.total=Math.max(0,s.population.total+totalDelta);}
@@ -521,6 +526,8 @@ function processCampaignLogistics(campaign){
  const armies=campaign.armies||[],regions=campaign.regions||[],events=[];
  for(const army of armies){
   if(!army.roster?.length)continue;
+  const owner=army.owner||army.factionId,race=FACTION_BY_ID[owner]?.race||campaign.factionStates?.find(f=>f.id===owner)?.race||"human";
+  if(race==="undead"){army.supplyStatus="no provisions required";army.supplies=army.maxSupplies||3;continue;}
   const path=campaignSupplyPath(campaign,army),connected=path.length>0,raided=(army.supplyRaidedUntilTurn||0)>=campaign.turn;
   if(connected&&!raided)army.supplies=army.maxSupplies||3;
   else army.supplies=Math.max(0,(army.supplies||0)-1);
@@ -548,7 +555,7 @@ function processCampaignLogistics(campaign){
 function raidEnemySupplyLine(){
  const army=selectedPlayerArmy();if(!army||!activeCampaign)return;
  const graph=activeCampaign.graph,at=army.nodeId,near=new Set([at,...(graph.edges[at]||[]).map(e=>e.to)]);
- const targets=playerArmies().length>=0?(activeCampaign.armies||[]).filter(a=>(a.owner||a.factionId)!==activeCampaign.playerPoliticalFaction&&a.roster?.length&&campaignSupplyPath(activeCampaign,a).some(n=>near.has(n))):[];
+ const targets=(activeCampaign.armies||[]).filter(a=>{const owner=a.owner||a.factionId,race=FACTION_BY_ID[owner]?.race||activeCampaign.factionStates?.find(f=>f.id===owner)?.race||"human";return owner!==activeCampaign.playerPoliticalFaction&&race!=="undead"&&a.roster?.length&&campaignSupplyPath(activeCampaign,a).some(n=>near.has(n));});
  if(!targets.length){campaignMessage("No enemy supply line is within raiding range. Move beside a road feeding an enemy army.");return;}
  targets.sort((a,b)=>((b.supplies||0)-(a.supplies||0)));
  const target=targets[0];target.supplyRaidedUntilTurn=activeCampaign.turn+2;target.supplies=Math.max(0,(target.supplies||0)-1);target.supplyStatus="raided";
