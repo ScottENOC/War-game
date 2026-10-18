@@ -357,7 +357,7 @@ function createInitialCampaignState(faction,city,commander){
   const army=createCampaignArmyRoster(profile.id,isPlayer?1000:500,{player:isPlayer,commander:isPlayer?commander:null});
   return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,treasury:isPlayer?500:300,income:campaignCityIncome(regions.find(r=>r.id===home.id)),upkeep:Math.ceil(army.points*.04),armyPoints:army.points,turnsTaken:0,relations:{}};
  });
- const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;const pa=FACTION_BY_ID[a.id],pb=FACTION_BY_ID[b.id],base=RACES[pa.race].attitudes[pb.race]??0;diplomacy[a.id][b.id]=base+(pa.race===pb.race?10:0);}}
+ const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;diplomacy[a.id][b.id]=baseFactionRelation(a.id,b.id);}}
  const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0}));
  const playerState=factionStates.find(f=>f.id===playerPoliticalFaction);
  return {schemaVersion:7,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},armies,lastEvent:commander.name+" begins the campaign at "+city.name+"."};
@@ -683,12 +683,13 @@ function renderCampaignMap(){
   stockButton.addEventListener("click",()=>{const funds=selectedFactionTreasury();if(!funds||funds.treasury<40){campaignMessage("Not enough gold to stock city provisions.");return;}if(st.besiegedBy){campaignMessage("A besieged city cannot receive provisions.");return;}funds.treasury-=40;st.maxFoodStores=12;st.foodStores=Math.min(12,(st.foodStores||0)+3);campaignMessage(battleRegion.name+" stores provisions for "+st.foodStores+" siege turns.");});
   byId("grand-campaign-node-detail").append(stockButton);
  }
- byId("grand-campaign-event").textContent=activeCampaign.lastEvent||"Select a highlighted place connected by road.";renderArmyManagement();if(firstRender){const scale=map.clientWidth/1300;host.scrollLeft=Math.max(0,current.x*scale-host.clientWidth/2);host.scrollTop=Math.max(0,current.y*scale-host.clientHeight/2);}
+ byId("grand-campaign-event").textContent=activeCampaign.lastEvent||"Select a highlighted place connected by road.";renderArmyManagement();renderDiplomacy();if(firstRender){const scale=map.clientWidth/1300;host.scrollLeft=Math.max(0,current.x*scale-host.clientWidth/2);host.scrollTop=Math.max(0,current.y*scale-host.clientHeight/2);}
 }
 function launchCampaignBattle(region){
  if(!activeCampaign||!region||typeof window.startPoliticalCampaignBattle!=="function")return;
  const playerId=activeCampaign.playerPoliticalFaction,enemyId=politicalOwner(region);
  if(!enemyId||enemyId===playerId)return;
+ declareCampaignWar(activeCampaign,playerId,enemyId);
  const playerArmy=selectedPlayerArmy(),enemyArmy=factionArmy(activeCampaign,enemyId);
  if(!playerArmy?.roster?.length||!enemyArmy?.roster?.length){activeCampaign.lastEvent="Cannot muster a valid army for this battle.";renderCampaignMap();return;}
  const playerFaction=playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId),enemyFaction=enemyArmy.rosterFaction||rosterFactionForPoliticalFaction(enemyId);
@@ -726,17 +727,59 @@ function moveCommander(id){
 }
 function politicalOwner(region){return region?.ownerFaction||region?.politicalFactionId||FACTION_PROFILES[region?.id]?.id;}
 function profileForFaction(id){return FACTION_BY_ID[id]||null;}
-function campaignRelation(campaign,a,b){
- const explicit=campaign.diplomacy?.[a]?.[b];
- if(Number.isFinite(explicit))return explicit;
+function baseFactionRelation(a,b){
  const pa=profileForFaction(a),pb=profileForFaction(b);
  if(!pa||!pb)return 0;
  return (RACES[pa.race]?.attitudes?.[pb.race]??0)+(pa.race===pb.race?10:0);
 }
+function campaignRelation(campaign,a,b){
+ const explicit=campaign.diplomacy?.[a]?.[b];
+ if(Number.isFinite(explicit))return explicit;
+ return baseFactionRelation(a,b);
+}
 function setCampaignRelation(campaign,a,b,value){
  campaign.diplomacy=campaign.diplomacy||{};
- campaign.diplomacy[a]=campaign.diplomacy[a]||{};campaign.diplomacy[b]=campaign.diplomacy[b]||{};
- campaign.diplomacy[a][b]=value;campaign.diplomacy[b][a]=value;
+ campaign.diplomacy[a]=campaign.diplomacy[a]||{};
+ campaign.diplomacy[a][b]=Math.max(-100,Math.min(100,Math.round(value)));
+}
+function campaignWarKey(a,b){return [a,b].sort().join(":");}
+function declareCampaignWar(campaign,attackerId,defenderId){
+ campaign.activeWars=campaign.activeWars||[];
+ const key=campaignWarKey(attackerId,defenderId);
+ if(campaign.activeWars.includes(key))return false;
+ campaign.activeWars.push(key);
+ setCampaignRelation(campaign,attackerId,defenderId,campaignRelation(campaign,attackerId,defenderId)-25);
+ setCampaignRelation(campaign,defenderId,attackerId,campaignRelation(campaign,defenderId,attackerId)-25);
+ for(const third of campaign.factionStates||[]){
+  if(third.id===attackerId||third.id===defenderId)continue;
+  const likesDefender=campaignRelation(campaign,third.id,defenderId);
+  const dislikesAttacker=campaignRelation(campaign,third.id,attackerId)<=-25;
+  if(likesDefender>=10)setCampaignRelation(campaign,third.id,attackerId,campaignRelation(campaign,third.id,attackerId)-12);
+  if(dislikesAttacker)setCampaignRelation(campaign,third.id,defenderId,campaignRelation(campaign,third.id,defenderId)+6);
+  if(campaignRelation(campaign,defenderId,third.id)>=10)setCampaignRelation(campaign,defenderId,third.id,campaignRelation(campaign,defenderId,third.id)+3);
+ }
+ campaign.lastEvent=(campaign.factionStates.find(f=>f.id===attackerId)?.name||attackerId)+" declares war on "+(campaign.factionStates.find(f=>f.id===defenderId)?.name||defenderId)+". Diplomatic relations shift across the realms.";
+ return true;
+}
+function updatePeaceAndWarRelations(campaign){
+ const states=campaign.factionStates||[],wars=new Set(campaign.activeWars||[]);
+ for(const a of states)for(const b of states){
+  if(a.id===b.id)continue;
+  const atWar=wars.has(campaignWarKey(a.id,b.id)),current=campaignRelation(campaign,a.id,b.id);
+  if(atWar)setCampaignRelation(campaign,a.id,b.id,current-3);
+  else setCampaignRelation(campaign,a.id,b.id,Math.min(60,current+1));
+ }
+}
+function renderDiplomacy(){
+ const host=byId("grand-campaign-diplomacy");if(!host||!activeCampaign)return;
+ const playerId=activeCampaign.playerPoliticalFaction,wars=new Set(activeCampaign.activeWars||[]);
+ const rows=(activeCampaign.factionStates||[]).filter(f=>f.id!==playerId).map(f=>{
+  const score=campaignRelation(activeCampaign,playerId,f.id),war=wars.has(campaignWarKey(playerId,f.id));
+  const label=war?"War":score>=35?"Friendly":score>=10?"Cordial":score<=-50?"Hostile":score<=-20?"Strained":"Neutral";
+  const colour=war||score<=-50?"#d66b63":score>=35?"#83c58d":score<=-20?"#d6ad65":"#b9c4d0";
+  return '<div class="grand-diplomacy-row"><span>'+f.name+'</span><b style="color:'+colour+'">'+label+' · '+(score>0?"+":"")+score+'</b></div>';
+ }).join("");
+ host.innerHTML='<h3>Diplomacy</h3><p class="grand-diplomacy-hint">Peace improves relations; war erodes them. Race and past conflicts shape the starting point.</p>'+rows;
 }
 function factionArmy(campaign,id){
  let army=campaign.armies.find(a=>a.owner===id||a.factionId===id||a.id===id+"-main");
@@ -799,12 +842,12 @@ function runAIFactionTurn(campaign,faction){
  });
  const choice=hostile[0],enemy=choice.owner;
  let relation=campaignRelation(campaign,faction.id,enemy.id);
- if(relation<=-30&&!campaign.activeWars.includes([faction.id,enemy.id].sort().join(":"))){
-  campaign.activeWars.push([faction.id,enemy.id].sort().join(":"));
-  setCampaignRelation(campaign,faction.id,enemy.id,Math.min(-60,relation-20));
-  campaign.lastEvent=faction.name+" declares war on "+enemy.name+".";
+ const warKey=campaignWarKey(faction.id,enemy.id);
+ if(!campaign.activeWars.includes(warKey)){
+  const hostility=Math.max(0,Math.min(1,(15-relation)/100));
+  const attackChance=Math.max(0.05,Math.min(0.85,0.08+hostility*0.82));
+  if(Math.random()<attackChance)declareCampaignWar(campaign,faction.id,enemy.id);
  }
- const warKey=[faction.id,enemy.id].sort().join(":");
  if(campaign.activeWars.includes(warKey)){
   army.region=choice.region.id;army.nodeId="city-"+choice.region.id;
   resolveStrategicBattle(campaign,faction,enemy,choice.region);
@@ -819,7 +862,8 @@ function endCampaignTurn(){
  const playerId=activeCampaign.playerPoliticalFaction||FACTION_PROFILES[activeCampaign.startingRegion]?.id;
  activeCampaign.activeWars=activeCampaign.activeWars||[];
  activeCampaign.diplomacy=activeCampaign.diplomacy||{};
- for(const a of states)for(const b of states)if(a.id!==b.id&&!Number.isFinite(activeCampaign.diplomacy[a.id]?.[b.id]))setCampaignRelation(activeCampaign,a.id,b.id,campaignRelation(activeCampaign,a.id,b.id));
+ for(const a of states)for(const b of states)if(a.id!==b.id&&!Number.isFinite(activeCampaign.diplomacy[a.id]?.[b.id]))setCampaignRelation(activeCampaign,a.id,b.id,baseFactionRelation(a.id,b.id));
+ updatePeaceAndWarRelations(activeCampaign);
  const playerIndex=order.indexOf(playerId),processed=[];
  for(let step=1;step<order.length;step++){
   const id=order[(Math.max(0,playerIndex)+step)%order.length],f=states.find(x=>x.id===id);
