@@ -572,7 +572,9 @@ function renderArmyManagement(){
  byId("grand-recruit-unit").addEventListener("click",()=>{const o=catalog.find(x=>x.key===byId("grand-recruit-type").value);if(!o){campaignMessage("Choose a troop type first.");return;}if((army.roster||[]).length>=6){campaignMessage("This army already has six units.");return;}const count=o.fixed?o.min:Math.max(o.min,Math.min(o.max,Math.floor(Number(byId("grand-recruit-count").value)||o.min))),available=availableForOption(o);if(available<count){campaignMessage("You need "+count+" compatible unassigned models; only "+available+" are available.");return;}const config=optionConfig(o,count),price=unitCost(config,faction);if((treasury?.treasury||0)<price){campaignMessage("Not enough gold. This unit costs "+price+".");return;}army.roster.push(config);treasury.treasury-=price;army.points=campaignArmyCost(army);syncPlayerArmyState();campaignMessage("Recruited "+o.label+" ("+count+" models) for "+price+" gold.");});
 }
 function renderCampaignMap(){
- if(!activeCampaign)return;const host=byId("grand-map-live-wrap");let map=byId("grand-campaign-world-map");
+ if(!activeCampaign)return;
+ const currentArmy=selectedPlayerArmy();if(currentArmy){activeCampaign.commander.nodeId=currentArmy.nodeId;activeCampaign.commander.region=currentArmy.region;activeCampaign.commander.movement=currentArmy.movement;}
+ const host=byId("grand-map-live-wrap");let map=byId("grand-campaign-world-map");
  const firstRender=!map;if(!map){map=byId("grand-world-map").cloneNode(true);map.id="grand-campaign-world-map";map.querySelectorAll(".grand-city").forEach(m=>m.classList.remove("other-faction","selected","character-locked"));host.replaceChildren(map);installCampaignMapNavigation(host,map);}
  map.querySelectorAll("#campaign-road-layer,#campaign-node-layer,#campaign-commander-layer").forEach(e=>e.remove());
  const road=svgEl("g",{id:"campaign-road-layer","pointer-events":"none"}),layer=svgEl("g",{id:"campaign-node-layer"}),token=svgEl("g",{id:"campaign-commander-layer","pointer-events":"none"}),{nodes,edges}=activeCampaign.graph;
@@ -583,7 +585,7 @@ function renderCampaignMap(){
  map.querySelector("#grand-city-markers").after(layer);
  const current=nodes[activeCampaign.commander.nodeId];token.append(svgEl("circle",{cx:current.x,cy:current.y-17,r:11,class:"commander-token"}));const initials=activeCampaign.commander.name.split(/\s+/).map(s=>s[0]).join("").slice(0,2).toUpperCase(),label=svgEl("text",{x:current.x,y:current.y-13,"text-anchor":"middle",class:"commander-initials"});label.textContent=initials;token.append(label);map.append(token);
  layer.querySelectorAll("[data-node]").forEach(g=>{const move=()=>moveCommander(g.dataset.node);g.addEventListener("click",move);g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();move();}});});
- const n=nodes[activeCampaign.commander.nodeId];const settlementRegion=activeCampaign.regions.find(r=>r.id===n.region);byId("grand-campaign-turn").textContent="TURN "+activeCampaign.turn;const playerState=activeCampaign.factionStates.find(f=>f.id===activeCampaign.playerPoliticalFaction);byId("grand-campaign-treasury").textContent=activeCampaign.treasury+" gold · +"+(playerState?.income||0)+" / −"+(playerState?.upkeep||0);
+ const n=nodes[activeCampaign.commander.nodeId];const settlementRegion=activeCampaign.regions.find(r=>r.id===n.region);byId("grand-campaign-turn").textContent="TURN "+activeCampaign.turn;const playerState=activeCampaign.factionStates.find(f=>f.id===activeCampaign.playerPoliticalFaction);if(playerState)playerState.upkeep=playerArmies().reduce((sum,a)=>sum+campaignArmyUpkeep(a),0);byId("grand-campaign-treasury").textContent=activeCampaign.treasury+" gold · +"+(playerState?.income||0)+" / −"+(playerState?.upkeep||0);
  byId("grand-campaign-commander").innerHTML="<strong>♟ "+activeCampaign.commander.name+"</strong><span>"+(activeCampaign.commander.kind==="legendary"?"Legendary":"Commander")+" · "+activeCampaign.commander.movement+"/"+activeCampaign.commander.maxMovement+" MP</span>";
  byId("grand-campaign-node-detail").innerHTML="<strong>"+(n.type==="city"?"⌂ ":"◆ ")+n.label+"</strong>"+(n.type==="city"&&settlementRegion?.settlement?("<span>"+(FACTION_BY_ID[settlementRegion.ownerFaction]?.name||FACTIONS[settlementRegion.ownerFaction]?.name||settlementRegion.ownerFaction)+" · "+Math.round(settlementRegion.settlement.population.total).toLocaleString()+"</span>"):"<span>"+({crossroads:"Road junction",port:"Port",river:"River crossing",border:"Border"}[n.type]||"Road")+"</span>");
  const battleRegion=n.type==="city"?activeCampaign.regions.find(r=>r.id===n.region):null;
@@ -591,13 +593,13 @@ function renderCampaignMap(){
  if(battleRegion&&defenderId&&defenderId!==playerId&&activeCampaign.factionStates.some(f=>f.id===defenderId&&f.alive)){
   const battleButton=document.createElement("button");battleButton.type="button";battleButton.className="primary-button grand-campaign-battle-button";battleButton.textContent="Fight for "+battleRegion.name;battleButton.addEventListener("click",()=>launchCampaignBattle(battleRegion));byId("grand-campaign-node-detail").append(battleButton);
  }
- byId("grand-campaign-event").textContent=activeCampaign.lastEvent||"Select a highlighted place connected by road.";if(firstRender){const scale=map.clientWidth/1300;host.scrollLeft=Math.max(0,current.x*scale-host.clientWidth/2);host.scrollTop=Math.max(0,current.y*scale-host.clientHeight/2);}
+ byId("grand-campaign-event").textContent=activeCampaign.lastEvent||"Select a highlighted place connected by road.";renderArmyManagement();if(firstRender){const scale=map.clientWidth/1300;host.scrollLeft=Math.max(0,current.x*scale-host.clientWidth/2);host.scrollTop=Math.max(0,current.y*scale-host.clientHeight/2);}
 }
 function launchCampaignBattle(region){
  if(!activeCampaign||!region||typeof window.startPoliticalCampaignBattle!=="function")return;
  const playerId=activeCampaign.playerPoliticalFaction,enemyId=politicalOwner(region);
  if(!enemyId||enemyId===playerId)return;
- const playerArmy=factionArmy(activeCampaign,playerId),enemyArmy=factionArmy(activeCampaign,enemyId);
+ const playerArmy=selectedPlayerArmy(),enemyArmy=factionArmy(activeCampaign,enemyId);
  if(!playerArmy?.roster?.length||!enemyArmy?.roster?.length){activeCampaign.lastEvent="Cannot muster a valid army for this battle.";renderCampaignMap();return;}
  const playerFaction=playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId),enemyFaction=enemyArmy.rosterFaction||rosterFactionForPoliticalFaction(enemyId);
  const started=window.startPoliticalCampaignBattle({army:playerArmy.roster,faction:playerFaction,enemyArmy:enemyArmy.roster,enemyFaction,onComplete:result=>{
@@ -619,18 +621,18 @@ function launchCampaignBattle(region){
    activeCampaign.lastEvent=!playerArmy.roster.length?"Defeat at "+region.name+". Your army has been destroyed; rebuild from your remaining miniatures and treasury.":"Defeat at "+region.name+". Your surviving forces retreat to "+(CITIES.find(c=>c.id===home)?.name||"your capital")+".";
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
   }
-  if(playerState){playerState.armyPoints=playerArmy.points;playerState.roster=playerArmy.roster;}
+  if(playerState){playerState.armyPoints=playerArmies().reduce((sum,a)=>sum+campaignArmyCost(a),0);playerState.roster=(playerArmies().find(a=>a.id===idMainArmy())||playerArmy).roster;playerState.upkeep=playerArmies().reduce((sum,a)=>sum+campaignArmyUpkeep(a),0);}
   if(enemyState){enemyState.armyPoints=enemyArmy.points;enemyState.roster=enemyArmy.roster;}
   saveCampaign();byId("grand-campaign-screen").hidden=false;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();
  }});
  if(!started){activeCampaign.lastEvent="The tactical battle could not be started.";renderCampaignMap();}
 }
 function moveCommander(id){
- if(!activeCampaign)return;const from=activeCampaign.commander.nodeId,n=activeCampaign.graph.nodes[id],edge=(activeCampaign.graph.edges[from]||[]).find(e=>e.to===id);
+ if(!activeCampaign)return;const army=selectedPlayerArmy(),from=army?.nodeId||activeCampaign.commander.nodeId,n=activeCampaign.graph.nodes[id],edge=(activeCampaign.graph.edges[from]||[]).find(e=>e.to===id);
  if(!n||!edge){activeCampaign.lastEvent="You can only move along a connected road.";renderCampaignMap();return;}
- const cost=edge.cost+nodeCost(n)-1;if(cost>activeCampaign.commander.movement){activeCampaign.lastEvent="Not enough movement remaining to reach "+n.label+".";renderCampaignMap();return;}
- activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement-=cost;const army=activeCampaign.armies.find(a=>a.owner===activeCampaign.playerPoliticalFaction||a.id==="player-main");if(army){army.nodeId=id;army.region=n.region;}
- activeCampaign.lastEvent=activeCampaign.commander.name+" moves to "+n.label+". "+activeCampaign.commander.movement+" movement remaining.";saveCampaign();renderCampaignMap();
+ const movement=army?.movement??activeCampaign.commander.movement,cost=edge.cost+nodeCost(n)-1;if(cost>movement){activeCampaign.lastEvent="Not enough movement remaining to reach "+n.label+".";renderCampaignMap();return;}
+ activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement=movement-cost;if(army){army.nodeId=id;army.region=n.region;army.movement=movement-cost;}
+ activeCampaign.lastEvent=(army?.name||activeCampaign.commander.name)+" moves to "+n.label+". "+activeCampaign.commander.movement+" movement remaining.";saveCampaign();renderCampaignMap();
 }
 function politicalOwner(region){return region?.ownerFaction||region?.politicalFactionId||FACTION_PROFILES[region?.id]?.id;}
 function profileForFaction(id){return FACTION_BY_ID[id]||null;}
@@ -738,20 +740,16 @@ function endCampaignTurn(){
  if(player){
   const owned=activeCampaign.regions.filter(r=>politicalOwner(r)===playerId);
   player.income=owned.reduce((sum,r)=>sum+campaignCityIncome(r),0);
-  const playerArmy=factionArmy(activeCampaign,playerId);
-  player.upkeep=campaignArmyUpkeep(playerArmy);
+  const armies=playerArmies();
+  player.upkeep=armies.reduce((sum,a)=>sum+campaignArmyUpkeep(a),0);
   player.treasury=Math.max(0,(player.treasury||0)+player.income-player.upkeep);
   activeCampaign.treasury=player.treasury;
-  if(playerArmy){
-   const recruitmentBudget=Math.min(Math.max(0,player.treasury-100),Math.max(0,Math.floor(Math.max(player.income*.5,player.treasury*.25))));
-   const recruitment=recruitPlayerArmyFromCollection(playerArmy,playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId),recruitmentBudget,activeCampaign.commander);
-   player.treasury=Math.max(0,player.treasury-recruitment.spent);activeCampaign.treasury=player.treasury;
-   playerArmy.points=campaignArmyCost(playerArmy);player.armyPoints=playerArmy.points;player.roster=playerArmy.roster;
-  }
+  syncPlayerArmyState();
   player.turnsTaken=(player.turnsTaken||0)+1;
  }
  activeCampaign.turn++;activeCampaign.activeFaction=playerId;
- activeCampaign.commander.movement=activeCampaign.commander.maxMovement;
+ for(const army of playerArmies())army.movement=activeCampaign.commander.maxMovement;
+ const activeArmy=selectedPlayerArmy();if(activeArmy){activeCampaign.commander.nodeId=activeArmy.nodeId;activeCampaign.commander.region=activeArmy.region;activeCampaign.commander.movement=activeArmy.movement;}
  activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Cities provide income; armies cost upkeep. "+processed.length+" AI faction turns completed. "+(processed.slice(0,2).join(" ")||"The realms consolidate their positions.")+" Your movement is replenished.";
  saveCampaign();renderCampaignMap();
 }
