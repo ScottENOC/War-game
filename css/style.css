@@ -436,3 +436,5 @@ button,[role="button"]{
 .grand-army-unit small,.grand-recruit-box small{font-size:10px;line-height:1.35;color:#aebbb0}
 .grand-recruit-box{display:grid;gap:7px;padding-top:9px;border-top:1px solid #ffffff24}
 @media(max-width:760px){.grand-army-management{max-height:none}.grand-army-management-head{align-items:flex-start}.grand-army-unit{align-items:flex-start}.grand-army-unit button{max-width:100px;white-space:normal}}
+
+.grand-supply-note{display:block;font-size:12px;line-height:1.4;opacity:.8;margin:5px 0 10px}.grand-army-summary{line-height:1.5}
