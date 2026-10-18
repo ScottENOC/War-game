@@ -515,7 +515,17 @@ function recruitCatalog(){
  const race=FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race||"human",basic=race==="dwarf"?"dwarfInfantry":"swordsmen";
  const options=[
   {key:"melee",label:race==="dwarf"?"Dwarf melee infantry":"Melee infantry",type:basic,weapon:"handWeapon",min:5,max:30,modelType:basic,modelWeapon:"handWeapon"},
-  ...(race==="dwarf"?[{key:"crossbows",label:"Dwarf crossbowmen",type:"dwarfInfantry",weapon:"handWeapon",rangedWeapon:"crossbow",min:5,max:30,modelType:"dwarfInfantry",modelWeapon:"crossbow"}]:[{key:"archers",label:"Archers",type:"archers",weapon:"handWeapon",rangedWeapon:"bow",min:5,max:30,modelType:"archers",modelWeapon:"bow"}]),
+  ...(race==="dwarf"?[
+   {key:"crossbows",label:"Dwarf crossbowmen",type:"dwarfInfantry",weapon:"handWeapon",rangedWeapon:"crossbow",min:5,max:30,modelType:"dwarfInfantry",modelWeapon:"crossbow"},
+   {key:"dwarfFirearms",label:"Dwarf firearm infantry",type:"dwarfInfantry",weapon:"handWeapon",rangedWeapon:"firearm",min:5,max:30,modelType:"dwarfInfantry",modelWeapon:"firearm"}
+  ]:[{key:"archers",label:"Archers",type:"archers",weapon:"handWeapon",rangedWeapon:"bow",min:5,max:30,modelType:"archers",modelWeapon:"bow"}]),
+  ...(race==="human"?[
+   {key:"crossbowmen",label:"Crossbow infantry",type:"swordsmen",weapon:"handWeapon",rangedWeapon:"crossbow",min:5,max:30,modelType:"swordsmen",modelWeapon:"crossbow"},
+   {key:"firearmInfantry",label:"Firearm infantry",type:"swordsmen",weapon:"handWeapon",rangedWeapon:"firearm",min:5,max:30,modelType:"swordsmen",modelWeapon:"firearm"}
+  ]:[]),
+  {key:"spearmen",label:race==="elf"?"High Elf spearmen":"Spearmen",type:basic,weapon:"spear",min:5,max:30,modelType:basic,modelWeapon:"spear"},
+  {key:"halberdiers",label:"Halberdiers",type:basic,weapon:"halberd",min:5,max:30,modelType:basic,modelWeapon:"halberd"},
+  {key:"greatWeapons",label:"Great-weapon infantry",type:basic,weapon:"greatWeapon",min:5,max:30,modelType:basic,modelWeapon:"greatWeapon"},
   ...(race!=="dwarf"?[{key:"cavalry",label:race==="elf"?"High Elf cavalry":"Cavalry",type:"cavalry",weapon:"handWeapon",min:5,max:15,modelType:"cavalry"}]:[]),
   {key:"artillery",label:race==="elf"?"Bolt thrower":race==="dwarf"?"Dwarf cannon":"Cannon",type:race==="elf"?"boltThrower":"cannon",weapon:"handWeapon",min:race==="elf"?2:3,max:race==="elf"?2:3,modelType:race==="elf"?"boltThrower":"cannon",fixed:true},
   ...(race==="dwarf"?[
@@ -539,13 +549,13 @@ function recruitCatalog(){
  return options;
 }
 function optionMatchesModel(o,m){return m?.faction===rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction)&&m.type===o.modelType&&(!o.modelWeapon||m.weapon===o.modelWeapon);}
-function deployedForOption(o){return playerArmies().reduce((sum,a)=>sum+(a.roster||[]).filter(u=>u.type===o.type&&(o.character||o.key==="cavalry"||(o.rangedWeapon?u.rangedWeapon===o.rangedWeapon:!u.rangedWeapon))).reduce((n,u)=>n+(u.models||0),0),0);}
+function deployedForOption(o){return playerArmies().reduce((sum,a)=>sum+(a.roster||[]).filter(u=>u.type===o.type&&(o.character||o.key==="cavalry"||(o.rangedWeapon?u.rangedWeapon===o.rangedWeapon:o.modelWeapon&&["spear","halberd","greatWeapon"].includes(o.modelWeapon)?u.weapon===o.modelWeapon:!u.rangedWeapon&&u.weapon===(o.weapon||"handWeapon")))).reduce((n,u)=>n+(u.models||0),0),0);}
 function availableModelsForOption(o){return collectionModels().filter(m=>optionMatchesModel(o,m)).slice(deployedForOption(o));}
 function availableForOption(o){return availableModelsForOption(o).length;}
 function optionConfig(o,models){
  const sample=availableModelsForOption(o)[0];
  if(o.type==="legendaryLord"||o.type==="shadowElf"||o.type==="pegasusChampion")return campaignCharacterConfig(activeCampaign.playerPoliticalFaction,{id:o.type==="legendaryLord"?"edric_voss":o.type==="shadowElf"?"lethariel_starweaver":"aelthir_dawnwing"});
- let weapon=o.weapon||"handWeapon",meleeWeapons=[weapon],rangedWeapon=o.rangedWeapon||null;
+ let weapon=o.weapon||"handWeapon",meleeWeapons=weapon==="handWeapon"?["handWeapon"]:["handWeapon",weapon],rangedWeapon=o.rangedWeapon||null;
  if(sample&&o.character&&!o.rangedWeapon){
   if(["bow","crossbow","firearm","longRifle"].includes(sample.weapon))rangedWeapon=sample.weapon;
   else if(["spear","lance","greatWeapon","halberd"].includes(sample.weapon)){weapon=sample.weapon;meleeWeapons=["handWeapon",sample.weapon];}
