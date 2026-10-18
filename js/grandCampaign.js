@@ -539,14 +539,23 @@ function recruitCatalog(){
  return options;
 }
 function optionMatchesModel(o,m){return m?.faction===rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction)&&m.type===o.modelType&&(!o.modelWeapon||m.weapon===o.modelWeapon);}
-function deployedForOption(o){return playerArmies().reduce((sum,a)=>sum+(a.roster||[]).filter(u=>u.type===o.type&&(o.rangedWeapon?u.rangedWeapon===o.rangedWeapon:!u.rangedWeapon)).reduce((n,u)=>n+(u.models||0),0),0);}
-function availableForOption(o){return Math.max(0,collectionModels().filter(m=>optionMatchesModel(o,m)).length-deployedForOption(o));}
+function deployedForOption(o){return playerArmies().reduce((sum,a)=>sum+(a.roster||[]).filter(u=>u.type===o.type&&(o.character|| (o.rangedWeapon?u.rangedWeapon===o.rangedWeapon:!u.rangedWeapon))).reduce((n,u)=>n+(u.models||0),0),0);}
+function availableModelsForOption(o){return collectionModels().filter(m=>optionMatchesModel(o,m)).slice(deployedForOption(o));}
+function availableForOption(o){return availableModelsForOption(o).length;}
 function optionConfig(o,models){
- const config={type:o.type,models,weapon:o.weapon||"handWeapon",meleeWeapons:[o.weapon||"handWeapon"],champion:false,upgrades:{},skills:{}};
- if(o.rangedWeapon)config.rangedWeapon=o.rangedWeapon;
+ const sample=availableModelsForOption(o)[0];
+ if(o.type==="legendaryLord"||o.type==="shadowElf"||o.type==="pegasusChampion")return campaignCharacterConfig(activeCampaign.playerPoliticalFaction,{id:o.type==="legendaryLord"?"edric_voss":o.type==="shadowElf"?"lethariel_starweaver":"aelthir_dawnwing"});
+ let weapon=o.weapon||"handWeapon",meleeWeapons=[weapon],rangedWeapon=o.rangedWeapon||null;
+ if(sample&&o.character&&!o.rangedWeapon){
+  if(["bow","crossbow","firearm","longRifle"].includes(sample.weapon))rangedWeapon=sample.weapon;
+  else if(["spear","lance","greatWeapon","halberd"].includes(sample.weapon)){weapon=sample.weapon;meleeWeapons=["handWeapon",sample.weapon];}
+ }
+ if(sample&&o.type==="cavalry"&&["spear","lance","greatWeapon","halberd"].includes(sample.weapon)){weapon=sample.weapon;meleeWeapons=["handWeapon",sample.weapon];}
+ if(sample&&o.type==="cavalry"&&["bow","crossbow","firearm"].includes(sample.weapon))rangedWeapon=sample.weapon;
+ const config={type:o.type,models,weapon,meleeWeapons,champion:false,upgrades:{},skills:{}};
+ if(rangedWeapon)config.rangedWeapon=rangedWeapon;
  if(o.type==="cavalry"){config.mounted=true;config.mountType="horse";}
  if(o.type==="dwarfKingHaldric"){config.shield=true;config.magicArmour=true;}
- if(o.type==="legendaryLord"||o.type==="shadowElf"||o.type==="pegasusChampion")return campaignCharacterConfig(activeCampaign.playerPoliticalFaction,{id:o.type==="legendaryLord"?"edric_voss":o.type==="shadowElf"?"lethariel_starweaver":"aelthir_dawnwing"});
  return config;
 }
 function selectedFactionTreasury(){return activeCampaign?.factionStates?.find(f=>f.id===activeCampaign.playerPoliticalFaction);}
