@@ -438,3 +438,6 @@ button,[role="button"]{
 @media(max-width:760px){.grand-army-management{max-height:none}.grand-army-management-head{align-items:flex-start}.grand-army-unit{align-items:flex-start}.grand-army-unit button{max-width:100px;white-space:normal}}
 
 .grand-supply-note{display:block;font-size:12px;line-height:1.4;opacity:.8;margin:5px 0 10px}.grand-army-summary{line-height:1.5}
+
+/* Compact political relationship list for the grand campaign. */
+.grand-campaign-diplomacy h3{margin:0 0 6px;font-size:1rem}.grand-diplomacy-hint{font-size:.75rem;line-height:1.35;opacity:.75;margin:0 0 8px}.grand-diplomacy-row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:5px 0;border-top:1px solid rgba(255,255,255,.09);font-size:.78rem}.grand-diplomacy-row span{min-width:0;overflow-wrap:anywhere}.grand-diplomacy-row b{white-space:nowrap;font-size:.74rem}
