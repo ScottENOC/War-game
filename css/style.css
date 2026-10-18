@@ -420,3 +420,19 @@ button,[role="button"]{
 /* Keep the campaign map scrollable on both axes; two-finger pinch is handled in JS. */
 #grand-campaign-world .grand-map-live-wrap{overflow:auto;touch-action:pan-x pan-y;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 #grand-campaign-world .grand-map-live-wrap::-webkit-scrollbar{display:none}
+
+/* Grand campaign army management and manual recruitment */
+.grand-army-management{gap:9px;max-height:48vh;overflow:auto;overscroll-behavior:contain}
+.grand-army-management-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.grand-army-management-head h3{margin:0;font-size:14px;color:#f3e6bc}
+.grand-army-management button{font-size:11px;padding:7px 9px;white-space:nowrap}
+.grand-army-management button:disabled{opacity:.38;cursor:not-allowed}
+.grand-army-field{display:grid;gap:4px;color:#c1cbbf;font-size:11px}
+.grand-army-field select,.grand-army-field input{box-sizing:border-box;width:100%;min-width:0;padding:8px;border:1px solid #66736b;border-radius:6px;background:#20292a;color:#f2e8cb;font:inherit}
+.grand-army-summary{color:#d9bf75;font-size:11px;font-weight:800}
+.grand-army-unit{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid #ffffff18}
+.grand-army-unit>span{display:grid;gap:2px;min-width:0}
+.grand-army-unit b{font-size:11px;color:#f2e8cb}
+.grand-army-unit small,.grand-recruit-box small{font-size:10px;line-height:1.35;color:#aebbb0}
+.grand-recruit-box{display:grid;gap:7px;padding-top:9px;border-top:1px solid #ffffff24}
+@media(max-width:760px){.grand-army-management{max-height:none}.grand-army-management-head{align-items:flex-start}.grand-army-unit{align-items:flex-start}.grand-army-unit button{max-width:100px;white-space:normal}}
