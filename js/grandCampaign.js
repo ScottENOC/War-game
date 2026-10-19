@@ -655,7 +655,33 @@ function createMovementGraph(){
    });
   }
  }
- // Find every crossing between land routes. Both routes receive the same crossroads,
+ // Give every visible geographic feature its own clickable point of interest.
+ // These correspond to the forest groves, mountain chains and river courses drawn
+ // on the map background; their access paths join the nearest road junction.
+ const mapFeatures=[
+  {id:"forest-poi-west-1",region:2,type:"forest",label:"Oldreach western forest",x:130,y:215},
+  {id:"forest-poi-west-2",region:2,type:"forest",label:"Westmere timber grove",x:170,y:245},
+  {id:"forest-poi-central",region:3,type:"forest",label:"Goldhaven woodland",x:350,y:240},
+  {id:"forest-poi-north-east",region:10,type:"forest",label:"Deepdelve forest edge",x:730,y:350},
+  {id:"forest-poi-east",region:21,type:"forest",label:"Dreadmarch woodland",x:775,y:410},
+  {id:"forest-poi-south",region:20,type:"forest",label:"Southlands forest",x:555,y:480},
+  {id:"mountain-poi-north",region:13,type:"mountain",label:"Northern mountain chain",x:275,y:115},
+  {id:"mountain-poi-west",region:9,type:"mountain",label:"Western high peaks",x:375,y:155},
+  {id:"mountain-poi-central",region:9,type:"mountain",label:"Central mountain pass",x:510,y:375},
+  {id:"mountain-poi-east",region:10,type:"mountain",label:"Eastern crags",x:645,y:300},
+  {id:"river-poi-west",region:1,type:"river",label:"Oldreach upper river",x:195,y:170},
+  {id:"river-poi-north",region:3,type:"river",label:"Goldhaven river bend",x:315,y:190},
+  {id:"river-poi-south",region:4,type:"river",label:"Southlands river ford",x:530,y:390},
+  {id:"river-poi-east",region:10,type:"river",label:"Eastern river crossing",x:690,y:365}
+ ];
+ for(const p of mapFeatures){
+  add(p);
+  const junctions=Object.values(nodes).filter(n=>n.type==="crossroads"||n.type==="port");
+  const nearest=junctions.reduce((best,n)=>!best||Math.hypot(n.x-p.x,n.y-p.y)<Math.hypot(best.x-p.x,best.y-p.y)?n:best,null);
+  if(nearest)route(p.id,nearest.id,"land",p.region,nearest.region);
+ }
+ // Find every crossing between routes. Both routes receive the same crossroads,
+
  // so no road is visually allowed to pass through another road without a POI.
  const intersection=(p,p2,q,q2)=>{
   const rx=p2.x-p.x,ry=p2.y-p.y,sx=q2.x-q.x,sy=q2.y-q.y,den=rx*sy-ry*sx;
