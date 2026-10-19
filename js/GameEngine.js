@@ -233,8 +233,9 @@ function validateArmy(army,faction){
   for(const loss of roguelike?.getLostModels()||[]){
    let remaining=Number(loss.count)||0;
    for(let i=owned.length-1;i>=0&&remaining>0;i--){
-    const m=owned[i],mount=m.mountType||(m.mounted?"horse":"none");
-    const matches=m.faction===loss.faction&&(loss.kind==="infantry"?!m.mounted&&["swordsmen","archers","dwarfInfantry"].includes(m.type):loss.kind==="cavalry"?m.type==="cavalry"&&!!m.mounted&&mount===loss.mountType:m.type===loss.type&&!!m.mounted===!!loss.mounted&&mount===loss.mountType);
+    const m=owned[i],mount=m.mountType||(m.mounted?"horse":"none"),lossType=loss.type==="mageHero"||loss.type==="goblinShaman"||loss.type==="orcShaman"?"captain":loss.type==="mageLord"||loss.type==="goblinGreatShaman"||loss.type==="orcGreatShaman"?"lord":loss.type==="goblinShaman"?"goblinHero":loss.type==="goblinGreatShaman"?"goblinLord":loss.type==="orcShaman"?"orcHero":loss.type==="orcGreatShaman"?"orcLord":loss.type;
+    const mappedLossType=loss.type==="goblinShaman"?"goblinHero":loss.type==="goblinGreatShaman"?"goblinLord":loss.type==="orcShaman"?"orcHero":loss.type==="orcGreatShaman"?"orcLord":loss.type==="mageHero"?"captain":loss.type==="mageLord"?"lord":lossType;
+    const matches=m.faction===loss.faction&&(loss.kind==="infantry"?!m.mounted&&["swordsmen","archers","dwarfInfantry"].includes(m.type):loss.kind==="cavalry"?m.type==="cavalry"&&!!m.mounted&&mount===loss.mountType:m.type===mappedLossType&&!!m.mounted===!!loss.mounted&&mount===loss.mountType);
     if(matches){owned.splice(i,1);remaining--;}
    }
   }
