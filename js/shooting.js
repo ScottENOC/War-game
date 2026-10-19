@@ -103,7 +103,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     const context={
       longRange:distance>range/2,moved:!!u.moved,elvenArchery:!!u.elvenArchery,standShoot,distance,elevationRange,
       targetCharging:!!target.charged,targetInMelee:!!target.engaged,largeTarget:!!target.largeTarget,
-      singleCharacter:!!target.isCharacter||!!target.singleCharacter||target.models===1,
+      singleCharacter:!target.isChariot&&(!!target.isCharacter||!!target.singleCharacter||target.models===1),
       skirmisher:!!target.skirmishing||!!target.skirmisher,cover:target.wallDefence?.posture==="hunker"?"hard":target.wallDefence?.posture==="active"?"soft":(target.cover==="soft"||target.cover==="hard"?target.cover:null),
       coverHitPenaltyBonus:(target.coverHitPenaltyBonus||(target.attachedCharacters||[]).some(id=>S.units[id]?.models>0&&!S.units[id]?.fled&&S.units[id]?.coverHitPenaltyBonus))?1:0,
       overUnitPenalty:wallEffect.arcUsed?0:visibility.overUnitPenalty,wallPenalty:wallEffect.penalty||0,terrainWallPenalty:wallEffect.penalty||0,arcShot:!!(visibility.arcShot||wallEffect.arcUsed),longRangePenalty:u.rangedWeapon==="firearm"?2:1,
