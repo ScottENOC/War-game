@@ -110,11 +110,11 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       armourPiercing:u.armourPiercing||0,attackingModels:u.isBoltThrower?6:visibility.visibleModels,attackingChampion:visibility.visibleChampion
     };
     let result,cannonBodyWounds=0,cannonCrewWounds=0,crewCascadePlan=null,cannonSplitInfo=null;
-    if(target.isCannon||target.isBoltThrower||target.isCatapult){
+    if(target.isCannon||target.isBoltThrower||target.isCatapult||target.isChariot){
       const visibleShotModels=u.isBoltThrower?Array.from({length:6},()=>({champion:false})):(visibility.visibleModelsList?.length?visibility.visibleModelsList:Array.from({length:visibility.visibleModels},(_,i)=>({champion:i===0&&visibility.visibleChampion})));
       let bodyShots=0,crewShots=0,bodyChampion=false,crewChampion=false;const allocationRolls=[];
       for(const model of visibleShotModels){const die=roll(1)[0];allocationRolls.push(die);if(die<=4){bodyShots++;bodyChampion=bodyChampion||!!model.champion;}else{crewShots++;crewChampion=crewChampion||!!model.champion;}}
-      const artilleryTarget={...target,stats:{...target.stats,T:target.artilleryToughness||7,W:1},models:1,damage:0,isCharacter:false,champion:{enabled:false},championAlive:false,attachedCharacters:[],armour:"none",lightArmour:false,shield:false,skirmishing:false,cover:null};
+      const artilleryTarget={...target,stats:{...target.stats,T:target.isChariot?(target.chariotToughness||target.stats.T):(target.artilleryToughness||7),W:1},models:1,damage:0,isCharacter:false,isChariot:false,champion:{enabled:false},championAlive:false,attachedCharacters:[],armour:"none",lightArmour:false,shield:false,skirmishing:false,cover:null};
       const artilleryContext={...context,cover:null,singleCharacter:false,skirmisher:false,targetInMelee:false,coverHitPenaltyBonus:0,attackingModels:bodyShots,attackingChampion:bodyChampion};
       const crewContext={...context,attackingModels:crewShots,attackingChampion:crewChampion};
       const bodyResult=bodyShots?shootingAttack(u,artilleryTarget,artilleryContext):null;
@@ -123,7 +123,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       const sum=key=>parts.reduce((n,p)=>n+(p[key]||0),0),flat=key=>parts.flatMap(p=>p[key]||[]);
       result={attacks:sum("attacks"),hits:sum("hits"),woundsBeforeSave:sum("woundsBeforeSave"),saved:sum("saved"),wardSaved:sum("wardSaved"),wounds:sum("wounds"),hitNeed:parts.find(p=>p.hitNeed!=null)?.hitNeed??7,woundNeed:parts.find(p=>p.woundNeed!=null)?.woundNeed??null,saveNeed:parts.find(p=>p.saveNeed!=null)?.saveNeed??null,pools:parts.flatMap(p=>p.pools||[]),hitRolls:flat("hitRolls"),hitPasses:flat("hitPasses"),hitFollowUps:flat("hitFollowUps"),hitFollowUpPasses:flat("hitFollowUpPasses"),hitRerolls:flat("hitRerolls"),hitRerollPasses:flat("hitRerollPasses"),woundRolls:flat("woundRolls"),saveRolls:flat("saveRolls"),wardRolls:flat("wardRolls"),cascadePlan:crewResult?.cascadePlan||bodyResult?.cascadePlan||null};
       cannonBodyWounds=bodyResult?.wounds||0;cannonCrewWounds=crewResult?.wounds||0;crewCascadePlan=crewResult?.cascadePlan||null;cannonSplitInfo={bodyShots,crewShots,allocationRolls};
-      say((target.isBoltThrower?"Bolt thrower":"Cannon")+" target allocation: "+bodyShots+" shot(s) at engine, "+crewShots+" at crew (allocation dice "+(allocationRolls.join(", ")||"none")+").");
+      say((target.isChariot?"Chariot":target.isBoltThrower?"Bolt thrower":"Cannon")+" target allocation: "+bodyShots+" shot(s) at "+(target.isChariot?"vehicle":"engine")+", "+crewShots+" at crew (allocation dice "+(allocationRolls.join(", ")||"none")+").");
     }else result=shootingAttack(u,target,context);
     Object.assign(result,context);
     let friendlyFireCount=0;
@@ -136,13 +136,13 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     result.hitModifier=result.pools.length?result.pools[0].hitModifier:0;
     const targetDiceStack=diceStack(u,result);u.shot=true;showAttack(standShoot?"Stand and shoot":"Shooting",u,target,result,"shoot");
     let killed=0;
-    if(target.isCannon||target.isBoltThrower){
+    if(target.isChariot){target.chariotWounds=Math.max(0,target.chariotWounds-cannonBodyWounds);killed=cannonCrewWounds?applyDamage(target,cannonCrewWounds,true,crewCascadePlan):0;if(cannonBodyWounds)say(target.name+" chariot takes "+cannonBodyWounds+" wound(s); "+target.chariotWounds+"/"+target.chariotStartWounds+" remain.");if(cannonCrewWounds)say(target.name+" crew take "+cannonCrewWounds+" wound(s) and lose "+killed+" model(s).");}else if(target.isCannon||target.isBoltThrower){
       target.artilleryWounds=Math.max(0,target.artilleryWounds-cannonBodyWounds);
       killed=cannonCrewWounds?applyDamage(target,cannonCrewWounds,true,crewCascadePlan):0;
       if(cannonBodyWounds){if(target.artilleryWounds<=0&&target.crewMovementCharacteristic){target.stats.M=target.crewMovementCharacteristic;target.baseMove=target.stats.M;say(target.name+" is destroyed; surviving crew can now move at their full Movement characteristic ("+target.stats.M+" inches).");}say(target.name+" engine takes "+cannonBodyWounds+" wound"+(cannonBodyWounds===1?"":"s")+"; "+target.artilleryWounds+"/"+target.artilleryStartWounds+" wounds remain.");}
       if(cannonCrewWounds)say(target.name+" crew take "+cannonCrewWounds+" wound"+(cannonCrewWounds===1?"":"s")+" and lose "+killed+" model"+(killed===1?"":"s")+".");
     }else killed=applyDamage(target,result.wounds,true,result.cascadePlan);
-    if(!target.isCannon&&!target.isBoltThrower)say(target.name+" loses "+killed+" model"+(killed===1?"":"s")+" to shooting.");
+    if(!target.isCannon&&!target.isBoltThrower&&!target.isChariot)say(target.name+" loses "+killed+" model"+(killed===1?"":"s")+" to shooting.");
     if(friendlyFireCount){
       const friend=visibility.friendlyBlockers.slice().sort((a,b)=>dist(u,a)-dist(u,b))[0];
       if(friend&&alive(friend)){
@@ -208,7 +208,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
         if(wounded){wall.wounds=Math.max(0,(wall.wounds??2)-damage);say((wall.type==="gate"?"Gate":"Wall")+" has "+wall.wounds+" wound"+(wall.wounds===1?"":"s")+" remaining.");}
       }else{
         const target=item.unit;
-        if(target.isCannon||target.isBoltThrower){
+        if(target.isChariot){const split=roll(1)[0],body=split<=4,need=woundTarget(strength,body?(target.chariotToughness||4):target.stats.T),die=roll(1)[0],wounded=need!==null&&die>=need,damage=wounded?(roll(1)[0]%3+1):0;if(wounded){if(body)target.chariotWounds=Math.max(0,target.chariotWounds-damage);else applyDamage(target,damage,true);}say(projectileLabel+" hits "+target.name+(body?" chariot":" crew")+" (allocation "+split+"): wound "+die+" vs "+(need===null?"impossible":need)+(wounded?"; D3 damage "+damage+".":"; no wound."));}else if(target.isCannon||target.isBoltThrower){
           const split=roll(1)[0];
           if(split<=4){
             const need=woundTarget(strength,target.artilleryToughness||7),die=roll(1)[0],wounded=need!==null&&die>=need,damage=wounded?(roll(1)[0]%3+1):0;
