@@ -1201,8 +1201,8 @@ function campaignRandomChoice(items){return items[Math.floor(Math.random()*items
 function campaignAttackStrength(unit,mode){
  const config=unit.config,u=unit.unit;
  if(mode==="ranged")return Number(u.rangedStrength)||3;
- const weapon=config.weapon||u.weapon||"handWeapon";
- return Math.max(1,(Number(u.stats?.S)||3)+(weapon==="greatWeapon"?2:weapon==="halberd"?1:0));
+ const weapon=config.weapon||u.weapon||"handWeapon",greatWeapon=weapon==="greatWeapon"||(config.meleeWeapons||[]).includes("greatWeapon");
+ return Math.max(1,(Number(u.stats?.S)||3)+(greatWeapon?2:weapon==="halberd"?1:0));
 }
 function campaignHitTarget(ws,defenderWs){if(ws>defenderWs)return 3;if(defenderWs>ws*2)return 5;return 4;}
 function campaignWoundTarget(strength,toughness){if(strength>=toughness*2)return 2;if(strength>toughness)return 3;if(strength===toughness)return 4;if(strength*2>toughness)return 5;if(strength*2===toughness)return 6;return null;}
@@ -1238,8 +1238,8 @@ function campaignResolveSquabble(campaign,armyA,armyB=null){
    if(troopChoices.length)choices=troopChoices;
    const target=campaignRandomChoice(choices);if(!target)continue;
    const ranged=!!attacker.unit.hasRangedWeapon;
-   const mode=ranged?"ranged":"melee",weapon=attacker.config.weapon||attacker.unit.weapon;
-   const initiative=(Number(attacker.unit.stats?.I)||0)*10-(weapon==="greatWeapon"?10:0);
+   const mode=ranged?"ranged":"melee",weapon=attacker.config.weapon||attacker.unit.weapon,greatWeapon=weapon==="greatWeapon"||(attacker.config.meleeWeapons||[]).includes("greatWeapon");
+   const initiative=(Number(attacker.unit.stats?.I)||0)*10-(greatWeapon?10:0);
    actions.push({attacker,target,mode,initiative});
   }
  }
