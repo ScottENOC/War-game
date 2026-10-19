@@ -171,6 +171,7 @@ function saveBattleSnapshot() {
  }
 }
 render = () => {
+ Object.values(S.units||{}).forEach(u=>{u.magicSuppressed=isInsideNullificationDome(u);});
  renderUI();
  saveBattleSnapshot();
 };
