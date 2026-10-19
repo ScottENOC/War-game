@@ -39,6 +39,7 @@ export const FACTIONS = {
     orcLord:{name:"Orc Warboss",short:"Orc Warboss",kind:"hero",models:1,points:85,greenskin:true,stats:{M:4,WS:6,BS:3,S:5,T:5,W:3,I:4,A:4,Ld:9}},
     wolfRiders:{name:"Goblin Wolf Riders",short:"Wolf Riders",kind:"cavalry",models:5,points:11,greenskin:true,stats:{M:9,WS:2,BS:3,S:3,T:3,W:1,I:2,A:1,Ld:6},mountStats:{A:1,WS:3,I:3,S:3},mountType:"wolf"},
     boarBoyz:{name:"Orc Boar Riders",short:"Boar Boyz",kind:"cavalry",models:5,points:18,greenskin:true,stats:{M:7,WS:3,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:7},mountStats:{A:1,WS:3,I:3,S:3},mountType:"boar"},
+    wyvern:{name:"Wyvern",short:"Wyvern",kind:"monster",models:1,points:100,isDragon:true,breathStrength:0,intrinsicArmourSave:5,stats:{M:8,WS:4,BS:0,S:5,T:5,W:4,I:3,A:3,Ld:6}},
     catapult:{name:"Goblin Rock Lobber",short:"Rock Lobber",kind:"artillery",models:3,points:70,greenskin:true,stats:{M:0,WS:2,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:5}}
   }},
   opposing: { name:"Opposing Host", units:{
