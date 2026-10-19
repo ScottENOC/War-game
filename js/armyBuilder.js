@@ -120,7 +120,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         if(!dwarf())options.append(check("Shield",{cost:(green()?"+1/model":"+0.5/model")+", +1 front armour save",checked:!!u.shield,onChange:v=>{u.shield=v;updateTotals();}}));else options.append(check("Heavy armour",{cost:"+2 pts/model · no Move penalty for Dwarfs",checked:!!u.heavyArmour,onChange:v=>{u.heavyArmour=v;updateTotals();renderRows();}}));
       }
       {
-        if(!campaignMode&&!isCasterType(u.type)&&u.type!=="pegasusChampion"&&!["youngDragon","dragon","ancientDragon"].includes(u.type)){const skillBox=document.createElement("div");skillBox.className="stat-upgrades";
+        if(!campaignMode&&!chariot&&!isCasterType(u.type)&&u.type!=="pegasusChampion"&&!["youngDragon","dragon","ancientDragon"].includes(u.type)){const skillBox=document.createElement("div");skillBox.className="stat-upgrades";
         const skillHeading=document.createElement("p");skillHeading.className="stat-upgrades-heading";skillHeading.textContent="Special skills · 3 pts each";skillBox.append(skillHeading);
         skillBox.append(check("Melee Mastery",{cost:"+3 pts · reroll natural 1s to hit in melee",checked:!!u.skills?.rerollOnesMelee,onChange:v=>{u.skills={...(u.skills||{}),rerollOnesMelee:v};updateTotals();}}));
         const hasBow=u.type==="archers"||["bow","crossbow","firearm"].includes(u.weapon)||!!u.rangedWeapon||(u.type==="cavalry"&&(!!u.bow||!!u.rangedWeapon||(elf()&&(u.freeCavalryOption||"bow")==="bow")));
@@ -130,7 +130,7 @@ export function createArmyBuilder({ $, onStart, onBack, validateArmy=()=>"" }) {
         options.append(skillBox);
       }}
       {
-        if(!campaignMode&&!isCasterType(u.type)&&u.type!=="pegasusChampion"&&!["youngDragon","dragon","ancientDragon"].includes(u.type)){const upgradeBox=document.createElement("div");upgradeBox.className="stat-upgrades";
+        if(!campaignMode&&!chariot&&!isCasterType(u.type)&&u.type!=="pegasusChampion"&&!["youngDragon","dragon","ancientDragon"].includes(u.type)){const upgradeBox=document.createElement("div");upgradeBox.className="stat-upgrades";
         const heading=document.createElement("p");heading.className="stat-upgrades-heading";heading.textContent="Stat upgrades · +1 each, once per stat";upgradeBox.append(heading);
         statUpgrades.filter(s=>!(isCasterType(u.type)&&!elf()&&["WS","S","A"].includes(s.key))).forEach(s=>{const e=elf(),d=dwarf(),m=u.models||1,elfRate=e&&(["WS","BS"].includes(s.key)?{unit:1,character:3}:s.key==="T"?{unit:6,character:10}:null),dwarfRate=d&&({M:{unit:4,character:8},T:{unit:2,character:5},I:{unit:3,character:5}}[s.key]),cost=character?(dwarfRate?.character??elfRate?.character??s.character):(dwarfRate?.unit??elfRate?.unit??s.unit)*m;upgradeBox.append(check("+"+s.key+" "+s.label,{cost:"+"+cost+" pts",checked:!!u.upgrades?.[s.key],disabled:u.rangedWeapon==="firearm"&&s.key==="BS",onChange:v=>{u.upgrades={...(u.upgrades||{}),[s.key]:v};updateTotals();}}));});
         options.append(upgradeBox);
