@@ -1135,6 +1135,7 @@ function applyStrategicArmyLosses(army,remainingFraction){
 }
 function resolveStrategicBattle(campaign,attacker,defender,target){
  const attacking=factionArmy(campaign,attacker.id),defending=factionArmy(campaign,defender.id);
+ if(attacking)attacking.foughtThisTurn=true;if(defending)defending.foughtThisTurn=true;
  const defenderRegion=campaign.regions.find(r=>r.id===target.id);
  const fort=defenderRegion?.settlement?.fortification;
  const defenceBonus=fort?Math.max(0,Math.min(0.35,(fort.condition||0)/300)):0;
@@ -1259,9 +1260,9 @@ function campaignResolveSquabble(campaign,armyA,armyB=null){
  for(const army of [armyA,armyB].filter(Boolean)){
   army.roster=(army.roster||[]).filter(u=>Number(u.models)>0);army.points=campaignArmyCost(army);
   army.foughtThisTurn=true;
+  const state=campaign.factionStates.find(f=>f.id===(army.owner||army.factionId));if(state){state.roster=army.roster;state.armyPoints=army.points;if(!army.roster.length)state.alive=false;}
  }
  const hits=results.filter(r=>r.wound&&!r.saved).length;
- const casualties=all.map(x=>Number(x.config.models)||0).reduce((sum,n)=>sum+n,0);
  return "Squabble: "+results.length+" attacks are resolved in initiative order; "+hits+" wound(s) get through armour.";
 }
 function campaignStrategicFieldBattle(campaign,attackerArmy,defenderArmy){
@@ -1325,9 +1326,10 @@ function processGreenskinAnimosity(campaign,army){
 }
 
 function runAIFactionTurn(campaign,faction){
+ const factionArmies=(campaign.armies||[]).filter(a=>(a.owner||a.factionId)===faction.id&&a.roster?.length);
  const army=factionArmy(campaign,faction.id);if(!army)return faction.name+" had no field army.";
- army.movement=campaignArmyMovementProfile(army,campaign).points;
- const animosity=processGreenskinAnimosity(campaign,army);if(animosity.interrupted){faction.armyPoints=army.points;faction.roster=army.roster;return animosity.message;}
+ if(!factionArmies.includes(army))factionArmies.unshift(army);
+ for(const fieldArmy of factionArmies){fieldArmy.movement=campaignArmyMovementProfile(fieldArmy,campaign).points;const animosity=processGreenskinAnimosity(campaign,fieldArmy);if(animosity.interrupted){faction.armyPoints=fieldArmy.points;faction.roster=fieldArmy.roster;return animosity.message;}}
  growFactionRecruitment(campaign,faction);
  const owned=campaign.regions.filter(r=>politicalOwner(r)===faction.id);
  faction.income=owned.reduce((sum,r)=>sum+campaignCityIncome(r),0);
@@ -1374,10 +1376,11 @@ function endCampaignTurn(){
  activeCampaign.diplomacy=activeCampaign.diplomacy||{};
  for(const a of states)for(const b of states)if(a.id!==b.id&&!Number.isFinite(activeCampaign.diplomacy[a.id]?.[b.id]))setCampaignRelation(activeCampaign,a.id,b.id,baseFactionRelation(a.id,b.id));
  updatePeaceAndWarRelations(activeCampaign);
- const playerArmy=selectedPlayerArmy();
- if(playerArmy&&campaignArmyRace(playerArmy,activeCampaign)==="greenskin"&&playerArmy.lastAnimosityTurn!==activeCampaign.turn){
+ let playerAnimosityMessage="";
+ for(const playerArmy of playerArmies()){
+  if(campaignArmyRace(playerArmy,activeCampaign)!=="greenskin"||playerArmy.lastAnimosityTurn===activeCampaign.turn)continue;
   const animosity=processGreenskinAnimosity(activeCampaign,playerArmy);
-  if(animosity.message)activeCampaign.lastEvent=animosity.message;
+  if(animosity.message)playerAnimosityMessage+=(playerAnimosityMessage?" ":"")+animosity.message;
  }
  const playerIndex=order.indexOf(playerId),processed=[];
  for(let step=1;step<order.length;step++){
@@ -1401,7 +1404,7 @@ function endCampaignTurn(){
  activeCampaign.turn++;activeCampaign.activeFaction=playerId;
  activeCampaign.commander.maxMovement=campaignArmyMovementProfile(selectedPlayerArmy(),activeCampaign).points;activeCampaign.commander.movement=activeCampaign.commander.maxMovement;for(const army of playerArmies())army.movement=campaignArmyMovementProfile(army,activeCampaign).points;
  const activeArmy=selectedPlayerArmy();if(activeArmy){activeCampaign.commander.nodeId=activeArmy.nodeId;activeCampaign.commander.region=activeArmy.region;activeCampaign.commander.movement=activeArmy.movement;}
- activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Cities provide income; armies cost upkeep and supplies. "+processed.length+" AI faction turns completed. "+(logisticsEvents.slice(0,2).join(" ")+" ") +(processed.slice(0,2).join(" ")||"The realms consolidate their positions.")+" Your movement is replenished.";
+ activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Cities provide income; armies cost upkeep and supplies. "+(playerAnimosityMessage?playerAnimosityMessage+" ":"")+processed.length+" AI faction turns completed. "+(logisticsEvents.slice(0,2).join(" ")+" ") +(processed.slice(0,2).join(" ")||"The realms consolidate their positions.")+" Your movement is replenished.";
  saveCampaign();renderCampaignMap();
 }
 function showCampaignWorld(c){activeCampaign=c;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();}
