@@ -966,6 +966,7 @@ function launchCampaignBattle(region){
  if(!playerArmy?.roster?.length||!enemyArmy?.roster?.length){activeCampaign.lastEvent="Cannot muster a valid army for this battle.";renderCampaignMap();return;}
  const playerFaction=playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId),enemyFaction=enemyArmy.rosterFaction||rosterFactionForPoliticalFaction(enemyId);
  const started=window.startPoliticalCampaignBattle({army:playerArmy.roster,faction:playerFaction,enemyArmy:enemyArmy.roster,enemyFaction,onComplete:result=>{
+  playerArmy.foughtThisTurn=true;enemyArmy.foughtThisTurn=true;
   const survivors=(result.playerUnits||[]).filter(u=>u.models>0);
   const enemySurvivors=(result.enemyUnits||[]).filter(u=>u.models>0);
   playerArmy.roster=playerArmy.roster.map((config,i)=>({...config,models:Math.max(0,survivors[i]?.models??0),currentDamage:survivors[i]?.damage||0,currentWounds:survivors[i]?.characterWounds})).filter(config=>config.models>0);
@@ -1156,7 +1157,7 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  }
 }
 
-const CAMPAIGN_CHARACTER_TYPES=new Set(["captain","lord","mageHero","mageLord","starwardenLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric","goblinHero","goblinLord","orcHero","orcLord"]);
+const CAMPAIGN_CHARACTER_TYPES=new Set(["captain","lord","magehero","magelord","starwardenlord","goblinshaman","goblingreatshaman","orcshaman","orcgreatshaman","legendarylord","shadowelf","pegasuschampion","rifleman","captainweiss","dwarfcaptain","dwarflord","dwarfkinghaldric","goblinhero","goblinlord","orchero","orclord"]);
 function campaignArmyBattleUnits(army){
  try{
   const built=createUnitsFromArmy(army.roster||[],army.rosterFaction||rosterFactionForPoliticalFaction(army.owner||army.factionId));
