@@ -114,7 +114,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       const visibleShotModels=u.isBoltThrower?Array.from({length:6},()=>({champion:false})):(visibility.visibleModelsList?.length?visibility.visibleModelsList:Array.from({length:visibility.visibleModels},(_,i)=>({champion:i===0&&visibility.visibleChampion})));
       let bodyShots=0,crewShots=0,bodyChampion=false,crewChampion=false;const allocationRolls=[];
       for(const model of visibleShotModels){const die=roll(1)[0];allocationRolls.push(die);if(die<=4){bodyShots++;bodyChampion=bodyChampion||!!model.champion;}else{crewShots++;crewChampion=crewChampion||!!model.champion;}}
-      const artilleryTarget={...target,stats:{...target.stats,T:target.isChariot?(target.chariotToughness||target.stats.T):(target.artilleryToughness||7),W:1},models:1,damage:0,isCharacter:false,isChariot:false,champion:{enabled:false},championAlive:false,attachedCharacters:[],armour:"none",lightArmour:false,shield:false,skirmishing:false,cover:null};
+      const artilleryTarget={...target,stats:{...target.stats,T:target.isChariot?(target.chariotToughness||target.stats.T):(target.artilleryToughness||7),W:1},models:1,damage:0,isCharacter:false,isChariot:false,champion:{enabled:false},championAlive:false,attachedCharacters:[],armour:"none",lightArmour:false,shield:false,mountStats:null,skirmishing:false,cover:null};
       const artilleryContext={...context,cover:null,singleCharacter:false,skirmisher:false,targetInMelee:false,coverHitPenaltyBonus:0,attackingModels:bodyShots,attackingChampion:bodyChampion};
       const crewContext={...context,attackingModels:crewShots,attackingChampion:crewChampion};
       const bodyResult=bodyShots?shootingAttack(u,artilleryTarget,artilleryContext):null;
