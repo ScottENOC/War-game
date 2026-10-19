@@ -1,7 +1,7 @@
 import "./tooltips.js";
 import { installSaveBackupControls } from "./saveBackup.js?v=20261016-save-backup-v1";
 import { startGame } from "./GameEngine.js?v=20261019-recruitment-pools-v2";
-import { startGrandCampaign } from "./grandCampaign.js?v=20261019-campaign-movement-v7";
+import { startGrandCampaign } from "./grandCampaign.js?v=20261019-campaign-flyer-route-jump-v8";
 
 startGrandCampaign();
 startGame();
