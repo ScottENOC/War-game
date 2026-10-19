@@ -45,9 +45,12 @@ const bitDefs=[
  {id:"back_crossbow",label:"Crossbow carried on back",kind:"backWeapon",weapon:"crossbow"},
  {id:"back_halberd",label:"Halberd carried on back",kind:"backWeapon",weapon:"halberd"},
  {id:"back_spear",label:"Spear carried on back",kind:"backWeapon",weapon:"spear"},
- {id:"back_firearm",label:"Firearm carried on back",kind:"backWeapon",weapon:"firearm"}
+ {id:"back_firearm",label:"Firearm carried on back",kind:"backWeapon",weapon:"firearm"},
+ {id:"human_cannon_machine",label:"Human cannon",kind:"siegeMachine",faction:"empire",unitType:"cannon"},
+ {id:"dwarf_cannon_machine",label:"Dwarf cannon",kind:"siegeMachine",faction:"dwarfs",unitType:"cannon"},
+ {id:"elf_bolt_thrower_machine",label:"Elf bolt thrower",kind:"siegeMachine",faction:"highElves",unitType:"boltThrower"}
 ];
-const labels={empire:"Human / Empire",highElves:"High Elf",dwarfs:"Dwarf",greenskins:"Greenskins",goblins:"Goblin Mob",orcBoyz:"Orc Boyz",goblinHero:"Goblin Big Boss",goblinLord:"Goblin Warboss",orcHero:"Orc Big Boss",orcLord:"Orc Warboss",wolfRiders:"Wolf Riders",boarBoyz:"Boar Boyz",catapult:"Rock Lobber",swordsmen:"Infantry Sword",archers:"Infantry",dwarfInfantry:"Dwarf Infantry",dwarfCaptain:"Dwarf Thane",dwarfLord:"Dwarf Lord",dwarfKingHaldric:"King Haldric Stoneward",cavalry:"Cavalry",captain:"Hero",lord:"Lord",legendaryLord:"Lord-Marshal Edric Voss",shadowElf:"Lethariel Starweaver",handWeapon:"Sword",magicBow:"Magical longbow",signature:"Signature equipment",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm"};
+const labels={empire:"Human / Empire",highElves:"High Elf",dwarfs:"Dwarf",greenskins:"Greenskins",goblins:"Goblin Mob",orcBoyz:"Orc Boyz",goblinHero:"Goblin Big Boss",goblinLord:"Goblin Warboss",orcHero:"Orc Big Boss",orcLord:"Orc Warboss",wolfRiders:"Wolf Riders",boarBoyz:"Boar Boyz",catapult:"Rock Lobber",swordsmen:"Infantry Sword",archers:"Infantry",dwarfInfantry:"Dwarf Infantry",dwarfCaptain:"Dwarf Thane",dwarfLord:"Dwarf Lord",dwarfKingHaldric:"King Haldric Stoneward",cavalry:"Cavalry",captain:"Hero",lord:"Lord",legendaryLord:"Lord-Marshal Edric Voss",shadowElf:"Lethariel Starweaver",handWeapon:"Sword",magicBow:"Magical longbow",signature:"Signature equipment",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm",cannon:"Cannon",boltThrower:"Bolt thrower"};
 const makeModel=(id,faction,type,weapon,extra={})=>({id,faction,type,weapon,shield:!!extra.shield,mounted:!!extra.mounted,mountType:extra.mountType||(extra.mounted?"horse":"none"),backWeapons:[...(extra.backWeapons||[])],components:["body",weapon,...(extra.shield?["shield"]:[]),...(extra.mounted?[extra.mountType==="eagle"?"eagle":"horse"]:[]),...(extra.backWeapons||[]).map(w=>w==="bow"?"back_bow":w==="crossbow"?"back_crossbow":w==="greatWeapon"?"back_greatsword":w==="halberd"?"back_halberd":w==="spear"?"back_spear":w==="firearm"?"back_firearm":w)],name:extra.name||((faction==="empire"?"Empire ":faction==="dwarfs"?"Dwarf ":faction==="greenskins"?"Greenskin ":"High Elf ")+labels[type]+(type==="swordsmen"||type==="archers"||type==="cavalry"?"":"")+" · "+labels[weapon])});
 function starterData(){
  const models=[];let id=1;
@@ -93,7 +96,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  const consumeBit=id=>{if(bitCount(id)<1)return false;data.bits[id]--;if(!data.bits[id])delete data.bits[id];return true;};
  const modelLabel=m=>(m.name==="Aelthir, the Dawnwing"?"Aelthir, the Dawnwing":(m.faction==="empire"?"Empire ":m.faction==="dwarfs"?"Dwarf ":m.faction==="greenskins"?"Greenskin ":"High Elf ")+title(m.type))+" · "+title(m.weapon)+(m.offhandWeapon?" + Off-hand sword":"")+(m.shield?" + Shield":"")+((m.backWeapons||[]).length?" · Back: "+m.backWeapons.map(title).join(", "):"")+(m.mountType==="eagle"?" · Pegasus":m.mounted?" · Mounted":"");
  const canUseBit=(m,id)=>{
-   const b=bitDefs.find(x=>x.id===id);if(!b)return false;
+   const b=bitDefs.find(x=>x.id===id);if(!b||b.kind==="siegeMachine")return false;
    if(m.faction==="dwarfs"&&b.weapon==="bow")return false;
    if(b.kind==="backWeapon")return m.weapon!==b.weapon&&!(m.backWeapons||[]).includes(b.weapon);
    if(b.kind==="shield")return !m.shield&&(!["greatWeapon","halberd","bow"].includes(m.weapon)||m.faction==="dwarfs");
@@ -149,7 +152,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
   const root=$("model-workbench");root.replaceChildren();
   const tabs=document.createElement("div");tabs.className="workbench-tabs";
   const editBtn=document.createElement("button");editBtn.className="secondary-button";editBtn.textContent="Upgrade existing model";
-  const buildBtn=document.createElement("button");buildBtn.className="secondary-button";buildBtn.textContent="Assemble new model";tabs.append(editBtn,buildBtn);root.append(tabs);
+  const buildBtn=document.createElement("button");buildBtn.className="secondary-button";buildBtn.textContent="Assemble new model";const siegeBtn=document.createElement("button");siegeBtn.className="secondary-button";siegeBtn.textContent="Assemble siege engine";tabs.append(editBtn,buildBtn,siegeBtn);root.append(tabs);
   const panel=document.createElement("div");panel.className="workbench-form";root.append(panel);
   function field(label,options,value){const wrap=document.createElement("label");wrap.textContent=label;const sel=document.createElement("select");options.forEach(o=>{const opt=document.createElement("option");opt.value=o.value;opt.textContent=o.label;sel.append(opt);});if(value!==undefined)sel.value=value;wrap.append(sel);panel.append(wrap);return sel;}
   function renderEdit(){
@@ -185,7 +188,14 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     offhandLabel.hidden=!(body.faction==="highElves"||body.faction==="greenskins"||((body.kind==="captain"||body.kind==="lord")&&body.faction==="empire"));if(offhandLabel.hidden)offhandCheck.checked=false;
     [...weapon.options].forEach(o=>o.remove());
     const rangedArms=body.faction==="empire"?["both_bow","both_crossbow","both_firearm"]:body.faction==="greenskins"?(["goblins","goblinHero","goblinLord"].includes(body.kind)?["both_bow"]:[]):body.faction==="highElves"?["both_bow"]:[];
-    const arms=named?["signature"]:(cavalry?(body.faction==="empire"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]):(hero?(horseWrap.value!=="no"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","both_greatWeapon","both_halberd",...rangedArms]):(body.faction==="empire"?["right_sword","right_spear","both_bow","both_crossbow","both_firearm","both_greatWeapon","both_halberd"]:body.faction==="greenskins"?(body.kind==="catapult"?["right_sword"]:["right_sword","right_spear","both_greatWeapon","both_halberd",...rangedArms]):["right_sword","right_spear","both_bow","both_greatWeapon","both_halberd"])));
+    let arms;
+    if(named) arms=["signature"];
+    else if(body.kind==="infantry"&&body.faction==="highElves") arms=["right_spear","both_bow","both_greatWeapon","both_halberd"];
+    else if(cavalry) arms=body.faction==="empire"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms];
+    else if(hero) arms=horseWrap.value!=="no"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","both_greatWeapon","both_halberd",...rangedArms];
+    else if(body.faction==="empire") arms=["right_sword","right_spear","both_bow","both_crossbow","both_firearm","both_greatWeapon","both_halberd"];
+    else if(body.faction==="greenskins") arms=body.kind==="catapult"?["right_club"]:["right_club","right_spear","both_greatWeapon","both_halberd",...rangedArms];
+    else arms=["right_sword","right_spear","both_bow","both_greatWeapon","both_halberd"];
     
     arms.forEach(id=>{const d=bitDefs.find(b=>b.id===id);const o=document.createElement("option");o.value=id;o.textContent=named?(body.kind==="legendaryLord"?"Signature sword and shield (included)":body.kind==="pegasusChampion"?"Magical lance and shield (included)":"Magical longbow and dual swords (included)"):d.label+" ("+bitCount(id)+" owned)";weapon.append(o);});
     horseWrap.parentElement.hidden=body.faction==="dwarfs"||(named&&body.kind==="shadowElf"?!cavalry:!cavalry&&!hero);
@@ -218,7 +228,28 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    });panel.append(assemble);
    const status=document.createElement("p");status.className="workbench-status";panel.append(status);
   }
-  editBtn.addEventListener("click",renderEdit);buildBtn.addEventListener("click",renderBuild);renderEdit();
+  function renderSiegeBuild(){
+    panel.replaceChildren();
+    const faction=field("Faction",[{value:"empire",label:"Human / Empire"},{value:"highElves",label:"High Elf"},{value:"dwarfs",label:"Dwarf"}],"empire");
+    const machine=field("War machine",[], "human_cannon_machine");
+    const refresh=()=>{
+      [...machine.options].forEach(o=>o.remove());
+      const choices=faction.value==="highElves"?[["elf_bolt_thrower_machine","Elf bolt thrower"]]:faction.value==="dwarfs"?[["dwarf_cannon_machine","Dwarf cannon"]]:[["human_cannon_machine","Human cannon"]];
+      choices.forEach(([id,label])=>{const o=document.createElement("option");o.value=id;o.textContent=label+" ("+bitCount(id)+" owned)";machine.append(o);});
+    };
+    faction.addEventListener("change",refresh);refresh();
+    const note=document.createElement("p");note.className="subtle";note.textContent="The machine is a separate collectible. It does not include crew: cannons need three compatible crew models; bolt throwers need two. Human crew use a hand weapon; elf crew must carry a spear.";panel.append(note);
+    const assemble=document.createElement("button");assemble.className="primary-button";assemble.textContent="Assemble siege engine";
+    assemble.addEventListener("click",()=>{
+      const def=bitDefs.find(b=>b.id===machine.value);
+      if(!def||def.kind!=="siegeMachine"||def.faction!==faction.value){status.textContent="Choose a siege engine matching the selected faction.";return;}
+      if(!consumeBit(def.id)){status.textContent="You do not own that machine component.";return;}
+      const model=makeModel("assembled-"+data.nextId++,def.faction,def.unitType,"none",{name:def.label});
+      model.components=[def.id];model.siegeMachine=true;data.models.push(model);save();renderAll();status.textContent=def.label+" added to your collection. Assemble compatible crew separately.";
+    });panel.append(assemble);
+    const status=document.createElement("p");status.className="workbench-status";panel.append(status);
+   }
+   editBtn.addEventListener("click",renderEdit);buildBtn.addEventListener("click",renderBuild);siegeBtn.addEventListener("click",renderSiegeBuild);renderEdit();
  }
  function renderAll(){renderSummary();renderModels();renderBits();renderWorkbench();renderDailyReward();$("bypass-model-check").checked=!!data.bypass;}
  function rarityWeightedModel(){
