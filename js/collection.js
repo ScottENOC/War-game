@@ -32,7 +32,11 @@ const bodyKinds=[
   {id:"goblin_lord_body",label:"Goblin Warboss body",faction:"greenskins",kind:"goblinLord"},
   {id:"orc_hero_body",label:"Orc Big Boss body",faction:"greenskins",kind:"orcHero"},
   {id:"orc_lord_body",label:"Orc Warboss body",faction:"greenskins",kind:"orcLord"},
-  {id:"goblin_crew_body",label:"Goblin catapult crew body",faction:"greenskins",kind:"catapult"}
+  {id:"goblin_crew_body",label:"Goblin catapult crew body",faction:"greenskins",kind:"catapult"},
+  {id:"human_chariot_body",label:"Empire chariot crew and vehicle",faction:"empire",kind:"humanChariot"},
+  {id:"elf_chariot_body",label:"High Elf chariot crew and vehicle",faction:"highElves",kind:"elfChariot"},
+  {id:"goblin_chariot_body",label:"Goblin wolf chariot crew and vehicle",faction:"greenskins",kind:"goblinChariot"},
+  {id:"orc_chariot_body",label:"Orc boar chariot crew and vehicle",faction:"greenskins",kind:"orcChariot"}
 ];
 const bitDefs=[
  ...bodyKinds.map(x=>({id:x.id,label:x.label,kind:"body"})),
@@ -57,9 +61,13 @@ const bitDefs=[
  {id:"back_firearm",label:"Firearm carried on back",kind:"backWeapon",weapon:"firearm"},
  {id:"human_cannon_machine",label:"Human cannon",kind:"siegeMachine",faction:"empire",unitType:"cannon"},
  {id:"dwarf_cannon_machine",label:"Dwarf cannon",kind:"siegeMachine",faction:"dwarfs",unitType:"cannon"},
- {id:"elf_bolt_thrower_machine",label:"Elf bolt thrower",kind:"siegeMachine",faction:"highElves",unitType:"boltThrower"}
+ {id:"elf_bolt_thrower_machine",label:"Elf bolt thrower",kind:"siegeMachine",faction:"highElves",unitType:"boltThrower"},
+ {id:"human_chariot_vehicle",label:"Empire horse chariot vehicle",kind:"chariotMachine",faction:"empire",unitType:"humanChariot"},
+ {id:"elf_chariot_vehicle",label:"High Elf chariot with elven horses",kind:"chariotMachine",faction:"highElves",unitType:"elfChariot"},
+ {id:"goblin_chariot_vehicle",label:"Goblin wolf chariot vehicle",kind:"chariotMachine",faction:"greenskins",unitType:"goblinChariot"},
+ {id:"orc_chariot_vehicle",label:"Orc boar chariot vehicle",kind:"chariotMachine",faction:"greenskins",unitType:"orcChariot"}
 ];
-const labels={empire:"Human / Empire",highElves:"High Elf",dwarfs:"Dwarf",greenskins:"Greenskins",goblins:"Goblin Mob",orcBoyz:"Orc Boyz",goblinHero:"Goblin Big Boss",goblinLord:"Goblin Warboss",orcHero:"Orc Big Boss",orcLord:"Orc Warboss",mageHero:"Mage",mageLord:"Wizard Lord",goblinShaman:"Goblin Shaman",goblinGreatShaman:"Goblin Great Shaman",orcShaman:"Orc Shaman",orcGreatShaman:"Orc Great Shaman",wolfRiders:"Wolf Riders",boarBoyz:"Boar Boyz",catapult:"Rock Lobber",swordsmen:"Infantry Sword",archers:"Infantry",dwarfInfantry:"Dwarf Infantry",dwarfCaptain:"Dwarf Thane",dwarfLord:"Dwarf Lord",dwarfKingHaldric:"King Haldric Stoneward",starwardenLord:"Eldrin Starwarden",cavalry:"Cavalry",captain:"Hero",lord:"Lord",legendaryLord:"Lord-Marshal Edric Voss",shadowElf:"Lethariel Starweaver",handWeapon:"Sword",magicBow:"Magical longbow",signature:"Signature equipment",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm",cannon:"Cannon",boltThrower:"Bolt thrower"};
+const labels={empire:"Human / Empire",highElves:"High Elf",dwarfs:"Dwarf",greenskins:"Greenskins",goblins:"Goblin Mob",orcBoyz:"Orc Boyz",goblinHero:"Goblin Big Boss",goblinLord:"Goblin Warboss",orcHero:"Orc Big Boss",orcLord:"Orc Warboss",mageHero:"Mage",mageLord:"Wizard Lord",goblinShaman:"Goblin Shaman",goblinGreatShaman:"Goblin Great Shaman",orcShaman:"Orc Shaman",orcGreatShaman:"Orc Great Shaman",humanChariot:"Empire War Chariot",elfChariot:"High Elf Chariot",goblinChariot:"Goblin Wolf Chariot",orcChariot:"Orc Boar Chariot",wolfRiders:"Wolf Riders",boarBoyz:"Boar Boyz",catapult:"Rock Lobber",swordsmen:"Infantry Sword",archers:"Infantry",dwarfInfantry:"Dwarf Infantry",dwarfCaptain:"Dwarf Thane",dwarfLord:"Dwarf Lord",dwarfKingHaldric:"King Haldric Stoneward",starwardenLord:"Eldrin Starwarden",cavalry:"Cavalry",captain:"Hero",lord:"Lord",legendaryLord:"Lord-Marshal Edric Voss",shadowElf:"Lethariel Starweaver",handWeapon:"Sword",magicBow:"Magical longbow",signature:"Signature equipment",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm",cannon:"Cannon",boltThrower:"Bolt thrower"};
 const makeModel=(id,faction,type,weapon,extra={})=>({id,faction,type,weapon,shield:!!extra.shield,mounted:!!extra.mounted,mountType:extra.mountType||(extra.mounted?"horse":"none"),backWeapons:[...(extra.backWeapons||[])],components:["body",weapon,...(extra.shield?["shield"]:[]),...(extra.mounted?[extra.mountType==="eagle"?"eagle":extra.mountType==="greatEagle"?"greatEagle":extra.mountType==="wyvern"?"wyvern":extra.mountType==="wolf"?"wolf":extra.mountType==="boar"?"boar":"horse"]:[]),...(extra.backWeapons||[]).map(w=>w==="bow"?"back_bow":w==="crossbow"?"back_crossbow":w==="greatWeapon"?"back_greatsword":w==="halberd"?"back_halberd":w==="spear"?"back_spear":w==="firearm"?"back_firearm":w)],name:extra.name||((faction==="empire"?"Empire ":faction==="dwarfs"?"Dwarf ":faction==="greenskins"?"Greenskin ":"High Elf ")+labels[type]+(type==="swordsmen"||type==="archers"||type==="cavalry"?"":"")+" · "+labels[weapon])});
 function starterData(){
  const models=[];let id=1;
@@ -105,7 +113,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  const consumeBit=id=>{if(bitCount(id)<1)return false;data.bits[id]--;if(!data.bits[id])delete data.bits[id];return true;};
  const modelLabel=m=>(m.name==="Aelthir, the Dawnwing"?"Aelthir, the Dawnwing":(m.faction==="empire"?"Empire ":m.faction==="dwarfs"?"Dwarf ":m.faction==="greenskins"?"Greenskin ":"High Elf ")+title(m.type))+" · "+title(m.weapon)+(m.offhandWeapon?" + Off-hand sword":"")+(m.shield?" + Shield":"")+((m.backWeapons||[]).length?" · Back: "+m.backWeapons.map(title).join(", "):"")+(m.mountType==="eagle"||m.mountType==="greatEagle"?" · Pegasus":m.mountType==="wyvern"?" · Wyvern":m.mounted?" · Mounted":"");
  const canUseBit=(m,id)=>{
-   const b=bitDefs.find(x=>x.id===id);if(!b||b.kind==="siegeMachine"||m.siegeMachine)return false;
+   const b=bitDefs.find(x=>x.id===id);if(!b||b.kind==="siegeMachine"||b.kind==="chariotMachine"||m.siegeMachine)return false;
    if(m.faction==="dwarfs"&&b.weapon==="bow")return false;
    if(b.kind==="backWeapon")return m.weapon!==b.weapon&&!(m.backWeapons||[]).includes(b.weapon);
    if(b.kind==="shield")return !m.shield&&(!["greatWeapon","halberd","bow"].includes(m.weapon)||m.faction==="dwarfs");
@@ -199,6 +207,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     const rangedArms=body.faction==="empire"?["both_bow","both_crossbow","both_firearm"]:body.faction==="greenskins"?(["goblins","goblinHero","goblinLord"].includes(body.kind)?["both_bow"]:[]):body.faction==="highElves"?["both_bow"]:[];
     let arms;
     if(named) arms=["signature"];
+    else if(body.kind==="elfChariot") arms=["right_spear","both_bow","both_greatWeapon"];
     else if(body.kind==="infantry"&&body.faction==="highElves") arms=["right_spear","both_bow","both_greatWeapon","both_halberd"];
     else if(cavalry) arms=body.faction==="empire"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms];
     else if(hero) arms=horseWrap.value!=="no"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","both_greatWeapon","both_halberd",...rangedArms];
@@ -218,13 +227,13 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const p=document.createElement("p");p.className="subtle";p.textContent="A finished model consumes its main body, the selected arms, and a horse if mounted. Elf and human arms are interchangeable.";panel.append(p);
    const assemble=document.createElement("button");assemble.className="primary-button";assemble.textContent="Assemble model";
    assemble.addEventListener("click",()=>{
-    const body=bodyKinds.find(b=>b.id===kind.value),named=!!body.namedCharacter,arms=named?{id:"signature",kind:"signature",weapon:body.kind==="legendaryLord"||body.kind==="starwardenLord"?"handWeapon":body.kind==="pegasusChampion"?"lance":"magicBow"}:bitDefs.find(b=>b.id===weapon.value),mountType=["eagle","greatEagle","wolf","boar"].includes(horseWrap.value)?horseWrap.value:horseWrap.value==="yes"?"horse":"none",mounted=mountType!=="none"&&(body.kind==="cavalry"||["wolfRiders","boarBoyz","captain","lord","mageHero","mageLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","dwarfCaptain","dwarfLord","goblinHero","goblinLord","orcHero","orcLord","legendaryLord","pegasusChampion"].includes(body.kind));
+    const body=bodyKinds.find(b=>b.id===kind.value),named=!!body.namedCharacter,chariot=["humanChariot","elfChariot","goblinChariot","orcChariot"].includes(body.kind),arms=named?{id:"signature",kind:"signature",weapon:body.kind==="legendaryLord"||body.kind==="starwardenLord"?"handWeapon":body.kind==="pegasusChampion"?"lance":"magicBow"}:bitDefs.find(b=>b.id===weapon.value),mountType=["eagle","greatEagle","wolf","boar"].includes(horseWrap.value)?horseWrap.value:horseWrap.value==="yes"?"horse":"none",mounted=mountType!=="none"&&(body.kind==="cavalry"||["wolfRiders","boarBoyz","captain","lord","mageHero","mageLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","dwarfCaptain","dwarfLord","goblinHero","goblinLord","orcHero","orcLord","legendaryLord","pegasusChampion"].includes(body.kind));
     if(body.faction!==faction.value){status.textContent="Choose a main body matching the selected faction.";return;}
     if(mounted&&arms.weapon==="halberd"){status.textContent="Halberds cannot be used by mounted models.";return;}
     if((mountType==="eagle"||mountType==="greatEagle")&&(body.faction!=="highElves"||arms.weapon==="halberd")){status.textContent="Pegasus and Great Eagle mounts are available only to High Elves; neither can carry a halberd.";return;}
     const addShield=named?["legendaryLord","pegasusChampion"].includes(body.kind):shieldCheck.checked&&(arms.kind==="right"||body.faction==="dwarfs");if(!named&&shieldCheck.checked&&!addShield){status.textContent="Two-handed weapons use both arms and cannot take a shield.";return;}
     const addOffhand=named?body.kind==="shadowElf":offhandCheck.checked&&!offhandLabel.hidden;if(!named&&addOffhand&&arms.kind!=="right"){status.textContent="A left-hand sword needs a free right-hand weapon, not a two-handed weapon.";return;}if(addShield&&addOffhand){status.textContent="A model cannot hold both a shield and a sword in its left hand.";return;}
-    if(named&&data.models.some(m=>m.type===body.kind&&m.faction===body.faction&&!!m.mounted===mounted&&(m.mountType||(m.mounted?"horse":"none"))===mountType)){status.textContent="You already own this named character in that mount configuration.";return;}const need=[body.id];if(!named){need.push(arms.id);if(arms.kind==="right")need.push(addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm");else if(addShield)need.push("left_shield");}if(mounted)need.push(mountType==="eagle"?"eagle":mountType==="greatEagle"?"greatEagle":mountType==="wolf"?"wolf":mountType==="boar"?"boar":"horse");if(mountType==="eagle"&&body.kind!=="pegasusChampion")need.push("back_bow");
+    if(named&&data.models.some(m=>m.type===body.kind&&m.faction===body.faction&&!!m.mounted===mounted&&(m.mountType||(m.mounted?"horse":"none"))===mountType)){status.textContent="You already own this named character in that mount configuration.";return;}const need=[body.id];if(chariot)need.push(({humanChariot:"human_chariot_vehicle",elfChariot:"elf_chariot_vehicle",goblinChariot:"goblin_chariot_vehicle",orcChariot:"orc_chariot_vehicle"})[body.kind]);if(!named){need.push(arms.id);if(arms.kind==="right")need.push(addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm");else if(addShield)need.push("left_shield");}if(mounted)need.push(mountType==="eagle"?"eagle":mountType==="greatEagle"?"greatEagle":mountType==="wolf"?"wolf":mountType==="boar"?"boar":"horse");if(mountType==="eagle"&&body.kind!=="pegasusChampion")need.push("back_bow");
     const shortage=need.find(id=>bitCount(id)<1);if(shortage){status.textContent="Not enough bits: "+bitDefs.find(b=>b.id===shortage).label+".";return;}
     if(["cavalry","wolfRiders","boarBoyz"].includes(body.kind)&&!mounted){status.textContent="Cavalry bodies require their mount.";return;}if(body.kind==="wolfRiders"&&mountType!=="wolf"){status.textContent="Goblin wolf riders require a wolf.";return;}if(body.kind==="boarBoyz"&&mountType!=="boar"){status.textContent="Orc boar riders require a boar.";return;}
     if(body.faction==="highElves"&&["crossbow","firearm"].includes(arms.weapon)){status.textContent="High Elves refuse crossbows and firearms.";return;}
@@ -232,7 +241,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     const type=body.kind==="infantry"?(arms.weapon==="bow"?"archers":"swordsmen"):body.kind;
     const namedName=body.kind==="legendaryLord"?"Lord-Marshal Edric Voss":body.kind==="shadowElf"?"Lethariel Starweaver":body.kind==="pegasusChampion"?"Aelthir, the Dawnwing":body.kind==="starwardenLord"?"Eldrin Starwarden":null;
     const model=makeModel("assembled-"+data.nextId++,body.faction,type,arms.weapon,{mounted,mountType,shield:addShield,backWeapons:mountType==="eagle"&&body.kind!=="pegasusChampion"?["bow"]:[],name:namedName||(body.faction==="empire"?"Empire ":body.faction==="dwarfs"?"Dwarf ":"High Elf ")+title(type)+" · "+title(arms.weapon)+(addShield?" + Shield":"")+(mounted?" · Mounted":"")});
-    model.components=[body.id,...(!named?[arms.id,...(arms.kind==="right"?[addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm"]:addShield?["left_shield"]:[])]:[]),...(mounted?[mountType==="eagle"?"eagle":mountType==="greatEagle"?"greatEagle":mountType==="wolf"?"wolf":mountType==="boar"?"boar":"horse"]:[]),...(mountType==="eagle"&&body.kind!=="pegasusChampion"?["back_bow"]:[])];model.offhandWeapon=addOffhand;model.namedCharacter=named;
+    model.components=[body.id,...(chariot?[({humanChariot:"human_chariot_vehicle",elfChariot:"elf_chariot_vehicle",goblinChariot:"goblin_chariot_vehicle",orcChariot:"orc_chariot_vehicle"})[body.kind]]:[]),...(!named?[arms.id,...(arms.kind==="right"?[addShield?"left_shield":addOffhand?"left_sword":"left_empty_arm"]:addShield?["left_shield"]:[])]:[]),...(mounted?[mountType==="eagle"?"eagle":mountType==="greatEagle"?"greatEagle":mountType==="wolf"?"wolf":mountType==="boar"?"boar":"horse"]:[]),...(mountType==="eagle"&&body.kind!=="pegasusChampion"?["back_bow"]:[])];model.offhandWeapon=addOffhand;model.namedCharacter=named;
     data.models.push(model);save();renderAll();status.textContent="Model assembled and added to your collection.";
    });panel.append(assemble);
    const status=document.createElement("p");status.className="workbench-status";panel.append(status);
@@ -268,6 +277,10 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    {faction:"empire",type:"swordsmen",weapon:"crossbow",cost:11},
    {faction:"empire",type:"swordsmen",weapon:"firearm",cost:12},
    {faction:"empire",type:"cavalry",weapon:"handWeapon",cost:16,mounted:true},
+   {faction:"empire",type:"humanChariot",weapon:"handWeapon",cost:95},
+   {faction:"highElves",type:"elfChariot",weapon:"spear",cost:110},
+   {faction:"greenskins",type:"goblinChariot",weapon:"spear",cost:65},
+   {faction:"greenskins",type:"orcChariot",weapon:"handWeapon",cost:100},
    {faction:"empire",type:"captain",weapon:"handWeapon",cost:50},
    {faction:"empire",type:"captain",weapon:"crossbow",cost:53},
    {faction:"empire",type:"captain",weapon:"firearm",cost:54},
@@ -336,6 +349,10 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     {faction:"empire",type:"cavalry",weapon:"spear",mounted:true,mountType:"horse"},
     {faction:"highElves",type:"cavalry",weapon:"spear",mounted:true,mountType:"horse"},
     {faction:"highElves",type:"cavalry",weapon:"spear",mounted:true,mountType:"eagle"},
+   {faction:"empire",type:"humanChariot",weapon:"handWeapon"},
+   {faction:"highElves",type:"elfChariot",weapon:"spear"},
+   {faction:"greenskins",type:"goblinChariot",weapon:"spear"},
+   {faction:"greenskins",type:"orcChariot",weapon:"handWeapon"},
     {faction:"highElves",type:"pegasusChampion",weapon:"lance",mounted:true,mountType:"eagle",shield:true,namedCharacter:true,name:"Aelthir, the Dawnwing"}
    ],
    character:[
