@@ -42,9 +42,10 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
     const group=document.createElement("div");group.className="campaign-choice-list";
     const hasRanged=!!unit.rangedWeapon||unit.type==="archers"||unit.type==="shadowElf"||unit.type==="rifleman"||(unit.type==="cavalry"&&(unit.bow||unit.freeCavalryOption==="bow"));
     const available=skillChoices.filter(s=>!unit.skills?.[s.key]&&(s.key!=="rerollOnesShooting"||hasRanged));
-    const earnedStats=veteranStats.filter(s=>!(Number(unit.campaignStats?.[s.key])>0)).map(s=>({key:"veteran_"+s.key,label:s.label,description:"Earn a permanent +1 characteristic bonus through victory."}));
-    const fallbackStats=veteranStats.map(s=>({key:"veteran_"+s.key,label:s.label,description:"Permanent veteran improvement earned through survival."}));
-    const choices=[...available,...(earnedStats.length?earnedStats:(!available.length?fallbackStats:[]))];
+    const restrictedMage=["mageHero","mageLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"].includes(unit.type)&&run.faction!=="highElves";const allowedVeteranStats=veteranStats.filter(s=>!(restrictedMage&&["WS","S"].includes(s.key)));const earnedStats=allowedVeteranStats.filter(s=>!(Number(unit.campaignStats?.[s.key])>0)).map(s=>({key:"veteran_"+s.key,label:s.label,description:"Earn a permanent +1 characteristic bonus through victory."}));
+    const fallbackStats=allowedVeteranStats.map(s=>({key:"veteran_"+s.key,label:s.label,description:"Permanent veteran improvement earned through survival."}));
+    const hybridCasterUpgrade=run.faction==="highElves"&&["captain","lord"].includes(unit.type)&&!(unit.casterLevel>0)?[{key:"veteran_casterLevel",label:"+1 Caster Level",description:"Unlock spellcasting and one power die each turn; this is an elven veteran upgrade."}]:[];
+    const choices=[...available,...hybridCasterUpgrade,...(earnedStats.length?earnedStats:(!available.length?fallbackStats:[]))];
     choices.forEach((s,j)=>{const label=document.createElement("label");label.className="campaign-choice";const radio=document.createElement("input");radio.type="radio";radio.name="rogue-skill-"+i;radio.value=s.key;const copy=document.createElement("span");copy.innerHTML="<b>"+s.label+"</b><small>"+(s.description||"")+"</small>";label.append(radio,copy);group.append(label);});
     card.append(group);skillsHost.append(card);
    });
@@ -131,7 +132,7 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
   const selected=[];
   run.pendingSkills.forEach((u,i)=>{const radio=document.querySelector('input[name="rogue-skill-'+i+'"]:checked');if(radio)selected.push([u,radio.value]);});
   if(selected.length!==run.pendingSkills.length){el("roguelike-description").textContent="Choose one skill for each surviving unit before continuing.";return;}
-  for(const [unit,key] of selected){const target=run.army.find(x=>x.id===unit.id)||run.army[unit._sourceIndex];if(!target)continue;if(key.startsWith("veteran_")){const stat=key.slice(8);target.campaignStats=target.campaignStats||{};target.campaignStats[stat]=(target.campaignStats[stat]||0)+1;}else{target.skills=target.skills||{};target.skills[key]=true;}}
+  for(const [unit,key] of selected){const target=run.army.find(x=>x.id===unit.id)||run.army[unit._sourceIndex];if(!target)continue;if(key==="veteran_casterLevel"){target.casterLevel=1;target.spells=["fireBolt"];}else if(key.startsWith("veteran_")){const stat=key.slice(8);target.campaignStats=target.campaignStats||{};target.campaignStats[stat]=(target.campaignStats[stat]||0)+1;}else{target.skills=target.skills||{};target.skills[key]=true;}}
   run.pendingSkills=[];run.state="ready";run.rosterPoints=calculatePoints?calculatePoints(run.army,run.faction):run.rosterPoints;save();render();
  }
  el("roguelike-start").addEventListener("click",()=>{if(run.state==="defeat")run=blankRun();chooseArmy();});
