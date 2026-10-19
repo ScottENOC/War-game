@@ -168,7 +168,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    add.addEventListener("click",()=>{const def=bitDefs.find(b=>b.id===bit.value);if(!def||!consumeBit(def.id))return;
     if(def.kind==="backWeapon"){model.backWeapons=[...(model.backWeapons||[]),def.weapon];model.components.push(def.id);}
     if(def.kind==="shield"){model.shield=true;model.components.push("left_shield");}
-    if(def.kind==="mount"){model.mounted=true;model.mountType=def.id==="eagle"?"eagle":"horse";model.components.push(model.mountType==="eagle"?"eagle":"horse");}
+    if(def.kind==="mount"){model.mounted=true;model.mountType=def.id;model.components.push(def.id==="eagle"?"eagle":def.id==="wyvern"?"wyvern":def.id==="wolf"?"wolf":def.id==="boar"?"boar":"horse");}
     if(def.kind==="right"||def.kind==="twohand"){model.weapon=def.weapon;model.components.push(def.id);}
     if(def.kind==="leftSword"){model.components.push("left_sword");model.offhandWeapon=true;}
     model.name=modelLabel(model);save();renderAll();editingId=model.id;renderWorkbench();
