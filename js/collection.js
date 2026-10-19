@@ -14,12 +14,22 @@ const bodyKinds=[
   {id:"haldric_stoneward_body",label:"King Haldric Stoneward (named character)",faction:"dwarfs",kind:"dwarfKingHaldric",namedCharacter:true},
   {id:"edric_voss_body",label:"Lord-Marshal Edric Voss (named character)",faction:"empire",kind:"legendaryLord",namedCharacter:true},
   {id:"lethariel_starweaver_body",label:"Lethariel Starweaver (named character)",faction:"highElves",kind:"shadowElf",namedCharacter:true},
-  {id:"aelthir_dawnwing_body",label:"Aelthir, the Dawnwing (named character)",faction:"highElves",kind:"pegasusChampion",namedCharacter:true}
+  {id:"aelthir_dawnwing_body",label:"Aelthir, the Dawnwing (named character)",faction:"highElves",kind:"pegasusChampion",namedCharacter:true},
+  {id:"goblin_infantry_body",label:"Goblin infantry body",faction:"greenskins",kind:"goblins"},
+  {id:"orc_infantry_body",label:"Orc infantry body",faction:"greenskins",kind:"orcBoyz"},
+  {id:"goblin_cavalry_body",label:"Goblin wolf-rider body",faction:"greenskins",kind:"wolfRiders"},
+  {id:"orc_cavalry_body",label:"Orc boar-rider body",faction:"greenskins",kind:"boarBoyz"},
+  {id:"goblin_hero_body",label:"Goblin Big Boss body",faction:"greenskins",kind:"goblinHero"},
+  {id:"goblin_lord_body",label:"Goblin Warboss body",faction:"greenskins",kind:"goblinLord"},
+  {id:"orc_hero_body",label:"Orc Big Boss body",faction:"greenskins",kind:"orcHero"},
+  {id:"orc_lord_body",label:"Orc Warboss body",faction:"greenskins",kind:"orcLord"},
+  {id:"goblin_crew_body",label:"Goblin catapult crew body",faction:"greenskins",kind:"catapult"}
 ];
 const bitDefs=[
  ...bodyKinds.map(x=>({id:x.id,label:x.label,kind:"body"})),
- {id:"horse",label:"Horse",kind:"mount"},{id:"eagle",label:"Pegasus",kind:"mount"},
+ {id:"horse",label:"Horse",kind:"mount"},{id:"eagle",label:"Pegasus",kind:"mount"},{id:"wolf",label:"Wolf",kind:"mount"},{id:"boar",label:"Boar",kind:"mount"},
  {id:"right_sword",label:"Right arm · sword",kind:"right",weapon:"handWeapon"},
+ {id:"right_club",label:"Right arm · crude club",kind:"right",weapon:"handWeapon"},
  {id:"right_spear",label:"Right arm · spear",kind:"right",weapon:"spear"},
  {id:"right_lance",label:"Right arm · lance",kind:"right",weapon:"lance"},
  {id:"left_empty_arm",label:"Left arm · empty hand",kind:"leftEmpty"},
@@ -37,7 +47,7 @@ const bitDefs=[
  {id:"back_spear",label:"Spear carried on back",kind:"backWeapon",weapon:"spear"},
  {id:"back_firearm",label:"Firearm carried on back",kind:"backWeapon",weapon:"firearm"}
 ];
-const labels={empire:"Human / Empire",highElves:"High Elf",dwarfs:"Dwarf",swordsmen:"Infantry Sword",archers:"Infantry",dwarfInfantry:"Dwarf Infantry",dwarfCaptain:"Dwarf Thane",dwarfLord:"Dwarf Lord",dwarfKingHaldric:"King Haldric Stoneward",cavalry:"Cavalry",captain:"Hero",lord:"Lord",legendaryLord:"Lord-Marshal Edric Voss",shadowElf:"Lethariel Starweaver",handWeapon:"Sword",magicBow:"Magical longbow",signature:"Signature equipment",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm"};
+const labels={empire:"Human / Empire",highElves:"High Elf",dwarfs:"Dwarf",greenskins:"Greenskins",goblins:"Goblin Mob",orcBoyz:"Orc Boyz",goblinHero:"Goblin Big Boss",goblinLord:"Goblin Warboss",orcHero:"Orc Big Boss",orcLord:"Orc Warboss",wolfRiders:"Wolf Riders",boarBoyz:"Boar Boyz",catapult:"Rock Lobber",swordsmen:"Infantry Sword",archers:"Infantry",dwarfInfantry:"Dwarf Infantry",dwarfCaptain:"Dwarf Thane",dwarfLord:"Dwarf Lord",dwarfKingHaldric:"King Haldric Stoneward",cavalry:"Cavalry",captain:"Hero",lord:"Lord",legendaryLord:"Lord-Marshal Edric Voss",shadowElf:"Lethariel Starweaver",handWeapon:"Sword",magicBow:"Magical longbow",signature:"Signature equipment",spear:"Spear",lance:"Lance",greatWeapon:"Great weapon",halberd:"Halberd",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm"};
 const makeModel=(id,faction,type,weapon,extra={})=>({id,faction,type,weapon,shield:!!extra.shield,mounted:!!extra.mounted,mountType:extra.mountType||(extra.mounted?"horse":"none"),backWeapons:[...(extra.backWeapons||[])],components:["body",weapon,...(extra.shield?["shield"]:[]),...(extra.mounted?[extra.mountType==="eagle"?"eagle":"horse"]:[]),...(extra.backWeapons||[]).map(w=>w==="bow"?"back_bow":w==="crossbow"?"back_crossbow":w==="greatWeapon"?"back_greatsword":w==="halberd"?"back_halberd":w==="spear"?"back_spear":w==="firearm"?"back_firearm":w)],name:extra.name||((faction==="empire"?"Empire ":faction==="dwarfs"?"Dwarf ":"High Elf ")+labels[type]+(type==="swordsmen"||type==="archers"||type==="cavalry"?"":"")+" · "+labels[weapon])});
 function starterData(){
  const models=[];let id=1;
@@ -55,7 +65,7 @@ function load(){
    const legacyTypes={dwarfWarriors:"dwarfInfantry",dwarfThunderers:"dwarfInfantry",dwarfQuarrellers:"dwarfInfantry",dwarfLongbeards:"dwarfInfantry",dwarfIronbreakers:"dwarfInfantry"};
    merged.models=merged.models.filter(m=>m&&typeof m==="object").map((m,i)=>{
     const type=legacyTypes[m.type]||m.type||"swordsmen";
-    const faction=["empire","highElves","dwarfs"].includes(m.faction)?m.faction:"empire";
+    const faction=["empire","highElves","dwarfs","greenskins"].includes(m.faction)?m.faction:"empire";
     const weapon=typeof m.weapon==="string"&&m.weapon?m.weapon:"handWeapon";
     const safe={...m,id:typeof m.id==="string"&&m.id?m.id:"recovered-"+(i+1),faction,type,weapon:faction==="dwarfs"&&weapon==="bow"?"crossbow":weapon,shield:!!m.shield,mounted:!!m.mounted,mountType:m.mountType||(m.mounted?"horse":"none"),backWeapons:Array.isArray(m.backWeapons)?m.backWeapons.filter(w=>typeof w==="string").map(w=>faction==="dwarfs"&&w==="bow"?"crossbow":w):[],components:Array.isArray(m.components)?m.components.map(x=>faction==="dwarfs"&&x==="both_bow"?"both_crossbow":faction==="dwarfs"&&x==="back_bow"?"back_crossbow":x):[]};
     if(typeof safe.name!=="string"||!safe.name.trim()){
@@ -87,7 +97,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    if(m.faction==="dwarfs"&&b.weapon==="bow")return false;
    if(b.kind==="backWeapon")return m.weapon!==b.weapon&&!(m.backWeapons||[]).includes(b.weapon);
    if(b.kind==="shield")return !m.shield&&(!["greatWeapon","halberd","bow"].includes(m.weapon)||m.faction==="dwarfs");
-   if(b.kind==="mount")return (m.type==="captain"||m.type==="lord"||m.type==="dwarfCaptain"||m.type==="dwarfLord"||m.type==="cavalry")&&!m.mounted&&m.weapon!=="halberd"&&(id!=="eagle"||m.faction==="highElves")&&m.faction!=="dwarfs";
+   if(b.kind==="mount")return (m.type==="captain"||m.type==="lord"||m.type==="dwarfCaptain"||m.type==="dwarfLord"||m.type==="goblinHero"||m.type==="goblinLord"||m.type==="orcHero"||m.type==="orcLord"||["cavalry","wolfRiders","boarBoyz"].includes(m.type))&&!m.mounted&&m.weapon!=="halberd"&&(id!=="eagle"||m.faction==="highElves")&&(id!=="wolf"||m.faction==="greenskins"&&["goblins","goblinHero","goblinLord"].includes(m.type))&&(id!=="boar"||m.faction==="greenskins"&&["orcBoyz","orcHero","orcLord"].includes(m.type))&&m.faction!=="dwarfs";
    if(b.kind==="right")return m.weapon==="none"&&m.type!=="archers"&&m.type!=="swordsmen";
    if(b.kind==="leftSword")return !m.shield&&!["greatWeapon","halberd","bow","crossbow","firearm"].includes(m.weapon)&&!m.components?.includes("left_sword")&&(m.faction==="highElves"||((m.type==="captain"||m.type==="lord")&&m.faction==="empire"));
    if(b.kind==="twohand")return m.weapon==="none"&&(b.weapon!=="halberd"||!m.mounted);
@@ -164,13 +174,13 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
   }
   function renderBuild(){
    panel.replaceChildren();
-   const faction=field("Faction",[{value:"empire",label:"Human / Empire"},{value:"highElves",label:"High Elf"}],"empire");
+   const faction=field("Faction",[{value:"empire",label:"Human / Empire"},{value:"highElves",label:"High Elf"},{value:"dwarfs",label:"Dwarf"},{value:"greenskins",label:"Greenskins"}],"empire");
    const kind=field("Main body",bodyKinds.map(b=>({value:b.id,label:b.label})),bodyKinds[0].id);
    const weapon=field("Arms / weapon",[], "right_sword");
    const horseWrap=field("Mount",[{value:"no",label:"No mount"},{value:"yes",label:"Add horse"},{value:"eagle",label:"Pegasus (High Elves)"}],"no");
    const refresh=()=>{
-    const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=body.kind==="cavalry";const named=!!body.namedCharacter;const hero=body.kind==="captain"||body.kind==="lord"||body.kind==="dwarfCaptain"||body.kind==="dwarfLord"||named;
-    horseWrap.querySelectorAll("option").forEach(o=>{if(o.value==="eagle")o.disabled=body.faction!=="highElves"||!(cavalry||hero);});
+    const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=["cavalry","wolfRiders","boarBoyz"].includes(body.kind);const named=!!body.namedCharacter;const hero=["captain","lord","dwarfCaptain","dwarfLord","goblinHero","goblinLord","orcHero","orcLord"].includes(body.kind)||named;
+    horseWrap.querySelectorAll("option").forEach(o=>{if(o.value==="eagle")o.disabled=body.faction!=="highElves"||!(cavalry||hero);if(o.value==="yes")o.disabled=body.faction==="dwarfs"||!(cavalry||hero);if(o.value==="wolf")o.disabled=body.faction!=="greenskins"||body.kind!=="wolfRiders";if(o.value==="boar")o.disabled=body.faction!=="greenskins"||body.kind!=="boarBoyz";});
     if(horseWrap.selectedOptions[0]?.disabled)horseWrap.value="no";if(body.kind==="pegasusChampion"){horseWrap.value="eagle";horseWrap.querySelectorAll("option").forEach(o=>{o.disabled=o.value!=="eagle";});}
     offhandLabel.hidden=!(body.faction==="highElves"||((body.kind==="captain"||body.kind==="lord")&&body.faction==="empire"));if(offhandLabel.hidden)offhandCheck.checked=false;
     [...weapon.options].forEach(o=>o.remove());
