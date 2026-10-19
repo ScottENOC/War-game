@@ -999,6 +999,8 @@ function runAIFactionTurn(campaign,faction){
   if(Math.random()<attackChance)declareCampaignWar(campaign,faction.id,enemy.id);
  }
  if(campaign.activeWars.includes(warKey)){
+  const enemyArmy=factionArmy(campaign,enemy.id),race=faction.race||FACTION_BY_ID[faction.id]?.race||"human";
+  if(race==="dwarf"&&enemyArmy?.region===choice.region.id&&army.points<(enemyArmy.points||0)*1.15)return faction.name+" holds its defensive line rather than attacking a stronger enemy at "+choice.region.name+".";
   army.region=choice.region.id;army.nodeId="city-"+choice.region.id;
   resolveStrategicBattle(campaign,faction,enemy,choice.region);
   return faction.name+" wages war against "+enemy.name+".";
