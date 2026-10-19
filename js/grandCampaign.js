@@ -968,7 +968,7 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  }
 }
 function runAIFactionTurn(campaign,faction){
- replenishRecruitmentPool(faction);
+ growFactionRecruitment(campaign,faction);
  const owned=campaign.regions.filter(r=>politicalOwner(r)===faction.id);
  faction.income=owned.reduce((sum,r)=>sum+campaignCityIncome(r),0);
  faction.turnsTaken=(faction.turnsTaken||0)+1;
@@ -1030,9 +1030,9 @@ function endCampaignTurn(){
   syncPlayerArmyState();
   player.turnsTaken=(player.turnsTaken||0)+1;
  }
- replenishRecruitmentPool(player);
+ for(const region of activeCampaign.regions||[])if(politicalOwner(region)===player.id)growSettlementRecruitment(region);
  activeCampaign.turn++;activeCampaign.activeFaction=playerId;
- for(const army of playerArmies())army.movement=activeCampaign.commander.maxMovement;
+ activeCampaign.commander.maxMovement=(FACTION_BY_ID[playerId]?.race==="elf"?4:3);activeCampaign.commander.movement=activeCampaign.commander.maxMovement;for(const army of playerArmies())army.movement=activeCampaign.commander.maxMovement;
  const activeArmy=selectedPlayerArmy();if(activeArmy){activeCampaign.commander.nodeId=activeArmy.nodeId;activeCampaign.commander.region=activeArmy.region;activeCampaign.commander.movement=activeArmy.movement;}
  activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Cities provide income; armies cost upkeep and supplies. "+processed.length+" AI faction turns completed. "+(logisticsEvents.slice(0,2).join(" ")+" ") +(processed.slice(0,2).join(" ")||"The realms consolidate their positions.")+" Your movement is replenished.";
  saveCampaign();renderCampaignMap();
