@@ -1,4 +1,4 @@
-import { FACTIONS } from "./factions.js?v=20261020-starwarden-v1";
+import { FACTIONS } from "./factions.js?v=20261020-starwarden-v2";
 
 export function unitCost(config, faction) {
   const elf=faction==="highElves",dwarf=faction==="dwarfs",green=faction==="greenskins",type=config.type,models=config.models||1,character=["captain","lord","mageHero","mageLord","starwardenLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric","goblinHero","goblinLord","orcHero","orcLord"].includes(type),eagleKit=elf&&(character||type==="cavalry")&&(config.mountType==="eagle"||type==="pegasusChampion"),dragonCosts={youngDragon:140,dragon:220,ancientDragon:320,wyvern:100};
