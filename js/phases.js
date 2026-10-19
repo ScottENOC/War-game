@@ -4,7 +4,7 @@ function resolveGreenskinAnimosity({S,units,alive,roll,say,enemies,dist,canPlace
   const moveStraight=(u,angle)=>{
     const maxMove=Math.max(0,u.baseMove||u.stats.M||0),startX=u.x,startY=u.y,stepPixels=W()/BATTLEFIELD_WIDTH_IN,steps=Math.max(1,Math.ceil(maxMove*4));let moved=0;
     for(let i=1;i<=steps;i++){const inches=maxMove*i/steps,nx=startX+Math.cos(angle)*inches*stepPixels/W(),ny=startY+Math.sin(angle)*inches*stepPixels/H();if(!canPlace(u,nx,ny,angle))break;u.x=nx;u.y=ny;moved=inches;}
-    u.facing=angle;u.moved=true;u.moveUsed=moved;return moved;
+    u.facing=angle;u.moved=false;u.moveUsed=0;return moved;
   };
   all.filter(u=>u.faction==="greenskins").forEach(u=>{
     if(u.baseMove!=null&&u.stats&&u.animosityEligible)u.stats.M=u.baseMove;
