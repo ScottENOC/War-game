@@ -4,7 +4,7 @@ export function createRules({ roll, units = () => [] }) {
   function woundTarget(strength,toughness) { if(strength<=0||toughness<=0)return null;if(strength>=toughness*2)return 2;if(strength>toughness)return 3;if(strength===toughness)return 4;if(strength*2>toughness)return 5;if(strength*2===toughness)return 6;return null; }
   function saveTarget(defender,strength,armourPiercing=0) {
     const type=defender.armour||(defender.lightArmour?"light":"none");
-    const base=defender.intrinsicArmourSave|| (type==="fullPlate"?4:type==="heavy"?5:type==="light"?6:(defender.shield||defender.barding?7:0));
+    const base=defender.magicSuppressed&&defender.magicArmour?5:(defender.intrinsicArmourSave|| (type==="fullPlate"?4:type==="heavy"?5:type==="light"?6:(defender.shield||defender.barding?7:0)));
     if(!base)return null;
     return base+Math.max(0,strength-3)+Math.max(0,armourPiercing)-(defender.shield?1:0)-(defender.mountStats?1:0)-(defender.barding?1:0);
   }
@@ -120,7 +120,7 @@ export function createRules({ roll, units = () => [] }) {
     const charging=!!context.charging, isRider=context.attackComponent!=="mount";
     const dualBonus=mode==="melee"&&u.dualWield&&isRider?1:0;
     const weapons=u.meleeWeapons||[u.weapon||"handWeapon"];
-    const hasMagicSword=mode==="melee"&&isRider&&(u.weapon==="magicSword"||weapons.includes("magicSword"));
+    const hasMagicSword=mode==="melee"&&isRider&&!u.magicSuppressed&&(u.weapon==="magicSword"||weapons.includes("magicSword"));
     const lesserWeapon=weapons.find(w=>w!=="magicSword"&&["handWeapon","offhandWeapon"].includes(w));
     const plans=hasMagicSword&&lesserWeapon
       ?[{weapon:lesserWeapon,attacksPerModel:1},{weapon:"magicSword",attacksPerModel:u.stats.A+dualBonus}]
@@ -129,7 +129,7 @@ export function createRules({ roll, units = () => [] }) {
       const weapon=plan.weapon;
       const strengthBonus=context.attackComponent==="mount"?0:(weapon==="greatWeapon"?2:weapon==="halberd"?1:(charging&&weapon==="lance"?2:charging&&weapon==="spear"?1:0));
       const magicSword=weapon==="magicSword"&&isRider;
-      const attacker={...u,weapon,stats:{...u.stats,WS:u.stats.WS+(charging&&u.magicalLance&&weapon==="lance"?1:0),S:u.stats.S+strengthBonus+(magicSword?1:0),A:u.stats.A+(magicSword?1:0)+dualBonus}};
+      const attacker={...u,weapon,stats:{...u.stats,WS:u.stats.WS+(charging&&u.magicalLance&&!u.magicSuppressed&&weapon==="lance"?1:0),S:u.stats.S+strengthBonus+(magicSword?1:0),A:u.stats.A+(magicSword?1:0)+dualBonus}};
       const attackContext={...context,attacker,attacksPerModel:plan.attacksPerModel,rerollOnesMelee:!!u.skills?.rerollOnesMelee,rerollOnesShooting:!!u.skills?.rerollOnesShooting};
       for(const attackerPool of modelPools(attacker,mode,attackContext))pools.push(...rollPool(attackerPool,target,mode,attackContext,v));
     }
