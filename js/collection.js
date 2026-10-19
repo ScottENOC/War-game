@@ -177,7 +177,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const faction=field("Faction",[{value:"empire",label:"Human / Empire"},{value:"highElves",label:"High Elf"},{value:"dwarfs",label:"Dwarf"},{value:"greenskins",label:"Greenskins"}],"empire");
    const kind=field("Main body",bodyKinds.map(b=>({value:b.id,label:b.label})),bodyKinds[0].id);
    const weapon=field("Arms / weapon",[], "right_sword");
-   const horseWrap=field("Mount",[{value:"no",label:"No mount"},{value:"yes",label:"Add horse"},{value:"eagle",label:"Pegasus (High Elves)"}],"no");
+   const horseWrap=field("Mount",[{value:"no",label:"No mount"},{value:"yes",label:"Add horse"},{value:"eagle",label:"Pegasus (High Elves)"},{value:"wolf",label:"Wolf (Greenskins)"},{value:"boar",label:"Boar (Greenskins)"}],"no");
    const refresh=()=>{
     const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=["cavalry","wolfRiders","boarBoyz"].includes(body.kind);const named=!!body.namedCharacter;const hero=["captain","lord","dwarfCaptain","dwarfLord","goblinHero","goblinLord","orcHero","orcLord"].includes(body.kind)||named;
     horseWrap.querySelectorAll("option").forEach(o=>{if(o.value==="eagle")o.disabled=body.faction!=="highElves"||!(cavalry||hero);if(o.value==="yes")o.disabled=body.faction==="dwarfs"||!(cavalry||hero);if(o.value==="wolf")o.disabled=body.faction!=="greenskins"||body.kind!=="wolfRiders";if(o.value==="boar")o.disabled=body.faction!=="greenskins"||body.kind!=="boarBoyz";});
@@ -199,7 +199,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const p=document.createElement("p");p.className="subtle";p.textContent="A finished model consumes its main body, the selected arms, and a horse if mounted. Elf and human arms are interchangeable.";panel.append(p);
    const assemble=document.createElement("button");assemble.className="primary-button";assemble.textContent="Assemble model";
    assemble.addEventListener("click",()=>{
-    const body=bodyKinds.find(b=>b.id===kind.value),named=!!body.namedCharacter,arms=named?{id:"signature",kind:"signature",weapon:body.kind==="legendaryLord"?"handWeapon":body.kind==="pegasusChampion"?"lance":"magicBow"}:bitDefs.find(b=>b.id===weapon.value),mountType=horseWrap.value==="eagle"?"eagle":horseWrap.value==="yes"?"horse":"none",mounted=mountType!=="none"&&(body.kind==="cavalry"||body.kind==="captain"||body.kind==="lord"||body.kind==="legendaryLord"||body.kind==="pegasusChampion");
+    const body=bodyKinds.find(b=>b.id===kind.value),named=!!body.namedCharacter,arms=named?{id:"signature",kind:"signature",weapon:body.kind==="legendaryLord"?"handWeapon":body.kind==="pegasusChampion"?"lance":"magicBow"}:bitDefs.find(b=>b.id===weapon.value),mountType=["eagle","wolf","boar"].includes(horseWrap.value)?horseWrap.value:horseWrap.value==="yes"?"horse":"none",mounted=mountType!=="none"&&(body.kind==="cavalry"||["wolfRiders","boarBoyz","captain","lord","dwarfCaptain","dwarfLord","goblinHero","goblinLord","orcHero","orcLord","legendaryLord","pegasusChampion"].includes(body.kind));
     if(body.faction!==faction.value){status.textContent="Choose a main body matching the selected faction.";return;}
     if(mounted&&arms.weapon==="halberd"){status.textContent="Halberds cannot be used by mounted models.";return;}
     if(mountType==="eagle"&&(body.faction!=="highElves"||arms.weapon==="halberd")){status.textContent="Pegasi are available to High Elves and cannot carry halberds.";return;}
