@@ -104,6 +104,16 @@ function reformCombatPairs(){const pairs=[];units().filter(u=>u.engaged&&alive(u
 let render = () => {};
 const COMBAT = createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render: () => render(), endTurn, finishBattle, reformCombatPairs, pursueAfterBreak, panicNearby, leadership });
 const { resolveCombat, resolveBreak, continueBreakTests } = COMBAT;
+function resolveAnimosityBrawl(a,b){
+ const aModels=Math.min(Math.max(1,Math.floor(a.formationWidth||5)),a.models||0),bModels=Math.min(Math.max(1,Math.floor(b.formationWidth||5)),b.models||0);
+ const aAttack=meleeAttack(a,b,{attackingModels:aModels,attackingChampion:false,charging:true});
+ const bAttack=meleeAttack(b,a,{attackingModels:bModels,attackingChampion:false,charging:true});
+ applyDamage(b,aAttack.wounds,false,aAttack.cascadePlan);
+ applyDamage(a,bAttack.wounds,false,bAttack.cascadePlan);
+ const dx=(b.x-a.x)*W(),dy=(b.y-a.y)*H(),length=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx),step=W()/BATTLEFIELD_WIDTH_IN*.5;
+ a.x-=Math.cos(angle)*step/W();a.y-=Math.sin(angle)*step/H();b.x+=Math.cos(angle)*step/W();b.y+=Math.sin(angle)*step/H();
+ say("Greenskin brawl: "+a.name+" inflicts "+aAttack.wounds+" wound(s); "+b.name+" inflicts "+bAttack.wounds+" wound(s). Casualties are removed, but no combat result or panic test is made.");
+}
 function checkSiegeDeadline(){if(S.battleType!=="siege"||S.turn<=10)return false;const castle=(S.terrain||[]).find(t=>t.type==="siegeCastle"),attackerSide=S.siegeRole==="attacker"?"player":"ai",breached=!!castle&&units().some(u=>u.side===attackerSide&&alive(u)&&!u.fled&&!u.wallLevel&&u.x>castle.left&&u.x<castle.right&&u.y>castle.top&&u.y<castle.bottom),playerAttacks=attackerSide==="player";finishBattle(breached?(playerAttacks?"Player wins the siege: the attackers have breached the castle.":"Opponent wins the siege: the attackers have breached the castle."):(playerAttacks?"Opponent wins the siege: the defenders hold the castle through turn 10.":"Player wins the siege: the defenders hold the castle through turn 10."));return true;}
 function endTurn(){S.combatResolved=false;units().forEach(u=>{u.charged=false;u.defendedWallCombat=false;if(!alive(u)||u.fled||!u.engagedWith||!alive(S.units[u.engagedWith])||S.units[u.engagedWith].fled){u.engaged=false;u.engagedWith=null;u.engagedSide=null;u.chargedSide=null;u.attackedFromSide=null;u.flankedBy=null;}});units().filter(u=>u.wallLevel&&!u.engaged&&u.wallSegment).forEach(u=>{u.cover="hard";u.wallDefence={wall:u.wallSegment,posture:"active",wasSkirmishing:true};});S.turn++;if(checkSiegeDeadline())return;say("Turn "+S.turn+" begins.");setPhase("charges");}
 function finishBattle(msg){
@@ -124,7 +134,7 @@ const view={zoom:.55,x:0,y:0};
 const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_IN, BATTLEFIELD_WIDTH_IN, MODEL_BASE_IN, shape, view });
 const { setupCanvas, draw } = RENDERING;
 function requestRender(){ render(); }
-const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, PX_PER_IN, BOW_RANGE, roll, dist, enemies, say, shoot, render:requestRender, startActivations, canPlace, canCharge, testTerrorAtTurnStart, testChargePsychology, resolveCombat });
+const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, PX_PER_IN, BOW_RANGE, roll, dist, enemies, say, shoot, render:requestRender, startActivations, canPlace, canCharge, testTerrorAtTurnStart, testChargePsychology, resolveCombat, resolveAnimosityBrawl });
 const { setPhase, declareCharge, fleeFromCharge, finishMovement, passCharges, aiChargeStep, resolveDeclaredCharges } = PHASES;
 const UI = createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, resolvePursuit, reset, validDeployment, canPlace, rallyUnit, rallyingCall, fleeFromCharge, say, equipMeleeWeapon, setRangedMode, shape, PX_PER_IN, terrain:()=>S.terrain, BATTLEFIELD_WIDTH_IN, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
 const renderUI = UI.render;
