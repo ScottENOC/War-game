@@ -17,10 +17,10 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
   }
   function combatantAlive(u) { return !!u && u.models > 0 && !u.fled; }
   function combatUnitStrength(u){if(!u)return 0;if(Number.isFinite(u.unitStrength))return u.unitStrength;if(u.isDragon||u.isDragonRider)return 6;if(u.isCavalry)return Math.max(0,u.models)*2;return Math.max(0,u.models||0);}
-  function captureFighter(u, host=u) {
+  function captureFighter(u, host=u, component="rider") {
     const champion = !!(u.champion?.enabled && u.championAlive !== false && u.models > 0);
     const rankWidth=Math.max(1,Math.floor(u.formationWidth||5));
-    const eligibleModels = u.isCharacter ? 1 : Math.min(rankWidth*(u.spears&&!host.charged?(u.spearRanks||2):1),u.models);
+    const eligibleModels = u.isCharacter ? 1 : u.isChariot ? (component==="mount"?1:Math.max(0,u.models)) : Math.min(rankWidth*(u.spears&&!host.charged?(u.spearRanks||2):1),u.models);
     return { models:u.models, damage:u.damage||0, championAlive:u.championAlive, championWounds:u.championWounds, characterWounds:u.characterWounds, eligibleModels, eligibleChampion:champion, skirmishRound:u.skirmishCombatRound===S.combatRound };
   }
   function resolveCombat(){
@@ -51,7 +51,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
         (host.attachedCharacters||[]).forEach(id=>{const hero=S.units[id];if(hero&&alive(hero)&&!hero.fled){combatants.push({u:hero,host,component:"rider"});if(hero.mountStats)combatants.push({u:hero,host,component:"mount"});}});
       });
       const keyOf=c=>c.u.id+":"+c.component;
-      const snapshots=new Map(combatants.map(c=>[keyOf(c),captureFighter(c.u,c.host)]));
+      const snapshots=new Map(combatants.map(c=>[keyOf(c),captureFighter(c.u,c.host,c.component)]));
       const attackedPackets=new Set();
       const levels=[...new Set(combatants.map(c=>effectiveI(c.u,c.host,c.component)))].sort((a,b)=>b-a);
       levels.forEach(initiative=>{
