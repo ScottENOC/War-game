@@ -379,7 +379,6 @@ function ensureSettlementState(campaign){
   if(!Array.isArray(region.settlement.buildings))region.settlement.buildings=initialSettlement(city).buildings;
   if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
   ensureSettlementRecruitment(region);
-  ensureSettlementRecruitment(region);
  }
  campaign.schemaVersion=7;
  if(!campaign.factionStates){campaign.factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id),generated=createCampaignArmyRoster(profile.id,profile.id===campaign.playerPoliticalFaction?1000:500);return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:generated.faction,roster:generated.roster,homeRegion:home.id,alive:true,treasury:profile.id===campaign.playerPoliticalFaction?Number(campaign.treasury)||500:300,income:100,armyPoints:profile.id===campaign.playerPoliticalFaction?1000:500,turnsTaken:0,relations:{},};});campaign.factionTurnOrder=campaign.factionStates.map(f=>f.id);campaign.playerPoliticalFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[1].id;campaign.activeFaction=campaign.activeFaction||campaign.playerPoliticalFaction;}
@@ -395,6 +394,9 @@ function ensureSettlementState(campaign){
   });
   const player=campaign.factionStates.find(f=>f.id===campaign.playerPoliticalFaction);if(player)campaign.treasury=player.treasury;
  }
+ const playerRace=FACTION_BY_ID[campaign.playerPoliticalFaction]?.race||"human";
+ if(campaign.commander){campaign.commander.maxMovement=playerRace==="elf"?4:3;campaign.commander.movement=Math.min(campaign.commander.maxMovement,Number(campaign.commander.movement)||campaign.commander.maxMovement);}
+ for(const army of campaign.armies||[])if(army.owner===campaign.playerPoliticalFaction||army.factionId===campaign.playerPoliticalFaction)army.movement=Math.min(campaign.commander?.maxMovement||3,Number(army.movement)||0);
  return campaign;
 }
 function addDisplacedPeople(settlement,culture,count){
