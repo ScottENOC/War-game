@@ -1,15 +1,15 @@
-import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-starwarden-v3";
-import { createRoguelike } from "./roguelike.js?v=20261020-starwarden-v3";
-import { createArmyBuilder } from "./armyBuilder.js?v=20261020-starwarden-v3";
-import { createCollectionManager } from "./collection.js?v=20261020-starwarden-v3";
+import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-mage-models-v1";
+import { createRoguelike } from "./roguelike.js?v=20261020-mage-models-v1";
+import { createArmyBuilder } from "./armyBuilder.js?v=20261020-mage-models-v1";
+import { createCollectionManager } from "./collection.js?v=20261020-mage-models-v1";
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js?v=greenskin-roster-v3";
-import { createRules } from "./rules.js?v=20261020-starwarden-v3";
+import { createRules } from "./rules.js?v=20261020-mage-models-v1";
 import { createShooting } from "./shooting.js?v=20261020-nullification-dome-v1";
 import { createCombat } from "./combat.js?v=20261015-fear-rules-v1";
 import { createRendering } from "./rendering.js?v=20261020-nullification-dome-v1";
 import { createInput } from "./input.js?v=20261020-nullification-dome-v1";
-import { createUI } from "./ui.js?v=20261020-starwarden-v3";
+import { createUI } from "./ui.js?v=20261020-mage-models-v1";
 import { createPhases } from "./phases.js?v=20261019-animosity-v3";
 import { createDice } from "./dice.js";
 import { createMovement } from "./movement.js";
@@ -258,7 +258,7 @@ function validateArmy(army,faction){
    if(["youngDragon","dragon","ancientDragon"].includes(entry.type)){if(faction!=="highElves")shortages.push("Dragons are only available to the High Elves.");continue;}
   const character=["captain","lord","mageHero","mageLord","starwardenLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","legendaryLord","shadowElf","pegasusChampion","dwarfCaptain","dwarfLord","dwarfKingHaldric","rifleman","captainWeiss","goblinHero","goblinLord","orcHero","orcLord"].includes(entry.type);
   if(entry.type==="orcLord"&&entry.mountType==="wyvern"){if(faction!=="greenskins")shortages.push("Only Orc Warbosses may ride Wyverns.");continue;}if(entry.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(entry.mountType)){if(faction!=="highElves")shortages.push("Only High Elf Lords may ride dragons.");continue;}
-  const collectionType=entry.type==="mageHero"?"captain":entry.type==="mageLord"?"lord":entry.type==="goblinShaman"?"goblinHero":entry.type==="goblinGreatShaman"?"goblinLord":entry.type==="orcShaman"?"orcHero":entry.type==="orcGreatShaman"?"orcLord":entry.type;const count=character?1:(entry.models||1);
+  const collectionType=entry.type;const count=character?1:(entry.models||1);
   const mounted=entry.type==="cavalry"||(character&&!!entry.mounted),expectedMount=mounted?(entry.mountType||(entry.type==="cavalry"?"horse":"horse")):"none";
   const matches=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&(m.type===collectionType||(["swordsmen","archers"].includes(entry.type)&&["swordsmen","archers"].includes(m.type)))&&!!m.mounted===mounted&&(m.mountType||(m.mounted?"horse":"none"))===expectedMount);
   if(matches.length<count)shortages.push((count-matches.length)+" "+entry.type+" model(s) needed"+(mounted?" mounted":""));
