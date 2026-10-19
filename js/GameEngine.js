@@ -9,7 +9,7 @@ import { createShooting } from "./shooting.js?v=20261020-nullification-dome-v1";
 import { createCombat } from "./combat.js?v=20261015-fear-rules-v1";
 import { createRendering } from "./rendering.js?v=20261020-nullification-dome-v1";
 import { createInput } from "./input.js?v=20261020-nullification-dome-v1";
-import { createUI } from "./ui.js?v=20261020-nullification-dome-v1";
+import { createUI } from "./ui.js?v=20261020-starwarden-v1";
 import { createPhases } from "./phases.js?v=20261019-animosity-v3";
 import { createDice } from "./dice.js";
 import { createMovement } from "./movement.js";
