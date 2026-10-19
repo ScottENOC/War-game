@@ -1,4 +1,4 @@
-export function createRules({ roll, units = () => [] }) {
+export function createRules({ roll, units = () => [], say = () => {} }) {
   function rankBonus(u) { const width=Math.max(1,Math.floor(u.formationWidth||5)); if(width<4)return 0; const full=Math.floor(u.models/width),remainder=u.models%width; return Math.min(3,Math.max(0,full-1)+(remainder>=4?1:0)); }
   function hitTarget(attacker,defender) { if(attacker>defender)return 3;if(defender>attacker*2)return 5;return 4; }
   function woundTarget(strength,toughness) { if(strength<=0||toughness<=0)return null;if(strength>=toughness*2)return 2;if(strength>toughness)return 3;if(strength===toughness)return 4;if(strength*2>toughness)return 5;if(strength*2===toughness)return 6;return null; }
@@ -108,6 +108,8 @@ export function createRules({ roll, units = () => [] }) {
       const saveNeed=mode==="melee"&&context.attackComponent!=="mount"&&context.attacker?.ignoreArmourSaves&&!context.attacker?.magicSuppressed?null:saveTarget(tier,attackerPool.stats.S,mode==="shooting"?(context.armourPiercing||0):0);g.saveNeed=saveNeed;let saved=false;
       if(saveNeed!==null&&saveNeed<=6){const sr=roll(1)[0];g.saveRolls.push(sr);saved=sr!==1&&sr>=saveNeed;}
       if(!saved&&tier.wardSave&&(!tier.wardSaveFrontOnly||tier.shield)){const wn=parseInt(tier.wardSave,10);g.wardNeed=wn;if(Number.isFinite(wn)){const wrd=roll(1)[0];g.wardRolls.push(wrd);if(wrd!==1&&wrd>=wn){g.wardSaved++;saved=true;}}}
+      const fateward=tier.kind==="character"&&tier.hero?.type==="starwardenLord"&&!tier.hero.magicSuppressed&&(tier.hero.casterLevel-(tier.hero.castingDiceUsed||0))>0;const fatewardActive=!!context.reactionState[tier.id];if(!saved&&fateward&&!fatewardActive){const level=tier.hero.casterLevel||5,powerDie=roll(1)[0];tier.hero.castingDiceUsed=(tier.hero.castingDiceUsed||0)+1;context.reactionState[tier.id]=true;say("Eldrin Starwarden casts Fateward as a reaction: one power die rolls "+powerDie+" + caster level "+level+" (CV 1). He gains a 2+ ward save against wounds from this attack sequence.");}
+      if(!saved&&context.reactionState[tier.id]){const wrd=roll(1)[0];g.wardNeed=2;g.wardRolls.push(wrd);if(wrd!==1&&wrd>=2){g.wardSaved++;saved=true;}say("Fateward ward save: "+wrd+" — "+(saved?"saved":"wound gets through")+".");}
       if(saved){g.saved++;continue;}g.wounds++;
       if(tier.kind==="rankFile"||tier.kind==="dragon"){v.rankFileDamage++;if(v.rankFileDamage>=Math.max(1,tier.stats.W)){v.rankFileDamage=0;v.rankFiles--;v.rankFileLost++;}}
       else if(tier.kind==="champion"){v.championWounds--;if(v.championWounds<=0){v.championAlive=false;v.championKilled=true;}}
@@ -116,7 +118,7 @@ export function createRules({ roll, units = () => [] }) {
     return [...groups.values()];
   }
   function attack(u,target,mode,context={}) {
-    const v=newVirtual(target),pools=[];
+    const v=newVirtual(target),pools=[];context={...context,reactionState:{}};
     const charging=!!context.charging, isRider=context.attackComponent!=="mount";
     const dualBonus=mode==="melee"&&u.dualWield&&isRider?1:0;
     const weapons=u.meleeWeapons||[u.weapon||"handWeapon"];
