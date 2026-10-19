@@ -872,7 +872,8 @@ function campaignArmyRace(army,campaign=activeCampaign){
 }
 function campaignUnitMovementClass(unit){
  const type=String(unit?.type||"").toLowerCase();
- if(["cavalry","wolfriders","boarboyz","wolfrider","horsecavalry"].includes(type)||unit?.mounted||["horse","wolf","boar","eagle","pegasus"].includes(unit?.mountType))return "cavalry";
+ if(["dragon","youngdragon","ancientdragon","pegasuschampion"].includes(type)||unit?.flying||["eagle","pegasus"].includes(unit?.mountType))return "flyer";
+ if(["cavalry","wolfriders","boarboyz","wolfrider","horsecavalry"].includes(type)||unit?.mounted||["horse","wolf","boar"].includes(unit?.mountType))return "cavalry";
  return "foot";
 }
 function campaignArmyMovementProfile(army,campaign=activeCampaign){
@@ -880,7 +881,9 @@ function campaignArmyMovementProfile(army,campaign=activeCampaign){
  const characterTypes=new Set(["captain","lord","legendarylord","shadowelf","pegasuschampion","dwarfcaptain","dwarflord","dwarfkinghaldric","goblinhero","goblinlord","orchero","orclord"]);
  const units=roster.filter(u=>!characterTypes.has(String(u?.type||"").toLowerCase()));
  const main=units.length?units:roster;
- const allCavalry=main.length>0&&main.every(u=>campaignUnitMovementClass(u)==="cavalry");
+ const classes=main.map(campaignUnitMovementClass);
+ const allFlying=classes.length>0&&classes.every(c=>c==="flyer");
+ const allCavalry=classes.length>0&&classes.every(c=>c==="cavalry");
  const cavalry=main.filter(u=>campaignUnitMovementClass(u)==="cavalry");
  const infantry=main.filter(u=>campaignUnitMovementClass(u)==="foot");
  const hasHeavyArmouredInfantry=infantry.some(u=>!!(u.heavyArmour||u.upgrades?.heavyArmour||u.upgrades?.heavy_armour));
@@ -891,7 +894,7 @@ function campaignArmyMovementProfile(army,campaign=activeCampaign){
   const barded=cavalry.some(u=>!!(u.barding||u.upgrades?.barding));
   points=barded?7:8;
  }else if(race==="human"||race==="undead"||race==="greenskin")points=hasHeavyArmouredInfantry?3:4;
- return {points,allFlying:false,allCavalry,hasFlying:false,race,classes:main.map(campaignUnitMovementClass)};
+ return {points,allFlying,allCavalry,race,classes};
 }
 function campaignSupplyRange(army,campaign=activeCampaign){
  const profile=campaignArmyMovementProfile(army,campaign);
@@ -911,14 +914,25 @@ function campaignMovementPath(campaign,from,to){
 function moveCommander(id){
  if(!activeCampaign)return;
  const army=selectedPlayerArmy(),from=army?.nodeId||activeCampaign.commander.nodeId,n=activeCampaign.graph.nodes[id],edge=(activeCampaign.graph.edges[from]||[]).find(e=>e.to===id);
- const path=campaignMovementPath(activeCampaign,from,id);
- if(!n||!path||!edge){activeCampaign.lastEvent="You can only move along a connected road.";renderCampaignMap();return;}
+ const profile=army?campaignArmyMovementProfile(army,activeCampaign):{allFlying:false};
+ const path=campaignMovementPath(activeCampaign,from,id),flying=!!profile.allFlying;
+ if(!n||!path||(!edge&&!flying)){activeCampaign.lastEvent="You can only move along connected roads. A flying army can leap over an intervening army, but cannot travel cross-country.";renderCampaignMap();return;}
+ if(flying&&path.slice(1,-1).some(nodeId=>{
+  const node=activeCampaign.graph.nodes[nodeId];
+  if(node?.type!=="city")return false;
+  const region=activeCampaign.regions.find(r=>r.id===node.region);
+  return region&&politicalOwner(region)!==(army?.owner||army?.factionId);
+ })){activeCampaign.lastEvent="Flying armies can leap over an intervening army, but cannot bypass enemy-held settlements.";renderCampaignMap();return;}
  const movement=army?.movement??activeCampaign.commander.movement;
- const cost=edge.cost+nodeCost(n)-1;
+ let cost=0;
+ for(let i=1;i<path.length;i++){
+  const next=activeCampaign.graph.nodes[path[i]],step=(activeCampaign.graph.edges[path[i-1]]||[]).find(e=>e.to===path[i]);
+  cost+=(step?.cost||1)+nodeCost(next)-1;
+ }
  if(cost>movement){activeCampaign.lastEvent="Not enough movement remaining to reach "+n.label+".";renderCampaignMap();return;}
  activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement=movement-cost;
  if(army){army.nodeId=id;army.region=n.region;army.movement=movement-cost;}
- activeCampaign.lastEvent=(army?.name||activeCampaign.commander.name)+" moves to "+n.label+". "+activeCampaign.commander.movement+" movement remaining.";
+ activeCampaign.lastEvent=(army?.name||activeCampaign.commander.name)+(flying&&path.length>2?" leaps over an intervening army and moves along the road network to ":" moves to ")+n.label+". "+activeCampaign.commander.movement+" movement remaining.";
  saveCampaign();renderCampaignMap();
 }
 function politicalOwner(region){return region?.ownerFaction||region?.politicalFactionId||FACTION_PROFILES[region?.id]?.id;}
