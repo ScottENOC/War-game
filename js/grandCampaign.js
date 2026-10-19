@@ -142,18 +142,77 @@ function campaignArmyCost(army){
  return Math.max(0,Math.round((army?.roster||[]).reduce((sum,u)=>sum+unitCost(u,army.rosterFaction||"empire"),0)));
 }
 function campaignArmyUpkeep(army){return Math.ceil(campaignArmyCost(army)*.04);}
-function recruitArmyModels(army,faction,budget){
+function recruitmentPoolSettings(race){
+ if(race==="elf")return {initial:20,maximum:30,growth:1};
+ if(race==="dwarf")return {initial:26,maximum:40,growth:2};
+ if(race==="greenskin")return {unlimited:true,initial:null,maximum:null,growth:0};
+ return {initial:40,maximum:60,growth:4};
+}
+function ensureRecruitmentPool(faction){
+ if(!faction)return null;
+ const settings=recruitmentPoolSettings(faction.race||FACTION_BY_ID[faction.id]?.race||"human");
+ if(settings.unlimited){faction.recruitmentPool=null;faction.recruitmentPoolUnlimited=true;return settings;}
+ faction.recruitmentPoolUnlimited=false;
+ if(!Number.isFinite(faction.recruitmentPool))faction.recruitmentPool=settings.initial;
+ faction.recruitmentPool=Math.max(0,Math.min(settings.maximum,faction.recruitmentPool));
+ return settings;
+}
+function recruitmentPoolAvailable(faction){
+ const settings=ensureRecruitmentPool(faction);
+ return !faction?0:settings?.unlimited?Infinity:Math.max(0,Number(faction.recruitmentPool)||0);
+}
+function replenishRecruitmentPool(faction){
+ const settings=ensureRecruitmentPool(faction);
+ if(!faction||settings?.unlimited)return 0;
+ const before=faction.recruitmentPool;
+ faction.recruitmentPool=Math.min(settings.maximum,before+settings.growth);
+ return faction.recruitmentPool-before;
+}
+function consumeRecruitmentPool(faction,count){
+ if(!faction||count<=0)return false;
+ if(recruitmentPoolAvailable(faction)<count)return false;
+ if(!faction.recruitmentPoolUnlimited)faction.recruitmentPool=Math.max(0,faction.recruitmentPool-count);
+ return true;
+}
+function civilianPopulation(region){
+ return Math.max(0,Math.floor(Number(region?.settlement?.population?.total)||0));
+}
+function consumeCivilianPopulation(region,count){
+ count=Math.max(0,Math.floor(Number(count)||0));
+ if(!region?.settlement?.population||civilianPopulation(region)<count)return false;
+ const population=region.settlement.population;
+ let remaining=count;
+ for(const group of [...(population.groups||[])].sort((a,b)=>(b.count||0)-(a.count||0))){
+  const loss=Math.min(Math.max(0,group.count||0),remaining);
+  group.count-=loss;remaining-=loss;if(!remaining)break;
+ }
+ if(remaining>0)return false;
+ population.total=Math.max(0,civilianPopulation(region)-count);
+ return true;
+}
+function recruitmentCapacity(army){
+ const faction=selectedFactionTreasury(),region=activeCampaign?.regions?.find(r=>r.id===army?.region);
+ return Math.max(0,Math.floor(Math.min(recruitmentPoolAvailable(faction),civilianPopulation(region))));
+}
+function availableForRecruitment(option,army){
+ const available=availableForOption(option),capacity=recruitmentCapacity(army);
+ return option?.fixed?Math.floor(Math.min(available*option.min,capacity)/option.min):Math.min(available,capacity);
+}
+function recruitArmyModels(army,faction,budget,campaign,factionState){
  let spent=0,added=0;
- while(added<5&&budget-spent>0){
-  const unit=(army.roster||[]).find(u=>["swordsmen","dwarfInfantry","archers"].includes(u.type)&&u.models<30);
+ const region=campaign?.regions?.find(r=>r.id===army.region);
+ while(added<5&&budget-spent>0&&recruitmentPoolAvailable(factionState)>0&&civilianPopulation(region)>0){
+  const unit=(army.roster||[]).find(u=>["swordsmen","dwarfInfantry","archers","goblins","orcBoyz"].includes(u.type)&&u.models<30);
   if(!unit)break;
   const before=unitCost({...unit,models:unit.models},faction),after=unitCost({...unit,models:unit.models+1},faction),price=Math.max(1,after-before);
   if(budget-spent<price)break;
+  if(!consumeRecruitmentPool(factionState,1)||!consumeCivilianPopulation(region,1))break;
   unit.models++;spent+=price;added++;
  }
  army.points=campaignArmyCost(army);
  return {spent,added};
 }
+
 function recruitPlayerArmyFromCollection(army,faction,budget,commander=null){
  const models=collectionModels(),profile=FACTION_BY_ID[army.factionId||army.owner],race=profile?.race||"human";
  let spent=0,added=0;
@@ -255,6 +314,7 @@ function initialSettlement(city){
  return {historicalTier:p.tier,prosperity:p.prosperity,unrest:0,foodStores:8,maxFoodStores:8,siegeTurns:0,besiegedBy:null,population:{total:pop,groups:[{culture:CULTURE_BY_FACTION[city.faction]||"Local",count:pop}],displaced:0},buildings:p.buildings.map(id=>({id,condition:100})),fortification:{...p.fortification,condition:100,damage:0,upgrades:[]},infrastructureCondition:100,occupationPolicy:"local-administration",monthsUnderOccupation:0};
 }
 function ensureSettlementState(campaign){
+ for(const faction of campaign.factionStates||[])ensureRecruitmentPool(faction);
  const oldSchemaVersion=Number(campaign.schemaVersion)||0;
  for(const region of campaign.regions||[]){
   const city=CITIES.find(c=>c.id===region.id);if(!city)continue;
@@ -854,7 +914,7 @@ function runAIFactionTurn(campaign,faction){
  faction.upkeep=campaignArmyUpkeep(army);
  faction.treasury=Math.max(0,(faction.treasury||0)+faction.income-faction.upkeep);
  const recruitBudget=Math.min(Math.max(0,faction.treasury-100),Math.max(0,Math.floor(faction.income*.35)));
- const recruitment=recruitArmyModels(army,army.rosterFaction||rosterFactionForPoliticalFaction(faction.id),recruitBudget);
+ const recruitment=recruitArmyModels(army,army.rosterFaction||rosterFactionForPoliticalFaction(faction.id),recruitBudget,campaign,faction);
  faction.treasury=Math.max(0,faction.treasury-recruitment.spent);
  faction.armyPoints=army.points;faction.roster=army.roster;
  const region=campaign.regions.find(r=>r.id===army.region)||campaign.regions.find(r=>r.id===faction.homeRegion);
