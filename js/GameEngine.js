@@ -10,7 +10,7 @@ import { createCombat } from "./combat.js?v=20261015-fear-rules-v1";
 import { createRendering } from "./rendering.js?v=20261017-faction-colours-v2";
 import { createInput } from "./input.js?v=greenskin-roster-v3";
 import { createUI } from "./ui.js?v=greenskin-roster-v3";
-import { createPhases } from "./phases.js?v=greenskin-roster-v3";
+import { createPhases } from "./phases.js?v=greenskin-animosity-v1";
 import { createDice } from "./dice.js";
 import { createMovement } from "./movement.js";
 import { createNarrativeCampaign } from "./campaign.js";
@@ -124,7 +124,7 @@ const view={zoom:.55,x:0,y:0};
 const RENDERING = createRendering({ canvas, ctx, S, units, alive, W, H, PX_PER_IN, BATTLEFIELD_WIDTH_IN, MODEL_BASE_IN, shape, view });
 const { setupCanvas, draw } = RENDERING;
 function requestRender(){ render(); }
-const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, PX_PER_IN, BOW_RANGE, roll, dist, enemies, say, shoot, render:requestRender, startActivations, canPlace, canCharge, testTerrorAtTurnStart, testChargePsychology });
+const PHASES = createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, PX_PER_IN, BOW_RANGE, roll, dist, enemies, say, shoot, render:requestRender, startActivations, canPlace, canCharge, testTerrorAtTurnStart, testChargePsychology, resolveCombat });
 const { setPhase, declareCharge, fleeFromCharge, finishMovement, passCharges, aiChargeStep, resolveDeclaredCharges } = PHASES;
 const UI = createUI({ S, $, units, alive, draw, W, H, BOW_RANGE, selectedTarget, dist, passCharges, finishActivation, resolveCombat, endTurn, resolveBreak, resolvePursuit, reset, validDeployment, canPlace, rallyUnit, rallyingCall, fleeFromCharge, say, equipMeleeWeapon, setRangedMode, shape, PX_PER_IN, terrain:()=>S.terrain, BATTLEFIELD_WIDTH_IN, startBattle:()=>{setPhase("charges");say("Battle begins! The opponent's deployment is revealed.");} });
 const renderUI = UI.render;
