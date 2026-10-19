@@ -99,7 +99,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    if(b.kind==="shield")return !m.shield&&(!["greatWeapon","halberd","bow"].includes(m.weapon)||m.faction==="dwarfs");
    if(b.kind==="mount")return (m.type==="captain"||m.type==="lord"||m.type==="dwarfCaptain"||m.type==="dwarfLord"||m.type==="goblinHero"||m.type==="goblinLord"||m.type==="orcHero"||m.type==="orcLord"||["cavalry","wolfRiders","boarBoyz"].includes(m.type))&&!m.mounted&&m.weapon!=="halberd"&&(id!=="eagle"||m.faction==="highElves")&&(id!=="wolf"||m.faction==="greenskins"&&["goblins","goblinHero","goblinLord"].includes(m.type))&&(id!=="boar"||m.faction==="greenskins"&&["orcBoyz","orcHero","orcLord"].includes(m.type))&&m.faction!=="dwarfs";
    if(b.kind==="right")return m.weapon==="none"&&m.type!=="archers"&&m.type!=="swordsmen";
-   if(b.kind==="leftSword")return !m.shield&&!["greatWeapon","halberd","bow","crossbow","firearm"].includes(m.weapon)&&!m.components?.includes("left_sword")&&(m.faction==="highElves"||((m.type==="captain"||m.type==="lord")&&(m.faction==="empire"||m.faction==="greenskins"));
+   if(b.kind==="leftSword")return !m.shield&&!["greatWeapon","halberd","bow","crossbow","firearm"].includes(m.weapon)&&!m.components?.includes("left_sword")&&(m.faction==="highElves"||m.faction==="greenskins"||((m.type==="captain"||m.type==="lord"||m.type==="goblinHero"||m.type==="goblinLord"||m.type==="orcHero"||m.type==="orcLord")&&m.faction==="empire"));
    if(b.kind==="twohand")return m.weapon==="none"&&(b.weapon!=="halberd"||!m.mounted);
    return false;
  };
