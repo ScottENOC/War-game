@@ -1,7 +1,7 @@
 import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=greenskin-roster-v3";
 import { createRoguelike } from "./roguelike.js?v=20261017-abandon-run-v1";
 import { createArmyBuilder } from "./armyBuilder.js?v=greenskin-roster-v3";
-import { createCollectionManager } from "./collection.js?v=greenskin-roster-v3";
+import { createCollectionManager } from "./collection.js?v=20261019-siege-collector-v1";
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js?v=greenskin-roster-v3";
 import { createRules } from "./rules.js?v=20261015-fear-rules-v1";
