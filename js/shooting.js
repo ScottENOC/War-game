@@ -86,7 +86,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     return {visibleModels:visible.length,visibleModelsList:visible,visibleChampion,overUnitPenalty:visiblePenalties.length?Math.max(...visiblePenalties):0,arcShot:visibleArcShot,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
   }
   function shoot(u,target,standShoot) {
-    if(u?.isCannon)return fireCannon(u,target.x,target.y,target);
+    if(u?.isCannon)return fireCannon(u,target.x,target.y,target);if(u?.isCatapult)return fireCannon(u,target.x,target.y,target);
     if(u?.isSiegeEngine&&u.moved&&!u.moveAndFire){say(u.name+" cannot fire after moving without the Move and Fire upgrade.");return false;}
     const host=u.attachedTo?S.units[u.attachedTo]:null;
     if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged)return false;if(u.wallDefence?.posture==="hunker"){say(u.name+" is hunkered behind the wall and cannot shoot until it adopts an active posture.");return false;}if(u.ownsShield&&u.rangedMode!=="bow"){say(u.name+" has its shield ready; switch to bow before shooting.");return false;}
@@ -110,7 +110,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       armourPiercing:u.armourPiercing||0,attackingModels:u.isBoltThrower?6:visibility.visibleModels,attackingChampion:visibility.visibleChampion
     };
     let result,cannonBodyWounds=0,cannonCrewWounds=0,crewCascadePlan=null,cannonSplitInfo=null;
-    if(target.isCannon||target.isBoltThrower){
+    if(target.isCannon||target.isBoltThrower||target.isCatapult){
       const visibleShotModels=u.isBoltThrower?Array.from({length:6},()=>({champion:false})):(visibility.visibleModelsList?.length?visibility.visibleModelsList:Array.from({length:visibility.visibleModels},(_,i)=>({champion:i===0&&visibility.visibleChampion})));
       let bodyShots=0,crewShots=0,bodyChampion=false,crewChampion=false;const allocationRolls=[];
       for(const model of visibleShotModels){const die=roll(1)[0];allocationRolls.push(die);if(die<=4){bodyShots++;bodyChampion=bodyChampion||!!model.champion;}else{crewShots++;crewChampion=crewChampion||!!model.champion;}}
@@ -160,10 +160,11 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     return true;
   }
   function fireCannon(cannon, aimX, aimY, aimedUnit=null) {
-    const isBoltThrower=!!cannon?.isBoltThrower,weaponLabel=isBoltThrower?"bolt thrower":"cannon",projectileLabel=isBoltThrower?"bolt":"cannonball",rangeLimit=cannon?.artilleryRange||(isBoltThrower?48:60),baseStrength=cannon?.artilleryStrength||(isBoltThrower?7:10),armourPiercing=cannon?.artilleryArmourPiercing??(isBoltThrower?0:1);
-    if(!(cannon?.isCannon||cannon?.isBoltThrower)||!cannon.isSiege||cannon.artilleryWounds<=0||cannon.shot||cannon.models<=0||(cannon.moved&&!cannon.moveAndFire)){say("This "+weaponLabel+" cannot fire: it may be disabled, crewless, or already fired this turn.");return false;}
-    const ox=cannon.x*W(),oy=cannon.y*H(),tx=aimX*W(),ty=aimY*H(),dx=tx-ox,dy=ty-oy;
-    const range=Math.hypot(dx,dy)/(W()/BATTLEFIELD_WIDTH_IN);
+    const isBoltThrower=!!cannon?.isBoltThrower,isCatapult=!!cannon?.isCatapult,weaponLabel=isCatapult?"catapult":isBoltThrower?"bolt thrower":"cannon",projectileLabel=isCatapult?"rock":isBoltThrower?"bolt":"cannonball",rangeLimit=cannon?.artilleryRange||(isCatapult||isBoltThrower?48:60),baseStrength=cannon?.artilleryStrength||(isCatapult?3:isBoltThrower?7:10),armourPiercing=cannon?.artilleryArmourPiercing??(isBoltThrower||isCatapult?0:1);
+    if(!(cannon?.isCannon||cannon?.isBoltThrower||cannon?.isCatapult)||!cannon.isSiege||cannon.artilleryWounds<=0||cannon.shot||cannon.models<=0||(cannon.moved&&!cannon.moveAndFire)){say("This "+weaponLabel+" cannot fire: it may be disabled, crewless, or already fired this turn.");return false;}
+    const ox=cannon.x*W(),oy=cannon.y*H();let tx=aimX*W(),ty=aimY*H(),dx=tx-ox,dy=ty-oy;
+    let range=Math.hypot(dx,dy)/(W()/BATTLEFIELD_WIDTH_IN);
+    if(isCatapult){const minimumRange=Math.max(0,12-Math.max(0,cannon.stats.BS||0));if(range<minimumRange){say("The catapult cannot target anything within its minimum range of "+minimumRange.toFixed(1)+" inches.");return false;}const driftDice=roll(2),drift=Math.max(0,driftDice[0]+driftDice[1]-Math.max(0,cannon.stats.BS||0)),toward=roll(1)[0]<=3?-1:1,unitScale=(W()/BATTLEFIELD_WIDTH_IN),length=Math.max(.001,Math.hypot(dx,dy));tx+=toward*drift*unitScale*dx/length;ty+=toward*drift*unitScale*dy/length;dx=tx-ox;dy=ty-oy;range=Math.hypot(dx,dy)/unitScale;say("Catapult range scatter: 2D6 "+driftDice.join(" + ")+" − BS "+Math.max(0,cannon.stats.BS||0)+" = "+drift+" inches, "+(toward<0?"towards":"away from")+" the catapult; the normal directional scatter follows.");}
     const aimElevation=terrainElevationAt(terrain(),tx,ty,W(),H())+(aimedUnit?(aimedUnit.heightIn||1.7)*.75+(aimedUnit.flyingMount&&!aimedUnit.engaged?12:0):0),muzzleElevation=terrainElevationAt(terrain(),ox,oy,W(),H())+(cannon.heightIn||1.7)*.75,elevationDifference=aimElevation-muzzleElevation,maxRange=Math.max(1,rangeLimit-elevationDifference),elevationAngle=Math.atan2(elevationDifference,Math.max(.1,range))*180/Math.PI;
     if(range<0.5){say("Choose a target at least half an inch from the cannon.");return false;}
     if(range>maxRange){say("Target is out of range for the "+weaponLabel+": "+range.toFixed(1)+" inches away; maximum at this elevation is "+maxRange.toFixed(1)+" inches.");return false;}
