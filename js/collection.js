@@ -71,7 +71,7 @@ function load(){
     const type=legacyTypes[m.type]||m.type||"swordsmen";
     const faction=["empire","highElves","dwarfs","greenskins"].includes(m.faction)?m.faction:"empire";
     const weapon=typeof m.weapon==="string"&&m.weapon?m.weapon:"handWeapon";
-    const legacyMount=m.mountType==="greatEagle"?"eagle":m.mountType;const safe={...m,id:typeof m.id==="string"&&m.id?m.id:"recovered-"+(i+1),faction,type,weapon:faction==="dwarfs"&&weapon==="bow"?"crossbow":weapon,shield:!!m.shield,mounted:!!m.mounted,mountType:legacyMount||(m.mounted?"horse":"none"),backWeapons:Array.isArray(m.backWeapons)?m.backWeapons.filter(w=>typeof w==="string").map(w=>faction==="dwarfs"&&w==="bow"?"crossbow":w):[],components:Array.isArray(m.components)?m.components.map(x=>faction==="dwarfs"&&x==="both_bow"?"both_crossbow":faction==="dwarfs"&&x==="back_bow"?"back_crossbow":x):[]};
+    const legacyMount=m.mountType==="greatEagle"?"eagle":m.mountType;const safe={...m,id:typeof m.id==="string"&&m.id?m.id:"recovered-"+(i+1),faction,type,weapon:faction==="dwarfs"&&weapon==="bow"?"crossbow":weapon,shield:!!m.shield,mounted:!!m.mounted,mountType:legacyMount||(m.mounted?"horse":"none"),backWeapons:Array.isArray(m.backWeapons)?m.backWeapons.filter(w=>typeof w==="string").map(w=>faction==="dwarfs"&&w==="bow"?"crossbow":w):[],components:Array.isArray(m.components)?m.components.map(x=>x==="greatEagle"?"eagle":faction==="dwarfs"&&x==="both_bow"?"both_crossbow":faction==="dwarfs"&&x==="back_bow"?"back_crossbow":x):[]};
     if(typeof safe.name!=="string"||!safe.name.trim()){
      const typeLabel=labels[type]||String(type).replace(/([a-z])([A-Z])/g,"$1 $2");
      safe.name=(faction==="empire"?"Empire ":faction==="dwarfs"?"Dwarf ":"High Elf ")+typeLabel+" · "+(labels[weapon]||weapon);
