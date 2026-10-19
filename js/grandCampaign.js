@@ -872,28 +872,30 @@ function campaignArmyRace(army,campaign=activeCampaign){
 }
 function campaignUnitMovementClass(unit){
  const type=String(unit?.type||"").toLowerCase();
- if(["dragon","youngdragon","ancientdragon","pegasuschampion"].includes(type)||unit?.flying||unit?.mountType==="eagle"||unit?.mountType==="pegasus")return "flyer";
- if(["cavalry","wolfriders","boarboyz","wolfrider","horsecavalry"].includes(type)||unit?.mounted||["horse","wolf","boar"].includes(unit?.mountType))return "cavalry";
+ if(["cavalry","wolfriders","boarboyz","wolfrider","horsecavalry"].includes(type)||unit?.mounted||["horse","wolf","boar","eagle","pegasus"].includes(unit?.mountType))return "cavalry";
  return "foot";
 }
 function campaignArmyMovementProfile(army,campaign=activeCampaign){
  const race=campaignArmyRace(army,campaign),roster=(army?.roster||[]).filter(u=>(u.models||1)>0);
- const classes=roster.map(campaignUnitMovementClass);
  const characterTypes=new Set(["captain","lord","legendarylord","shadowelf","pegasuschampion","dwarfcaptain","dwarflord","dwarfkinghaldric","goblinhero","goblinlord","orchero","orclord"]);
- const main=classes.filter((c,i)=>!characterTypes.has(String(roster[i]?.type||"").toLowerCase()));
- const units=main.length?main:classes;
- const allFlying=units.length>0&&units.every(c=>c==="flyer");
- const allCavalry=units.length>0&&units.every(c=>c==="cavalry");
- const hasFlying=units.some(c=>c==="flyer");
- let points=race==="elf"||race==="dwarf"?4:3;
- if(allCavalry)points=6;
- else if(allFlying)points=7;
- else if(hasFlying)points=Math.max(points,4);
- return {points,allFlying,allCavalry,hasFlying,race,classes:units};
+ const units=roster.filter(u=>!characterTypes.has(String(u?.type||"").toLowerCase()));
+ const main=units.length?units:roster;
+ const allCavalry=main.length>0&&main.every(u=>campaignUnitMovementClass(u)==="cavalry");
+ const cavalry=main.filter(u=>campaignUnitMovementClass(u)==="cavalry");
+ const infantry=main.filter(u=>campaignUnitMovementClass(u)==="foot");
+ const hasHeavyArmouredInfantry=infantry.some(u=>!!(u.heavyArmour||u.upgrades?.heavyArmour||u.upgrades?.heavy_armour));
+ let points=4;
+ if(race==="dwarf")points=3;
+ else if(race==="elf")points=allCavalry?9:5;
+ else if(allCavalry){
+  const barded=cavalry.some(u=>!!(u.barding||u.upgrades?.barding));
+  points=barded?7:8;
+ }else if(race==="human"||race==="undead"||race==="greenskin")points=hasHeavyArmouredInfantry?3:4;
+ return {points,allFlying:false,allCavalry,hasFlying:false,race,classes:main.map(campaignUnitMovementClass)};
 }
 function campaignSupplyRange(army,campaign=activeCampaign){
  const profile=campaignArmyMovementProfile(army,campaign);
- return profile.allFlying?12:profile.allCavalry?9:profile.race==="dwarf"?4:6;
+ return profile.allCavalry?9:profile.race==="dwarf"?4:6;
 }
 function campaignMovementPath(campaign,from,to){
  const graph=campaign?.graph;if(!graph?.nodes?.[from]||!graph.nodes[to])return null;
@@ -909,20 +911,14 @@ function campaignMovementPath(campaign,from,to){
 function moveCommander(id){
  if(!activeCampaign)return;
  const army=selectedPlayerArmy(),from=army?.nodeId||activeCampaign.commander.nodeId,n=activeCampaign.graph.nodes[id],edge=(activeCampaign.graph.edges[from]||[]).find(e=>e.to===id);
- const profile=army?campaignArmyMovementProfile(army,activeCampaign):{allFlying:false,points:FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race==="elf"||FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race==="dwarf"?4:3};
- const flying=!!profile.allFlying,path=campaignMovementPath(activeCampaign,from,id);
- if(!n||!path||(!edge&&!flying)){activeCampaign.lastEvent="You can only move along a connected road, unless this army can fly.";renderCampaignMap();return;}
+ const path=campaignMovementPath(activeCampaign,from,id);
+ if(!n||!path||!edge){activeCampaign.lastEvent="You can only move along a connected road.";renderCampaignMap();return;}
  const movement=army?.movement??activeCampaign.commander.movement;
- let cost=0;
- if(flying){
-  for(let i=1;i<path.length;i++){const next=activeCampaign.graph.nodes[path[i]],e=(activeCampaign.graph.edges[path[i-1]]||[]).find(x=>x.to===path[i]);cost+=(e?.cost||1)+nodeCost(next)-1;}
-  cost=Math.max(1,Math.ceil(cost*.5));
- }else cost=edge.cost+nodeCost(n)-1;
+ const cost=edge.cost+nodeCost(n)-1;
  if(cost>movement){activeCampaign.lastEvent="Not enough movement remaining to reach "+n.label+".";renderCampaignMap();return;}
- const passedEnemy=flying&&path.slice(1,-1).some(nodeId=>{const node=activeCampaign.graph.nodes[nodeId];if(node?.type!=="city")return false;const region=activeCampaign.regions.find(r=>r.id===node.region);return region&&politicalOwner(region)!==(army?.owner||army?.factionId);});
  activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement=movement-cost;
  if(army){army.nodeId=id;army.region=n.region;army.movement=movement-cost;}
- activeCampaign.lastEvent=(army?.name||activeCampaign.commander.name)+(passedEnemy?" flies past enemy-held ground and lands at ":" moves to ")+n.label+". "+activeCampaign.commander.movement+" movement remaining.";
+ activeCampaign.lastEvent=(army?.name||activeCampaign.commander.name)+" moves to "+n.label+". "+activeCampaign.commander.movement+" movement remaining.";
  saveCampaign();renderCampaignMap();
 }
 function politicalOwner(region){return region?.ownerFaction||region?.politicalFactionId||FACTION_PROFILES[region?.id]?.id;}
