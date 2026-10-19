@@ -866,12 +866,64 @@ function launchCampaignBattle(region){
  }});
  if(!started){activeCampaign.lastEvent="The tactical battle could not be started.";renderCampaignMap();}
 }
+function campaignArmyRace(army,campaign=activeCampaign){
+ const owner=army?.owner||army?.factionId;
+ return FACTION_BY_ID[owner]?.race||campaign?.factionStates?.find(f=>f.id===owner)?.race||"human";
+}
+function campaignUnitMovementClass(unit){
+ const type=String(unit?.type||"").toLowerCase();
+ if(["dragon","youngdragon","ancientdragon","pegasuschampion"].includes(type)||unit?.flying||unit?.mountType==="eagle"||unit?.mountType==="pegasus")return "flyer";
+ if(["cavalry","wolfriders","boarboyz","wolfrider","horsecavalry"].includes(type)||unit?.mounted||["horse","wolf","boar"].includes(unit?.mountType))return "cavalry";
+ return "foot";
+}
+function campaignArmyMovementProfile(army,campaign=activeCampaign){
+ const race=campaignArmyRace(army,campaign),roster=(army?.roster||[]).filter(u=>(u.models||1)>0);
+ const classes=roster.map(campaignUnitMovementClass);
+ const characterTypes=new Set(["captain","lord","legendarylord","shadowelf","pegasuschampion","dwarfcaptain","dwarflord","dwarfkinghaldric","goblinhero","goblinlord","orchero","orclord"]);
+ const main=classes.filter((c,i)=>!characterTypes.has(String(roster[i]?.type||"").toLowerCase()));
+ const units=main.length?main:classes;
+ const allFlying=units.length>0&&units.every(c=>c==="flyer");
+ const allCavalry=units.length>0&&units.every(c=>c==="cavalry");
+ const hasFlying=units.some(c=>c==="flyer");
+ let points=race==="elf"||race==="dwarf"?4:3;
+ if(allCavalry)points=6;
+ else if(allFlying)points=7;
+ else if(hasFlying)points=Math.max(points,4);
+ return {points,allFlying,allCavalry,hasFlying,race,classes:units};
+}
+function campaignSupplyRange(army,campaign=activeCampaign){
+ const profile=campaignArmyMovementProfile(army,campaign);
+ return profile.allFlying?12:profile.allCavalry?9:profile.race==="dwarf"?4:6;
+}
+function campaignMovementPath(campaign,from,to){
+ const graph=campaign?.graph;if(!graph?.nodes?.[from]||!graph.nodes[to])return null;
+ const queue=[from],previous=new Map([[from,null]]);
+ while(queue.length){
+  const at=queue.shift();if(at===to)break;
+  for(const edge of graph.edges[at]||[]){if(previous.has(edge.to))continue;previous.set(edge.to,at);queue.push(edge.to);}
+ }
+ if(!previous.has(to))return null;
+ const path=[];for(let at=to;at!==null;at=previous.get(at))path.push(at);
+ return path.reverse();
+}
 function moveCommander(id){
- if(!activeCampaign)return;const army=selectedPlayerArmy(),from=army?.nodeId||activeCampaign.commander.nodeId,n=activeCampaign.graph.nodes[id],edge=(activeCampaign.graph.edges[from]||[]).find(e=>e.to===id);
- if(!n||!edge){activeCampaign.lastEvent="You can only move along a connected road.";renderCampaignMap();return;}
- const movement=army?.movement??activeCampaign.commander.movement,cost=edge.cost+nodeCost(n)-1;if(cost>movement){activeCampaign.lastEvent="Not enough movement remaining to reach "+n.label+".";renderCampaignMap();return;}
- activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement=movement-cost;if(army){army.nodeId=id;army.region=n.region;army.movement=movement-cost;}
- activeCampaign.lastEvent=(army?.name||activeCampaign.commander.name)+" moves to "+n.label+". "+activeCampaign.commander.movement+" movement remaining.";saveCampaign();renderCampaignMap();
+ if(!activeCampaign)return;
+ const army=selectedPlayerArmy(),from=army?.nodeId||activeCampaign.commander.nodeId,n=activeCampaign.graph.nodes[id],edge=(activeCampaign.graph.edges[from]||[]).find(e=>e.to===id);
+ const profile=army?campaignArmyMovementProfile(army,activeCampaign):{allFlying:false,points:FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race==="elf"||FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race==="dwarf"?4:3};
+ const flying=!!profile.allFlying,path=campaignMovementPath(activeCampaign,from,id);
+ if(!n||!path||(!edge&&!flying)){activeCampaign.lastEvent="You can only move along a connected road, unless this army can fly.";renderCampaignMap();return;}
+ const movement=army?.movement??activeCampaign.commander.movement;
+ let cost=0;
+ if(flying){
+  for(let i=1;i<path.length;i++){const next=activeCampaign.graph.nodes[path[i]],e=(activeCampaign.graph.edges[path[i-1]]||[]).find(x=>x.to===path[i]);cost+=(e?.cost||1)+nodeCost(next)-1;}
+  cost=Math.max(1,Math.ceil(cost*.5));
+ }else cost=edge.cost+nodeCost(n)-1;
+ if(cost>movement){activeCampaign.lastEvent="Not enough movement remaining to reach "+n.label+".";renderCampaignMap();return;}
+ const passedEnemy=flying&&path.slice(1,-1).some(nodeId=>{const node=activeCampaign.graph.nodes[nodeId];if(node?.type!=="city")return false;const region=activeCampaign.regions.find(r=>r.id===node.region);return region&&politicalOwner(region)!==(army?.owner||army?.factionId);});
+ activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement=movement-cost;
+ if(army){army.nodeId=id;army.region=n.region;army.movement=movement-cost;}
+ activeCampaign.lastEvent=(army?.name||activeCampaign.commander.name)+(passedEnemy?" flies past enemy-held ground and lands at ":" moves to ")+n.label+". "+activeCampaign.commander.movement+" movement remaining.";
+ saveCampaign();renderCampaignMap();
 }
 function politicalOwner(region){return region?.ownerFaction||region?.politicalFactionId||FACTION_PROFILES[region?.id]?.id;}
 function profileForFaction(id){return FACTION_BY_ID[id]||null;}
