@@ -96,7 +96,7 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
    const id="p"+(i+1),u=units.find(x=>x.id===id);
    if(!u||cfg.type==="cannon"||cfg.type==="boltThrower"||["youngDragon","dragon","ancientDragon"].includes(cfg.type))return;
    let lost=Math.max(0,(Number(cfg.models)||1)-(Number(u.models)||0));
-   if(["humanChariot","elfChariot","goblinChariot","orcChariot"].includes(cfg.type)){const attached=(u.attachedCharacters||[]).map(cid=>units.find(x=>x.id===cid)).filter(h=>h&&h.models>0&&!h.fled).length;lost=Math.max(0,(Number(cfg.models)||3)-(Number(u.models)||0)-attached);}
+   if(["humanChariot","elfChariot","goblinChariot","orcChariot"].includes(cfg.type)){lost=0;}
    if(cfg.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(cfg.mountType)){const rider=units.find(x=>x.id===id+"r");lost=rider&&rider.models>0?0:1;}
    if(!lost)return;
    const character=["captain","lord","mageHero","mageLord","starwardenLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric","goblinHero","goblinLord","orcHero","orcLord"].includes(cfg.type);
