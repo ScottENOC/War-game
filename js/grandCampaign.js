@@ -380,6 +380,11 @@ function ensureSettlementState(campaign){
   if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
   ensureSettlementRecruitment(region);
  }
+ if(campaign.mapId!==MAP_ID||!campaign.graph?.nodes||!campaign.graph?.edges){
+  campaign.graph=createMovementGraph();campaign.mapId=MAP_ID;
+  for(const army of campaign.armies||[])if(!campaign.graph.nodes[army.nodeId])army.nodeId="city-"+(army.region||army.homeRegion||campaign.startingRegion);
+  if(campaign.commander&&!campaign.graph.nodes[campaign.commander.nodeId])campaign.commander.nodeId="city-"+(campaign.commander.region||campaign.startingRegion);
+ }
  campaign.schemaVersion=7;
  if(!campaign.factionStates){campaign.factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id),generated=createCampaignArmyRoster(profile.id,profile.id===campaign.playerPoliticalFaction?1000:500);return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:generated.faction,roster:generated.roster,homeRegion:home.id,alive:true,treasury:profile.id===campaign.playerPoliticalFaction?Number(campaign.treasury)||500:300,income:100,armyPoints:profile.id===campaign.playerPoliticalFaction?1000:500,turnsTaken:0,relations:{},};});campaign.factionTurnOrder=campaign.factionStates.map(f=>f.id);campaign.playerPoliticalFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[1].id;campaign.activeFaction=campaign.activeFaction||campaign.playerPoliticalFaction;}
  for(const state of campaign.factionStates){if(!Array.isArray(state.roster)||!state.roster.length){const generated=createCampaignArmyRoster(state.id,state.armyPoints||500);state.rosterFaction=generated.faction;state.roster=generated.roster;}}
@@ -459,7 +464,7 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
  return {region,summary,fled,killed,previousOwner,conquerorFaction};
 }
 
-const MAP_ID="shattered-realms-v4";
+const MAP_ID="shattered-realms-v5";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -597,14 +602,107 @@ function renderFaction(){
  byId("grand-campaign-begin").textContent="Start campaign";renderCity();
 }
 function createMovementGraph(){
- const nodes={},edges={},add=n=>{nodes[n.id]=n;edges[n.id]=edges[n.id]||[];},link=(a,b,cost=1)=>{if(!edges[a]||!edges[b])return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost});};
- for(const c of CITIES){const [x,y]=CITY_POSITIONS[c.id];add({id:"city-"+c.id,region:c.id,type:"city",label:c.name,x,y});}
- const seen=new Set(),features=[
- {id:"port-5",region:5,type:"port",label:"Southwatch harbour",x:625,y:515,city:5},{id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:135,y:126,city:6},{id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:561,y:163,city:7},{id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:817,y:190,city:8},
- {id:"river-1",region:1,type:"river",label:"Crownfall river ford",x:226,y:239,city:1},{id:"river-4",region:4,type:"river",label:"Stonebridge crossing",x:450,y:447,city:4},{id:"river-23",region:23,type:"river",label:"Ashenford crossing",x:608,y:665,city:23}];
- for(const c of CITIES){const [x,y]=CITY_POSITIONS[c.id],ns=REGION_NEIGHBORS[c.id]||[],avg=ns.reduce((p,id)=>({x:p.x+CITY_POSITIONS[id][0]/ns.length,y:p.y+CITY_POSITIONS[id][1]/ns.length}),{x:0,y:0}),jx=Math.max(30,Math.min(1270,x+(avg.x-x)*.12)),jy=Math.max(30,Math.min(720,y+(avg.y-y)*.12));add({id:"crossroads-"+c.id,region:c.id,type:"crossroads",label:c.name+" crossroads",x:jx,y:jy});link("city-"+c.id,"crossroads-"+c.id);}
- for(const c of CITIES)for(const other of REGION_NEIGHBORS[c.id]||[]){const key=[c.id,other].sort((a,b)=>a-b).join("-");if(seen.has(key))continue;seen.add(key);const [x,y]=CITY_POSITIONS[c.id],[ox,oy]=CITY_POSITIONS[other],id="road-"+key,type=(new Set(["1-4","4-5","4-9","4-20","4-23","18-23","20-23"])).has(key)?"river":"border";add({id,region:c.id,type,label:type==="river"?"River crossing":c.name+"–"+CITIES.find(x=>x.id===other).name+" border",x:(x+ox)/2,y:(y+oy)/2});link("crossroads-"+c.id,id);link("crossroads-"+other,id);}
- for(const n of features){add(n);link("city-"+n.city,n.id);}
+ const nodes={},edges={},routes=[];
+ const add=n=>{nodes[n.id]=n;edges[n.id]=edges[n.id]||[];};
+ const link=(a,b,cost=1)=>{if(!edges[a]||!edges[b]||a===b)return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost});};
+ const route=(a,b,kind="land",regionA=null,regionB=null)=>routes.push({a,b,kind,regionA,regionB,marks:[],cuts:[0,1]});
+ const positions=CITY_POSITIONS;
+ for(const c of CITIES){const [x,y]=positions[c.id];add({id:"city-"+c.id,region:c.id,type:"city",label:c.name,x,y});}
+ for(const c of CITIES){
+  const [x,y]=positions[c.id],ns=REGION_NEIGHBORS[c.id]||[];
+  const avg=ns.reduce((p,id)=>({x:p.x+positions[id][0]/ns.length,y:p.y+positions[id][1]/ns.length}),{x:0,y:0});
+  const jx=Math.max(30,Math.min(1270,x+(avg.x-x)*.12)),jy=Math.max(30,Math.min(720,y+(avg.y-y)*.12));
+  add({id:"crossroads-"+c.id,region:c.id,type:"crossroads",label:c.name+" crossroads",x:jx,y:jy});
+  route("city-"+c.id,"crossroads-"+c.id,"land",c.id,c.id);
+ }
+ const ports=[
+  {id:"port-5",region:5,type:"port",label:"Southwatch harbour",x:625,y:515,city:5},
+  {id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:135,y:126,city:6},
+  {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:561,y:163,city:7},
+  {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:817,y:190,city:8}
+ ];
+ for(const p of ports){add(p);route("city-"+p.city,p.id,"land",p.city,p.city);}
+ const seen=new Set(),seaLinks=new Set(["5-8","6-7","7-8"]);
+ for(const c of CITIES)for(const other of REGION_NEIGHBORS[c.id]||[]){
+  const key=[c.id,other].sort((a,b)=>a-b).join("-");
+  if(seen.has(key))continue;seen.add(key);
+  if(seaLinks.has(key)){
+   const pA=ports.find(p=>p.city===c.id)||ports.find(p=>p.city===other);
+   const pB=ports.find(p=>p.city===other&&p!==pA)||ports.find(p=>p.city===c.id&&p!==pA);
+   if(pA&&pB)route(pA.id,pB.id,"sea",c.id,other);
+   continue;
+  }
+  route("crossroads-"+c.id,"crossroads-"+other,"land",c.id,other);
+ }
+ // Put a visible point of interest on routes through every named terrain feature.
+ const featurePattern=[
+  {re:/forest|woodland|grove|timber/i,type:"forest",label:"Forest trail"},
+  {re:/mountain|highlands|crag|ridge|pass|ore/i,type:"mountain",label:"Mountain pass"},
+  {re:/river|crossing|ford/i,type:"river",label:"River crossing"},
+  {re:/marsh|fen|wetland|swamp/i,type:"marsh",label:"Marsh track"},
+  {re:/coast|harbour|port|island|shoal/i,type:"coast",label:"Coastal track"},
+  {re:/plain|grassland|farmland|plains/i,type:"plain",label:"Open-country track"}
+ ];
+ for(const c of CITIES){
+  const terrain=String(c.terrain||"");
+  const wanted=featurePattern.filter(f=>f.re.test(terrain));
+  const neighbors=REGION_NEIGHBORS[c.id]||[];
+  const target=neighbors.map(id=>routes.find(r=>r.kind==="land"&&r.regionA===c.id&&r.regionB===id||r.kind==="land"&&r.regionA===id&&r.regionB===c.id)).find(Boolean);
+  if(target){
+   wanted.slice(0,3).forEach((f,i)=>{
+    const t=target.regionA===c.id?(0.24+i*0.12):(0.76-i*0.12);
+    target.marks.push({t,region:c.id,type:f.type,label:c.name+" "+f.label.toLowerCase()});
+   });
+  }
+ }
+ // Find every crossing between land routes. Both routes receive the same crossroads,
+ // so no road is visually allowed to pass through another road without a POI.
+ const intersection=(p,p2,q,q2)=>{
+  const rx=p2.x-p.x,ry=p2.y-p.y,sx=q2.x-q.x,sy=q2.y-q.y,den=rx*sy-ry*sx;
+  if(Math.abs(den)<1e-7)return null;
+  const qpx=q.x-p.x,qpy=q.y-p.y,t=(qpx*sy-qpy*sx)/den,u=(qpx*ry-qpy*rx)/den;
+  if(t<=0.015||t>=0.985||u<=0.015||u>=0.985)return null;
+  return {t,u,x:p.x+t*rx,y:p.y+t*ry};
+ };
+ for(let i=0;i<routes.length;i++){
+  const a=routes[i];if(a.kind!=="land")continue;
+  const p=nodes[a.a],p2=nodes[a.b];
+  for(let j=i+1;j<routes.length;j++){
+   const b=routes[j];if(b.kind!=="land"||a.a===b.a||a.a===b.b||a.b===b.a||a.b===b.b)continue;
+   const q=nodes[b.a],q2=nodes[b.b],hit=intersection(p,p2,q,q2);if(!hit)continue;
+   const sharedId="crossing-"+Math.round(hit.x)+"-"+Math.round(hit.y);
+   if(!nodes[sharedId])add({id:sharedId,region:a.regionA||b.regionA,type:"crossroads",label:"Road crossroads",x:hit.x,y:hit.y});
+   a.cuts.push(hit.t);b.cuts.push(hit.u);
+   a.marks.push({t:hit.t,nodeId:sharedId});b.marks.push({t:hit.u,nodeId:sharedId});
+  }
+ }
+ for(const r of routes){
+  const a=nodes[r.a],b=nodes[r.b],distance=Math.hypot(b.x-a.x,b.y-a.y);
+  const cuts=[...r.cuts];
+  for(let d=48;d<distance;d+=48)cuts.push(d/distance);
+  for(const mark of r.marks)cuts.push(mark.t);
+  const sorted=[...new Set(cuts.map(t=>Math.max(0,Math.min(1,Number(t.toFixed(5))))))].sort((x,y)=>x-y);
+  const ids=[];
+  for(let i=0;i<sorted.length;i++){
+   const t=sorted[i];
+   let id=i===0?r.a:i===sorted.length-1?r.b:null;
+   const marks=r.marks.filter(m=>Math.abs(m.t-t)<0.0001);
+   const intersectionMark=marks.find(m=>m.nodeId);
+   if(intersectionMark)id=intersectionMark.nodeId;
+   const featureMark=marks.find(m=>!m.nodeId);
+   if(!id){
+    id=featureMark?"feature-"+r.regionA+"-"+r.regionB+"-"+r.kind+"-"+i:"waypoint-"+r.a+"-"+r.b+"-"+i;
+    const region=featureMark?.region??r.regionA??r.regionB;
+    const type=featureMark?.type||(r.kind==="sea"?"seaRoute":r.regionA!==r.regionB?"border":"road");
+    const label=featureMark?.label||(r.kind==="sea"?"Sea lane waypoint":r.regionA!==r.regionB?"Road waypoint":"Local road");
+    add({id,region,type,label,x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+   }
+   ids.push(id);
+  }
+  for(let i=1;i<ids.length;i++)link(ids[i-1],ids[i],1);
+ }
+ // Coastal travel can only enter or leave the sea at a named harbour.
+ // Existing save files are migrated to this graph while city IDs remain stable.
  return {nodes,edges};
 }
 function svgEl(name,attrs={}){const el=document.createElementNS("http://www.w3.org/2000/svg",name);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el;}
