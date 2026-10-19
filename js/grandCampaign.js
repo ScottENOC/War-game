@@ -661,14 +661,14 @@ function createMovementGraph(){
   const rx=p2.x-p.x,ry=p2.y-p.y,sx=q2.x-q.x,sy=q2.y-q.y,den=rx*sy-ry*sx;
   if(Math.abs(den)<1e-7)return null;
   const qpx=q.x-p.x,qpy=q.y-p.y,t=(qpx*sy-qpy*sx)/den,u=(qpx*ry-qpy*rx)/den;
-  if(t<=0.015||t>=0.985||u<=0.015||u>=0.985)return null;
+  if(t<=0.001||t>=0.999||u<=0.001||u>=0.999)return null;
   return {t,u,x:p.x+t*rx,y:p.y+t*ry};
  };
  for(let i=0;i<routes.length;i++){
   const a=routes[i];
   const p=nodes[a.a],p2=nodes[a.b];
   for(let j=i+1;j<routes.length;j++){
-   const b=routes[j];if(a.a===b.a||a.a===b.b||a.b===b.a||a.b===b.b)continue;
+   const b=routes[j];
    const q=nodes[b.a],q2=nodes[b.b],hit=intersection(p,p2,q,q2);if(!hit)continue;
    const sharedId="crossing-"+Math.round(hit.x)+"-"+Math.round(hit.y);
    if(!nodes[sharedId])add({id:sharedId,region:a.regionA||b.regionA,type:"crossroads",label:"Road crossroads",x:hit.x,y:hit.y});
