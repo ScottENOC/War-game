@@ -184,7 +184,7 @@ function roguelikeCampaignStatCost(config,faction){
 function roguelikeUnitCost(config,faction){
  const base=unitCost(config,faction),type=config.type,models=config.models||1;
  const fixed=["cannon","boltThrower","youngDragon","dragon","ancientDragon","pegasusChampion","dwarfKingHaldric"].includes(type);
- const character=["captain","lord","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric"].includes(type);
+ const character=["captain","lord","mageHero","mageLord","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric"].includes(type);
  const skillCount=["rerollOnesMelee","rerollOnesShooting","steadfast","skirmish"].filter(key=>config.skills?.[key]).length;
  return base+(!fixed&&!character?skillCount*3*Math.max(0,models-1):0)+roguelikeCampaignStatCost(config,faction);
 }
@@ -253,8 +253,8 @@ function validateArmy(army,faction){
    }
    if(["youngDragon","dragon","ancientDragon"].includes(entry.type)){if(faction!=="highElves")shortages.push("Dragons are only available to the High Elves.");continue;}
   const character=["captain","lord","legendaryLord","shadowElf","pegasusChampion","dwarfCaptain","dwarfLord","dwarfKingHaldric","rifleman","captainWeiss"].includes(entry.type),collectionType=entry.type;
-  if(entry.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(entry.mountType)){if(faction!=="highElves")shortages.push("Only High Elf Lords may ride dragons.");continue;}
-  const count=character?1:(entry.models||1);
+  if(entry.type==="orcLord"&&entry.mountType==="wyvern"){if(faction!=="greenskins")shortages.push("Only Orc Warbosses may ride Wyverns.");continue;}if(entry.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(entry.mountType)){if(faction!=="highElves")shortages.push("Only High Elf Lords may ride dragons.");continue;}
+  const collectionType=entry.type==="mageHero"?"captain":entry.type==="mageLord"?"lord":entry.type;const count=character?1:(entry.models||1);
   const mounted=entry.type==="cavalry"||(character&&!!entry.mounted),expectedMount=mounted?(entry.mountType||(entry.type==="cavalry"?"horse":"horse")):"none";
   const matches=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&(m.type===collectionType||(["swordsmen","archers"].includes(entry.type)&&["swordsmen","archers"].includes(m.type)))&&!!m.mounted===mounted&&(m.mountType||(m.mounted?"horse":"none"))===expectedMount);
   if(matches.length<count)shortages.push((count-matches.length)+" "+entry.type+" model(s) needed"+(mounted?" mounted":""));
