@@ -3,6 +3,8 @@ export const FACTIONS = {
     swordsmen:{name:"Empire Swordsmen",short:"Swordsmen",kind:"melee",models:20,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
     archers:{name:"Empire Archers",short:"Infantry",kind:"archer",models:10,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},range:24},
     captain:{name:"Empire Captain",short:"Captain",kind:"hero",models:1,points:50,stats:{M:4,WS:5,BS:5,S:4,T:4,W:2,I:5,A:2,Ld:8}},
+    mageHero:{name:"Empire Mage",short:"Mage",kind:"hero",models:1,points:55,spellcaster:true,baseCasterLevel:1,stats:{M:4,WS:3,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:7}},
+    mageLord:{name:"Empire Wizard Lord",short:"Wizard Lord",kind:"hero",models:1,points:100,spellcaster:true,baseCasterLevel:3,stats:{M:4,WS:3,BS:3,S:3,T:4,W:3,I:4,A:1,Ld:8}},
     lord:{name:"Empire General",short:"General",kind:"hero",models:1,points:80,stats:{M:4,WS:5,BS:5,S:4,T:4,W:3,I:5,A:3,Ld:9}},
     legendaryLord:{name:"Lord-Marshal Edric Voss",short:"Edric Voss",kind:"hero",models:1,points:160,namedCharacter:true,ignoreArmourSaves:true,defaultHeavyArmour:true,defaultShield:true,stats:{M:4,WS:6,BS:5,S:5,T:5,W:4,I:6,A:4,Ld:10}},
     rifleman:{name:"Matthias Keller, Imperial Marksman",short:"Keller",kind:"hero",models:1,points:65,namedCharacter:true,stats:{M:4,WS:4,BS:5,S:3,T:3,W:2,I:4,A:1,Ld:8}},
@@ -40,7 +42,7 @@ export const FACTIONS = {
     wolfRiders:{name:"Goblin Wolf Riders",short:"Wolf Riders",kind:"cavalry",models:5,points:11,greenskin:true,stats:{M:9,WS:2,BS:3,S:3,T:3,W:1,I:2,A:1,Ld:6},mountStats:{A:1,WS:3,I:3,S:3},mountType:"wolf"},
     boarBoyz:{name:"Orc Boar Riders",short:"Boar Boyz",kind:"cavalry",models:5,points:18,greenskin:true,stats:{M:7,WS:3,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:7},mountStats:{A:1,WS:3,I:3,S:3},mountType:"boar"},
     wyvern:{name:"Wyvern",short:"Wyvern",kind:"monster",models:1,points:100,isDragon:true,breathStrength:0,intrinsicArmourSave:5,stats:{M:8,WS:4,BS:0,S:5,T:5,W:4,I:3,A:3,Ld:6}},
-    catapult:{name:"Goblin Rock Lobber",short:"Rock Lobber",kind:"artillery",models:3,points:70,greenskin:true,stats:{M:0,WS:2,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:5}}
+    catapult:{name:"Goblin Rock Lobber",short:"Rock Lobber",kind:"artillery",models:3,points:70,greenskin:true,stats:{M:0,WS:2,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:5}}
   }},
   opposing: { name:"Opposing Host", units:{
     swordsmen:{name:"Opposing Swordsmen",short:"Swordsmen",kind:"melee",models:20,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
