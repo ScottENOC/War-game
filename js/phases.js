@@ -1,4 +1,4 @@
-function resolveGreenskinAnimosity({S,units,alive,roll,say,enemies,dist,canPlace,W,H,BATTLEFIELD_WIDTH_IN,shoot,resolveCombat}){
+function resolveGreenskinAnimosity({S,units,alive,roll,say,enemies,dist,canPlace,W,H,BATTLEFIELD_WIDTH_IN,shoot,resolveAnimosityBrawl}){
   const all=units();
   const squabble=u=>{u.animositySquabble=true;u.stats.M=0;u.shot=true;u.charged=true;say("Animosity — "+u.name+" squabbles and cannot move or shoot this turn.");};
   const moveStraight=(u,angle)=>{
@@ -9,7 +9,7 @@ function resolveGreenskinAnimosity({S,units,alive,roll,say,enemies,dist,canPlace
   all.filter(u=>u.faction==="greenskins").forEach(u=>{
     if(u.baseMove!=null&&u.stats&&u.animosityEligible)u.stats.M=u.baseMove;
     u.animositySquabble=false;
-    if(!u.animosityEligible||u.models<5||!alive(u)||u.fled||u.engaged||u.deployed===false)return;
+    if(!u.animosityEligible||u.models<5||!alive(u)||u.fled||u.engaged||u.deployed===false||u.animosityBrawl)return;
     if(roll(1)[0]!==1)return;
     const result=roll(1)[0];
     if(result===1){
@@ -26,13 +26,10 @@ function resolveGreenskinAnimosity({S,units,alive,roll,say,enemies,dist,canPlace
         .sort((a,b)=>a.distance-b.distance)[0]?.unit;
       if(!rival){squabble(u);return;}
       moveStraight(u,Math.atan2((rival.y-u.y)*H(),(rival.x-u.x)*W()));
-      u.engaged=rival.engaged=true;u.engagedWith=rival.id;rival.engagedWith=u.id;
-      u.engagedWithIds=[...new Set([...(u.engagedWithIds||[]),rival.id])];rival.engagedWithIds=[...new Set([...(rival.engagedWithIds||[]),u.id])];
-      u.engagementSides={...(u.engagementSides||{}),[rival.id]:"front"};rival.engagementSides={...(rival.engagementSides||{}),[u.id]:"front"};
-      u.engagedSide=rival.engagedSide="front";u.chargedSide=rival.chargedSide="front";u.animosityGetEm=true;rival.animosityGetEm=true;
+      u.animosityGetEm=true;rival.animosityGetEm=true;
       say("Animosity — "+u.name+" rolls 1, then 1 (Get ’em!): it charges friendly "+rival.name+" and starts a brawl.");
-      resolveCombat?.();
-      for(const v of [u,rival]){v.engaged=false;v.engagedWith=null;v.engagedWithIds=[];v.engagementSides={};v.animositySquabble=true;v.stats.M=0;v.shot=true;v.charged=true;}
+      resolveAnimosityBrawl?.(u,rival);
+      for(const v of [u,rival]){v.animosityBrawl=true;v.animositySquabble=true;v.stats.M=0;v.shot=true;v.charged=true;}
       return;
     }
     if(result>=2&&result<=5){squabble(u);return;}
@@ -42,8 +39,8 @@ function resolveGreenskinAnimosity({S,units,alive,roll,say,enemies,dist,canPlace
     say("Animosity — "+u.name+" rolls 1, then 6 (We’ll Show ’Em!): it makes a full move of "+moved.toFixed(1)+" inches "+(target?"towards "+target.name:"straight ahead")+". It may still act normally this turn.");
   });
 }
-export function createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, PX_PER_IN, roll, dist, enemies, say, shoot, render, startActivations, canPlace, canCharge, panicNearby, testTerrorAtTurnStart, testChargePsychology, resolveCombat }) {
-  function runGreenskinAnimosity(){resolveGreenskinAnimosity({S,units,alive,roll,say,enemies,dist,canPlace,W,H,BATTLEFIELD_WIDTH_IN,shoot,resolveCombat});}
+export function createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, PX_PER_IN, roll, dist, enemies, say, shoot, render, startActivations, canPlace, canCharge, panicNearby, testTerrorAtTurnStart, testChargePsychology, resolveCombat, resolveAnimosityBrawl }) {
+  function runGreenskinAnimosity(){resolveGreenskinAnimosity({S,units,alive,roll,say,enemies,dist,canPlace,W,H,BATTLEFIELD_WIDTH_IN,shoot,resolveAnimosityBrawl});}
   function setPhase(p){S.phase=p;if(p==="charges")testTerrorAtTurnStart?.();if(p==="combat")S.combatResolved=false;S.mode=null;units().forEach(u=>{u.activated=false;if(p==="movement")u.shield=!!u.ownsShield&&(!u.hasRangedWeapon||u.rangedMode==="shield")&&!["greatWeapon","halberd"].includes(u.weapon);if(p==="charges"){u.moved=false;u.moveUsed=0;u.shot=false;u.shootCasualties=0;u.panicTested=false;u.charged=false;}});if(p==="charges")runGreenskinAnimosity();if(p==="charges"){S.chargePasses=0;S.declaredCharges=[];S.normalChargeSide=S.turn%2===1?"player":"ai";const priority=units().find(u=>u.side==="player"&&alive(u)&&u.deployed!==false&&!u.fled&&!u.engaged&&(u.priorityActivation||(u.attachedCharacters||[]).some(id=>S.units?.[id]?.priorityActivation)));S.priorityChargePending=!!priority;S.selected=priority?.id||S.selected;S.chargeSide=priority?"player":S.normalChargeSide;}if(p==="movement")S.activationSide="player";S.targetId=null;render();if(p==="movement")startActivations();else if(p==="charges"&&S.chargeSide==="ai")aiChargeStep();}
 function chargeGap(u,target){const bearing=Math.atan2((target.y-u.y)*H(),(target.x-u.x)*W()),a=shape(u),b=shape(target),support=(unit,angle,q)=>{const d=angle-(unit.facing||0);return Math.abs(Math.cos(d))*q.depth/(2*PX_PER_IN())+Math.abs(Math.sin(d))*q.front/(2*PX_PER_IN());};return Math.max(0,dist(u,target)-support(u,bearing,a)-support(target,bearing+Math.PI,b));}
 function sideOfTarget(charger,target){if(target.skirmishing&&!target.engaged)return "front";const dx=(charger.x-target.x)*W(),dy=(charger.y-target.y)*H(),f=target.facing||0,q=shape(target),forward=dx*Math.cos(f)+dy*Math.sin(f),lateral=-dx*Math.sin(f)+dy*Math.cos(f);if(Math.abs(forward)/Math.max(1,q.depth/2)>=Math.abs(lateral)/Math.max(1,q.front/2))return forward>=0?"front":"rear";return lateral>=0?"left":"right";}
