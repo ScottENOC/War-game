@@ -53,7 +53,7 @@ function leadership(u){
 }
 function panicNearby(source,reason="a nearby friendly unit is lost"){
   if(!source)return;
-  units().filter(v=>v!==source&&!v.attachedTo&&v.side===source.side&&alive(v)&&!v.fled&&!v.panicTested&&dist(v,source)<=6&&!(source.faction==="greenskins"&&["goblins","wolfRiders"].includes(source.greenskinType)&&["orcBoyz","boarBoyz","orcHero","orcLord"].includes(v.greenskinType))).forEach(v=>{
+  units().filter(v=>v!==source&&!v.attachedTo&&v.side===source.side&&alive(v)&&!v.fled&&!v.panicTested&&dist(v,source)<=6&&!(String(reason).includes("flees")&&source.faction==="greenskins"&&["goblins","wolfRiders"].includes(source.greenskinType)&&["orcBoyz","boarBoyz","orcHero","orcLord"].includes(v.greenskinType))).forEach(v=>{
     v.panicTested=true;const ld=leadership(v),dice=roll(2),total=dice[0]+dice[1],snakeEyes=dice[0]===1&&dice[1]===1;
     say("Panic test — "+v.name+" ("+reason+"): "+dice.join(" + ")+" = "+total+" against Leadership "+ld+".");
     if(!snakeEyes&&total>ld){v.fled=true;v.engaged=false;v.engagedWith=null;say(v.name+" panics and flees.");}
