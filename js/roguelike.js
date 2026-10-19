@@ -97,7 +97,7 @@ export function createRoguelike({$,onBuildArmy,onStartBattle,onReturnMenu,grantM
    let lost=Math.max(0,(Number(cfg.models)||1)-(Number(u.models)||0));
    if(cfg.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(cfg.mountType)){const rider=units.find(x=>x.id===id+"r");lost=rider&&rider.models>0?0:1;}
    if(!lost)return;
-   const character=["captain","lord","mageHero","mageLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric","goblinHero","goblinLord","orcHero","orcLord"].includes(cfg.type);
+   const character=["captain","lord","mageHero","mageLord","starwardenLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric","goblinHero","goblinLord","orcHero","orcLord"].includes(cfg.type);
    const kind=character?"character":cfg.type==="cavalry"?"cavalry":"infantry";
    const loss={kind,faction:run.faction,type:cfg.type,mounted:!!cfg.mounted,mountType:cfg.mountType||(cfg.mounted?"horse":"none"),count:lost};
    const same=run.lostModels.find(x=>x.kind===loss.kind&&x.faction===loss.faction&&x.type===loss.type&&x.mounted===loss.mounted&&x.mountType===loss.mountType);
