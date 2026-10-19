@@ -14,7 +14,7 @@ const RACES = {
  human:{name:"Human",defaultRoster:"empire",attitudes:{greenskin:-55,undead:-45,elf:0,dwarf:0,human:0}},
  elf:{name:"High Elf",defaultRoster:"highElves",attitudes:{greenskin:-65,undead:-60,human:0,dwarf:-20,elf:15}},
  dwarf:{name:"Dwarf",defaultRoster:"dwarfs",attitudes:{greenskin:-75,undead:-50,elf:-35,human:5,dwarf:15}},
- greenskin:{name:"Greenskin",defaultRoster:"empire",attitudes:{human:-65,elf:-70,dwarf:-75,undead:-10,greenskin:10}},
+ greenskin:{name:"Greenskin",defaultRoster:"greenskins",attitudes:{human:-65,elf:-70,dwarf:-75,undead:-10,greenskin:10}},
  undead:{name:"Undead",defaultRoster:"empire",attitudes:{human:-45,elf:-55,dwarf:-45,greenskin:-10,undead:15}}
 };
 const FACTION_PROFILES = {
@@ -55,12 +55,12 @@ const FACTION_ROSTER_OVERRIDES={
  silverAdmiralty:{roster:"highElves",units:["archers","cavalry","swordsmen","boltThrower"]},
  barakdur:{roster:"dwarfs",units:["dwarfInfantry","dwarfInfantry","dwarfCaptain","cannon"]},
  kazrinn:{roster:"dwarfs",units:["dwarfInfantry","dwarfCaptain","cannon"]},
- grinholdCouncil:{roster:"empire",units:["swordsmen","swordsmen","cavalry","captain"]},
- redfang:{roster:"empire",units:["swordsmen","cavalry","cavalry","archers"]},
- cragBosses:{roster:"empire",units:["swordsmen","swordsmen","archers","cannon"]},
- ironjaw:{roster:"empire",units:["swordsmen","cavalry","swordsmen","captain"]},
- mudgut:{roster:"empire",units:["cavalry","swordsmen","cavalry","archers"]},
- bonefield:{roster:"empire",units:["swordsmen","archers","cavalry","captain"]},
+ grinholdCouncil:{roster:"greenskins",units:["orcBoyz","goblins","boarBoyz","orcHero"]},
+ redfang:{roster:"greenskins",units:["goblins","wolfRiders","wolfRiders","goblinHero"]},
+ cragBosses:{roster:"greenskins",units:["orcBoyz","orcBoyz","goblins","catapult"]},
+ ironjaw:{roster:"greenskins",units:["orcBoyz","boarBoyz","orcBoyz","orcHero"]},
+ mudgut:{roster:"greenskins",units:["wolfRiders","goblins","boarBoyz","goblinHero"]},
+ bonefield:{roster:"greenskins",units:["goblins","orcBoyz","wolfRiders","orcHero"]},
  paleRegent:{roster:"empire",units:["swordsmen","swordsmen","archers","lord"]},
  fenCourt:{roster:"empire",units:["swordsmen","archers","cavalry","captain"]},
  ashenSepulchre:{roster:"empire",units:["swordsmen","archers","cannon","lord"]},
@@ -94,7 +94,7 @@ function campaignCharacterConfig(id,commander=null){
 }
 function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=null}={}){
  const faction=rosterFactionForPoliticalFaction(id),profile=FACTION_BY_ID[id],race=profile?.race||"human";
- const basicType=race==="dwarf"?"dwarfInfantry":"swordsmen",rangedType=race==="dwarf"?"dwarfInfantry":"archers";
+ const basicType=race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":"swordsmen",rangedType=race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":"archers";
  const character=campaignCharacterConfig(id,player?commander:null);
  let roster=[];
  if(player){
