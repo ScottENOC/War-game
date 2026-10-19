@@ -588,7 +588,7 @@ function selectedPlayerArmy(){
 function recruitCatalog(){
  const race=FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race||"human",basic=race==="dwarf"?"dwarfInfantry":"swordsmen";
  const options=[
-  {key:"melee",label:race==="dwarf"?"Dwarf melee infantry":"Melee infantry",type:basic,weapon:"handWeapon",min:5,max:30,modelType:basic,modelWeapon:"handWeapon"},
+  {key:"melee",label:race==="dwarf"?"Dwarf melee infantry":race==="elf"?"High Elf spearmen":"Melee infantry",type:basic,weapon:race==="elf"?"spear":"handWeapon",min:5,max:30,modelType:basic,modelWeapon:race==="elf"?"spear":"handWeapon"},
   ...(race==="dwarf"?[
    {key:"crossbows",label:"Dwarf crossbowmen",type:"dwarfInfantry",weapon:"handWeapon",rangedWeapon:"crossbow",min:5,max:30,modelType:"dwarfInfantry",modelWeapon:"crossbow"},
    {key:"dwarfFirearms",label:"Dwarf firearm infantry",type:"dwarfInfantry",weapon:"handWeapon",rangedWeapon:"firearm",min:5,max:30,modelType:"dwarfInfantry",modelWeapon:"firearm"}
@@ -597,11 +597,11 @@ function recruitCatalog(){
    {key:"crossbowmen",label:"Crossbow infantry",type:"swordsmen",weapon:"handWeapon",rangedWeapon:"crossbow",min:5,max:30,modelType:"swordsmen",modelWeapon:"crossbow"},
    {key:"firearmInfantry",label:"Firearm infantry",type:"swordsmen",weapon:"handWeapon",rangedWeapon:"firearm",min:5,max:30,modelType:"swordsmen",modelWeapon:"firearm"}
   ]:[]),
-  {key:"spearmen",label:race==="elf"?"High Elf spearmen":"Spearmen",type:basic,weapon:"spear",min:5,max:30,modelType:basic,modelWeapon:"spear"},
+  ...(race==="elf"?[]:[{key:"spearmen",label:"Spearmen",type:basic,weapon:"spear",min:5,max:30,modelType:basic,modelWeapon:"spear"}]),
   {key:"halberdiers",label:"Halberdiers",type:basic,weapon:"halberd",min:5,max:30,modelType:basic,modelWeapon:"halberd"},
   {key:"greatWeapons",label:"Great-weapon infantry",type:basic,weapon:"greatWeapon",min:5,max:30,modelType:basic,modelWeapon:"greatWeapon"},
   ...(race!=="dwarf"?[{key:"cavalry",label:race==="elf"?"High Elf cavalry":"Cavalry",type:"cavalry",weapon:"handWeapon",min:5,max:15,modelType:"cavalry"}]:[]),
-  {key:"artillery",label:race==="elf"?"Bolt thrower":race==="dwarf"?"Dwarf cannon":"Cannon",type:race==="elf"?"boltThrower":"cannon",weapon:"handWeapon",min:race==="elf"?2:3,max:race==="elf"?2:3,modelType:race==="elf"?"boltThrower":"cannon",fixed:true},
+  ...(race==="greenskin"?[]:[{key:"artillery",label:race==="elf"?"Bolt thrower":race==="dwarf"?"Dwarf cannon":"Cannon",type:race==="elf"?"boltThrower":"cannon",weapon:"handWeapon",min:race==="elf"?2:3,max:race==="elf"?2:3,modelType:race==="elf"?"boltThrower":"cannon",modelWeapon:"none",fixed:true,crewType:race==="dwarf"?"dwarfInfantry":"swordsmen",crewWeapon:race==="elf"?"spear":"handWeapon"}]),
   ...(race==="dwarf"?[
    {key:"dwarfCaptain",label:"Dwarf thane",type:"dwarfCaptain",weapon:"handWeapon",min:1,max:1,modelType:"dwarfCaptain",character:true},
    {key:"dwarfLord",label:"Dwarf lord",type:"dwarfLord",weapon:"handWeapon",min:1,max:1,modelType:"dwarfLord",character:true},
@@ -622,12 +622,24 @@ function recruitCatalog(){
  ];
  return options;
 }
+function assignedSiegeModelIds(){return new Set(playerArmies().flatMap(a=>(a.roster||[]).flatMap(u=>[u.machineModelId,...(u.crewModelIds||[])].filter(Boolean))));}
 function optionMatchesModel(o,m){return m?.faction===rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction)&&m.type===o.modelType&&(!o.modelWeapon||m.weapon===o.modelWeapon);}
-function deployedForOption(o){return playerArmies().reduce((sum,a)=>sum+(a.roster||[]).filter(u=>u.type===o.type&&(o.character||o.key==="cavalry"||(o.rangedWeapon?u.rangedWeapon===o.rangedWeapon:o.modelWeapon&&["spear","halberd","greatWeapon"].includes(o.modelWeapon)?u.weapon===o.modelWeapon:!u.rangedWeapon&&u.weapon===(o.weapon||"handWeapon")))).reduce((n,u)=>n+(u.models||0),0),0);}
-function availableModelsForOption(o){return collectionModels().filter(m=>optionMatchesModel(o,m)).slice(deployedForOption(o));}
-function availableForOption(o){return availableModelsForOption(o).length;}
+function deployedForOption(o){
+ let total=0;
+ for(const a of playerArmies())for(const u of a.roster||[]){
+  if(u.type!==o.type)continue;
+  if(o.fixed){total++;continue;}
+  const matches=o.character||o.key==="cavalry"||(o.rangedWeapon?u.rangedWeapon===o.rangedWeapon:o.modelWeapon&&["spear","halberd","greatWeapon"].includes(o.modelWeapon)?u.weapon===o.modelWeapon:!u.rangedWeapon&&u.weapon===(o.weapon||"handWeapon"));
+  if(matches)total+=u.models||0;
+ }
+ return total;
+}
+function availableModelsForOption(o){const assigned=assignedSiegeModelIds();return collectionModels().filter(m=>!assigned.has(m.id)&&optionMatchesModel(o,m)).slice(o.fixed?0:deployedForOption(o));}
+function availableCrewForOption(o){const assigned=assignedSiegeModelIds(),crewOption={type:o.crewType,modelType:o.crewType,modelWeapon:o.crewWeapon,weapon:o.crewWeapon,key:"crew-"+o.key};return collectionModels().filter(m=>!assigned.has(m.id)&&optionMatchesModel(crewOption,m)&&!m.mounted).slice(deployedForOption(crewOption));}
+function availableForOption(o){const machines=availableModelsForOption(o).length;if(!o.fixed)return machines;return Math.min(machines,Math.floor(availableCrewForOption(o).length/o.min));}
 function optionConfig(o,models){
  const sample=availableModelsForOption(o)[0];
+ if(o.fixed){const crew=availableCrewForOption(o).slice(0,o.min);return {type:o.type,models:o.min,weapon:"handWeapon",meleeWeapons:["handWeapon"],machineModelId:sample?.id||null,crewModelIds:crew.map(m=>m.id),siegeMachine:true};}
  if(o.type==="legendaryLord"||o.type==="shadowElf"||o.type==="pegasusChampion")return campaignCharacterConfig(activeCampaign.playerPoliticalFaction,{id:o.type==="legendaryLord"?"edric_voss":o.type==="shadowElf"?"lethariel_starweaver":"aelthir_dawnwing"});
  let weapon=o.weapon||"handWeapon",meleeWeapons=weapon==="handWeapon"?["handWeapon"]:["handWeapon",weapon],rangedWeapon=o.rangedWeapon||null;
  if(sample&&o.character&&!o.rangedWeapon){
