@@ -154,6 +154,12 @@ function recruitmentRaceForCulture(culture){
 function recruitmentRate(race){
  return race==="elf"?0.00005:race==="dwarf"?0.0002:race==="greenskin"?Infinity:race==="undead"?0.0002:0.0004;
 }
+function initialRecruitmentRate(race){
+ return race==="elf"?0.002:race==="dwarf"?0.0026:race==="greenskin"?Infinity:race==="undead"?0.002:0.004;
+}
+function recruitmentPoolCapRate(race){
+ return race==="elf"?0.003:race==="dwarf"?0.004:race==="greenskin"?Infinity:race==="undead"?0.004:0.006;
+}
 function ensureSettlementRecruitment(region){
  const settlement=region?.settlement;
  if(!settlement?.population)return null;
@@ -162,8 +168,8 @@ function ensureSettlementRecruitment(region){
   const race=recruitmentRaceForCulture(group.culture);
   if(race==="greenskin")continue;
   if(!settlement.recruitmentPools[race]){
-   const count=Math.max(0,Number(group.count)||0),rate=recruitmentRate(race);
-   settlement.recruitmentPools[race]={available:Math.floor(count*rate*10),progress:0};
+   const count=Math.max(0,Number(group.count)||0),rate=initialRecruitmentRate(race);
+   settlement.recruitmentPools[race]={available:Math.floor(count*rate),progress:0};
   }
  }
  return settlement.recruitmentPools;
@@ -184,7 +190,7 @@ function growSettlementRecruitment(region){
   pool.progress=(Number(pool.progress)||0)+population*rate;
   const gained=Math.floor(pool.progress);
   if(gained>0){
-   const cap=Math.floor(population*rate*15);
+   const cap=Math.floor(population*recruitmentPoolCapRate(race));
    pool.available=Math.min(cap,Math.max(0,Number(pool.available)||0)+gained);
    pool.progress-=gained;
   }
@@ -220,6 +226,7 @@ function consumeCivilianPopulation(region,count,race=null){
  count=Math.max(0,Math.floor(Number(count)||0));
  if(!region?.settlement?.population||civilianPopulation(region,race)<count)return false;
  const population=region.settlement.population;
+ const totalBefore=civilianPopulation(region);
  let remaining=count;
  const eligible=(population.groups||[]).filter(g=>!race||recruitmentRaceForCulture(g.culture)===race).sort((a,b)=>(b.count||0)-(a.count||0));
  for(const group of eligible){
@@ -227,7 +234,7 @@ function consumeCivilianPopulation(region,count,race=null){
   group.count-=loss;remaining-=loss;if(!remaining)break;
  }
  if(remaining>0)return false;
- population.total=Math.max(0,civilianPopulation(region)-count);
+ population.total=Math.max(0,totalBefore-count);
  return true;
 }
 function recruitmentCapacity(army){
@@ -371,6 +378,7 @@ function ensureSettlementState(campaign){
   if(!region.settlement.population)region.settlement.population=initialSettlement(city).population;
   if(!Array.isArray(region.settlement.buildings))region.settlement.buildings=initialSettlement(city).buildings;
   if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
+  ensureSettlementRecruitment(region);
   ensureSettlementRecruitment(region);
  }
  campaign.schemaVersion=7;
@@ -781,7 +789,7 @@ function campaignMessage(message){activeCampaign.lastEvent=message;saveCampaign(
 function renderArmyManagement(){
  const host=byId("grand-army-management");if(!host||!activeCampaign)return;ensureLogisticsState(activeCampaign);
  const armies=playerArmies(),army=selectedPlayerArmy();if(!army){host.textContent="No field army.";return;}
- const faction=army.rosterFaction||rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction),treasury=selectedFactionTreasury(),catalog=recruitCatalog();ensureRecruitmentPool(treasury);
+ const faction=army.rosterFaction||rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction),treasury=selectedFactionTreasury(),catalog=recruitCatalog();
  const labels={goblins:"Goblin mobs",orcBoyz:"Orc Boyz",wolfRiders:"Goblin wolf riders",boarBoyz:"Orc boar riders",goblinHero:"Goblin Big Boss",goblinLord:"Goblin Warboss",orcHero:"Orc Big Boss",orcLord:"Orc Warboss",catapult:"Goblin Rock Lobber",swordsmen:"Melee infantry",archers:"Archers",dwarfInfantry:"Dwarf infantry",cavalry:"Cavalry",cannon:"Cannon",boltThrower:"Bolt thrower",captain:"Captain",lord:"Lord",dwarfCaptain:"Dwarf thane",dwarfLord:"Dwarf lord",dwarfKingHaldric:"King Haldric",legendaryLord:"Edric Voss",shadowElf:"Lethariel Starweaver",pegasusChampion:"Aelthir, the Dawnwing",rifleman:"Marksman",captainWeiss:"Marta Weiss",youngDragon:"Young dragon",dragon:"Dragon",ancientDragon:"Ancient dragon"};
  const options=catalog.map(o=>{const available=availableForRecruitment(o,army),config=optionConfig(o,o.min),price=unitCost(config,faction);return '<option value="'+o.key+'" '+(available<o.min?'disabled':'')+'>'+o.label+' · '+available+' available · '+price+' gold minimum</option>';}).join("");
  const roster=(army.roster||[]).map((u,i)=>{const label=labels[u.type]||u.type,o=optionForUnit(u,catalog),can=!!o&&!o.character&&!o.fixed&&u.models<o.max&&availableForRecruitment(o,army)>0;return '<div class="grand-army-unit"><span><b>'+label+'</b><small>'+u.models+' models · '+unitCost(u,faction)+' gold</small></span><div class="grand-army-unit-actions"><button type="button" class="secondary-button" data-replenish="'+i+'" '+(!can?'disabled':'')+'>Replenish +1</button><button type="button" class="secondary-button grand-disband-button" data-disband="'+i+'">Disband</button></div></div>';}).join("");
