@@ -394,9 +394,8 @@ function ensureSettlementState(campaign){
   });
   const player=campaign.factionStates.find(f=>f.id===campaign.playerPoliticalFaction);if(player)campaign.treasury=player.treasury;
  }
- const playerRace=FACTION_BY_ID[campaign.playerPoliticalFaction]?.race||"human";
- if(campaign.commander){campaign.commander.maxMovement=playerRace==="elf"?4:3;campaign.commander.movement=Math.min(campaign.commander.maxMovement,Number(campaign.commander.movement)||campaign.commander.maxMovement);}
- for(const army of campaign.armies||[])if(army.owner===campaign.playerPoliticalFaction||army.factionId===campaign.playerPoliticalFaction)army.movement=Math.min(campaign.commander?.maxMovement||3,Number(army.movement)||0);
+ if(campaign.commander){const selected=(campaign.armies||[]).find(a=>a.id===campaign.selectedArmyId)|| (campaign.armies||[]).find(a=>(a.owner||a.factionId)===campaign.playerPoliticalFaction);campaign.commander.maxMovement=campaignArmyMovementProfile(selected,campaign).points;campaign.commander.movement=Math.min(campaign.commander.maxMovement,Number(campaign.commander.movement)||campaign.commander.maxMovement);}
+ for(const army of campaign.armies||[])if(army.owner===campaign.playerPoliticalFaction||army.factionId===campaign.playerPoliticalFaction)army.movement=Math.min(campaignArmyMovementProfile(army,campaign).points,Number(army.movement)||0);
  return campaign;
 }
 function addDisplacedPeople(settlement,culture,count){
@@ -638,13 +637,13 @@ function campaignSupplyPath(campaign,army){
  const owner=army.owner||army.factionId,start=army.nodeId;if(!start||!campaign.graph.nodes[start])return [];
  const friendly=id=>supplyOwnerAtNode(campaign,id)===owner;
  const queue=[],previous=new Map();for(const r of campaign.regions||[]){if(politicalOwner(r)===owner){const id="city-"+r.id;if(campaign.graph.nodes[id]){queue.push(id);previous.set(id,null);}}}
- while(queue.length){const at=queue.shift();if(at===start){const path=[];let cur=at;while(cur!==null){path.push(cur);cur=previous.get(cur);}return path.reverse();}
+ while(queue.length){const at=queue.shift();if(at===start){const path=[];let cur=at;while(cur!==null){path.push(cur);cur=previous.get(cur);}path.reverse();return path.length-1<=campaignSupplyRange(army,campaign)?path:[];}
   for(const e of campaign.graph.edges[at]||[]){if(previous.has(e.to))continue;if(!friendly(e.to))continue;previous.set(e.to,at);queue.push(e.to);}
  }
  return [];
 }
 function ensureLogisticsState(campaign){
- for(const army of campaign.armies||[]){if(!Number.isFinite(army.supplies))army.supplies=3;if(!Number.isFinite(army.maxSupplies))army.maxSupplies=3;if(!Number.isFinite(army.supplyRaidedUntilTurn))army.supplyRaidedUntilTurn=0;}
+ for(const army of campaign.armies||[]){const profile=campaignArmyMovementProfile(army,campaign),max=profile.race==="undead"?3:profile.race==="dwarf"?2:(profile.allCavalry||profile.allFlying)?4:3;if(!Number.isFinite(army.maxSupplies)||army.maxSupplies===3&&profile.race==="dwarf"||army.maxSupplies===3&&(profile.allCavalry||profile.allFlying))army.maxSupplies=max;if(!Number.isFinite(army.supplies))army.supplies=army.maxSupplies;if(army.supplies>army.maxSupplies)army.supplies=army.maxSupplies;if(!Number.isFinite(army.supplyRaidedUntilTurn))army.supplyRaidedUntilTurn=0;}
  for(const region of campaign.regions||[]){if(!region.settlement)continue;const st=region.settlement;if(!Number.isFinite(st.foodStores))st.foodStores=8;if(!Number.isFinite(st.maxFoodStores))st.maxFoodStores=8;if(!Number.isFinite(st.siegeTurns))st.siegeTurns=0;}
 }
 function processCampaignLogistics(campaign){
@@ -995,7 +994,8 @@ function runAIFactionTurn(campaign,faction){
  const warKey=campaignWarKey(faction.id,enemy.id);
  if(!campaign.activeWars.includes(warKey)){
   const hostility=Math.max(0,Math.min(1,(15-relation)/100));
-  const attackChance=Math.max(0.05,Math.min(0.85,0.08+hostility*0.82));
+  const race=faction.race||FACTION_BY_ID[faction.id]?.race||"human";
+  const attackChance=race==="dwarf"?Math.max(0.01,Math.min(0.22,0.02+hostility*0.2)):Math.max(0.05,Math.min(0.85,0.08+hostility*0.82));
   if(Math.random()<attackChance)declareCampaignWar(campaign,faction.id,enemy.id);
  }
  if(campaign.activeWars.includes(warKey)){
@@ -1034,7 +1034,7 @@ function endCampaignTurn(){
  }
  for(const region of activeCampaign.regions||[])if(politicalOwner(region)===player.id)growSettlementRecruitment(region);
  activeCampaign.turn++;activeCampaign.activeFaction=playerId;
- activeCampaign.commander.maxMovement=(FACTION_BY_ID[playerId]?.race==="elf"?4:3);activeCampaign.commander.movement=activeCampaign.commander.maxMovement;for(const army of playerArmies())army.movement=activeCampaign.commander.maxMovement;
+ activeCampaign.commander.maxMovement=campaignArmyMovementProfile(selectedPlayerArmy(),activeCampaign).points;activeCampaign.commander.movement=activeCampaign.commander.maxMovement;for(const army of playerArmies())army.movement=campaignArmyMovementProfile(army,activeCampaign).points;
  const activeArmy=selectedPlayerArmy();if(activeArmy){activeCampaign.commander.nodeId=activeArmy.nodeId;activeCampaign.commander.region=activeArmy.region;activeCampaign.commander.movement=activeArmy.movement;}
  activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Cities provide income; armies cost upkeep and supplies. "+processed.length+" AI faction turns completed. "+(logisticsEvents.slice(0,2).join(" ")+" ") +(processed.slice(0,2).join(" ")||"The realms consolidate their positions.")+" Your movement is replenished.";
  saveCampaign();renderCampaignMap();
