@@ -957,12 +957,12 @@ function renderCampaignMap(){
  }
  byId("grand-campaign-event").textContent=activeCampaign.lastEvent||"Select a highlighted place connected by road.";renderArmyManagement();renderDiplomacy();if(firstRender){const scale=map.clientWidth/1300;host.scrollLeft=Math.max(0,current.x*scale-host.clientWidth/2);host.scrollTop=Math.max(0,current.y*scale-host.clientHeight/2);}
 }
-function launchCampaignBattle(region){
+function launchCampaignBattle(region,attackingArmyOverride=null){
  if(!activeCampaign||!region||typeof window.startPoliticalCampaignBattle!=="function")return;
  const playerId=activeCampaign.playerPoliticalFaction,enemyId=politicalOwner(region);
  if(!enemyId||enemyId===playerId)return;
  declareCampaignWar(activeCampaign,playerId,enemyId);
- const playerArmy=selectedPlayerArmy(),enemyArmy=factionArmy(activeCampaign,enemyId);
+ const playerArmy=attackingArmyOverride||selectedPlayerArmy(),enemyArmy=factionArmy(activeCampaign,enemyId);
  if(!playerArmy?.roster?.length||!enemyArmy?.roster?.length){activeCampaign.lastEvent="Cannot muster a valid army for this battle.";renderCampaignMap();return;}
  const playerFaction=playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId),enemyFaction=enemyArmy.rosterFaction||rosterFactionForPoliticalFaction(enemyId);
  const started=window.startPoliticalCampaignBattle({army:playerArmy.roster,faction:playerFaction,enemyArmy:enemyArmy.roster,enemyFaction,onComplete:result=>{
@@ -976,7 +976,7 @@ function launchCampaignBattle(region){
   const playerState=activeCampaign.factionStates.find(f=>f.id===playerId),enemyState=activeCampaign.factionStates.find(f=>f.id===enemyId);
   if(result.won){
    const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:"occupy"});
-   playerArmy.region=region.id;playerArmy.nodeId="city-"+region.id;activeCampaign.commander.region=region.id;activeCampaign.commander.nodeId="city-"+region.id;
+   playerArmy.region=region.id;playerArmy.nodeId="city-"+region.id;if(selectedPlayerArmy()===playerArmy){activeCampaign.commander.region=region.id;activeCampaign.commander.nodeId="city-"+region.id;}
    activeCampaign.lastEvent=!playerArmy.roster.length?"Victory at "+region.name+", but your army has been destroyed. Rebuild from your remaining miniatures and treasury.":"Victory at "+region.name+". "+outcome.summary;
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
   }else{
@@ -1314,7 +1314,10 @@ function processGreenskinAnimosity(campaign,army){
   const targetRegion=choice.region||campaign.regions.find(r=>r.id===choice.nodeId.replace("city-","")||"city-"+r.id===choice.nodeId);
   if(targetRegion&&choice.nodeId==="city-"+targetRegion.id){
    const defender=factionArmy(campaign,choice.owner);
-   if(defender){army.nodeId=choice.nodeId;army.region=targetRegion.id;resolveStrategicBattle(campaign,campaign.factionStates.find(f=>f.id===own)||{id:own,name},campaign.factionStates.find(f=>f.id===choice.owner)||{id:choice.owner,name:choice.owner},targetRegion);army.foughtThisTurn=true;defender.foughtThisTurn=true;return {interrupted:true,message:name+" attacks "+targetRegion.name+" after failing animosity. "+campaign.lastEvent};}
+   if(defender){
+    if(own===campaign.playerPoliticalFaction)return {interrupted:true,battleRegion:targetRegion,battleArmy:army,message:name+" attacks "+targetRegion.name+" after failing animosity. A battle is required."};
+    army.nodeId=choice.nodeId;army.region=targetRegion.id;resolveStrategicBattle(campaign,campaign.factionStates.find(f=>f.id===own)||{id:own,name},campaign.factionStates.find(f=>f.id===choice.owner)||{id:choice.owner,name:choice.owner},targetRegion);army.foughtThisTurn=true;defender.foughtThisTurn=true;return {interrupted:true,message:name+" attacks "+targetRegion.name+" after failing animosity. "+campaign.lastEvent};
+   }
   }
   const defender=choice.targetArmy||campaignArmyAtNode(campaign,choice.nodeId,army)[0];
   if(defender){const msg=campaignStrategicFieldBattle(campaign,army,defender);return {interrupted:true,message:name+" attacks "+(campaign.factionStates.find(f=>f.id===(defender.owner||defender.factionId))?.name||"an enemy army")+". "+msg};}
@@ -1370,6 +1373,13 @@ function runAIFactionTurn(campaign,faction){
 }
 function endCampaignTurn(){
  if(!activeCampaign)return;
+ let playerAnimosityMessage="";
+ for(const playerArmy of playerArmies()){
+  if(campaignArmyRace(playerArmy,activeCampaign)!=="greenskin"||playerArmy.lastAnimosityTurn===activeCampaign.turn)continue;
+  const animosity=processGreenskinAnimosity(activeCampaign,playerArmy);
+  if(animosity.message)playerAnimosityMessage+=(playerAnimosityMessage?" ":"")+animosity.message;
+  if(animosity.battleRegion){activeCampaign.lastEvent=animosity.message;saveCampaign();launchCampaignBattle(animosity.battleRegion,animosity.battleArmy||playerArmy);return;}
+ }
  ensureSettlementState(activeCampaign);settleMonthlyPopulation(activeCampaign);
  const order=activeCampaign.factionTurnOrder||[],states=activeCampaign.factionStates||[];
  const playerId=activeCampaign.playerPoliticalFaction||FACTION_PROFILES[activeCampaign.startingRegion]?.id;
@@ -1377,12 +1387,6 @@ function endCampaignTurn(){
  activeCampaign.diplomacy=activeCampaign.diplomacy||{};
  for(const a of states)for(const b of states)if(a.id!==b.id&&!Number.isFinite(activeCampaign.diplomacy[a.id]?.[b.id]))setCampaignRelation(activeCampaign,a.id,b.id,baseFactionRelation(a.id,b.id));
  updatePeaceAndWarRelations(activeCampaign);
- let playerAnimosityMessage="";
- for(const playerArmy of playerArmies()){
-  if(campaignArmyRace(playerArmy,activeCampaign)!=="greenskin"||playerArmy.lastAnimosityTurn===activeCampaign.turn)continue;
-  const animosity=processGreenskinAnimosity(activeCampaign,playerArmy);
-  if(animosity.message)playerAnimosityMessage+=(playerAnimosityMessage?" ":"")+animosity.message;
- }
  const playerIndex=order.indexOf(playerId),processed=[];
  for(let step=1;step<order.length;step++){
   const id=order[(Math.max(0,playerIndex)+step)%order.length],f=states.find(x=>x.id===id);
