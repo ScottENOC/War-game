@@ -87,7 +87,7 @@ export function createRules({ roll, units = () => [], say = () => {} }) {
         const mods=-(longRangePenalty+movePenalty+overPenalty-elfReduction)-(context.wallPenalty||0)-(context.standShoot?1:0)-(context.targetCharging?1:0)-((context.singleCharacter||context.skirmisher)?1:0)-(context.targetInMelee&&!context.overUnitPenalty?1:0)-coverPenalty+(context.largeTarget?1:0);
         hitNeed=7-bs-mods;
       }
-      g.hitNeed=hitNeed;const forcedHit=mode==="shooting"&&i<(context.forcedHits||0);const hit=forcedHit?null:roll(1)[0];if(hit!==null)g.hitRolls.push(hit);
+      g.hitNeed=hitNeed;const forcedHit=(mode==="shooting"&&i<(context.forcedHits||0))||(mode==="melee"&&context.automaticHits&&i<(context.automaticHits||0));const hit=forcedHit?null:roll(1)[0];if(hit!==null)g.hitRolls.push(hit);
       let hitPass=forcedHit,follow=null;
       if(!forcedHit){if(mode==="melee")hitPass=context.onlySixes?hit===6:hit!==1&&(hit===6||hit>=hitNeed);
       else if(hit!==1){if(hitNeed<=6)hitPass=hit>=hitNeed;else if(hitNeed<10&&hit===6){follow=roll(1)[0];hitPass=follow>=hitNeed-3;}}}
