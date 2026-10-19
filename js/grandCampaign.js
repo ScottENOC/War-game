@@ -646,9 +646,20 @@ function selectedPlayerArmy(){
  return army;
 }
 function recruitCatalog(){
- const race=FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race||"human",basic=race==="dwarf"?"dwarfInfantry":"swordsmen";
+ const race=FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race||"human",basic=race==="greenskin"?"goblins":race==="dwarf"?"dwarfInfantry":"swordsmen";
  const options=[
-  {key:"melee",label:race==="dwarf"?"Dwarf melee infantry":race==="elf"?"High Elf spearmen":"Melee infantry",type:basic,weapon:race==="elf"?"spear":"handWeapon",min:5,max:30,modelType:basic,modelWeapon:race==="elf"?"spear":"handWeapon"},
+  {key:"melee",label:race==="dwarf"?"Dwarf melee infantry":race==="elf"?"High Elf spearmen":race==="greenskin"?"Goblin mobs":"Melee infantry",type:basic,weapon:race==="elf"?"spear":"handWeapon",min:5,max:30,modelType:basic,modelWeapon:race==="elf"?"spear":"handWeapon"},
+  ...(race==="greenskin"?[
+   {key:"orcBoyz",label:"Orc Boyz",type:"orcBoyz",weapon:"handWeapon",min:5,max:30,modelType:"orcBoyz",modelWeapon:"handWeapon"},
+   {key:"goblinBows",label:"Goblin short bows",type:"goblins",weapon:"handWeapon",rangedWeapon:"bow",min:5,max:30,modelType:"goblins",modelWeapon:"bow"},
+   {key:"wolfRiders",label:"Goblin wolf riders",type:"wolfRiders",weapon:"handWeapon",min:5,max:15,modelType:"wolfRiders",modelWeapon:"handWeapon"},
+   {key:"boarBoyz",label:"Orc boar riders",type:"boarBoyz",weapon:"handWeapon",min:5,max:15,modelType:"boarBoyz",modelWeapon:"handWeapon"},
+   {key:"goblinHero",label:"Goblin Big Boss",type:"goblinHero",weapon:"handWeapon",min:1,max:1,modelType:"goblinHero",character:true},
+   {key:"goblinLord",label:"Goblin Warboss",type:"goblinLord",weapon:"handWeapon",min:1,max:1,modelType:"goblinLord",character:true},
+   {key:"orcHero",label:"Orc Big Boss",type:"orcHero",weapon:"handWeapon",min:1,max:1,modelType:"orcHero",character:true},
+   {key:"orcLord",label:"Orc Warboss",type:"orcLord",weapon:"handWeapon",min:1,max:1,modelType:"orcLord",character:true},
+   {key:"rockLobber",label:"Goblin Rock Lobber",type:"catapult",weapon:"handWeapon",min:3,max:3,modelType:"catapult",modelWeapon:"none",fixed:true,crewType:"goblins",crewWeapon:"handWeapon"}
+  ]:[]),
   ...(race==="dwarf"?[
    {key:"crossbows",label:"Dwarf crossbowmen",type:"dwarfInfantry",weapon:"handWeapon",rangedWeapon:"crossbow",min:5,max:30,modelType:"dwarfInfantry",modelWeapon:"crossbow"},
    {key:"dwarfFirearms",label:"Dwarf firearm infantry",type:"dwarfInfantry",weapon:"handWeapon",rangedWeapon:"firearm",min:5,max:30,modelType:"dwarfInfantry",modelWeapon:"firearm"}
@@ -657,7 +668,7 @@ function recruitCatalog(){
    {key:"crossbowmen",label:"Crossbow infantry",type:"swordsmen",weapon:"handWeapon",rangedWeapon:"crossbow",min:5,max:30,modelType:"swordsmen",modelWeapon:"crossbow"},
    {key:"firearmInfantry",label:"Firearm infantry",type:"swordsmen",weapon:"handWeapon",rangedWeapon:"firearm",min:5,max:30,modelType:"swordsmen",modelWeapon:"firearm"}
   ]:[]),
-  ...(race==="elf"?[]:[{key:"spearmen",label:"Spearmen",type:basic,weapon:"spear",min:5,max:30,modelType:basic,modelWeapon:"spear"}]),
+  ...(race==="elf"||race==="greenskin"?[]:[{key:"spearmen",label:"Spearmen",type:basic,weapon:"spear",min:5,max:30,modelType:basic,modelWeapon:"spear"}]),
   {key:"halberdiers",label:"Halberdiers",type:basic,weapon:"halberd",min:5,max:30,modelType:basic,modelWeapon:"halberd"},
   {key:"greatWeapons",label:"Great-weapon infantry",type:basic,weapon:"greatWeapon",min:5,max:30,modelType:basic,modelWeapon:"greatWeapon"},
   ...(race!=="dwarf"?[{key:"cavalry",label:race==="elf"?"High Elf cavalry":"Cavalry",type:"cavalry",weapon:"handWeapon",min:5,max:15,modelType:"cavalry"}]:[]),
@@ -710,7 +721,7 @@ function optionConfig(o,models){
  if(sample&&o.type==="cavalry"&&["bow","crossbow","firearm"].includes(sample.weapon))rangedWeapon=sample.weapon;
  const config={type:o.type,models,weapon,meleeWeapons,champion:false,upgrades:{},skills:{}};
  if(rangedWeapon)config.rangedWeapon=rangedWeapon;
- if(o.type==="cavalry"){config.mounted=true;config.mountType="horse";}
+ if(o.type==="cavalry"){config.mounted=true;config.mountType="horse";}if(o.type==="wolfRiders"){config.mounted=true;config.mountType="wolf";}if(o.type==="boarBoyz"){config.mounted=true;config.mountType="boar";}
  if(o.type==="dwarfKingHaldric"){config.shield=true;config.magicArmour=true;}
  return config;
 }
