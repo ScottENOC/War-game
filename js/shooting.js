@@ -107,7 +107,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
       skirmisher:!!target.skirmishing||!!target.skirmisher,cover:target.wallDefence?.posture==="hunker"?"hard":target.wallDefence?.posture==="active"?"soft":(target.cover==="soft"||target.cover==="hard"?target.cover:null),
       coverHitPenaltyBonus:(target.coverHitPenaltyBonus||(target.attachedCharacters||[]).some(id=>S.units[id]?.models>0&&!S.units[id]?.fled&&S.units[id]?.coverHitPenaltyBonus))?1:0,
       overUnitPenalty:wallEffect.arcUsed?0:visibility.overUnitPenalty,wallPenalty:wallEffect.penalty||0,terrainWallPenalty:wallEffect.penalty||0,arcShot:!!(visibility.arcShot||wallEffect.arcUsed),longRangePenalty:u.rangedWeapon==="firearm"?2:1,
-      armourPiercing:u.armourPiercing||0,attackingModels:u.isBoltThrower?6:visibility.visibleModels,attackingChampion:visibility.visibleChampion
+      armourPiercing:u.armourPiercing||0,attackingModels:u.isBoltThrower?6:u.isChariot?Math.min(u.models,3):visibility.visibleModels,attackingChampion:visibility.visibleChampion
     };
     let result,cannonBodyWounds=0,cannonCrewWounds=0,crewCascadePlan=null,cannonSplitInfo=null;
     if(target.isCannon||target.isBoltThrower||target.isCatapult||target.isChariot){
