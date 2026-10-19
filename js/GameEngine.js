@@ -1,5 +1,5 @@
 import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-starwarden-v2";
-import { createRoguelike } from "./roguelike.js?v=20261017-abandon-run-v1";
+import { createRoguelike } from "./roguelike.js?v=20261020-starwarden-v2";
 import { createArmyBuilder } from "./armyBuilder.js?v=20261020-starwarden-v2";
 import { createCollectionManager } from "./collection.js?v=20261020-starwarden-v2";
 import { createGameState } from "./gameState.js";
