@@ -16,7 +16,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     return groups;
   }
   function combatantAlive(u) { return !!u && (u.models > 0 || (u.isChariot && u.chariotWounds > 0)) && !u.fled; }
-  function combatUnitStrength(u){if(!u)return 0;if(Number.isFinite(u.unitStrength))return u.unitStrength;if(u.isDragon||u.isDragonRider)return 6;if(u.isCavalry)return Math.max(0,u.models)*2;return Math.max(0,u.models||0);}
+  function combatUnitStrength(u){if(!u)return 0;if(u.isChariot&&u.chariotWounds<=0)return Math.max(0,u.models||0);if(Number.isFinite(u.unitStrength))return u.unitStrength;if(u.isDragon||u.isDragonRider)return 6;if(u.isCavalry)return Math.max(0,u.models)*2;return Math.max(0,u.models||0);}
   function captureFighter(u, host=u, component="rider") {
     const champion = !!(u.champion?.enabled && u.championAlive !== false && u.models > 0);
     const rankWidth=Math.max(1,Math.floor(u.formationWidth||5));
