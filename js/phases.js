@@ -1,54 +1,45 @@
 function resolveGreenskinAnimosity({S,units,alive,roll,say,enemies,dist,canPlace,W,H,BATTLEFIELD_WIDTH_IN,shoot,resolveCombat}){
   const all=units();
-  const moveToward=(u,target)=>{
-    const maxMove=Math.max(0,u.baseMove||u.stats.M||0),startX=u.x,startY=u.y;
-    const angle=Math.atan2((target.y-startY)*H(),(target.x-startX)*W()),stepPixels=W()/BATTLEFIELD_WIDTH_IN;
-    const steps=Math.max(1,Math.ceil(maxMove*4));let moved=0;
-    for(let i=1;i<=steps;i++){
-      const inches=maxMove*i/steps,px=Math.cos(angle)*inches*stepPixels,py=Math.sin(angle)*inches*stepPixels,nx=startX+px/W(),ny=startY+py/H();
-      if(!canPlace(u,nx,ny,angle))break;
-      u.x=nx;u.y=ny;moved=inches;
-    }
-    u.facing=angle;u.moved=true;u.moveUsed=moved;
-    return moved;
+  const squabble=u=>{u.animositySquabble=true;u.stats.M=0;u.shot=true;u.charged=true;say("Animosity — "+u.name+" squabbles and cannot move or shoot this turn.");};
+  const moveStraight=(u,angle)=>{
+    const maxMove=Math.max(0,u.baseMove||u.stats.M||0),startX=u.x,startY=u.y,stepPixels=W()/BATTLEFIELD_WIDTH_IN,steps=Math.max(1,Math.ceil(maxMove*4));let moved=0;
+    for(let i=1;i<=steps;i++){const inches=maxMove*i/steps,nx=startX+Math.cos(angle)*inches*stepPixels/W(),ny=startY+Math.sin(angle)*inches*stepPixels/H();if(!canPlace(u,nx,ny,angle))break;u.x=nx;u.y=ny;moved=inches;}
+    u.facing=angle;u.moved=true;u.moveUsed=moved;return moved;
   };
   all.filter(u=>u.faction==="greenskins").forEach(u=>{
     if(u.baseMove!=null&&u.stats&&u.animosityEligible)u.stats.M=u.baseMove;
     u.animositySquabble=false;
     if(!u.animosityEligible||u.models<5||!alive(u)||u.fled||u.engaged||u.deployed===false)return;
-    const test=roll(1)[0];
-    if(test!==1)return;
+    if(roll(1)[0]!==1)return;
     const result=roll(1)[0];
-    if(result<=2){
-      u.animositySquabble=true;u.stats.M=0;u.shot=true;u.charged=true;
-      say("Animosity — "+u.name+" rolls 1, then "+result+": the unit squabbles and cannot move or shoot this turn.");
-      return;
-    }
-    if(result<=4){
-      const friend=all.filter(v=>v!==u&&v.side===u.side&&v.faction==="greenskins"&&alive(v)&&!v.fled&&!v.engaged&&v.deployed!==false)
-        .sort((a,b)=>dist(u,a)-dist(u,b))[0];
-      if(!friend){u.animositySquabble=true;u.stats.M=0;u.shot=true;u.charged=true;say("Animosity — "+u.name+" rolls 1, then "+result+": it looks for a friendly unit to brawl with, finds none, and squabbles.");return;}
-      const moved=moveToward(u,friend);
-      const gap=dist(u,friend);
-      if(gap<=Math.max(1,(u.front||1)+(friend.front||1))){
-        u.engaged=friend.engaged=true;u.engagedWith=friend.id;friend.engagedWith=friend.id===u.id?u.id:u.id;
-        u.engagedWithIds=[...new Set([...(u.engagedWithIds||[]),friend.id])];
-        friend.engagedWithIds=[...new Set([...(friend.engagedWithIds||[]),u.id])];
-        u.engagementSides={...(u.engagementSides||{}),[friend.id]:"front"};friend.engagementSides={...(friend.engagementSides||{}),[u.id]:"front"};
-        u.engagedSide=friend.engagedSide="front";u.chargedSide=friend.chargedSide="front";
-        u.animosityBrawl=true;friend.animosityBrawl=true;
-        say("Animosity — "+u.name+" rolls 1, then "+result+": it charges into friendly "+friend.name+" and starts a brawl!");
-        resolveCombat?.();
-      }else{
-        u.animositySquabble=true;u.stats.M=0;u.shot=true;u.charged=true;
-        say("Animosity — "+u.name+" rolls 1, then "+result+": it advances "+moved.toFixed(1)+" inches towards "+friend.name+" but cannot reach it, so the unit squabbles.");
+    if(result===1){
+      if(u.hasRangedWeapon){
+        const rival=all.filter(v=>v!==u&&v.side===u.side&&v.faction==="greenskins"&&v.animosityEligible&&v.models>=5&&alive(v)&&!v.fled&&!v.engaged&&dist(u,v)<=(u.range||20))
+          .sort((a,b)=>dist(u,a)-dist(u,b))[0];
+        if(!rival||typeof shoot!=="function"){squabble(u);return;}
+        say("Animosity — "+u.name+" rolls 1, then 1 (Get ’em!): it immediately shoots at rival "+rival.name+".");
+        shoot(u,rival,false);u.stats.M=0;u.shot=true;u.charged=true;u.animosityGetEm=true;return;
       }
+      const rival=all.filter(v=>v!==u&&v.side===u.side&&v.faction==="greenskins"&&v.animosityEligible&&v.models>=5&&alive(v)&&!v.fled&&!v.engaged)
+        .map(v=>({unit:v,distance:dist(u,v),angle:Math.atan2((v.y-u.y)*H(),(v.x-u.x)*W())}))
+        .filter(x=>x.distance<=(u.baseMove||u.stats.M||0)+3&&Math.cos(x.angle-(u.facing||0))>=0)
+        .sort((a,b)=>a.distance-b.distance)[0]?.unit;
+      if(!rival){squabble(u);return;}
+      moveStraight(u,Math.atan2((rival.y-u.y)*H(),(rival.x-u.x)*W()));
+      u.engaged=rival.engaged=true;u.engagedWith=rival.id;rival.engagedWith=u.id;
+      u.engagedWithIds=[...new Set([...(u.engagedWithIds||[]),rival.id])];rival.engagedWithIds=[...new Set([...(rival.engagedWithIds||[]),u.id])];
+      u.engagementSides={...(u.engagementSides||{}),[rival.id]:"front"};rival.engagementSides={...(rival.engagementSides||{}),[u.id]:"front"};
+      u.engagedSide=rival.engagedSide="front";u.chargedSide=rival.chargedSide="front";u.animosityGetEm=true;rival.animosityGetEm=true;
+      say("Animosity — "+u.name+" rolls 1, then 1 (Get ’em!): it charges friendly "+rival.name+" and starts a brawl.");
+      resolveCombat?.();
+      for(const v of [u,rival]){v.engaged=false;v.engagedWith=null;v.engagedWithIds=[];v.engagementSides={};v.animositySquabble=true;v.stats.M=0;v.shot=true;v.charged=true;}
       return;
     }
+    if(result>=2&&result<=5){squabble(u);return;}
     const target=(enemies(u)||[]).filter(v=>alive(v)&&!v.fled).sort((a,b)=>dist(u,a)-dist(u,b))[0];
-    if(!target){say("Animosity — "+u.name+" rolls 1, then "+result+", but sees no enemy to advance towards.");return;}
-    const moved=moveToward(u,target);
-    say("Animosity — "+u.name+" rolls 1, then "+result+": “We'll show 'em!” It surges "+moved.toFixed(1)+" inches towards "+target.name+" and may still act normally.");
+    const angle=target?Math.atan2((target.y-u.y)*H(),(target.x-u.x)*W()):(u.facing||0);
+    const moved=moveStraight(u,angle);
+    say("Animosity — "+u.name+" rolls 1, then 6 (We’ll Show ’Em!): it makes a full move of "+moved.toFixed(1)+" inches "+(target?"towards "+target.name:"straight ahead")+". It may still act normally this turn.");
   });
 }
 export function createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, PX_PER_IN, roll, dist, enemies, say, shoot, render, startActivations, canPlace, canCharge, panicNearby, testTerrorAtTurnStart, testChargePsychology, resolveCombat }) {
