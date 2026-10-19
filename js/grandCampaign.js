@@ -693,7 +693,7 @@ function selectedPlayerArmy(){
  activeCampaign.selectedArmyId=army.id;army.name=army.name||(army.id===activeCampaign.playerPoliticalFaction+"-main"?"Main army":"Army "+(armies.indexOf(army)+1));
  if(!army.nodeId)army.nodeId=activeCampaign.commander.nodeId||"city-"+(army.region||activeCampaign.startingRegion);
  if(!Number.isFinite(army.region))army.region=activeCampaign.graph.nodes[army.nodeId]?.region||activeCampaign.startingRegion;
- if(!Number.isFinite(army.movement))army.movement=army.id===activeCampaign.playerPoliticalFaction+"-main"?(activeCampaign.commander.movement??activeCampaign.commander.maxMovement):0;
+ if(!Number.isFinite(army.movement))army.movement=campaignArmyMovementProfile(army,activeCampaign).points;
  return army;
 }
 function recruitCatalog(){
