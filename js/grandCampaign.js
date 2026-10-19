@@ -1266,6 +1266,28 @@ function campaignResolveSquabble(campaign,armyA,armyB=null){
  const hits=results.filter(r=>r.wound&&!r.saved).length;
  return "Squabble: "+results.length+" attacks are resolved in initiative order; "+hits+" wound(s) get through armour.";
 }
+function launchCampaignFieldBattle(attackingArmy,defendingArmy){
+ if(!activeCampaign||!attackingArmy?.roster?.length||!defendingArmy?.roster?.length||typeof window.startPoliticalCampaignBattle!=="function")return false;
+ const attackerId=attackingArmy.owner||attackingArmy.factionId,defenderId=defendingArmy.owner||defendingArmy.factionId;
+ declareCampaignWar(activeCampaign,attackerId,defenderId);
+ const attackerFaction=attackingArmy.rosterFaction||rosterFactionForPoliticalFaction(attackerId),defenderFaction=defendingArmy.rosterFaction||rosterFactionForPoliticalFaction(defenderId);
+ const targetNode=defendingArmy.nodeId||"city-"+defendingArmy.region;
+ const started=window.startPoliticalCampaignBattle({army:attackingArmy.roster,faction:attackerFaction,enemyArmy:defendingArmy.roster,enemyFaction:defenderFaction,onComplete:result=>{
+  attackingArmy.foughtThisTurn=true;defendingArmy.foughtThisTurn=true;
+  const update=(army,units,faction)=>{army.roster=army.roster.map((config,i)=>({...config,models:Math.max(0,units[i]?.models??0),currentDamage:units[i]?.damage||0,currentWounds:units[i]?.characterWounds})).filter(config=>config.models>0);army.points=Math.max(0,Math.round(army.roster.reduce((sum,u)=>sum+unitCost(u,faction),0)));};
+  update(attackingArmy,result.playerUnits||[],attackerFaction);update(defendingArmy,result.enemyUnits||[],defenderFaction);
+  const winner=result.won?attackingArmy:defendingArmy,loser=result.won?defendingArmy:attackingArmy;
+  if(result.won){winner.nodeId=targetNode;winner.region=activeCampaign.graph.nodes[targetNode]?.region??defendingArmy.region;}
+  const loserState=activeCampaign.factionStates.find(f=>f.id===(loser.owner||loser.factionId)),home=loserState?.homeRegion||loser.region;
+  loser.nodeId="city-"+home;loser.region=home;
+  for(const army of [attackingArmy,defendingArmy]){const state=activeCampaign.factionStates.find(f=>f.id===(army.owner||army.factionId));if(state){state.roster=army.roster;state.armyPoints=army.points;if(!army.roster.length)state.alive=false;}}
+  activeCampaign.lastEvent=result.won?"Greenskin animosity attack wins a field battle. The defeated army retreats.":"Greenskin animosity attack is repelled. The attacking army retreats.";
+  saveCampaign();byId("grand-campaign-screen").hidden=false;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();
+ }});
+ if(!started){activeCampaign.lastEvent="The tactical field battle could not be started.";renderCampaignMap();return false;}
+ return true;
+}
+
 function campaignStrategicFieldBattle(campaign,attackerArmy,defenderArmy){
  const attackerId=attackerArmy.owner||attackerArmy.factionId,defenderId=defenderArmy.owner||defenderArmy.factionId;
  const attacker=campaign.factionStates.find(f=>f.id===attackerId)||{id:attackerId,name:attackerId,homeRegion:attackerArmy.region};
@@ -1320,7 +1342,7 @@ function processGreenskinAnimosity(campaign,army){
    }
   }
   const defender=choice.targetArmy||campaignArmyAtNode(campaign,choice.nodeId,army)[0];
-  if(defender){const msg=campaignStrategicFieldBattle(campaign,army,defender);return {interrupted:true,message:name+" attacks "+(campaign.factionStates.find(f=>f.id===(defender.owner||defender.factionId))?.name||"an enemy army")+". "+msg};}
+  if(defender){if(own===campaign.playerPoliticalFaction)return {interrupted:true,fieldBattle:true,battleArmies:[army,defender],message:name+" attacks "+(campaign.factionStates.find(f=>f.id===(defender.owner||defender.factionId))?.name||"an enemy army")+". A tactical field battle is required."};const msg=campaignStrategicFieldBattle(campaign,army,defender);return {interrupted:true,message:name+" attacks "+(campaign.factionStates.find(f=>f.id===(defender.owner||defender.factionId))?.name||"an enemy army")+". "+msg};}
   return {interrupted:true,message:name+" attacks "+(campaign.factionStates.find(f=>f.id===choice.owner)?.name||choice.owner)+", but no defending army is available."};
  }
  const path=choice.path;let spent=0,last=path[0];
@@ -1379,6 +1401,7 @@ function endCampaignTurn(){
   const animosity=processGreenskinAnimosity(activeCampaign,playerArmy);
   if(animosity.message)playerAnimosityMessage+=(playerAnimosityMessage?" ":"")+animosity.message;
   if(animosity.battleRegion){activeCampaign.lastEvent=animosity.message;saveCampaign();launchCampaignBattle(animosity.battleRegion,animosity.battleArmy||playerArmy);return;}
+  if(animosity.fieldBattle){activeCampaign.lastEvent=animosity.message;saveCampaign();launchCampaignFieldBattle(animosity.battleArmies[0],animosity.battleArmies[1]);return;}
  }
  ensureSettlementState(activeCampaign);settleMonthlyPopulation(activeCampaign);
  const order=activeCampaign.factionTurnOrder||[],states=activeCampaign.factionStates||[];
