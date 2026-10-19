@@ -10,7 +10,7 @@ import { createCombat } from "./combat.js?v=20261015-fear-rules-v1";
 import { createRendering } from "./rendering.js?v=20261017-faction-colours-v2";
 import { createInput } from "./input.js?v=greenskin-roster-v3";
 import { createUI } from "./ui.js?v=greenskin-roster-v3";
-import { createPhases } from "./phases.js?v=20261019-animosity-v2";
+import { createPhases } from "./phases.js?v=20261019-animosity-v3";
 import { createDice } from "./dice.js";
 import { createMovement } from "./movement.js";
 import { createNarrativeCampaign } from "./campaign.js";
