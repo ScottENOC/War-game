@@ -207,7 +207,10 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     const rangedArms=body.faction==="empire"?["both_bow","both_crossbow","both_firearm"]:body.faction==="greenskins"?(["goblins","goblinHero","goblinLord"].includes(body.kind)?["both_bow"]:[]):body.faction==="highElves"?["both_bow"]:[];
     let arms;
     if(named) arms=["signature"];
-    else if(body.kind==="elfChariot") arms=["right_spear","both_bow","both_greatWeapon"];
+    else if(body.kind==="elfChariot") arms=["right_spear","both_bow"];
+    else if(body.kind==="humanChariot") arms=["right_sword","right_spear","both_bow","both_halberd"];
+    else if(body.kind==="goblinChariot") arms=["right_club","right_spear","both_bow"];
+    else if(body.kind==="orcChariot") arms=["right_club","right_spear"];
     else if(body.kind==="infantry"&&body.faction==="highElves") arms=["right_spear","both_bow","both_greatWeapon","both_halberd"];
     else if(cavalry) arms=body.faction==="empire"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms];
     else if(hero) arms=horseWrap.value!=="no"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","both_greatWeapon","both_halberd",...rangedArms];
