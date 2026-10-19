@@ -142,47 +142,87 @@ function campaignArmyCost(army){
  return Math.max(0,Math.round((army?.roster||[]).reduce((sum,u)=>sum+unitCost(u,army.rosterFaction||"empire"),0)));
 }
 function campaignArmyUpkeep(army){return Math.ceil(campaignArmyCost(army)*.04);}
-function recruitmentPoolSettings(race){
- if(race==="elf")return {initial:20,maximum:30,growth:1};
- if(race==="dwarf")return {initial:26,maximum:40,growth:2};
- if(race==="greenskin")return {unlimited:true,initial:null,maximum:null,growth:0};
- return {initial:40,maximum:60,growth:4};
+function recruitmentRaceForCulture(culture){
+ const value=String(culture||"").toLowerCase();
+ if(value.includes("elf"))return "elf";
+ if(value.includes("dwarf"))return "dwarf";
+ if(value.includes("green")||value.includes("goblin")||value.includes("orc"))return "greenskin";
+ if(value.includes("undead"))return "undead";
+ if(value.includes("human")||value.includes("valedorn")||value.includes("westmere"))return "human";
+ return "human";
 }
-function ensureRecruitmentPool(faction){
- if(!faction)return null;
- const settings=recruitmentPoolSettings(faction.race||FACTION_BY_ID[faction.id]?.race||"human");
- if(settings.unlimited){faction.recruitmentPool=null;faction.recruitmentPoolUnlimited=true;return settings;}
- faction.recruitmentPoolUnlimited=false;
- if(!Number.isFinite(faction.recruitmentPool))faction.recruitmentPool=settings.initial;
- faction.recruitmentPool=Math.max(0,Math.min(settings.maximum,faction.recruitmentPool));
- return settings;
+function recruitmentRate(race){
+ return race==="elf"?0.00005:race==="dwarf"?0.0002:race==="greenskin"?Infinity:race==="undead"?0.0002:0.0004;
 }
-function recruitmentPoolAvailable(faction){
- const settings=ensureRecruitmentPool(faction);
- return !faction?0:settings?.unlimited?Infinity:Math.max(0,Number(faction.recruitmentPool)||0);
+function ensureSettlementRecruitment(region){
+ const settlement=region?.settlement;
+ if(!settlement?.population)return null;
+ if(!settlement.recruitmentPools||typeof settlement.recruitmentPools!=="object")settlement.recruitmentPools={};
+ for(const group of settlement.population.groups||[]){
+  const race=recruitmentRaceForCulture(group.culture);
+  if(race==="greenskin")continue;
+  if(!settlement.recruitmentPools[race]){
+   const count=Math.max(0,Number(group.count)||0),rate=recruitmentRate(race);
+   settlement.recruitmentPools[race]={available:Math.floor(count*rate*10),progress:0};
+  }
+ }
+ return settlement.recruitmentPools;
 }
-function replenishRecruitmentPool(faction){
- const settings=ensureRecruitmentPool(faction);
- if(!faction||settings?.unlimited)return 0;
- const before=faction.recruitmentPool;
- faction.recruitmentPool=Math.min(settings.maximum,before+settings.growth);
- return faction.recruitmentPool-before;
+function recruitmentPoolAvailable(faction,region){
+ const race=faction?.race||FACTION_BY_ID[faction?.id]?.race||"human";
+ if(race==="greenskin")return Infinity;
+ const pools=ensureSettlementRecruitment(region);
+ return Math.max(0,Math.floor(Number(pools?.[race]?.available)||0));
 }
-function consumeRecruitmentPool(faction,count){
- if(!faction||count<=0)return false;
- if(recruitmentPoolAvailable(faction)<count)return false;
- if(!faction.recruitmentPoolUnlimited)faction.recruitmentPool=Math.max(0,faction.recruitmentPool-count);
+function growSettlementRecruitment(region){
+ const pools=ensureSettlementRecruitment(region);
+ if(!pools)return;
+ for(const [race,pool] of Object.entries(pools)){
+  const population=(region.settlement.population.groups||[]).filter(g=>recruitmentRaceForCulture(g.culture)===race).reduce((n,g)=>n+Math.max(0,Number(g.count)||0),0);
+  const rate=recruitmentRate(race);
+  if(!population||!Number.isFinite(rate))continue;
+  pool.progress=(Number(pool.progress)||0)+population*rate;
+  const gained=Math.floor(pool.progress);
+  if(gained>0){
+   const cap=Math.floor(population*rate*15);
+   pool.available=Math.min(cap,Math.max(0,Number(pool.available)||0)+gained);
+   pool.progress-=gained;
+  }
+ }
+}
+function growFactionRecruitment(campaign,faction){
+ let gained=0;
+ for(const region of campaign?.regions||[]){
+  if(politicalOwner(region)!==faction?.id)continue;
+  const before=Object.values(ensureSettlementRecruitment(region)||{}).reduce((n,p)=>n+(p.available||0),0);
+  growSettlementRecruitment(region);
+  const after=Object.values(ensureSettlementRecruitment(region)||{}).reduce((n,p)=>n+(p.available||0),0);
+  gained+=after-before;
+ }
+ return gained;
+}
+function consumeRecruitmentPool(faction,region,count){
+ count=Math.max(0,Math.floor(Number(count)||0));
+ if(!faction||!region||count<=0)return false;
+ const race=faction.race||FACTION_BY_ID[faction.id]?.race||"human";
+ if(race==="greenskin")return true;
+ const pools=ensureSettlementRecruitment(region),pool=pools?.[race];
+ if(!pool||Math.floor(Number(pool.available)||0)<count)return false;
+ pool.available-=count;
  return true;
 }
-function civilianPopulation(region){
+function civilianPopulation(region,race=null){
+ const groups=region?.settlement?.population?.groups||[];
+ if(race)return Math.max(0,Math.floor(groups.filter(g=>recruitmentRaceForCulture(g.culture)===race).reduce((n,g)=>n+Math.max(0,Number(g.count)||0),0)));
  return Math.max(0,Math.floor(Number(region?.settlement?.population?.total)||0));
 }
-function consumeCivilianPopulation(region,count){
+function consumeCivilianPopulation(region,count,race=null){
  count=Math.max(0,Math.floor(Number(count)||0));
- if(!region?.settlement?.population||civilianPopulation(region)<count)return false;
+ if(!region?.settlement?.population||civilianPopulation(region,race)<count)return false;
  const population=region.settlement.population;
  let remaining=count;
- for(const group of [...(population.groups||[])].sort((a,b)=>(b.count||0)-(a.count||0))){
+ const eligible=(population.groups||[]).filter(g=>!race||recruitmentRaceForCulture(g.culture)===race).sort((a,b)=>(b.count||0)-(a.count||0));
+ for(const group of eligible){
   const loss=Math.min(Math.max(0,group.count||0),remaining);
   group.count-=loss;remaining-=loss;if(!remaining)break;
  }
@@ -192,7 +232,8 @@ function consumeCivilianPopulation(region,count){
 }
 function recruitmentCapacity(army){
  const faction=selectedFactionTreasury(),region=activeCampaign?.regions?.find(r=>r.id===army?.region);
- return Math.max(0,Math.floor(Math.min(recruitmentPoolAvailable(faction),civilianPopulation(region))));
+ const race=faction?.race||FACTION_BY_ID[faction?.id]?.race||"human";
+ return Math.max(0,Math.floor(Math.min(recruitmentPoolAvailable(faction,region),civilianPopulation(region,race))));
 }
 function availableForRecruitment(option,army){
  const available=availableForOption(option),capacity=recruitmentCapacity(army);
@@ -200,13 +241,13 @@ function availableForRecruitment(option,army){
 }
 function recruitArmyModels(army,faction,budget,campaign,factionState){
  let spent=0,added=0;
- const region=campaign?.regions?.find(r=>r.id===army.region);
- while(added<5&&budget-spent>0&&recruitmentPoolAvailable(factionState)>0&&civilianPopulation(region)>0){
+ const region=campaign?.regions?.find(r=>r.id===army.region),race=factionState?.race||FACTION_BY_ID[factionState?.id]?.race||"human";
+ while(added<5&&budget-spent>0&&recruitmentPoolAvailable(factionState,region)>0&&civilianPopulation(region,race)>0){
   const unit=(army.roster||[]).find(u=>["swordsmen","dwarfInfantry","archers","goblins","orcBoyz"].includes(u.type)&&u.models<30);
   if(!unit)break;
   const before=unitCost({...unit,models:unit.models},faction),after=unitCost({...unit,models:unit.models+1},faction),price=Math.max(1,after-before);
   if(budget-spent<price)break;
-  if(!consumeRecruitmentPool(factionState,1)||!consumeCivilianPopulation(region,1))break;
+  if(!consumeRecruitmentPool(factionState,region,1)||!consumeCivilianPopulation(region,1,race))break;
   unit.models++;spent+=price;added++;
  }
  army.points=campaignArmyCost(army);
@@ -314,7 +355,7 @@ function initialSettlement(city){
  return {historicalTier:p.tier,prosperity:p.prosperity,unrest:0,foodStores:8,maxFoodStores:8,siegeTurns:0,besiegedBy:null,population:{total:pop,groups:[{culture:CULTURE_BY_FACTION[city.faction]||"Local",count:pop}],displaced:0},buildings:p.buildings.map(id=>({id,condition:100})),fortification:{...p.fortification,condition:100,damage:0,upgrades:[]},infrastructureCondition:100,occupationPolicy:"local-administration",monthsUnderOccupation:0};
 }
 function ensureSettlementState(campaign){
- for(const faction of campaign.factionStates||[])ensureRecruitmentPool(faction);
+ 
  const oldSchemaVersion=Number(campaign.schemaVersion)||0;
  for(const region of campaign.regions||[]){
   const city=CITIES.find(c=>c.id===region.id);if(!city)continue;
@@ -330,9 +371,10 @@ function ensureSettlementState(campaign){
   if(!region.settlement.population)region.settlement.population=initialSettlement(city).population;
   if(!Array.isArray(region.settlement.buildings))region.settlement.buildings=initialSettlement(city).buildings;
   if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
+  ensureSettlementRecruitment(region);
  }
- campaign.schemaVersion=6;
- if(!campaign.factionStates){campaign.factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id),generated=createCampaignArmyRoster(profile.id,profile.id===campaign.playerPoliticalFaction?1000:500);return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:generated.faction,roster:generated.roster,homeRegion:home.id,alive:true,treasury:profile.id===campaign.playerPoliticalFaction?Number(campaign.treasury)||500:300,income:100,armyPoints:profile.id===campaign.playerPoliticalFaction?1000:500,turnsTaken:0,relations:{},recruitmentPool:profile.race==="greenskin"?null:recruitmentPoolSettings(profile.race).initial,recruitmentPoolUnlimited:profile.race==="greenskin"};});campaign.factionTurnOrder=campaign.factionStates.map(f=>f.id);campaign.playerPoliticalFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[1].id;campaign.activeFaction=campaign.activeFaction||campaign.playerPoliticalFaction;}
+ campaign.schemaVersion=7;
+ if(!campaign.factionStates){campaign.factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id),generated=createCampaignArmyRoster(profile.id,profile.id===campaign.playerPoliticalFaction?1000:500);return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:generated.faction,roster:generated.roster,homeRegion:home.id,alive:true,treasury:profile.id===campaign.playerPoliticalFaction?Number(campaign.treasury)||500:300,income:100,armyPoints:profile.id===campaign.playerPoliticalFaction?1000:500,turnsTaken:0,relations:{},};});campaign.factionTurnOrder=campaign.factionStates.map(f=>f.id);campaign.playerPoliticalFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[1].id;campaign.activeFaction=campaign.activeFaction||campaign.playerPoliticalFaction;}
  for(const state of campaign.factionStates){if(!Array.isArray(state.roster)||!state.roster.length){const generated=createCampaignArmyRoster(state.id,state.armyPoints||500);state.rosterFaction=generated.faction;state.roster=generated.roster;}}
  if(oldSchemaVersion<6){
   const previousArmies=campaign.armies||[];
@@ -415,12 +457,12 @@ function createInitialCampaignState(faction,city,commander){
  const factionStates=Object.values(FACTION_PROFILES).map(profile=>{
   const home=CITIES.find(x=>FACTION_PROFILES[x.id].id===profile.id),isPlayer=profile.id===playerPoliticalFaction;
   const army=createCampaignArmyRoster(profile.id,isPlayer?1000:500,{player:isPlayer,commander:isPlayer?commander:null});
-  return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,treasury:isPlayer?500:300,income:campaignCityIncome(regions.find(r=>r.id===home.id)),upkeep:Math.ceil(army.points*.04),armyPoints:army.points,turnsTaken:0,relations:{},recruitmentPool:profile.race==="greenskin"?null:recruitmentPoolSettings(profile.race).initial,recruitmentPoolUnlimited:profile.race==="greenskin"};
+  return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,treasury:isPlayer?500:300,income:campaignCityIncome(regions.find(r=>r.id===home.id)),upkeep:Math.ceil(army.points*.04),armyPoints:army.points,turnsTaken:0,relations:{},};
  });
  const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;diplomacy[a.id][b.id]=baseFactionRelation(a.id,b.id);}}
  const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0}));
  const playerState=factionStates.find(f=>f.id===playerPoliticalFaction);
- return {schemaVersion:7,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:3,maxMovement:3},armies,lastEvent:commander.name+" begins the campaign at "+city.name+"."};
+ return {schemaVersion:7,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3),maxMovement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3)},armies,lastEvent:commander.name+" begins the campaign at "+city.name+"."};
 }
 let selectedFaction="empire",selectedPoliticalFaction="valedorn",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
@@ -743,14 +785,14 @@ function renderArmyManagement(){
  const labels={goblins:"Goblin mobs",orcBoyz:"Orc Boyz",wolfRiders:"Goblin wolf riders",boarBoyz:"Orc boar riders",goblinHero:"Goblin Big Boss",goblinLord:"Goblin Warboss",orcHero:"Orc Big Boss",orcLord:"Orc Warboss",catapult:"Goblin Rock Lobber",swordsmen:"Melee infantry",archers:"Archers",dwarfInfantry:"Dwarf infantry",cavalry:"Cavalry",cannon:"Cannon",boltThrower:"Bolt thrower",captain:"Captain",lord:"Lord",dwarfCaptain:"Dwarf thane",dwarfLord:"Dwarf lord",dwarfKingHaldric:"King Haldric",legendaryLord:"Edric Voss",shadowElf:"Lethariel Starweaver",pegasusChampion:"Aelthir, the Dawnwing",rifleman:"Marksman",captainWeiss:"Marta Weiss",youngDragon:"Young dragon",dragon:"Dragon",ancientDragon:"Ancient dragon"};
  const options=catalog.map(o=>{const available=availableForRecruitment(o,army),config=optionConfig(o,o.min),price=unitCost(config,faction);return '<option value="'+o.key+'" '+(available<o.min?'disabled':'')+'>'+o.label+' · '+available+' available · '+price+' gold minimum</option>';}).join("");
  const roster=(army.roster||[]).map((u,i)=>{const label=labels[u.type]||u.type,o=optionForUnit(u,catalog),can=!!o&&!o.character&&!o.fixed&&u.models<o.max&&availableForRecruitment(o,army)>0;return '<div class="grand-army-unit"><span><b>'+label+'</b><small>'+u.models+' models · '+unitCost(u,faction)+' gold</small></span><div class="grand-army-unit-actions"><button type="button" class="secondary-button" data-replenish="'+i+'" '+(!can?'disabled':'')+'>Replenish +1</button><button type="button" class="secondary-button grand-disband-button" data-disband="'+i+'">Disband</button></div></div>';}).join("");
- host.innerHTML='<div class="grand-army-management-head"><h3>Armies &amp; recruitment</h3><button type="button" class="secondary-button" id="grand-create-army">＋ Form army</button></div><label class="grand-army-field">Selected army<select id="grand-select-army">'+armies.map(a=>'<option value="'+a.id+'" '+(a.id===army.id?'selected':'')+'>'+(a.name||"Army")+' · '+(CITIES.find(c=>c.id===a.region)?.name||"Field")+'</option>').join("")+'</select></label><div class="grand-army-summary">'+(army.roster||[]).length+' / 6 units · '+(army.points||0)+' pts · '+(treasury?.recruitmentPoolUnlimited?'unlimited recruitment pool':(treasury?.recruitmentPool||0)+' recruits in pool')+' · '+civilianPopulation(activeCampaign.regions.find(r=>r.id===army.region)).toLocaleString()+' civilians at this location · '+(army.movement||0)+' movement left · '+(army.supplies??3)+'/'+(army.maxSupplies||3)+' supply turns · '+({supplied:'supplied',low:'low supplies',starving:'starving',raided:'supply line raided'}[army.supplyStatus]||'supply status unknown')+'</div>'+(roster||'<p class="subtle">This army has no troops yet. Recruit a unit below.</p>')+'<button type="button" class="secondary-button" id="grand-raid-supply">Raid enemy supply line</button><small class="grand-supply-note">Supplies refill while connected to friendly settlements. Cut off armies consume reserves; at zero, starvation causes losses.</small><div class="grand-recruit-box"><label class="grand-army-field">Recruit a new unit<select id="grand-recruit-type">'+options+'</select></label><label class="grand-army-field">Models<input id="grand-recruit-count" type="number" min="1" max="30" value="5"></label><button type="button" class="primary-button" id="grand-recruit-unit" '+((army.roster||[]).length>=6?'disabled':'')+'>Recruit unit</button><small>Recruitment costs gold and requires compatible miniatures you own. Models already deployed in any of your armies cannot be recruited again.</small></div>';
+ host.innerHTML='<div class="grand-army-management-head"><h3>Armies &amp; recruitment</h3><button type="button" class="secondary-button" id="grand-create-army">＋ Form army</button></div><label class="grand-army-field">Selected army<select id="grand-select-army">'+armies.map(a=>'<option value="'+a.id+'" '+(a.id===army.id?'selected':'')+'>'+(a.name||"Army")+' · '+(CITIES.find(c=>c.id===a.region)?.name||"Field")+'</option>').join("")+'</select></label><div class="grand-army-summary">'+(army.roster||[]).length+' / 6 units · '+(army.points||0)+' pts · '+(FACTION_BY_ID[treasury?.id]?.race==="greenskin"?"unlimited greenskin recruitment":recruitmentPoolAvailable(treasury,activeCampaign.regions.find(r=>r.id===army.region))+" local trained recruits")+' · '+civilianPopulation(activeCampaign.regions.find(r=>r.id===army.region)).toLocaleString()+' civilians at this location · '+(army.movement||0)+' movement left · '+(army.supplies??3)+'/'+(army.maxSupplies||3)+' supply turns · '+({supplied:'supplied',low:'low supplies',starving:'starving',raided:'supply line raided'}[army.supplyStatus]||'supply status unknown')+'</div>'+(roster||'<p class="subtle">This army has no troops yet. Recruit a unit below.</p>')+'<button type="button" class="secondary-button" id="grand-raid-supply">Raid enemy supply line</button><small class="grand-supply-note">Supplies refill while connected to friendly settlements. Cut off armies consume reserves; at zero, starvation causes losses.</small><div class="grand-recruit-box"><label class="grand-army-field">Recruit a new unit<select id="grand-recruit-type">'+options+'</select></label><label class="grand-army-field">Models<input id="grand-recruit-count" type="number" min="1" max="30" value="5"></label><button type="button" class="primary-button" id="grand-recruit-unit" '+((army.roster||[]).length>=6?'disabled':'')+'>Recruit unit</button><small>Recruitment costs gold and requires compatible miniatures you own. Models already deployed in any of your armies cannot be recruited again.</small></div>';
  byId("grand-raid-supply").addEventListener("click",raidEnemySupplyLine);
  byId("grand-select-army").addEventListener("change",e=>{activeCampaign.selectedArmyId=e.target.value;const selected=selectedPlayerArmy();activeCampaign.commander.nodeId=selected.nodeId;activeCampaign.commander.region=selected.region;activeCampaign.commander.movement=selected.movement;campaignMessage("Selected "+selected.name+".");});
  byId("grand-create-army").addEventListener("click",()=>{const id=activeCampaign.playerPoliticalFaction,base=selectedPlayerArmy(),number=playerArmies().length+1,armyId=id+"-army-"+activeCampaign.turn+"-"+number,fresh={id:armyId,owner:id,factionId:id,name:"Army "+number,rosterFaction:rosterFactionForPoliticalFaction(id),roster:[],region:base.region,nodeId:base.nodeId,points:0,movement:0};activeCampaign.armies.push(fresh);activeCampaign.selectedArmyId=armyId;activeCampaign.commander.nodeId=fresh.nodeId;activeCampaign.commander.region=fresh.region;activeCampaign.commander.movement=0;campaignMessage("Formed "+fresh.name+". Recruit troops to build it.");});
  host.querySelectorAll("[data-disband]").forEach(button=>button.addEventListener("click",()=>{const index=Number(button.dataset.disband),unit=army.roster[index];if(!unit)return;const label=labels[unit.type]||unit.type;if(!window.confirm("Disband "+label+" ("+unit.models+" models)? The models return to your available collection. Recruitment gold is not refunded."))return;army.roster.splice(index,1);army.points=campaignArmyCost(army);syncPlayerArmyState();campaignMessage("Disbanded "+label+"; "+unit.models+" models are available for recruitment again. No gold was refunded.");}));
- host.querySelectorAll("[data-replenish]").forEach(button=>button.addEventListener("click",()=>{const unit=army.roster[Number(button.dataset.replenish)],o=optionForUnit(unit,catalog);if(!unit||!o||o.character||o.fixed){campaignMessage("That unit cannot be replenished as ordinary rank-and-file.");return;}if(unit.models>=o.max||availableForRecruitment(o,army)<1){campaignMessage("No compatible unassigned model, recruitment-pool slot or civilian population is available.");return;}const price=Math.max(1,unitCost({...unit,models:unit.models+1},faction)-unitCost(unit,faction));if((treasury?.treasury||0)<price){campaignMessage("Not enough gold to replenish that unit.");return;}const region=activeCampaign.regions.find(r=>r.id===army.region);if(!consumeRecruitmentPool(treasury,1)||!consumeCivilianPopulation(region,1)){campaignMessage("Recruitment is limited by the pool and local civilian population.");return;}unit.models++;treasury.treasury-=price;army.points=campaignArmyCost(army);syncPlayerArmyState();campaignMessage("Replenished "+(labels[unit.type]||unit.type)+" by one model for "+price+" gold; one civilian joined the army.");}));
+ host.querySelectorAll("[data-replenish]").forEach(button=>button.addEventListener("click",()=>{const unit=army.roster[Number(button.dataset.replenish)],o=optionForUnit(unit,catalog);if(!unit||!o||o.character||o.fixed){campaignMessage("That unit cannot be replenished as ordinary rank-and-file.");return;}if(unit.models>=o.max||availableForRecruitment(o,army)<1){campaignMessage("No compatible unassigned model, recruitment-pool slot or civilian population is available.");return;}const price=Math.max(1,unitCost({...unit,models:unit.models+1},faction)-unitCost(unit,faction));if((treasury?.treasury||0)<price){campaignMessage("Not enough gold to replenish that unit.");return;}const region=activeCampaign.regions.find(r=>r.id===army.region);if(!consumeRecruitmentPool(treasury,region,1)||!consumeCivilianPopulation(region,1,treasury.race||FACTION_BY_ID[treasury.id]?.race||"human")){campaignMessage("Recruitment is limited by the pool and local civilian population.");return;}unit.models++;treasury.treasury-=price;army.points=campaignArmyCost(army);syncPlayerArmyState();campaignMessage("Replenished "+(labels[unit.type]||unit.type)+" by one model for "+price+" gold; one civilian joined the army.");}));
  byId("grand-recruit-type").addEventListener("change",()=>{const o=catalog.find(x=>x.key===byId("grand-recruit-type").value);if(o){const input=byId("grand-recruit-count");input.min=o.min;input.max=o.max;input.value=o.min;}});
- byId("grand-recruit-unit").addEventListener("click",()=>{const o=catalog.find(x=>x.key===byId("grand-recruit-type").value);if(!o){campaignMessage("Choose a troop type first.");return;}if((army.roster||[]).length>=6){campaignMessage("This army already has six units.");return;}const count=o.fixed?o.min:Math.max(o.min,Math.min(o.max,Math.floor(Number(byId("grand-recruit-count").value)||o.min))),available=availableForRecruitment(o,army),populationCost=o.fixed?o.min:count;if(available<count){campaignMessage("You need "+count+" compatible models; only "+available+" are available after collection, recruitment-pool and civilian-population limits.");return;}const config=optionConfig(o,count),price=unitCost(config,faction);if((treasury?.treasury||0)<price){campaignMessage("Not enough gold. This unit costs "+price+".");return;}const region=activeCampaign.regions.find(r=>r.id===army.region);if(!consumeRecruitmentPool(treasury,populationCost)||!consumeCivilianPopulation(region,populationCost)){campaignMessage("Recruitment is limited by the pool and local civilian population.");return;}army.roster.push(config);treasury.treasury-=price;army.points=campaignArmyCost(army);syncPlayerArmyState();campaignMessage("Recruited "+o.label+" ("+count+" models) for "+price+" gold; "+populationCost+" civilians joined the army.");});
+ byId("grand-recruit-unit").addEventListener("click",()=>{const o=catalog.find(x=>x.key===byId("grand-recruit-type").value);if(!o){campaignMessage("Choose a troop type first.");return;}if((army.roster||[]).length>=6){campaignMessage("This army already has six units.");return;}const count=o.fixed?o.min:Math.max(o.min,Math.min(o.max,Math.floor(Number(byId("grand-recruit-count").value)||o.min))),available=availableForRecruitment(o,army),populationCost=o.fixed?o.min:count;if(available<count){campaignMessage("You need "+count+" compatible models; only "+available+" are available after collection, recruitment-pool and civilian-population limits.");return;}const config=optionConfig(o,count),price=unitCost(config,faction);if((treasury?.treasury||0)<price){campaignMessage("Not enough gold. This unit costs "+price+".");return;}const region=activeCampaign.regions.find(r=>r.id===army.region);if(!consumeRecruitmentPool(treasury,region,populationCost)||!consumeCivilianPopulation(region,populationCost,treasury.race||FACTION_BY_ID[treasury.id]?.race||"human")){campaignMessage("Recruitment is limited by the pool and local civilian population.");return;}army.roster.push(config);treasury.treasury-=price;army.points=campaignArmyCost(army);syncPlayerArmyState();campaignMessage("Recruited "+o.label+" ("+count+" models) for "+price+" gold; "+populationCost+" civilians joined the army.");});
 }
 function renderCampaignMap(){
  if(!activeCampaign)return;
