@@ -229,7 +229,18 @@ function validateArmy(army,faction){
   }
  }
  for(const entry of army){
-  if(entry.type==="cannon"||entry.type==="boltThrower"||["youngDragon","dragon","ancientDragon"].includes(entry.type)){if(entry.type==="cannon"&&faction==="highElves")shortages.push("Cannons are only available to the Empire.");if(entry.type==="boltThrower"&&faction!=="highElves")shortages.push("Bolt throwers are only available to the High Elves.");if(["youngDragon","dragon","ancientDragon"].includes(entry.type)&&faction!=="highElves")shortages.push("Dragons are only available to the High Elves.");continue;}
+  if(entry.type==="cannon"||entry.type==="boltThrower"){
+    const allowed=entry.type==="boltThrower"?faction==="highElves":faction==="empire"||faction==="dwarfs";
+    if(!allowed){shortages.push(entry.type==="boltThrower"?"Bolt throwers are only available to the High Elves.":"Cannons are only available to humans and dwarves.");continue;}
+    const machine=owned.find(m=>!used.has(m.id)&&m.faction===faction&&m.type===entry.type);
+    if(!machine)shortages.push("One assembled "+(entry.type==="cannon"?"cannon":"bolt thrower")+" is required.");else used.add(machine.id);
+    const crewCount=entry.type==="cannon"?3:2,crewType=faction==="dwarfs"?"dwarfInfantry":"swordsmen",crewWeapon=faction==="highElves"?"spear":"handWeapon";
+    const crew=owned.filter(m=>!used.has(m.id)&&m.faction===faction&&m.type===crewType&&m.weapon===crewWeapon&&!m.mounted);
+    if(crew.length<crewCount)shortages.push((crewCount-crew.length)+" compatible "+(faction==="highElves"?"spear-armed elven":faction==="dwarfs"?"dwarf":"human")+" crew model(s) needed for the "+entry.type+".");
+    crew.slice(0,crewCount).forEach(m=>used.add(m.id));
+    continue;
+   }
+   if(["youngDragon","dragon","ancientDragon"].includes(entry.type)){if(faction!=="highElves")shortages.push("Dragons are only available to the High Elves.");continue;}
   const character=["captain","lord","legendaryLord","shadowElf","pegasusChampion","dwarfCaptain","dwarfLord","dwarfKingHaldric","rifleman","captainWeiss"].includes(entry.type),collectionType=entry.type;
   if(entry.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(entry.mountType)){if(faction!=="highElves")shortages.push("Only High Elf Lords may ride dragons.");continue;}
   const count=character?1:(entry.models||1);
