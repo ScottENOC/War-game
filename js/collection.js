@@ -96,7 +96,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  const consumeBit=id=>{if(bitCount(id)<1)return false;data.bits[id]--;if(!data.bits[id])delete data.bits[id];return true;};
  const modelLabel=m=>(m.name==="Aelthir, the Dawnwing"?"Aelthir, the Dawnwing":(m.faction==="empire"?"Empire ":m.faction==="dwarfs"?"Dwarf ":m.faction==="greenskins"?"Greenskin ":"High Elf ")+title(m.type))+" · "+title(m.weapon)+(m.offhandWeapon?" + Off-hand sword":"")+(m.shield?" + Shield":"")+((m.backWeapons||[]).length?" · Back: "+m.backWeapons.map(title).join(", "):"")+(m.mountType==="eagle"?" · Pegasus":m.mounted?" · Mounted":"");
  const canUseBit=(m,id)=>{
-   const b=bitDefs.find(x=>x.id===id);if(!b||b.kind==="siegeMachine")return false;
+   const b=bitDefs.find(x=>x.id===id);if(!b||b.kind==="siegeMachine"||m.siegeMachine)return false;
    if(m.faction==="dwarfs"&&b.weapon==="bow")return false;
    if(b.kind==="backWeapon")return m.weapon!==b.weapon&&!(m.backWeapons||[]).includes(b.weapon);
    if(b.kind==="shield")return !m.shield&&(!["greatWeapon","halberd","bow"].includes(m.weapon)||m.faction==="dwarfs");
@@ -245,7 +245,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
       if(!def||def.kind!=="siegeMachine"||def.faction!==faction.value){status.textContent="Choose a siege engine matching the selected faction.";return;}
       if(!consumeBit(def.id)){status.textContent="You do not own that machine component.";return;}
       const model=makeModel("assembled-"+data.nextId++,def.faction,def.unitType,"none",{name:def.label});
-      model.components=[def.id];model.siegeMachine=true;data.models.push(model);save();renderAll();status.textContent=def.label+" added to your collection. Assemble compatible crew separately.";
+      model.components=[def.id];model.siegeMachine=true;data.models.push(model);save();renderSummary();renderModels();renderBits();renderDailyReward();status.textContent=def.label+" added to your collection. Assemble compatible crew separately.";
     });panel.append(assemble);
     const status=document.createElement("p");status.className="workbench-status";panel.append(status);
    }
@@ -265,7 +265,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    {faction:"empire",type:"lord",weapon:"handWeapon",cost:80},
    {faction:"empire",type:"lord",weapon:"crossbow",cost:83},
    {faction:"empire",type:"lord",weapon:"firearm",cost:84},
-   {faction:"highElves",type:"swordsmen",weapon:"handWeapon",cost:12},
+   {faction:"highElves",type:"swordsmen",weapon:"spear",cost:12},
    {faction:"highElves",type:"archers",weapon:"bow",cost:15},
    {faction:"highElves",type:"cavalry",weapon:"spear",cost:32,mounted:true,mountType:"eagle"},
    {faction:"highElves",type:"captain",weapon:"spear",cost:83,mounted:true,mountType:"eagle"},
