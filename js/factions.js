@@ -10,7 +10,8 @@ export const FACTIONS = {
     rifleman:{name:"Matthias Keller, Imperial Marksman",short:"Keller",kind:"hero",models:1,points:65,namedCharacter:true,stats:{M:4,WS:4,BS:5,S:3,T:3,W:2,I:4,A:1,Ld:8}},
     captainWeiss:{name:"Captain Marta Weiss",short:"Marta Weiss",kind:"hero",models:1,points:70,namedCharacter:true,rallyingCall:true,stats:{M:4,WS:5,BS:4,S:4,T:4,W:3,I:4,A:2,Ld:8}},
     cavalry:{name:"Empire Cavalry",short:"Cavalry",kind:"cavalry",models:5,points:16,stats:{M:8,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},mountStats:{A:1,WS:3,I:3,S:3},range:24},
-    cannon:{name:"Empire Cannon",short:"Cannon",kind:"artillery",models:3,points:80,stats:{M:0,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}}
+    cannon:{name:"Empire Cannon",short:"Cannon",kind:"artillery",models:3,points:80,stats:{M:0,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
+    humanChariot:{name:"Empire War Chariot",short:"War Chariot",kind:"chariot",models:3,points:95,chariot:true,stats:{M:7,WS:3,BS:3,S:3,T:4,W:4,I:3,A:1,Ld:7},mountStats:{A:2,WS:3,I:3,S:3},impactStrength:5,armourSave:3}
   }},
   highElves: { name:"High Elves", units:{
     swordsmen:{name:"High Elf Spearmen",short:"Spearmen",kind:"melee",models:20,points:12,stats:{M:5,WS:5,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},alwaysStrikesFirst:true},
@@ -26,7 +27,8 @@ export const FACTIONS = {
     boltThrower:{name:"High Elf Bolt Thrower",short:"Bolt Thrower",kind:"artillery",models:2,points:60,stats:{M:0,WS:3,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},range:48},
     youngDragon:{name:"Young Dragon",short:"Young Dragon",kind:"monster",models:1,points:140,isDragon:true,breathStrength:3,intrinsicArmourSave:5,stats:{M:8,WS:4,BS:0,S:5,T:5,W:4,I:4,A:3,Ld:6}},
     dragon:{name:"Dragon",short:"Dragon",kind:"monster",models:1,points:220,isDragon:true,breathStrength:4,intrinsicArmourSave:4,stats:{M:8,WS:5,BS:0,S:6,T:6,W:6,I:5,A:4,Ld:7}},
-    ancientDragon:{name:"Ancient Dragon",short:"Ancient Dragon",kind:"monster",models:1,points:320,isDragon:true,breathStrength:5,intrinsicArmourSave:3,stats:{M:8,WS:6,BS:0,S:7,T:7,W:8,I:6,A:5,Ld:8}}
+    ancientDragon:{name:"Ancient Dragon",short:"Ancient Dragon",kind:"monster",models:1,points:320,isDragon:true,breathStrength:5,intrinsicArmourSave:3,stats:{M:8,WS:6,BS:0,S:7,T:7,W:8,I:6,A:5,Ld:8}},
+    elfChariot:{name:"High Elf Chariot",short:"Elven Chariot",kind:"chariot",models:3,points:110,chariot:true,alwaysStrikesFirst:true,stats:{M:8,WS:4,BS:4,S:3,T:4,W:4,I:4,A:1,Ld:8},mountStats:{A:2,WS:3,I:4,S:3},impactStrength:5,armourSave:4}
   }},
   dwarfs: { name:"Dwarfs", units:{
     dwarfInfantry:{name:"Dwarf Infantry",short:"Infantry",kind:"melee",models:20,points:8,stats:{M:3,WS:4,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:9}},
@@ -49,7 +51,9 @@ export const FACTIONS = {
     wolfRiders:{name:"Goblin Wolf Riders",short:"Wolf Riders",kind:"cavalry",models:5,points:11,greenskin:true,stats:{M:9,WS:2,BS:3,S:3,T:3,W:1,I:2,A:1,Ld:6},mountStats:{A:1,WS:3,I:3,S:3},mountType:"wolf"},
     boarBoyz:{name:"Orc Boar Riders",short:"Boar Boyz",kind:"cavalry",models:5,points:18,greenskin:true,stats:{M:7,WS:3,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:7},mountStats:{A:1,WS:3,I:3,S:3},mountType:"boar"},
     wyvern:{name:"Wyvern",short:"Wyvern",kind:"monster",models:1,points:100,isDragon:true,breathStrength:0,intrinsicArmourSave:5,stats:{M:8,WS:4,BS:0,S:5,T:5,W:4,I:3,A:3,Ld:6}},
-    catapult:{name:"Goblin Rock Lobber",short:"Rock Lobber",kind:"artillery",models:3,points:70,greenskin:true,stats:{M:0,WS:2,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:5}}
+    catapult:{name:"Goblin Rock Lobber",short:"Rock Lobber",kind:"artillery",models:3,points:70,greenskin:true,stats:{M:0,WS:2,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:5}},
+    goblinChariot:{name:"Goblin Wolf Chariot",short:"Wolf Chariot",kind:"chariot",models:3,points:65,greenskin:true,chariot:true,stats:{M:8,WS:2,BS:3,S:3,T:4,W:4,I:2,A:1,Ld:6},mountStats:{A:2,WS:3,I:3,S:3},impactStrength:4,armourSave:5},
+    orcChariot:{name:"Orc Boar Chariot",short:"Boar Chariot",kind:"chariot",models:3,points:100,greenskin:true,chariot:true,stats:{M:6,WS:3,BS:3,S:4,T:5,W:4,I:2,A:1,Ld:7},mountStats:{A:2,WS:3,I:2,S:3},impactStrength:5,armourSave:4}
   }},
   opposing: { name:"Opposing Host", units:{
     swordsmen:{name:"Opposing Swordsmen",short:"Swordsmen",kind:"melee",models:20,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
