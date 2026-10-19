@@ -85,7 +85,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     }
     return {visibleModels:visible.length,visibleModelsList:visible,visibleChampion,overUnitPenalty:visiblePenalties.length?Math.max(...visiblePenalties):0,arcShot:visibleArcShot,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
   }
-  function shoot(u,target,standShoot) {
+  function shoot(u,target,standShoot) {if(u?.magicSuppressed&&u.rangedWeapon==="magicBow"){say(u.name+" cannot use its magical bow while inside a Nullification Dome.");return false;}
     if(u?.isCannon)return fireCannon(u,target.x,target.y,target);if(u?.isCatapult)return fireCannon(u,target.x,target.y,target);
     if(u?.isSiegeEngine&&u.moved&&!u.moveAndFire){say(u.name+" cannot fire after moving without the Move and Fire upgrade.");return false;}
     const host=u.attachedTo?S.units[u.attachedTo]:null;
