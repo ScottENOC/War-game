@@ -276,7 +276,11 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    {faction:"empire",type:"legendaryLord",weapon:"handWeapon",cost:160,namedCharacter:true},
    {faction:"highElves",type:"shadowElf",weapon:"magicBow",cost:165,namedCharacter:true},
    {faction:"highElves",type:"pegasusChampion",weapon:"lance",cost:110,mounted:true,mountType:"eagle",shield:true,namedCharacter:true},
-    {faction:"highElves",type:"starwardenLord",weapon:"handWeapon",cost:300,namedCharacter:true}
+    {faction:"highElves",type:"starwardenLord",weapon:"handWeapon",cost:300,namedCharacter:true},
+    {faction:"greenskins",type:"goblinHero",weapon:"handWeapon",cost:35},
+    {faction:"greenskins",type:"goblinLord",weapon:"handWeapon",cost:65},
+    {faction:"greenskins",type:"orcHero",weapon:"handWeapon",cost:50},
+    {faction:"greenskins",type:"orcLord",weapon:"handWeapon",cost:85}
   ];
   const weights=pool.map(p=>1/p.cost),sum=weights.reduce((a,b)=>a+b,0);let n=Math.random()*sum;
   for(let i=0;i<pool.length;i++){n-=weights[i];if(n<=0)return pool[i];}return pool[0];
