@@ -665,10 +665,10 @@ function createMovementGraph(){
   return {t,u,x:p.x+t*rx,y:p.y+t*ry};
  };
  for(let i=0;i<routes.length;i++){
-  const a=routes[i];if(a.kind!=="land")continue;
+  const a=routes[i];
   const p=nodes[a.a],p2=nodes[a.b];
   for(let j=i+1;j<routes.length;j++){
-   const b=routes[j];if(b.kind!=="land"||a.a===b.a||a.a===b.b||a.b===b.a||a.b===b.b)continue;
+   const b=routes[j];if(a.a===b.a||a.a===b.b||a.b===b.a||a.b===b.b)continue;
    const q=nodes[b.a],q2=nodes[b.b],hit=intersection(p,p2,q,q2);if(!hit)continue;
    const sharedId="crossing-"+Math.round(hit.x)+"-"+Math.round(hit.y);
    if(!nodes[sharedId])add({id:sharedId,region:a.regionA||b.regionA,type:"crossroads",label:"Road crossroads",x:hit.x,y:hit.y});
