@@ -1,5 +1,5 @@
 import { getCollectionSnapshot } from "./collection.js?v=greenskin-roster-v3";
-import { unitCost } from "./units.js?v=greenskin-roster-v3";
+import { unitCost, createUnitsFromArmy } from "./units.js?v=20261020-greenskin-campaign-animosity-v1";
 const FACTIONS = {
  empire:{name:"Human Realms",summary:"The largest and most populous realm, but not a unified kingdom.",strengths:"Broad territory, fertile river valleys, trade roads and the largest pool of settlements.",politics:"Crownfall and Westmere recognise your court. Goldhaven, Stonebridge and Southwatch answer to rival human lords.",playerCities:["Crownfall","Westmere"],armyFaction:"empire"},
  highElves:{name:"High Elves",summary:"An old maritime people whose courts cluster around ancient forests and island harbours.",strengths:"Defensible islands, forest resources, sea access and compact but valuable settlements.",politics:"Aelthir recognises your court. Moonspire and Silvershade retain their own power and may resist your claims.",playerCities:["Aelthir"],armyFaction:"highElves"},
@@ -474,7 +474,7 @@ function createInitialCampaignState(faction,city,commander){
   return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,treasury:isPlayer?500:300,income:campaignCityIncome(regions.find(r=>r.id===home.id)),upkeep:Math.ceil(army.points*.04),armyPoints:army.points,turnsTaken:0,relations:{},};
  });
  const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;diplomacy[a.id][b.id]=baseFactionRelation(a.id,b.id);}}
- const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0}));
+ const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints,boredom:-4,foughtThisTurn:false,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0}));
  const playerState=factionStates.find(f=>f.id===playerPoliticalFaction);
  return {schemaVersion:7,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3),maxMovement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3)},armies,lastEvent:commander.name+" begins the campaign at "+city.name+"."};
 }
@@ -1154,12 +1154,184 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
   campaign.lastEvent=defender.name+" repels "+attacker.name+" at "+target.name+". Both armies suffer losses.";
  }
 }
+
+const CAMPAIGN_CHARACTER_TYPES=new Set(["captain","lord","mageHero","mageLord","starwardenLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric","goblinHero","goblinLord","orcHero","orcLord"]);
+function campaignArmyBattleUnits(army){
+ try{
+  const built=createUnitsFromArmy(army.roster||[],army.rosterFaction||rosterFactionForPoliticalFaction(army.owner||army.factionId));
+  return (army.roster||[]).map((config,index)=>({config,unit:built["p"+(index+1)],index})).filter(x=>x.unit&&Number(x.config.models)>0);
+ }catch{return (army.roster||[]).filter(u=>Number(u.models)>0).map((config,index)=>({config,unit:{name:config.type,stats:{WS:3,BS:3,S:3,T:3,I:3,Ld:5,A:1,W:1},weapon:config.weapon||"handWeapon",hasRangedWeapon:!!config.rangedWeapon,rangedWeapon:config.rangedWeapon,rangedStrength:3,armour:"none",models:config.models,isCharacter:CAMPAIGN_CHARACTER_TYPES.has(String(config.type||"").toLowerCase())},index}));}
+}
+function campaignArmyLeadership(army){
+ return Math.max(0,...campaignArmyBattleUnits(army).map(x=>Number(x.unit.stats?.Ld)||0));
+}
+function campaignPathCost(campaign,path){
+ let cost=0;for(let i=1;i<(path||[]).length;i++){const next=campaign.graph.nodes[path[i]],edge=(campaign.graph.edges[path[i-1]]||[]).find(e=>e.to===path[i]);cost+=(edge?.cost||1)+nodeCost(next)-1;}return cost;
+}
+function campaignArmyAtNode(campaign,nodeId,except=null){
+ return (campaign.armies||[]).filter(a=>a!==except&&a.roster?.length&&(a.nodeId||("city-"+a.region))===nodeId);
+}
+function campaignGreenskinTargets(campaign,army){
+ const own=army.owner||army.factionId,targets=[],seen=new Set();
+ const add=(owner,nodeId,region=null,targetArmy=null)=>{
+  if(!owner||(!targetArmy&&owner===own)||!campaign.factionStates.some(f=>f.id===owner&&f.alive))return;
+  const key=targetArmy?"army:"+targetArmy.id:"city:"+region?.id;
+  if(!nodeId||!campaign.graph?.nodes?.[nodeId]||seen.has(key))return;
+  const path=campaignMovementPath(campaign,army.nodeId||("city-"+army.region),nodeId);if(!path)return;
+  const state=campaign.factionStates.find(f=>f.id===owner),race=state?.race||FACTION_BY_ID[owner]?.race||"human";
+  const priority=owner===own?2:race!=="greenskin"?0:1;
+  targets.push({owner,nodeId,region,targetArmy,path,cost:campaignPathCost(campaign,path),priority});
+  seen.add(key);
+ };
+ for(const enemy of campaign.armies||[]){
+  if(enemy===army||!enemy.roster?.length)continue;
+  add(enemy.owner||enemy.factionId,enemy.nodeId||("city-"+enemy.region),campaign.regions.find(r=>r.id===enemy.region)||null,enemy);
+ }
+ for(const region of campaign.regions||[]){
+  const owner=politicalOwner(region);if(!owner||owner===own)continue;
+  const cityNode="city-"+region.id;
+  if(!campaign.graph.nodes[cityNode])continue;
+  add(owner,cityNode,region,null);
+ }
+ return targets;
+}
+function campaignRandomChoice(items){return items[Math.floor(Math.random()*items.length)]||null;}
+function campaignAttackStrength(unit,mode){
+ const config=unit.config,u=unit.unit;
+ if(mode==="ranged")return Number(u.rangedStrength)||3;
+ const weapon=config.weapon||u.weapon||"handWeapon";
+ return Math.max(1,(Number(u.stats?.S)||3)+(weapon==="greatWeapon"?2:weapon==="halberd"?1:0));
+}
+function campaignHitTarget(ws,defenderWs){if(ws>defenderWs)return 3;if(defenderWs>ws*2)return 5;return 4;}
+function campaignWoundTarget(strength,toughness){if(strength>=toughness*2)return 2;if(strength>toughness)return 3;if(strength===toughness)return 4;if(strength*2>toughness)return 5;if(strength*2===toughness)return 6;return null;}
+function campaignSaveTarget(defender,strength,armourPiercing=0){
+ const type=defender.armour||(defender.lightArmour?"light":"none");
+ const base=defender.magicSuppressed&&defender.magicArmour?5:(defender.intrinsicArmourSave||(type==="fullPlate"?4:type==="heavy"?5:type==="light"?6:(defender.shield||defender.barding?7:0)));
+ if(!base)return null;
+ return base+Math.max(0,strength-3)+Math.max(0,armourPiercing)-(defender.shield?1:0)-(defender.mountStats&&!defender.isChariot?1:0)-(defender.barding?1:0)-(defender.crewArmourBonus||0);
+}
+function campaignAnimosityAttack(attacker,target,mode){
+ const au=attacker.unit,tu=target.unit,as=au.stats||{},ts=tu.stats||{};
+ const hitRoll=1+Math.floor(Math.random()*6);
+ const hitNeed=mode==="ranged"?Math.max(2,7-Math.min(Number(as.BS)||3,Number(au.bsCap)||6)):campaignHitTarget(Number(as.WS)||3,Number(ts.WS)||3);
+ if(hitRoll<hitNeed)return {attacker,target,mode,hit:false,reason:"miss"};
+ const strength=campaignAttackStrength(attacker,mode),woundRoll=1+Math.floor(Math.random()*6),woundNeed=campaignWoundTarget(strength,Number(ts.T)||3);
+ if(woundNeed===null||woundRoll<woundNeed)return {attacker,target,mode,hit:true,wound:false,reason:"no wound"};
+ const saveNeed=campaignSaveTarget(tu,strength,mode==="ranged"?(Number(au.armourPiercing)||0):0),saveRoll=1+Math.floor(Math.random()*6);
+ if(saveNeed!==null&&saveNeed<=6&&saveRoll>=saveNeed)return {attacker,target,mode,hit:true,wound:true,saved:true};
+ if(saveNeed!==null&&saveNeed<=1)return {attacker,target,mode,hit:true,wound:true,saved:true};
+ return {attacker,target,mode,hit:true,wound:true,saved:false};
+}
+function campaignResolveSquabble(campaign,armyA,armyB=null){
+ const sides=[campaignArmyBattleUnits(armyA),...(armyB?[campaignArmyBattleUnits(armyB)]:[])];
+ const all=sides.flat();if(!all.length)return "The greenskins squabble, but have no units able to fight.";
+ const actions=[];
+ for(let sideIndex=0;sideIndex<sides.length;sideIndex++){
+  const attackers=sides[sideIndex],enemies=sides.length>1?sides[1-sideIndex]:attackers;
+  for(const attacker of attackers){
+   if(!enemies.length)continue;
+   let choices=enemies.filter(t=>t!==attacker);
+   if(!choices.length)choices=enemies;
+   const troopChoices=choices.filter(t=>!t.unit.isCharacter&&!CAMPAIGN_CHARACTER_TYPES.has(String(t.config.type||"").toLowerCase()));
+   if(troopChoices.length)choices=troopChoices;
+   const target=campaignRandomChoice(choices);if(!target)continue;
+   const ranged=!!attacker.unit.hasRangedWeapon;
+   const mode=ranged?"ranged":"melee",weapon=attacker.config.weapon||attacker.unit.weapon;
+   const initiative=(Number(attacker.unit.stats?.I)||0)*10-(weapon==="greatWeapon"?10:0);
+   actions.push({attacker,target,mode,initiative});
+  }
+ }
+ actions.sort((a,b)=>b.initiative-a.initiative);
+ const results=[];
+ for(let i=0;i<actions.length;){
+  let j=i+1;while(j<actions.length&&actions[j].initiative===actions[i].initiative)j++;
+  const tier=actions.slice(i,j),resolved=tier.map(a=>campaignAnimosityAttack(a.attacker,a.target,a.mode));
+  const wounds=new Map();
+  for(const r of resolved)if(r.wound&&!r.saved)wounds.set(r.target,(wounds.get(r.target)||0)+1);
+  for(const [target,count] of wounds){
+   const c=target.config,character=target.unit.isCharacter||CAMPAIGN_CHARACTER_TYPES.has(String(c.type||"").toLowerCase());
+   if(character){const totalWounds=Math.max(1,Number(target.unit.stats?.W)||1),prior=Number(c.currentWounds)||totalWounds;c.currentWounds=prior-count;if(c.currentWounds<=0)c.models=0;}
+   else c.models=Math.max(0,(Number(c.models)||1)-count);
+  }
+  results.push(...resolved);i=j;
+ }
+ for(const a of sides)for(const x of a)x.config.models=Math.max(0,Number(x.config.models)||0);
+ for(const army of [armyA,armyB].filter(Boolean)){
+  army.roster=(army.roster||[]).filter(u=>Number(u.models)>0);army.points=campaignArmyCost(army);
+  army.foughtThisTurn=true;
+ }
+ const hits=results.filter(r=>r.wound&&!r.saved).length;
+ const casualties=all.map(x=>Number(x.config.models)||0).reduce((sum,n)=>sum+n,0);
+ return "Squabble: "+results.length+" attacks are resolved in initiative order; "+hits+" wound(s) get through armour.";
+}
+function campaignStrategicFieldBattle(campaign,attackerArmy,defenderArmy){
+ const attackerId=attackerArmy.owner||attackerArmy.factionId,defenderId=defenderArmy.owner||defenderArmy.factionId;
+ const attacker=campaign.factionStates.find(f=>f.id===attackerId)||{id:attackerId,name:attackerId,homeRegion:attackerArmy.region};
+ const defender=campaign.factionStates.find(f=>f.id===defenderId)||{id:defenderId,name:defenderId,homeRegion:defenderArmy.region};
+ const attackPower=Math.max(1,attackerArmy.points||campaignArmyCost(attackerArmy)||100)*(.8+Math.random()*.4);
+ const defencePower=Math.max(1,defenderArmy.points||campaignArmyCost(defenderArmy)||100)*(.8+Math.random()*.4);
+ const winner=attackPower>=defencePower?attackerArmy:defenderArmy,loser=winner===attackerArmy?defenderArmy:attackerArmy;
+ applyStrategicArmyLosses(winner,.72);applyStrategicArmyLosses(loser,.42);
+ for(const army of [attackerArmy,defenderArmy]){army.foughtThisTurn=true;const state=campaign.factionStates.find(f=>f.id===(army.owner||army.factionId));if(state){state.armyPoints=army.points;state.roster=army.roster;if(!army.roster.length)state.alive=false;}}
+ const loserOwner=loser.owner||loser.factionId,loserState=campaign.factionStates.find(f=>f.id===loserOwner),home=loserState?.homeRegion||loser.region;
+ loser.region=home;loser.nodeId="city-"+home;
+ campaign.lastEvent=(winner.owner||winner.factionId)===attackerId?attacker.name+" defeats "+defender.name+" in a field battle.":" "+defender.name+" repels "+attacker.name+" in a field battle.";
+ return campaign.lastEvent.trim();
+}
+function processGreenskinAnimosity(campaign,army){
+ if(!army||campaignArmyRace(army,campaign)!=="greenskin"||!army.roster?.length)return {interrupted:false,message:""};
+ const previousFight=!!army.foughtThisTurn;
+ army.boredom=Math.max(-4,Math.min(10,Number.isFinite(army.boredom)?army.boredom:-4));
+ army.boredom=Math.max(-4,Math.min(10,army.boredom+(previousFight?-3:1)));
+ army.foughtThisTurn=false;
+ const built=campaignArmyBattleUnits(army),leadership=Math.max(0,...built.map(x=>Number(x.unit.stats?.Ld)||0));
+ const dice=[1+Math.floor(Math.random()*6),1+Math.floor(Math.random()*6)],total=dice[0]+dice[1],target=leadership-army.boredom;
+ const passed=total===2||(total!==12&&total<=target);
+ army.lastAnimosityTurn=campaign.turn;
+ if(passed)return {interrupted:false,message:(army.name||campaign.factionStates.find(f=>f.id===(army.owner||army.factionId))?.name||"Greenskin army")+" passes its animosity test ("+dice.join("+")+"="+total+"; Ld "+leadership+", boredom "+army.boredom+")."};
+ const result=1+Math.floor(Math.random()*6),name=army.name||campaign.factionStates.find(f=>f.id===(army.owner||army.factionId))?.name||"Greenskin army";
+ if(result<=2)return {interrupted:true,message:name+" bickers ("+dice.join("+")+"="+total+", animosity roll "+result+") and does nothing this turn."};
+ if(result<=4){
+  const message=campaignResolveSquabble(campaign,army);
+  return {interrupted:true,message:name+" squabbles ("+dice.join("+")+"="+total+", animosity roll "+result+"). "+message};
+ }
+ const targets=campaignGreenskinTargets(campaign,army).filter(t=>t.owner!==(army.owner||army.factionId));
+ if(!targets.length)return {interrupted:true,message:name+" wants to attack, but no enemy army or settlement is reachable on the campaign map."};
+ targets.sort((a,b)=>a.priority-b.priority||a.cost-b.cost);
+ const bestPriority=targets[0].priority,bestCost=targets[0].cost;
+ const tied=targets.filter(t=>t.priority===bestPriority&&t.cost===bestCost),choice=campaignRandomChoice(tied);
+ const movement=campaignArmyMovementProfile(army,campaign).points;
+ if(choice.cost<=movement){
+  const own=army.owner||army.factionId;
+  if(choice.owner===own){
+   const other=choice.targetArmy||campaignArmyAtNode(campaign,choice.nodeId,army)[0];
+   if(!other)return {interrupted:true,message:name+" turns on its own forces, but finds no opposing army to fight."};
+   return {interrupted:true,message:name+" turns on its own troops! "+campaignResolveSquabble(campaign,army,other)};
+  }
+  declareCampaignWar(campaign,own,choice.owner);
+  const targetRegion=choice.region||campaign.regions.find(r=>r.id===choice.nodeId.replace("city-","")||"city-"+r.id===choice.nodeId);
+  if(targetRegion&&choice.nodeId==="city-"+targetRegion.id){
+   const defender=factionArmy(campaign,choice.owner);
+   if(defender){army.nodeId=choice.nodeId;army.region=targetRegion.id;resolveStrategicBattle(campaign,campaign.factionStates.find(f=>f.id===own)||{id:own,name},campaign.factionStates.find(f=>f.id===choice.owner)||{id:choice.owner,name:choice.owner},targetRegion);army.foughtThisTurn=true;defender.foughtThisTurn=true;return {interrupted:true,message:name+" attacks "+targetRegion.name+" after failing animosity. "+campaign.lastEvent};}
+  }
+  const defender=choice.targetArmy||campaignArmyAtNode(campaign,choice.nodeId,army)[0];
+  if(defender){const msg=campaignStrategicFieldBattle(campaign,army,defender);return {interrupted:true,message:name+" attacks "+(campaign.factionStates.find(f=>f.id===(defender.owner||defender.factionId))?.name||"an enemy army")+". "+msg};}
+  return {interrupted:true,message:name+" attacks "+(campaign.factionStates.find(f=>f.id===choice.owner)?.name||choice.owner)+", but no defending army is available."};
+ }
+ const path=choice.path;let spent=0,last=path[0];
+ for(let i=1;i<path.length;i++){const stepCost=campaignPathCost(campaign,path.slice(i-1,i+1));if(spent+stepCost>movement)break;spent+=stepCost;last=path[i];}
+ if(last!==army.nodeId){army.nodeId=last;army.region=campaign.graph.nodes[last]?.region??army.region;army.movement=Math.max(0,movement-spent);}
+ return {interrupted:true,message:name+" attacks! It cannot reach "+(choice.region?.name||choice.targetArmy?.name||choice.nodeId)+" this turn, so it advances "+(last===army.nodeId?"towards its target.":"along the roads towards its target.")};
+}
+
 function runAIFactionTurn(campaign,faction){
+ const army=factionArmy(campaign,faction.id);if(!army)return faction.name+" had no field army.";
+ army.movement=campaignArmyMovementProfile(army,campaign).points;
+ const animosity=processGreenskinAnimosity(campaign,army);if(animosity.interrupted){faction.armyPoints=army.points;faction.roster=army.roster;return animosity.message;}
  growFactionRecruitment(campaign,faction);
  const owned=campaign.regions.filter(r=>politicalOwner(r)===faction.id);
  faction.income=owned.reduce((sum,r)=>sum+campaignCityIncome(r),0);
  faction.turnsTaken=(faction.turnsTaken||0)+1;
- const army=factionArmy(campaign,faction.id);if(!army)return faction.name+" had no field army.";
  faction.upkeep=campaignArmyUpkeep(army);
  faction.treasury=Math.max(0,(faction.treasury||0)+faction.income-faction.upkeep);
  const recruitBudget=Math.min(Math.max(0,faction.treasury-100),Math.max(0,Math.floor(faction.income*.35)));
@@ -1202,6 +1374,11 @@ function endCampaignTurn(){
  activeCampaign.diplomacy=activeCampaign.diplomacy||{};
  for(const a of states)for(const b of states)if(a.id!==b.id&&!Number.isFinite(activeCampaign.diplomacy[a.id]?.[b.id]))setCampaignRelation(activeCampaign,a.id,b.id,baseFactionRelation(a.id,b.id));
  updatePeaceAndWarRelations(activeCampaign);
+ const playerArmy=selectedPlayerArmy();
+ if(playerArmy&&campaignArmyRace(playerArmy,activeCampaign)==="greenskin"&&playerArmy.lastAnimosityTurn!==activeCampaign.turn){
+  const animosity=processGreenskinAnimosity(activeCampaign,playerArmy);
+  if(animosity.message)activeCampaign.lastEvent=animosity.message;
+ }
  const playerIndex=order.indexOf(playerId),processed=[];
  for(let step=1;step<order.length;step++){
   const id=order[(Math.max(0,playerIndex)+step)%order.length],f=states.find(x=>x.id===id);
