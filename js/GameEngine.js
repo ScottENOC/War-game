@@ -4,7 +4,7 @@ import { createArmyBuilder } from "./armyBuilder.js?v=20261020-casters-v1";
 import { createCollectionManager } from "./collection.js?v=20261020-great-eagle-v1";
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js?v=greenskin-roster-v3";
-import { createRules } from "./rules.js?v=20261015-fear-rules-v1";
+import { createRules } from "./rules.js?v=20261020-barding-caster-v1";
 import { createShooting } from "./shooting.js?v=greenskin-roster-v3";
 import { createCombat } from "./combat.js?v=20261015-fear-rules-v1";
 import { createRendering } from "./rendering.js?v=20261017-faction-colours-v2";
