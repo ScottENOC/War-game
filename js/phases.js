@@ -1,5 +1,33 @@
-export function createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, PX_PER_IN, BOW_RANGE, roll, dist, enemies, say, shoot, render, startActivations, canPlace, canCharge, panicNearby, testTerrorAtTurnStart, testChargePsychology }) {
-  function setPhase(p){S.phase=p;if(p==="charges")testTerrorAtTurnStart?.();if(p==="combat")S.combatResolved=false;S.mode=null;units().forEach(u=>{u.activated=false;if(p==="movement")u.shield=!!u.ownsShield&&(!u.hasRangedWeapon||u.rangedMode==="shield")&&!["greatWeapon","halberd"].includes(u.weapon);if(p==="charges"){u.moved=false;u.moveUsed=0;u.shot=false;u.shootCasualties=0;u.panicTested=false;u.charged=false;}});if(p==="charges"){S.chargePasses=0;S.declaredCharges=[];S.normalChargeSide=S.turn%2===1?"player":"ai";const priority=units().find(u=>u.side==="player"&&alive(u)&&u.deployed!==false&&!u.fled&&!u.engaged&&(u.priorityActivation||(u.attachedCharacters||[]).some(id=>S.units?.[id]?.priorityActivation)));S.priorityChargePending=!!priority;S.selected=priority?.id||S.selected;S.chargeSide=priority?"player":S.normalChargeSide;}if(p==="movement")S.activationSide="player";S.targetId=null;render();if(p==="movement")startActivations();else if(p==="charges"&&S.chargeSide==="ai")aiChargeStep();}
+function resolveGreenskinAnimosity({S,units,alive,roll,say,enemies,dist,canPlace,W,H,BATTLEFIELD_WIDTH_IN,shoot}){
+  const all=units();
+  all.filter(u=>u.faction==="greenskins").forEach(u=>{
+    if(u.baseMove!=null&&u.stats&&u.animosityEligible)u.stats.M=u.baseMove;
+    u.animositySquabble=false;
+    if(!u.animosityEligible||u.models<5||!alive(u)||u.fled||u.engaged||u.deployed===false)return;
+    const test=roll(1)[0];
+    if(test!==1)return;
+    const result=roll(1)[0];
+    if(result===6){
+      const target=(enemies(u)||[]).filter(v=>alive(v)&&!v.fled).sort((a,b)=>dist(u,a)-dist(u,b))[0];
+      if(!target){say("Animosity — "+u.name+" rolls 1, then 6, but sees no enemy to advance towards.");return;}
+      const maxMove=Math.max(0,u.baseMove||u.stats.M||0),startX=u.x,startY=u.y;
+      const dx=(target.x-startX)*W(),dy=(target.y-startY)*H(),pixelLength=Math.hypot(dx,dy)||1,stepPixels=W()/BATTLEFIELD_WIDTH_IN;
+      const angle=Math.atan2(dy,dx),steps=Math.max(1,Math.floor(maxMove*4));let moved=0;
+      for(let i=1;i<=steps;i++){const inches=maxMove*i/steps,px=Math.cos(angle)*inches*stepPixels,py=Math.sin(angle)*inches*stepPixels,nx=startX+px/W(),ny=startY+py/H();if(Math.hypot((target.x-nx)*W(),(target.y-ny)*H())<Math.min(W()/BATTLEFIELD_WIDTH_IN,H()/BATTLEFIELD_WIDTH_IN)*.7)break;if(!canPlace(u,nx,ny,angle))break;u.x=nx;u.y=ny;moved=inches;}
+      u.facing=angle;say("Animosity — "+u.name+" rolls 1, then 6: “We'll show 'em!” It surges "+moved.toFixed(1)+" inches towards "+target.name+" and may still act normally.");
+      return;
+    }
+    if(result===1&&u.hasRangedWeapon){
+      const friend=all.filter(v=>v!==u&&v.side===u.side&&v.faction==="greenskins"&&v.animosityEligible&&v.models>=5&&alive(v)&&!v.fled&&!v.engaged&&dist(u,v)<=(u.range||20)).sort((a,b)=>dist(u,a)-dist(u,b))[0];
+      if(friend&&typeof shoot==="function"){say("Animosity — "+u.name+" rolls 1, then 1: it turns on the nearest Greenskin rival, "+friend.name+".");shoot(u,friend,false);u.stats.M=0;u.animositySquabble=true;return;}
+    }
+    u.animositySquabble=true;u.stats.M=0;u.shot=true;u.charged=true;
+    say("Animosity — "+u.name+" rolls 1, then "+result+": the unit squabbles and cannot move or shoot this turn.");
+  });
+}
+export function createPhases({ S, units, alive, shape, BATTLEFIELD_WIDTH_IN, fieldHeightIn, W, H, PX_PER_IN, roll, dist, enemies, say, shoot, render, startActivations, canPlace, canCharge, panicNearby, testTerrorAtTurnStart, testChargePsychology }) {
+  function runGreenskinAnimosity(){resolveGreenskinAnimosity({S,units,alive,roll,say,enemies,dist,canPlace,W,H,BATTLEFIELD_WIDTH_IN,shoot});}
+  function setPhase(p){S.phase=p;if(p==="charges")testTerrorAtTurnStart?.();if(p==="combat")S.combatResolved=false;S.mode=null;units().forEach(u=>{u.activated=false;if(p==="movement")u.shield=!!u.ownsShield&&(!u.hasRangedWeapon||u.rangedMode==="shield")&&!["greatWeapon","halberd"].includes(u.weapon);if(p==="charges"){u.moved=false;u.moveUsed=0;u.shot=false;u.shootCasualties=0;u.panicTested=false;u.charged=false;}});if(p==="charges")runGreenskinAnimosity();if(p==="charges"){S.chargePasses=0;S.declaredCharges=[];S.normalChargeSide=S.turn%2===1?"player":"ai";const priority=units().find(u=>u.side==="player"&&alive(u)&&u.deployed!==false&&!u.fled&&!u.engaged&&(u.priorityActivation||(u.attachedCharacters||[]).some(id=>S.units?.[id]?.priorityActivation)));S.priorityChargePending=!!priority;S.selected=priority?.id||S.selected;S.chargeSide=priority?"player":S.normalChargeSide;}if(p==="movement")S.activationSide="player";S.targetId=null;render();if(p==="movement")startActivations();else if(p==="charges"&&S.chargeSide==="ai")aiChargeStep();}
 function chargeGap(u,target){const bearing=Math.atan2((target.y-u.y)*H(),(target.x-u.x)*W()),a=shape(u),b=shape(target),support=(unit,angle,q)=>{const d=angle-(unit.facing||0);return Math.abs(Math.cos(d))*q.depth/(2*PX_PER_IN())+Math.abs(Math.sin(d))*q.front/(2*PX_PER_IN());};return Math.max(0,dist(u,target)-support(u,bearing,a)-support(target,bearing+Math.PI,b));}
 function sideOfTarget(charger,target){if(target.skirmishing&&!target.engaged)return "front";const dx=(charger.x-target.x)*W(),dy=(charger.y-target.y)*H(),f=target.facing||0,q=shape(target),forward=dx*Math.cos(f)+dy*Math.sin(f),lateral=-dx*Math.sin(f)+dy*Math.cos(f);if(Math.abs(forward)/Math.max(1,q.depth/2)>=Math.abs(lateral)/Math.max(1,q.front/2))return forward>=0?"front":"rear";return lateral>=0?"left":"right";}
 function chargeContact(charger,target,side){const tq=shape(target),uq=shape(charger),f=target.facing||0,fx=Math.cos(f),fy=Math.sin(f),lx=-fy,ly=fx;let nx,ny,tx,ty,targetHalf,attackerHalf;if(side==="front"){nx=fx;ny=fy;tx=lx;ty=ly;targetHalf=tq.depth/2;attackerHalf=tq.front/2;}else if(side==="rear"){nx=-fx;ny=-fy;tx=lx;ty=ly;targetHalf=tq.depth/2;attackerHalf=tq.front/2;}else if(side==="left"){nx=lx;ny=ly;tx=fx;ty=fy;targetHalf=tq.front/2;attackerHalf=tq.front/2;}else{nx=-lx;ny=-ly;tx=fx;ty=fy;targetHalf=tq.front/2;attackerHalf=tq.front/2;}const dx=(charger.x-target.x)*W(),dy=(charger.y-target.y)*H(),along=dx*tx+dy*ty,offset=Math.max(-Math.max(0,targetHalf-attackerHalf),Math.min(Math.max(0,targetHalf-attackerHalf),along)),gap=targetHalf+uq.depth/2,cx=target.x*W()+tx*offset+nx*gap,cy=target.y*H()+ty*offset+ny*gap;return {x:cx/W(),y:cy/H(),facing:Math.atan2(-ny,-nx)};}
