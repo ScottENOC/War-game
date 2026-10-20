@@ -469,7 +469,7 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
   if(treasuryState)treasuryState.treasury=Math.max(0,Number(treasuryState.treasury)||0)+plunder;
   if(conquerorId===campaign.playerPoliticalFaction)campaign.treasury=Math.max(0,Number(campaign.treasury)||0)+plunder;
  }
- if(isGreenskinConqueror){const army=(campaign.armies||[]).find(a=>(a.owner||a.factionId)===conquerorId&&a.roster?.length);if(army)awardGreenskinMomentum(campaign,army,1);}
+ if(isGreenskinConqueror){if(settlement.population.total<=0)settlement.recruitmentPools={};const army=(campaign.armies||[]).find(a=>(a.owner||a.factionId)===conquerorId&&a.roster?.length);if(army)awardGreenskinMomentum(campaign,army,1);}
  const factionName=FACTION_BY_ID[conquerorId]?.name||FACTIONS[conquerorFaction]?.name||conquerorId;
  const special=(conquerorId==="greenskins"||FACTION_BY_ID[conquerorId]?.race==="greenskin")&&region.nativeFaction==="dwarfs"?" Orcs slaughtered the dwarves who could not escape; surviving escapees are displaced.":"";
  const summary=city.name+" falls to "+factionName+". "+fled.toLocaleString()+" inhabitants flee; "+killed.toLocaleString()+" are killed."+(plunder?" Greenskin plunder: "+plunder.toLocaleString()+" gold; the settlement has no usable population.":"")+special+" Its "+settlement.fortification.style+" fortifications remain in place, damaged but not replaced.";
@@ -1120,8 +1120,8 @@ function updateGreenskinDiplomacy(campaign){
  for(const a of greens)for(const b of greens){
   if(a.id===b.id)continue;
   const strengthA=campaignFactionStrength(campaign,a.id),strengthB=campaignFactionStrength(campaign,b.id);
-  const relative=Math.max(-25,Math.min(35,Math.round(Math.log(strengthB/strengthA)*18)));
-  const momentumEffect=Math.max(-24,Math.min(30,(campaignFactionMomentum(campaign,b.id)-campaignFactionMomentum(campaign,a.id))*6));
+  const relative=Math.max(-25,Math.min(35,Math.round(Math.log(strengthB/strengthA)*25)));
+  const momentumEffect=Math.max(-30,Math.min(40,(campaignFactionMomentum(campaign,b.id)-campaignFactionMomentum(campaign,a.id))*8));
   const target=Math.max(-85,Math.min(90,baseFactionRelation(a.id,b.id)+relative+momentumEffect));
   const current=campaignRelation(campaign,a.id,b.id);setCampaignRelation(campaign,a.id,b.id,current+Math.max(-8,Math.min(8,target-current)));
  }
@@ -1130,7 +1130,7 @@ function updateGreenskinDiplomacy(campaign){
   const smallPower=campaignFactionStrength(campaign,small.id),largePower=campaignFactionStrength(campaign,large.id);
   const relation=campaignRelation(campaign,small.id,large.id),momentum=campaignFactionMomentum(campaign,large.id);
   if(largePower<smallPower*1.35||momentum<2||relation<35)continue;
-  if(relation>=72&&largePower>=smallPower*1.8&&momentum>=4){
+  if(relation>=65&&largePower>=smallPower*1.8&&momentum>=4){
    if(Math.random()<0.22&&confederateGreenskinFaction(campaign,large.id,small.id))break;
   }else if(relation>=48&&!campaignAreAllied(campaign,small.id,large.id)&&Math.random()<0.2){
    establishGreenskinAlliance(campaign,small.id,large.id);
