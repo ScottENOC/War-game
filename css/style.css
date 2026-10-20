@@ -527,3 +527,5 @@ button,[role="button"]{
 .grand-world-sidebar{border:1px solid #ffffff25;border-radius:12px;background:#111a19;padding:10px}
 .grand-world-sidebar>.grand-world-card{border:0;border-radius:8px;background:#ffffff07;padding:8px}
 .grand-world-sidebar>.grand-world-card[hidden]{display:none!important}
+
+#grand-campaign-world[hidden] .grand-floating-end-turn{display:none!important}
