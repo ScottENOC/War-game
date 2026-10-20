@@ -89,7 +89,88 @@ function pursueAfterBreak(winner,loser,choice=null){
 
 const RULES = createRules({ roll, units, say });
 const { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage:applyRawDamage, meleeAttack, shootingAttack } = RULES;
-function applyDamage(u,wounds,shooting,cascadePlan=null){if(S.mordheimSkirmish&&u?.isMordheimFighter&&wounds>0){if(u.mordheimStatus==="unconscious"||u.mordheimStatus==="stunned"){u.mordheimStatus="outOfAction";u.models=0;say(u.name+" is struck while unconscious and is out of action.");render();return 0;}if(u.mordheimStatus==="outOfAction")return 0;u.mordheimWounds=Math.max(0,(u.mordheimWounds??u.stats.W??1)-Math.max(1,Math.floor(wounds)));u.characterWounds=u.mordheimWounds;if(u.mordheimWounds>0){say(u.name+" suffers a wound ("+u.mordheimWounds+" remaining).");render();return 0;}const injury=roll(1)[0];if(injury<=2){u.mordheimStatus="stunned";u.stunnedUntilTurn=S.turn+1;u.mordheimWounds=0;say("Mordheim injury — "+u.name+" rolls "+injury+": stunned and will miss their next turn.");}else if(injury<=4){u.mordheimStatus="unconscious";u.mordheimWounds=0;say("Mordheim injury — "+u.name+" rolls "+injury+": unconscious. A friendly fighter can revive them while adjacent during movement.");}else{u.mordheimStatus="outOfAction";u.models=0;say("Mordheim injury — "+u.name+" rolls "+injury+": out of action (dead in this one-off skirmish).");}render();return 0;}if(u?.regeneration&&wounds>0&&!cascadePlan){let regenerated=0;for(let i=0;i<Math.floor(wounds);i++)if(roll(1)[0]>=u.regeneration)regenerated++;if(regenerated){wounds-=regenerated;say(u.name+" regenerates "+regenerated+" wound(s) on a 4+.");}}const before=u?.models??0,result=applyRawDamage(u,wounds,shooting,cascadePlan);if(u?.isGiant&&before>0&&u.models<=0&&!u.fallingResolved){u.fallingResolved=true;say(u.name+" falls over as it dies!");for(const v of units().filter(v=>v!==u&&alive(v)&&dist(u,v)<=3)){if(roll(1)[0]>=4){const fallWounds=1+(roll(1)[0]%3);applyDamage(v,fallWounds,false);say(v.name+" is struck by the falling Giant for "+fallWounds+" wound(s).");}}}if(u?.isDragon&&before>0&&u.models<=0&&!u.fallingResolved){u.fallingResolved=true;const rider=(u.attachedCharacters||[]).map(id=>S.units[id]).find(h=>h&&h.models>0&&!h.fled);if(rider){rider.characterWounds=Math.max(0,(rider.characterWounds??rider.stats.W)-1);if(rider.characterWounds<=0)rider.models=0;rider.x=u.x;rider.y=u.y;rider.attachedTo=null;rider.mounted=false;rider.mountType="none";rider.flyingMount=false;rider.flightAltitudeIn=0;rider.baseWidthIn=20/25.4;rider.baseDepthIn=20/25.4;rider.stats.M=5;rider.baseMove=5;u.attachedCharacters=(u.attachedCharacters||[]).filter(id=>id!==rider.id);say(rider.name+" suffers an automatic falling wound as the flying dragon dies"+(rider.models>0?"; they continue on foot.":"."));}}return result;}
+const OBJECTIVE_NAMES={holdGround:"Hold / Seize the Ground",captureFlag:"Capture the Flag",relics:"Relic Hunt"};
+function initializeObjectives(){
+ S.objectiveScore={player:0,ai:0};
+ S.objectives=[];
+ S.flags=null;
+ if(S.objectiveMode==="holdGround")S.objectives=[{id:"ground",kind:"ground",x:.5,y:.5}];
+ if(S.objectiveMode==="captureFlag")S.flags={player:{side:"player",x:.08,y:.5,homeX:.08,homeY:.5,carrierId:null,atHome:true},ai:{side:"ai",x:.92,y:.5,homeX:.92,homeY:.5,carrierId:null,atHome:true}};
+ if(S.objectiveMode==="relics")S.objectives=[
+  {id:"relic1",kind:"relic",x:.39,y:.34,carrierId:null,bankedBy:null},
+  {id:"relic2",kind:"relic",x:.5,y:.29,carrierId:null,bankedBy:null},
+  {id:"relic3",kind:"relic",x:.61,y:.38,carrierId:null,bankedBy:null},
+  {id:"relic4",kind:"relic",x:.42,y:.62,carrierId:null,bankedBy:null},
+  {id:"relic5",kind:"relic",x:.59,y:.65,carrierId:null,bankedBy:null}
+ ];
+}
+function dropObjectiveCarrier(u){
+ if(!u)return;
+ if(u.carryingFlagSide&&S.flags?.[u.carryingFlagSide]){
+  const f=S.flags[u.carryingFlagSide];f.carrierId=null;f.x=u.x;f.y=u.y;f.atHome=false;
+  say(u.name+" drops the "+f.side+" flag.");
+  u.carryingFlagSide=null;
+ }
+ for(const item of S.objectives||[])if(item.kind==="relic"&&item.carrierId===u.id){item.carrierId=null;item.x=u.x;item.y=u.y;say(u.name+" drops "+item.id+".");}
+ u.carryingRelicId=null;
+}
+function objectiveActive(u){return !!u&&alive(u)&&!u.fled&&!u.mordheimStatus&&u.deployed!==false;}
+function updateObjectiveInteractions(){
+ if(!S.objectiveMode||S.finished)return;
+ const roster=units().filter(objectiveActive);
+ if(S.objectiveMode==="captureFlag"&&S.flags){
+  for(const u of roster){
+   for(const flag of Object.values(S.flags)){
+    if(flag.carrierId===u.id||flag.carrierId!==null)continue;
+    if(dist(u,{x:flag.x,y:flag.y})>1.4)continue;
+    if(flag.side===u.side){
+     flag.x=flag.homeX;flag.y=flag.homeY;flag.atHome=true;flag.carrierId=null;
+     say(u.name+" returns their own flag to base.");
+    }else{flag.carrierId=u.id;flag.atHome=false;u.carryingFlagSide=flag.side;say(u.name+" picks up the enemy flag!");}
+   }
+   if(u.carryingFlagSide){
+    const home=S.flags[u.side];
+    if(home?.atHome&&((u.side==="player"&&u.x<=.12)||(u.side==="ai"&&u.x>=.88))){
+     say(u.name+" returns the enemy flag to base — capture!");
+     finishBattle(u.side==="player"?"Player wins the battle! (Captured the flag)":"Opponent wins the battle! (Captured the flag)");
+     return;
+    }
+   }
+  }
+ }
+ if(S.objectiveMode==="relics"){
+  for(const u of roster){
+   if(u.carryingRelicId){
+    if((u.side==="player"&&u.x<=.32)||(u.side==="ai"&&u.x>=.68)){
+     const item=S.objectives.find(o=>o.id===u.carryingRelicId);
+     if(item){item.carrierId=null;item.bankedBy=u.side;item.x=u.x;item.y=u.y;}
+     S.objectiveScore[u.side]=(S.objectiveScore[u.side]||0)+1;
+     say(u.name+" extracts a relic for "+u.side+" ("+S.objectiveScore[u.side]+"/3).");
+     u.carryingRelicId=null;
+     if(S.objectiveScore[u.side]>=3){finishBattle(u.side==="player"?"Player wins the battle! (Recovered three relics)":"Opponent wins the battle! (Recovered three relics)");return;}
+    }
+   }else{
+    const item=S.objectives.find(o=>o.kind==="relic"&&!o.bankedBy&&!o.carrierId&&dist(u,o)<=1.25);
+    if(item){item.carrierId=u.id;u.carryingRelicId=item.id;say(u.name+" picks up a neutral relic. Carry it back to your deployment side to secure it.");}
+   }
+  }
+ }
+}
+function checkObjectiveDeadline(){
+ if(!S.objectiveMode)return false;
+ if(S.objectiveMode==="holdGround"&&S.turn>=6){
+  const ground=S.objectives?.[0],near=units().filter(u=>objectiveActive(u)&&dist(u,ground)<=3.5);
+  const p=near.filter(u=>u.side==="player").length,a=near.filter(u=>u.side==="ai").length;
+  finishBattle(p===a?"The battle is a draw! (The ground remains contested)":p>a?"Player wins the battle! (Held the central ground)":"Opponent wins the battle! (Held the central ground)");return true;
+ }
+ if(S.turn>=10&&S.objectiveMode==="captureFlag"){finishBattle("The battle is a draw! (No flag was captured)");return true;}
+ if(S.turn>=10&&S.objectiveMode==="relics"){
+  const p=S.objectiveScore?.player||0,a=S.objectiveScore?.ai||0;
+  finishBattle(p===a?"The battle is a draw! (Relics secured: "+p+" each)":p>a?"Player wins the battle! (Relics secured: "+p+" to "+a+")":"Opponent wins the battle! (Relics secured: "+a+" to "+p+")");return true;
+ }
+ return false;
+}
+function applyDamage(u,wounds,shooting,cascadePlan=null){if(S.mordheimSkirmish&&u?.isMordheimFighter&&wounds>0){if(u.mordheimStatus==="unconscious"||u.mordheimStatus==="stunned"){dropObjectiveCarrier(u);u.mordheimStatus="outOfAction";u.models=0;say(u.name+" is struck while unconscious and is out of action.");render();return 0;}if(u.mordheimStatus==="outOfAction")return 0;u.mordheimWounds=Math.max(0,(u.mordheimWounds??u.stats.W??1)-Math.max(1,Math.floor(wounds)));u.characterWounds=u.mordheimWounds;if(u.mordheimWounds>0){say(u.name+" suffers a wound ("+u.mordheimWounds+" remaining).");render();return 0;}const injury=roll(1)[0];if(injury<=2){u.mordheimStatus="stunned";u.stunnedUntilTurn=S.turn+1;u.mordheimWounds=0;say("Mordheim injury — "+u.name+" rolls "+injury+": stunned and will miss their next turn.");}else if(injury<=4){dropObjectiveCarrier(u);u.mordheimStatus="unconscious";u.mordheimWounds=0;say("Mordheim injury — "+u.name+" rolls "+injury+": unconscious. A friendly fighter can revive them while adjacent during movement.");}else{dropObjectiveCarrier(u);u.mordheimStatus="outOfAction";u.models=0;say("Mordheim injury — "+u.name+" rolls "+injury+": out of action (dead in this one-off skirmish).");}render();return 0;}if(u?.regeneration&&wounds>0&&!cascadePlan){let regenerated=0;for(let i=0;i<Math.floor(wounds);i++)if(roll(1)[0]>=u.regeneration)regenerated++;if(regenerated){wounds-=regenerated;say(u.name+" regenerates "+regenerated+" wound(s) on a 4+.");}}const before=u?.models??0,result=applyRawDamage(u,wounds,shooting,cascadePlan);if(before>0&&u?.models<=0)dropObjectiveCarrier(u);if(u?.isGiant&&before>0&&u.models<=0&&!u.fallingResolved){u.fallingResolved=true;say(u.name+" falls over as it dies!");for(const v of units().filter(v=>v!==u&&alive(v)&&dist(u,v)<=3)){if(roll(1)[0]>=4){const fallWounds=1+(roll(1)[0]%3);applyDamage(v,fallWounds,false);say(v.name+" is struck by the falling Giant for "+fallWounds+" wound(s).");}}}if(u?.isDragon&&before>0&&u.models<=0&&!u.fallingResolved){u.fallingResolved=true;const rider=(u.attachedCharacters||[]).map(id=>S.units[id]).find(h=>h&&h.models>0&&!h.fled);if(rider){rider.characterWounds=Math.max(0,(rider.characterWounds??rider.stats.W)-1);if(rider.characterWounds<=0)rider.models=0;rider.x=u.x;rider.y=u.y;rider.attachedTo=null;rider.mounted=false;rider.mountType="none";rider.flyingMount=false;rider.flightAltitudeIn=0;rider.baseWidthIn=20/25.4;rider.baseDepthIn=20/25.4;rider.stats.M=5;rider.baseMove=5;u.attachedCharacters=(u.attachedCharacters||[]).filter(id=>id!==rider.id);say(rider.name+" suffers an automatic falling wound as the flying dragon dies"+(rider.models>0?"; they continue on foot.":"."));}}return result;}
 const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H, terrain:()=>S.terrain, BATTLEFIELD_WIDTH_IN });
 const { shoot, fireCannon, breathAttack } = SHOOTING;
 function resolvePursuit(choice){const pending=S.pendingPursuit;if(!pending)return;S.pendingPursuit=null;const winner=S.units[pending.winnerId],loser=S.units[pending.loserId];if(winner&&loser)pursueAfterBreak(winner,loser,choice);if(units().filter(alive).every(v=>v.fled)||units().filter(v=>v.side==="player"&&alive(v)).length===0||units().filter(v=>v.side==="ai"&&alive(v)).length===0){finishBattle(units().some(v=>v.side==="player"&&alive(v)&&!v.fled)?"Player wins the battle!":"Opponent wins the battle!");return;}if(continueBreakTests())return;S.phase="combat";S.combatResolved=true;render();}
@@ -100,9 +181,9 @@ const runAiActivations = AI.runAiActivations;
 function finishActivation(unitOverride=null,alreadyActivated=false){const u=unitOverride||S.units[S.selected];if(!u||u.side!=="player"||(!alreadyActivated&&u.activated)||S.phase!=="movement")return;u.activated=true;S.mode=null;say(u.name+" completes its activation.");if(hasPriorityRule(u)&&!S.prioritySpentThisPhase){S.prioritySpentThisPhase=true;if(S.normalMovementSide==="ai"&&runAiActivation()){const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.selected=next.id;render();return;}}const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.forcePlayerNext=true;S.selected=next.id;render();return;}runAiActivations();return;}if(S.forcePlayerNext){S.forcePlayerNext=false;const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.selected=next.id;render();return;}}if(runAiActivation()){const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.activationSide="player";S.selected=next.id;render();return;}}const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.activationSide="player";S.selected=next.id;render();return;}runAiActivations();}
 function rallyUnit(u){if(!u||!u.fled||u.rallyAttemptTurn===S.turn||u.terrorFledTurn===S.turn)return false;if(u.models*4<u.startModels){say(u.name+" is below a quarter of its starting strength and cannot rally.");return false;}u.rallyAttemptTurn=S.turn;const ld=leadership(u),dice=roll(2),total=dice[0]+dice[1];say("Rally test — "+u.name+": "+dice.join(" + ")+" = "+total+" against unmodified Leadership "+ld+".");if(total<=ld){u.fled=false;u.moveUsed=u.stats.M;u.activated=true;say(u.name+" rallies, but cannot move further this turn.");}else{const foe=closestEnemy(u),dx=foe?(u.x-foe.x)*W():Math.cos(u.facing+Math.PI)*W(),dy=foe?(u.y-foe.y)*H():Math.sin(u.facing+Math.PI)*H(),len=Math.max(1,Math.hypot(dx,dy)),distanceRoll=roll(2),distance=distanceRoll[0]+distanceRoll[1],px=distance*PX_PER_IN();u.x+=dx/len*px/W();u.y+=dy/len*px/H();say(u.name+" fails to rally and flees "+distance+" inches ("+distanceRoll.join(" + ")+").");if(u.x<0||u.x>1||u.y<0||u.y>1){u.models=0;u.fled=false;say(u.name+" flees off the battlefield.");}}render();return !u.fled;}
 function rallyingCall(source,target){if(!source||!source.rallyingCall||source.side!=="player"||source.fled||(source.attachedTo&&S.units[source.attachedTo]?.fled)||source.models<=0||source.rallyingCallUsed||S.phase!=="movement")return false;if(!target||target===source||target.side!==source.side||!target.fled||target.terrorFledTurn===S.turn||!alive(target)||dist(source,target)>12){say("Choose a friendly fleeing unit within 12 inches.");return false;}source.rallyingCallUsed=true;target.fled=false;target.engaged=false;target.engagedWith=null;target.moveUsed=target.stats.M;target.activated=true;target.rallyAttemptTurn=S.turn;say(source.name+" uses Rallying Call: "+target.name+" rallies automatically and cannot move further this turn.");S.mode=null;render();return true;}
-function beginCombatPhase(){const canFight=u=>alive(u)&&!u.fled&&(!S.mordheimSkirmish||!["unconscious","outOfAction"].includes(u.mordheimStatus));const playerReady=units().some(u=>u.side==="player"&&canFight(u)),aiReady=units().some(u=>u.side==="ai"&&canFight(u));if(!playerReady||!aiReady){finishBattle(playerReady?"Player wins the battle!":"Opponent wins the battle!");return;}if(units().some(u=>u.engaged&&alive(u))){setPhase("combat");}else{S.turn++;if(checkSiegeDeadline())return;setPhase("charges");say("Turn "+S.turn+" begins.");}}
+function beginCombatPhase(){const canFight=u=>alive(u)&&!u.fled&&(!S.mordheimSkirmish||!["unconscious","outOfAction"].includes(u.mordheimStatus));const playerReady=units().some(u=>u.side==="player"&&canFight(u)),aiReady=units().some(u=>u.side==="ai"&&canFight(u));if(!playerReady||!aiReady){finishBattle(playerReady?"Player wins the battle!":"Opponent wins the battle!");return;}if(units().some(u=>u.engaged&&alive(u))){setPhase("combat");}else{S.turn++;if(checkObjectiveDeadline())return;if(checkSiegeDeadline())return;setPhase("charges");say("Turn "+S.turn+" begins.");}}
 function reformCombatPairs(){const pairs=[];units().filter(u=>u.engaged&&alive(u)).forEach(u=>{const v=u.engagedWith?S.units[u.engagedWith]:null;if(v&&alive(v)&&v.engagedWith===u.id&&!pairs.some(p=>p.includes(u)||p.includes(v)))pairs.push([u,v]);});if(pairs.length!==1)return;const [a,b]=pairs[0];if(!a.engaged||!b.engaged)return;const defender=[a,b].find(u=>["left","right","rear"].includes(u.attackedFromSide)&&u.flankedBy===([a,b].find(v=>v!==u)?.id));if(defender){const enemy=defender===a?b:a;const oldRanks=shape(defender).ranks;defender.formationWidth=Math.max(1,Math.min(defender.models,oldRanks+1,Math.max(1,enemy.formationWidth||5)));say(defender.name+" turns to face "+enemy.name+" and reforms to "+defender.formationWidth+" files. Its disrupted rank bonus and the flank bonus end for the next round.");}else say("The engaged units turn to face each other before the next round.");const dx=(b.x-a.x)*W(),dy=(b.y-a.y)*H(),angle=Math.atan2(dy,dx);a.facing=angle;b.facing=angle+Math.PI;const gap=(shape(a).depth+shape(b).depth)/2,midX=(a.x+b.x)/2,midY=(a.y+b.y)/2;a.x=midX-Math.cos(angle)*gap/2/W();a.y=midY-Math.sin(angle)*gap/2/H();b.x=midX+Math.cos(angle)*gap/2/W();b.y=midY+Math.sin(angle)*gap/2/H();for(const u of [a,b]){u.engagedSide="front";u.chargedSide="front";u.attackedFromSide="front";u.flankedBy=null;}}
-let render = () => { Object.values(S.units||{}).forEach(u=>{u.magicSuppressed=isInsideNullificationDome(u);});};
+let render = () => { Object.values(S.units||{}).forEach(u=>{u.magicSuppressed=isInsideNullificationDome(u);});updateObjectiveInteractions();};
 const COMBAT = createCombat({ S, units, alive, dist, meleeAttack, applyDamage, rankBonus, roll, say, diceStack, render: () => render(), endTurn, finishBattle, reformCombatPairs, pursueAfterBreak, panicNearby, leadership });
 const { resolveCombat, resolveBreak, continueBreakTests } = COMBAT;
 function resolveAnimosityBrawl(a,b){
@@ -181,7 +262,7 @@ render = () => {
 window.warGameSaveNow = saveBattleSnapshot;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, fireCannon, breathAttack, declareCharge, render, draw, $, say, dist, finishActivation, terrain:()=>S.terrain, rallyingCall, castSpell });
 
-function startBattleWithArmy(army,faction,battleType="skirmish",siegeRole="attacker"){S.mordheimSkirmish=false;if(roguelikeBuilderMode){roguelikeBuilderMode=false;roguelike?.beginBattle(army,faction,roguelikeArmyPoints(army,faction));return;}campaignBattle=false;S.battleType=battleType;S.siegeRole=siegeRole;S.autoTerrain=true;S.terrainSeed=Date.now();const budgetMultiplier=battleType==="siege"?(siegeRole==="attacker"?1/1.5:1.5):1;const playerForce=createUnitsFromArmy(army,faction),aiRoster=buildOpponentArmy(army,faction,{budgetMultiplier,siege:battleType==="siege"}),aiForce=createUnitsFromArmy(aiRoster,faction);S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};if(battleType==="siege"){const castle={left:.29,right:.71,top:.22,bottom:.78};Object.values(S.units).forEach(u=>{if(u.side==="player"){u.x=siegeRole==="defender"?.5:.12;u.y=.5;}else{u.x=siegeRole==="defender"?.12:.5;u.y=.5;}u.facing=u.side==="player"?(siegeRole==="defender"?0:0):Math.PI;});}const playerPoints=units().filter(u=>u.side==="player").reduce((sum,u)=>sum+(u.points||0),0),aiPoints=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();say((battleType==="siege"?"Siege · you are the "+siegeRole+". ":"Skirmish · ")+"Your army "+playerPoints+" pts; opponent "+aiPoints+" pts ("+(aiPoints>=playerPoints?"+"+(aiPoints-playerPoints):"−"+(playerPoints-aiPoints))+" pts). "+(battleType==="siege"?"The attacker receives 50% more budget; castle walls are T10/10 W and gates T8/6 W.":""));setupCanvas();}
+function startBattleWithArmy(army,faction,battleType="skirmish",siegeRole="attacker"){S.mordheimSkirmish=false;S.objectiveMode=pendingObjectiveMode;pendingObjectiveMode=null;if(roguelikeBuilderMode){roguelikeBuilderMode=false;roguelike?.beginBattle(army,faction,roguelikeArmyPoints(army,faction));return;}campaignBattle=false;S.battleType=battleType;S.siegeRole=siegeRole;S.autoTerrain=true;S.terrainSeed=Date.now();const budgetMultiplier=battleType==="siege"?(siegeRole==="attacker"?1/1.5:1.5):1;const playerForce=createUnitsFromArmy(army,faction),aiRoster=buildOpponentArmy(army,faction,{budgetMultiplier,siege:battleType==="siege"}),aiForce=createUnitsFromArmy(aiRoster,faction);S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};initializeObjectives();if(battleType==="siege"){const castle={left:.29,right:.71,top:.22,bottom:.78};Object.values(S.units).forEach(u=>{if(u.side==="player"){u.x=siegeRole==="defender"?.5:.12;u.y=.5;}else{u.x=siegeRole==="defender"?.12:.5;u.y=.5;}u.facing=u.side==="player"?(siegeRole==="defender"?0:0):Math.PI;});}const playerPoints=units().filter(u=>u.side==="player").reduce((sum,u)=>sum+(u.points||0),0),aiPoints=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();say((battleType==="siege"?"Siege · you are the "+siegeRole+". ":"Skirmish · ")+"Your army "+playerPoints+" pts; opponent "+aiPoints+" pts ("+(aiPoints>=playerPoints?"+"+(aiPoints-playerPoints):"−"+(playerPoints-aiPoints))+" pts). "+(battleType==="siege"?"The attacker receives 50% more budget; castle walls are T10/10 W and gates T8/6 W.":""));setupCanvas();}
 function roguelikeCampaignStatCost(config,faction){
  const m=config.models||1,dwarf=faction==="dwarfs",elf=faction==="highElves",character=["captain","lord","mageHero","mageLord","starwardenLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric","goblinHero","goblinLord","orcHero","orcLord"].includes(config.type),s=config.campaignStats||{};
  const rate={M:character?(dwarf?8:5):(dwarf?4:2)*m,WS:character?(elf?3:5):(elf?1:2)*m,BS:character?(elf?3:5):(elf?1:2)*m,S:character?6:3*m,T:character?(dwarf?5:elf?10:8):(dwarf?2:elf?6:4)*m,I:character?(dwarf?5:3):(dwarf?3:1)*m,Ld:character?3:m};
@@ -235,7 +316,8 @@ function startCampaignBattle(army,enemyConfig){
 }
 function showMainMenu(){$("game").hidden=true;$("armybuilder").hidden=true;$("collection-screen").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("roguelike-screen").hidden=true;$("mainmenu").hidden=false;}
 function showCollection(){$("game").hidden=true;$("armybuilder").hidden=true;$("mode-screen").hidden=true;$("mainmenu").hidden=true;$("collection-screen").hidden=false;}
-function showSkirmishBuilder(){$("game").hidden=true;$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("collection-screen").hidden=true;$("roguelike-screen").hidden=true;armyBuilder?.configureSkirmish();armyBuilder?.open();}
+let pendingObjectiveMode=null;
+function showSkirmishBuilder(objectiveMode=null){pendingObjectiveMode=objectiveMode;$("game").hidden=true;$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("collection-screen").hidden=true;$("roguelike-screen").hidden=true;armyBuilder?.configureSkirmish();armyBuilder?.open();}
 let collectionManager=null;
 let narrativeCampaign=null;
 let roguelike=null;
