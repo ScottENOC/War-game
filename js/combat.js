@@ -155,6 +155,22 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       say("Combat resolution (combined melee): Player "+sideScore.player+" (wounds "+detail.player[0].value+", best ranks "+detail.player[1].value+", flank/rear "+detail.player[2].value+", outnumber "+detail.player[3].value+") vs Opponent "+sideScore.ai+" (wounds "+detail.ai[0].value+", best ranks "+detail.ai[1].value+", flank/rear "+detail.ai[2].value+", outnumber "+detail.ai[3].value+").");
       if(diff!==0){const losingSide=diff>0?"ai":"player";group.filter(u=>u.side===losingSide&&alive(u)&&linked(u).length).forEach(loser=>{if(loser.crumbling||loser.undead){const loss=Math.abs(diff);applyDamage(loser,loss,false);say(loser.name+" crumbles: "+loss+" unsaveable wound(s) from losing combat (Undead cannot break).");if(!alive(loser)){loser.engaged=false;loser.engagedWithIds=[];loser.engagedWith=null;}return;}const fearEnemy=linked(loser).find(v=>v.side!==loser.side&&((v.causesFear||v.causesTerror||v.isDragon||v.isDragonRider))&&combatUnitStrength(v)>combatUnitStrength(loser));if(fearEnemy){tests.push({loser,diff:Math.abs(diff),automaticFear:true});say(loser.name+" is defeated and outnumbered by "+fearEnemy.name+"; Fear breaks the unit automatically.");}else tests.push({loser,diff:Math.abs(diff)});});}
     });
+    // 6th-edition Vampire Counts: once the army's Wizard-General is slain,
+    // each surviving rank-and-file Undead unit tests at the end of the phase.
+    S.undeadGeneralDeathApplied=S.undeadGeneralDeathApplied||{};
+    ["player","ai"].forEach(side=>{
+      const undead=units().filter(u=>u.side===side&&(u.undead||u.crumbling));
+      if(!undead.length||S.undeadGeneralDeathApplied[side])return;
+      const general=units().find(u=>u.side===side&&u.isGeneral);
+      if(!general||alive(general))return;
+      S.undeadGeneralDeathApplied[side]=true;
+      say("The Undead General has been destroyed. The army begins to crumble!");
+      undead.filter(u=>!u.isCharacter&&alive(u)).forEach(u=>{
+        const dice=roll(2),total=dice[0]+dice[1],ld=leadership(u),loss=Math.max(0,total-ld);
+        say(u.name+" tests against Leadership "+ld+" after the General's death: "+dice.join(" + ")+" = "+total+(loss?"; suffers "+loss+" unsaveable crumbling wound(s).":"; holds together."));
+        if(loss){applyDamage(u,loss,false);if(!alive(u)){u.engaged=false;u.engagedWithIds=[];u.engagedWith=null;}}
+      });
+    });
     if(units().filter(alive).filter(u=>u.side==="player").length===0){finishBattle("Opponent wins the battle!");return;}
     if(units().filter(alive).filter(u=>u.side==="ai").length===0){finishBattle("Player wins the battle!");return;}
     if(tests.length){S.breakTests=tests.sort((a,b)=>b.diff-a.diff);nextBreakTest();}
