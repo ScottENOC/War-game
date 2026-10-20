@@ -40,7 +40,7 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
     if (f.injuries?.leg) cfg.campaignStats = { ...(cfg.campaignStats || {}), M: (cfg.campaignStats?.M || 0) };
     return cfg;
   }
-  function open() { run = read(); show(); render(); }
+  function open() { run = read(); if(run.state==="battle"){run.state="ready";run.lastResult="The unfinished battle was abandoned. No casualties or rewards were recorded.";save();} show(); render(); el("warband-expedition-menu").onclick=()=>{hide();el("mainmenu").hidden=false;}; }
   function render() {
     const title = el("warband-expedition-title"), desc = el("warband-expedition-description"), content = el("warband-expedition-content"), shop = el("warband-expedition-shop"), actions = el("warband-expedition-actions");
     content.replaceChildren(); shop.replaceChildren(); actions.replaceChildren();
@@ -117,7 +117,11 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
   }
   function startNextBattle() {
     const active=run.fighters.filter(f=>f.alive&&f.benchFights===0);
-    if(!active.length){run.lastResult="No available fighters. Recruit reinforcements before the next battle.";save();render();return;}
+    if(!active.length){
+      const living=run.fighters.filter(f=>f.alive);
+      if(living.length&&living.some(f=>f.benchFights>0)){living.forEach(f=>{f.benchFights=Math.max(0,(Number(f.benchFights)||0)-1);});run.round++;run.fights++;run.lastResult="Your available fighters are recovering. The expedition loses a round while the injured warband waits.";save();render();return;}
+      run.lastResult="No available fighters. Recruit reinforcements before the next battle.";save();render();return;
+    }
     run.state="battle";save();hide();
     startBattle(active.map(configFor),run.faction,run.round);
   }
@@ -132,11 +136,11 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
       if(u.mordheimStatus==="outOfAction"||u.models<=0){
         const roll=()=>1+Math.floor(Math.random()*6);
         let result=roll(),tries=0;
-        while(((result===3&&f.injuries?.leg)||(result===4&&f.injuries?.leftArm))&&tries++<20)result=roll();
+        while((result===3&&f.injuries?.leg)||(result===4&&f.injuries?.leftArm))result=roll();
         if(result===1){f.benchFights=Math.max(Number(f.benchFights)||0,1);casualtyReports.push(f.name+": misses the next fight (roll 1).");}
         else if(result===2){f.benchFights=Math.max(Number(f.benchFights)||0,2);casualtyReports.push(f.name+": misses the next two fights (roll 2).");}
         else if(result===3){f.injuries=f.injuries||{};f.injuries.leg=true;casualtyReports.push(f.name+": loses a leg; Move −1 (roll 3).");}
-        else if(result===4){f.injuries=f.injuries||{};f.injuries.leftArm=true;f.shield=false;f.offhandWeapon=false;if(["greatWeapon","halberd"].includes(f.weapon)){f.weapon="handWeapon";f.meleeWeapons=["handWeapon"];}casualtyReports.push(f.name+": loses the left arm and can no longer use two-handed weapons, shields or dual wield (roll 4).");}
+        else if(result===4){f.injuries=f.injuries||{};f.injuries.leftArm=true;f.shield=false;f.offhandWeapon=false;if(["greatWeapon","halberd","bow","crossbow","firearm"].includes(f.weapon)){f.weapon="handWeapon";f.meleeWeapons=["handWeapon"];}f.rangedWeapon=null;casualtyReports.push(f.name+": loses the left arm and can no longer use two-handed weapons, shields or dual wield (roll 4).");}
         else {f.alive=false;casualtyReports.push(f.name+": dies permanently (roll "+result+").");}
       } else if(u.mordheimStatus==="stunned"||u.mordheimStatus==="unconscious") {
         f.woundsCurrent=1;
