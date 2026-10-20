@@ -778,7 +778,7 @@ const byId=id=>document.getElementById(id);
   },{passive:false});
   campaignMapNav.set(host,state);
  }
-const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[160,142],7:[541,182],8:[793,207],9:[515,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1207,515],20:[548,602],21:[944,462],22:[846,680],23:[629,642],24:[584,260]};
+const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[515,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1207,515],20:[548,602],21:[944,462],22:[846,680],23:[629,642],24:[584,260]};
 const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
 function collectionBypassEnabled(){try{return getCollectionSnapshot()?.bypass===true;}catch{return false;}}
 function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
@@ -871,14 +871,14 @@ function createMovementGraph(){
  const link=(a,b,cost=1)=>{if(!edges[a]||!edges[b]||a===b)return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost});};
  const route=(a,b,kind="land",regionA=null,regionB=null)=>routes.push({a,b,kind,regionA,regionB,marks:[],cuts:[0,1]});
  const positions=CITY_POSITIONS;
- const seaLinks=new Set(["5-8","6-7","7-8"]);
+ const seaLinks=new Set(["5-8","6-7","6-17","7-8"]);
  const isSeaLink=(a,b)=>seaLinks.has([a,b].sort((x,y)=>x-y).join("-"));
  for(const c of CITIES){const [x,y]=positions[c.id];add({id:"city-"+c.id,region:c.id,type:"city",label:c.name,x,y});}
  for(const c of CITIES){
   // Moonspire and Silvershade are island ports: connect each city directly
   // to its harbour, with no redundant inland crossroads.
-  if(c.id===7||c.id===8)continue;
-  const [x,y]=positions[c.id],ns=(REGION_NEIGHBORS[c.id]||[]).filter(id=>!isSeaLink(c.id,id)&&id!==7&&id!==8);
+  if(c.id===7||c.id===8||c.id===17)continue;
+  const [x,y]=positions[c.id],ns=(REGION_NEIGHBORS[c.id]||[]).filter(id=>!isSeaLink(c.id,id)&&id!==7&&id!==8&&id!==17);
   const avg=ns.length?ns.reduce((p,id)=>({x:p.x+positions[id][0]/ns.length,y:p.y+positions[id][1]/ns.length}),{x:0,y:0}):{x:x+18,y:y+12};
   const jx=Math.max(30,Math.min(1270,x+(avg.x-x)*.12)),jy=Math.max(30,Math.min(720,y+(avg.y-y)*.12));
   add({id:"crossroads-"+c.id,region:c.id,type:"crossroads",label:c.name+" crossroads",x:jx,y:jy});
@@ -886,9 +886,10 @@ function createMovementGraph(){
  }
  const ports=[
   {id:"port-5",region:5,type:"port",label:"Southwatch harbour",x:625,y:515,city:5},
-  {id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:135,y:126,city:6},
+  {id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:119,y:76,city:6},
   {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:561,y:163,city:7},
-  {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:773,y:226,city:8}
+  {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:773,y:226,city:8},
+  {id:"port-17",region:17,type:"port",label:"Barrowmere harbour",x:123,y:450,city:17}
  ];
  for(const p of ports){add(p);route("city-"+p.city,p.id,"land",p.city,p.city);}
  const seen=new Set();
@@ -898,11 +899,11 @@ function createMovementGraph(){
   if(seaLinks.has(key)){
    const pA=ports.find(p=>p.city===c.id)||ports.find(p=>p.city===other);
    const pB=ports.find(p=>p.city===other&&p!==pA)||ports.find(p=>p.city===c.id&&p!==pA);
-   if(pA&&pB)route(pA.id,pB.id,"sea",c.id,other);
+   if(pA&&pB){if(key==="6-7"){const northA={id:"aelthir-north-sea-waypoint",region:6,type:"seaRoute",label:"Northern sea passage",x:190,y:42},northB={id:"greyward-north-sea-waypoint",region:7,type:"seaRoute",label:"Greyward northern passage",x:315,y:32},northC={id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55};for(const n of [northA,northB,northC])add(n);route(pA.id,northA.id,"sea",c.id,other);route(northA.id,northB.id,"sea",c.id,other);route(northB.id,northC.id,"sea",c.id,other);route(northC.id,pB.id,"sea",c.id,other);}else route(pA.id,pB.id,"sea",c.id,other);}
    continue;
   }
   // Island cities have no mainland road links; onward travel is by sea.
-  if(c.id===7||other===7||c.id===8||other===8)continue;
+  if(c.id===7||other===7||c.id===8||other===8||c.id===17||other===17)continue;
   // Grinhold shares a short approach before the road branches toward Skullcrag
   // and Ironjaw Pass, avoiding two almost parallel roads leaving the stronghold.
   if(c.id===11||other===11)continue;
