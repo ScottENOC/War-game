@@ -409,10 +409,10 @@ const CITIES = [
 {id:24,name:"Khaz Varrak",faction:"dwarfs",ruler:"Thaurgath the Rune-Eater",status:"Ancient dragon lair",terrain:"High mountains; carved dwarven halls and rune-forges",description:"A vast dwarven hold cut into the high peaks, its bridges, gates and rune-forges still intact beneath the rule of Thaurgath the Rune-Eater, an ancient spellcasting dragon. No dwarven army garrisons the city.",requiredCharacters:[],passiveOccupant:true} 
 ];
 const REGION_NEIGHBORS = {
- 1:[2,3,4,6],2:[1,6,17],3:[1,8,10,12,21],4:[1,5,9,20,23],5:[4,8,18,20],
- 6:[1,2,7,17],7:[6,8],8:[3,5,7,10],9:[4,10,13,14,24],10:[3,8,9,13,14,21,24],
+ 1:[2,6],2:[1,6,17],3:[8,10,12,21],4:[5,9,20,23],5:[4,8,18,20],
+ 6:[1,2,7,17],7:[6,8,17],8:[3,5,7,10],9:[10,13,14,24],10:[3,8,9,13,14,21,24],
  11:[13,14],12:[3,14,15,16],13:[9,10,11,14],14:[9,10,11,12,13,15,21],
- 15:[12,14,16,18],16:[12,15,18,22],17:[2,6,20],18:[5,15,16,20,22,23],
+ 15:[12,14,16,18],16:[12,15,18,22],17:[6,7],18:[5,15,16,20,22,23],
  19:[21,22],20:[4,5,17,18,23],21:[3,10,14,19,22],22:[16,18,19,21,23],23:[4,18,20,22,24],24:[9,10,23]
 };
 
@@ -727,7 +727,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v6";
+const MAP_ID="shattered-realms-v7";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -868,10 +868,10 @@ function renderFaction(){
 function createMovementGraph(){
  const nodes={},edges={},routes=[];
  const add=n=>{nodes[n.id]=n;edges[n.id]=edges[n.id]||[];};
- const link=(a,b,cost=1)=>{if(!edges[a]||!edges[b]||a===b)return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost});};
+ const link=(a,b,cost=1,kind="land")=>{if(!edges[a]||!edges[b]||a===b)return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost,kind});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost,kind});};
  const route=(a,b,kind="land",regionA=null,regionB=null)=>routes.push({a,b,kind,regionA,regionB,marks:[],cuts:[0,1]});
  const positions=CITY_POSITIONS;
- const seaLinks=new Set(["5-8","6-7","6-17","7-8"]);
+ const seaLinks=new Set(["3-9","5-8","6-7","6-17","7-8","7-17"]);
  const isSeaLink=(a,b)=>seaLinks.has([a,b].sort((x,y)=>x-y).join("-"));
  for(const c of CITIES){const [x,y]=positions[c.id];add({id:"city-"+c.id,region:c.id,type:"city",label:c.name,x,y});}
  for(const c of CITIES){
@@ -881,15 +881,17 @@ function createMovementGraph(){
   const [x,y]=positions[c.id],ns=(REGION_NEIGHBORS[c.id]||[]).filter(id=>!isSeaLink(c.id,id)&&id!==7&&id!==8&&id!==17);
   const avg=ns.length?ns.reduce((p,id)=>({x:p.x+positions[id][0]/ns.length,y:p.y+positions[id][1]/ns.length}),{x:0,y:0}):{x:x+18,y:y+12};
   const jx=Math.max(30,Math.min(1270,x+(avg.x-x)*.12)),jy=Math.max(30,Math.min(720,y+(avg.y-y)*.12));
-  add({id:"crossroads-"+c.id,region:c.id,type:"crossroads",label:c.name+" crossroads",x:jx,y:jy});
+  const junction=c.id===6?{x:205,y:150}:{x:jx,y:jy}; add({id:"crossroads-"+c.id,region:c.id,type:"crossroads",label:c.name+" crossroads",x:junction.x,y:junction.y});
   route("city-"+c.id,"crossroads-"+c.id,"land",c.id,c.id);
  }
  const ports=[
+  {id:"port-3",region:3,type:"port",label:"Goldhaven harbour",x:302,y:315,city:3},
   {id:"port-5",region:5,type:"port",label:"Southwatch harbour",x:625,y:515,city:5},
   {id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:119,y:76,city:6},
-  {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:541,y:116,city:7},
+  {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:561,y:163,city:7},
   {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:773,y:226,city:8},
-  {id:"port-17",region:17,type:"port",label:"Barrowmere harbour",x:123,y:450,city:17}
+  {id:"port-17",region:17,type:"port",label:"Barrowmere harbour",x:123,y:450,city:17},
+  {id:"port-9",region:9,type:"port",label:"Ironhold harbour",x:488,y:333,city:9}
  ];
  for(const p of ports){add(p);route("city-"+p.city,p.id,"land",p.city,p.city);}
  const seen=new Set();
@@ -904,6 +906,10 @@ function createMovementGraph(){
      const waypoints=[{id:"aelthir-north-sea-waypoint",region:6,type:"seaRoute",label:"Northern sea passage",x:190,y:42},{id:"greyward-north-sea-waypoint",region:7,type:"seaRoute",label:"Greyward northern passage",x:315,y:32},{id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55}];
      for(const n of waypoints)add(n);
      const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+    }else if(key==="3-9"){
+     const waypoints=[{id:"goldhaven-south-sea-waypoint",region:3,type:"seaRoute",label:"Goldhaven southern sea passage",x:340,y:365},{id:"ironhold-coastal-sea-waypoint",region:9,type:"seaRoute",label:"Ironhold coastal passage",x:410,y:355}];for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+    }else if(key==="7-17"){
+     const waypoints=[{id:"barrowmere-moonspire-strait-west",region:17,type:"seaRoute",label:"Barrowmere–Moonspire western strait",x:270,y:385},{id:"barrowmere-moonspire-strait-east",region:7,type:"seaRoute",label:"Barrowmere–Moonspire eastern strait",x:385,y:295}];for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="6-17"){
      const waypoints=[{id:"barrowmere-west-sea-1",region:17,type:"seaRoute",label:"Western coastal passage",x:62,y:155},{id:"barrowmere-west-sea-2",region:17,type:"seaRoute",label:"Western island passage",x:48,y:260},{id:"barrowmere-west-sea-3",region:17,type:"seaRoute",label:"Barrowmere outer passage",x:64,y:365}];
      for(const n of waypoints)add(n);
@@ -948,6 +954,10 @@ function createMovementGraph(){
  // These correspond to the forest groves, mountain chains and river courses drawn
  // on the map background; their access paths join the nearest road junction.
  const mapFeatures=[
+   {id:"farm-poi-goldfields",region:3,type:"farm",label:"Goldhaven grain farms",x:405,y:260,population:1800,prosperity:62},
+   {id:"village-poi-westmere",region:2,type:"village",label:"Pinewatch village",x:92,y:330,population:950,prosperity:48},
+   {id:"farm-poi-southlands",region:4,type:"farm",label:"Southlands farmsteads",x:430,y:505,population:1450,prosperity:54},
+   {id:"village-poi-ironhold",region:9,type:"village",label:"Stonepick village",x:455,y:300,population:720,prosperity:50},
   {id:"forest-poi-west-1",region:2,type:"forest",label:"Oldreach western forest",x:130,y:215},
   {id:"forest-poi-west-2",region:2,type:"forest",label:"Westmere timber grove",x:170,y:245},
   {id:"forest-poi-central",region:3,type:"forest",label:"Goldhaven woodland",x:350,y:240},
@@ -1020,7 +1030,7 @@ function createMovementGraph(){
    }
    ids.push(id);
   }
-  for(let i=1;i<ids.length;i++)link(ids[i-1],ids[i],1);
+  for(let i=1;i<ids.length;i++)link(ids[i-1],ids[i],1,r.kind);
  }
  // Coastal travel can only enter or leave the sea at a named harbour.
  // Existing save files are migrated to this graph while city IDs remain stable.
