@@ -42,7 +42,7 @@ const bodyKinds=[
   {id:"undead_zombie_body",label:"Zombie body",faction:"undead",kind:"zombies"},
   {id:"undead_skeleton_body",label:"Skeleton warrior body",faction:"undead",kind:"skeletons"},
   {id:"undead_skeleton_chariot_body",label:"Skeleton chariot crew and vehicle",faction:"undead",kind:"skeletonChariot"},
-  {id:"undead_catapult_crew_body",label:"Skeleton catapult crew",faction:"undead",kind:"catapult"}
+  {id:"undead_catapult_crew_body",label:"Skeleton catapult crew",faction:"undead",kind:"catapult"},
   {id:"undead_skeletal_steed_body",label:"Skeletal steed and rider",faction:"undead",kind:"skeletonHorses"},
   {id:"undead_necromancer_body",label:"Necromancer body",faction:"undead",kind:"necromancer"},
   {id:"undead_master_necromancer_body",label:"Master Necromancer body",faction:"undead",kind:"masterNecromancer"},
