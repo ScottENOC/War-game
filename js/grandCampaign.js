@@ -235,7 +235,7 @@ function safeTradePath(campaign,startId,endId,ownerId){
   used.add(at);
   for(const edge of graph.edges[at]||[]){if(used.has(edge.to))continue;const node=graph.nodes[edge.to];if(!node)continue;
    if(node.type!=="seaRoute"&&node.type!=="river"&&node.region!=null){const region=campaign.regions?.find(r=>r.id===node.region),owner=region?politicalOwner(region):ownerId;if(!friendlyOwner(owner))continue;}
-   const candidate=best+(edge.kind==="sea"?.75:1)+(node.type==="river"?.5:0);if(candidate<(distances.get(edge.to)??Infinity)){distances.set(edge.to,candidate);previous.set(edge.to,{id:at,edge});}
+   const candidate=best+(edge.kind==="sea" ? 0.75 : 1)+(node.type==="river" ? 0.5 : 0);if(candidate<(distances.get(edge.to)??Infinity)){distances.set(edge.to,candidate);previous.set(edge.to,{id:at,edge});}
   }
  }
 }
@@ -1203,9 +1203,9 @@ function settleMonthlyPopulation(campaign){
    if(region.ownerFaction==="greenskins"&&region.nativeFaction==="dwarfs"){s.infrastructureCondition=Math.max(0,s.infrastructureCondition-0.35);s.fortification.condition=Math.max(0,s.fortification.condition-0.2);}
   }
  }
+ for(const place of campaign.minorSettlements||[]){const population=Math.max(0,Number(place.population)||0),rate=place.prosperity>=65 ? 0.0015 : 0.0005;place.population=Math.max(0,Math.round(population*(1+rate)));}
 }
-for(const place of campaign.minorSettlements||[]){const population=Math.max(0,Number(place.population)||0),rate=place.prosperity>=65?.0015:.0005;place.population=Math.max(0,Math.round(population*(1+rate)));}
- function nodeCost(n){return n.type==="river"?2:1;}
+function nodeCost(n){return n.type==="river"?2:1;}
 function supplyOwnerAtNode(campaign,nodeId){const n=campaign.graph?.nodes?.[nodeId];if(!n)return null;const region=campaign.regions.find(r=>r.id===n.region);return region?politicalOwner(region):null;}
 function campaignSupplyPath(campaign,army){
  if(!army||!campaign.graph?.nodes||!campaign.graph?.edges)return [];
