@@ -7,7 +7,7 @@ const NEVER_ALLOWED = new Set([
   "goblinLord","orcLord","goblinGreatShaman","orcGreatShaman",
   "humanChariot","elfChariot","goblinChariot","orcChariot","skeletonChariot",
   "youngDragon","dragon","ancientDragon","deepflameDragon","skeletonDragon",
-  "giant","skeletonGiant","trolls","skeletonTroll","wyvern","cannon","boltThrower","catapult"
+  "giant","skeletonGiant","wyvern","cannon","boltThrower","catapult"
 ]);
 const BIG_MOUNTS = new Set(["eagle","greatEagle","wyvern","youngDragon","dragon","ancientDragon","deepflameDragon","skeletonDragon"]);
 const CHARACTER_TYPES = new Set([
