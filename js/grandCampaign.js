@@ -1219,7 +1219,7 @@ function createMovementGraph(){
  const renameNode=(oldId,newId,overrides={})=>{
   const node=nodes[oldId];if(!node)return null;
   if(nodes[newId]&&newId!==oldId)removeAndSplice(newId);
-  delete nodes[oldId];delete edges[oldId];Object.assign(node,overrides,{id:newId});nodes[newId]=node;edges[newId]=edges[newId]||[];
+  const oldEdges=edges[oldId]||[];delete nodes[oldId];delete edges[oldId];Object.assign(node,overrides,{id:newId});nodes[newId]=node;edges[newId]=oldEdges;
   for(const [from,list] of Object.entries(edges)){for(const edge of list)if(edge.to===oldId)edge.to=newId;const seen=new Set();edges[from]=list.filter(e=>{const k=e.to+"|"+e.kind;if(seen.has(k))return false;seen.add(k);return e.to!==from;});}
   return node;
  };
@@ -1240,7 +1240,7 @@ function createMovementGraph(){
  renameNode("waypoint-crossroads-2-crossroads-6-2","river-crossing-oldreach-aelthir",{type:"river",label:"Oldreach–Aelthir River Crossing"});
  // Goldhaven itself is the junction; discard the overlapping generated intersection.
  mergeInto("crossing-337-295","city-3","Goldhaven");
- if(nodes["city-3"]){nodes["city-3"].type="crossroads";nodes["city-3"].label="Goldhaven";}
+ if(nodes["city-3"]){nodes["city-3"].type="city";nodes["city-3"].label="Goldhaven";}
  // Human and elven villages lie on the road from the Oldreach forest to Aelthir.
  const oldreachVillage={id:"village-poi-oldreach-human",region:2,type:"village",label:"Oldreach Watch village",x:128,y:177,population:780,prosperity:46,controllerFaction:"empire"};
  const aelthirVillage={id:"village-poi-aelthir-elf",region:6,type:"village",label:"Lethariel's Grove",x:151,y:132,population:620,prosperity:58,controllerFaction:"highElves"};
