@@ -14,7 +14,7 @@ function resolveGreenskinAnimosity({S,units,alive,roll,say,enemies,dist,canPlace
     const result=roll(1)[0];
     if(result===1){
       if(u.hasRangedWeapon){
-        const rival=all.filter(v=>v!==u&&v.side===u.side&&v.faction==="greenskins"&&v.animosityEligible&&v.models>=5&&alive(v)&&!v.fled&&!v.engaged&&dist(u,v)<=(u.range||20))
+        const minRange=u.minRange||u.minimumRange||0;const rival=all.filter(v=>v!==u&&v.side===u.side&&v.faction==="greenskins"&&v.animosityEligible&&v.models>=5&&alive(v)&&!v.fled&&!v.engaged&&dist(u,v)>minRange&&dist(u,v)<=(u.range||20))
           .sort((a,b)=>dist(u,a)-dist(u,b))[0];
         if(!rival||typeof shoot!=="function"){squabble(u);return;}
         say("Animosity — "+u.name+" rolls 1, then 1 (Get ’em!): it immediately shoots at rival "+rival.name+".");
