@@ -1201,7 +1201,11 @@ function createMovementGraph(){
  const ironholdCoastalJunction="waypoint-ironhold-coastal-sea-waypoint-goldhaven-ironhold-sea-junction-2";
  const sharedSeaJunction="goldhaven-ironhold-sea-junction";
  if(nodes[goldhavenSouthLane]&&nodes[ironholdCoastalJunction]&&nodes[sharedSeaJunction]){
-  unlink(goldhavenSouthLane,sharedSeaJunction);
+  // This section runs before the later local unlink helper is initialised, so
+  // remove the shortcut directly from the already-built adjacency lists.
+  for(const [from,list] of Object.entries(edges)){
+   edges[from]=list.filter(edge=>!((from===goldhavenSouthLane&&edge.to===sharedSeaJunction)||(from===sharedSeaJunction&&edge.to===goldhavenSouthLane)));
+  }
   link(goldhavenSouthLane,ironholdCoastalJunction,1,"sea");
   link(ironholdCoastalJunction,sharedSeaJunction,1,"sea");
  }
