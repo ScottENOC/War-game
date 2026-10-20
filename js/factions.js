@@ -52,6 +52,8 @@ export const FACTIONS = {
     boarBoyz:{name:"Orc Boar Riders",short:"Boar Boyz",kind:"cavalry",models:5,points:18,greenskin:true,stats:{M:7,WS:3,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:7},mountStats:{A:1,WS:3,I:3,S:3},mountType:"boar"},
     wyvern:{name:"Wyvern",short:"Wyvern",kind:"monster",models:1,points:100,isDragon:true,breathStrength:0,intrinsicArmourSave:5,stats:{M:8,WS:4,BS:0,S:5,T:5,W:4,I:3,A:3,Ld:6}},
     catapult:{name:"Goblin Rock Lobber",short:"Rock Lobber",kind:"artillery",models:3,points:70,greenskin:true,stats:{M:0,WS:2,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:5}},
+    trolls:{name:"Trolls",short:"Trolls",kind:"monster",models:3,points:50,greenskin:true,isTroll:true,regeneration:4,causesFear:true,stupidity:true,trollVomit:true,stats:{M:6,WS:3,BS:1,S:5,T:4,W:3,I:1,A:3,Ld:4}},
+    giant:{name:"Giant",short:"Giant",kind:"monster",models:1,points:205,greenskin:true,isGiant:true,causesTerror:true,largeTarget:true,ignoresGreenskinPanic:true,giantSpecialAttacks:true,fallOver:true,stats:{M:6,WS:3,BS:3,S:6,T:5,W:6,I:3,A:1,Ld:10}},
     goblinChariot:{name:"Goblin Wolf Chariot",short:"Wolf Chariot",kind:"chariot",models:3,points:65,greenskin:true,chariot:true,stats:{M:8,WS:2,BS:3,S:3,T:4,W:4,I:2,A:1,Ld:6},mountStats:{A:2,WS:3,I:3,S:3},impactStrength:4,armourSave:5},
     orcChariot:{name:"Orc Boar Chariot",short:"Boar Chariot",kind:"chariot",models:3,points:100,greenskin:true,chariot:true,stats:{M:6,WS:3,BS:3,S:4,T:5,W:4,I:2,A:1,Ld:7},mountStats:{A:2,WS:3,I:2,S:3},impactStrength:5,armourSave:4}
   }},
