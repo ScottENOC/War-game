@@ -1086,6 +1086,15 @@ function awardGreenskinMomentum(campaign,army,amount){
  const state=campaign.factionStates?.find(f=>f.id===(army.owner||army.factionId));if(state)state.momentum=army.momentum;
  return army.momentum-before;
 }
+function awardGreenskinPlunder(campaign,army,amount){
+ if(!army||!campaignIsGreenskin(campaign,army.owner||army.factionId))return 0;
+ const loot=Math.max(0,Math.round(amount));if(!loot)return 0;
+ const owner=army.owner||army.factionId,state=campaign.factionStates?.find(f=>f.id===owner);
+ if(state)state.treasury=Math.max(0,Number(state.treasury)||0)+loot;
+ if(owner===campaign.playerPoliticalFaction)campaign.treasury=Math.max(0,Number(campaign.treasury)||0)+loot;
+ army.lastPlunderTurn=campaign.turn;
+ return loot;
+}
 function campaignFactionStrength(campaign,id){
  const state=campaign.factionStates?.find(f=>f.id===id);
  const armies=(campaign.armies||[]).filter(a=>(a.owner||a.factionId)===id&&a.roster?.length);
@@ -1224,6 +1233,7 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  const winner=attackPower>=defencePower?attacker:defender,loser=winner===attacker?defender:attacker;
  awardGreenskinMomentum(campaign,factionArmy(campaign,winner.id),2);
  awardGreenskinMomentum(campaign,factionArmy(campaign,loser.id),-2);
+ awardGreenskinPlunder(campaign,factionArmy(campaign,winner.id),Math.round(35+Math.max(0,loser.armyPoints||0)*0.1));
  const winArmy=factionArmy(campaign,winner.id),loseArmy=factionArmy(campaign,loser.id);
  applyStrategicArmyLosses(winArmy,winner===attacker?.72:.82);
  applyStrategicArmyLosses(loseArmy,winner===attacker?.42:.55);
@@ -1361,6 +1371,8 @@ function launchCampaignFieldBattle(attackingArmy,defendingArmy){
   const winner=result.won?attackingArmy:defendingArmy,loser=result.won?defendingArmy:attackingArmy;
   awardGreenskinMomentum(activeCampaign,winner,2);
   awardGreenskinMomentum(activeCampaign,loser,-2);
+  awardGreenskinPlunder(activeCampaign,winner,Math.round(35+Math.max(0,loser.points||0)*0.1));
+  awardGreenskinPlunder(activeCampaign,winner,Math.round(35+Math.max(0,loser.points||0)*0.1));
   if(result.won){winner.nodeId=targetNode;winner.region=activeCampaign.graph.nodes[targetNode]?.region??defendingArmy.region;}
   const loserState=activeCampaign.factionStates.find(f=>f.id===(loser.owner||loser.factionId)),home=loserState?.homeRegion||loser.region;
   loser.nodeId="city-"+home;loser.region=home;
@@ -1381,6 +1393,7 @@ function campaignStrategicFieldBattle(campaign,attackerArmy,defenderArmy){
  const winner=attackPower>=defencePower?attackerArmy:defenderArmy,loser=winner===attackerArmy?defenderArmy:attackerArmy;
  awardGreenskinMomentum(campaign,winner,2);
  awardGreenskinMomentum(campaign,loser,-2);
+ awardGreenskinPlunder(campaign,winner,Math.round(35+Math.max(0,loser.points||0)*0.1));
  applyStrategicArmyLosses(winner,.72);applyStrategicArmyLosses(loser,.42);
  for(const army of [attackerArmy,defenderArmy]){army.foughtThisTurn=true;const state=campaign.factionStates.find(f=>f.id===(army.owner||army.factionId));if(state){state.armyPoints=army.points;state.roster=army.roster;if(!army.roster.length)state.alive=false;}}
  const loserOwner=loser.owner||loser.factionId,loserState=campaign.factionStates.find(f=>f.id===loserOwner),home=loserState?.homeRegion||loser.region;
