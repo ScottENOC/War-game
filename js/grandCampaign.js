@@ -509,7 +509,126 @@ function removePopulation(settlement,group,count){
  * Resolves political conquest without replacing the city's native architecture or culture.
  * options: {outcome:"occupy"|"sack"|"raze", fleeFraction:0..1, preserveCivilians:boolean}
  */
-export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options={}){
+export function ensureRefugeeState(campaign){
+ if(!Array.isArray(campaign.refugeeGroups))campaign.refugeeGroups=[];
+ if(!Number.isFinite(campaign.nextRefugeeId))campaign.nextRefugeeId=1;
+}
+function refugeeMovementForCulture(culture){
+ const c=String(culture||"").toLowerCase();
+ return c.includes("dwarf")?3:c.includes("elf")?5:4;
+}
+function refugeeCityAccepts(region,culture,campaign){
+ if(!region||!region.settlement||region.settlement.ruins)return false;
+ const owner=politicalOwner(region),race=String(culture||"").toLowerCase();
+ if(!owner)return false;
+ if(race.includes("greenskin")&&!campaignIsGreenskin(campaign,owner))return false;
+ const ownerRace=FACTION_BY_ID[owner]?.race||campaign.factionStates?.find(f=>f.id===owner)?.race;
+ if(ownerRace==="greenskin"&&!race.includes("greenskin"))return false;
+ return true;
+}
+function refugeeNodeForRegion(campaign,regionId){
+ return Object.values(campaign.graph?.nodes||{}).find(n=>n.type==="city"&&Number(n.region)===Number(regionId))?.id||null;
+}
+function refugeePathCost(campaign,path){
+ let cost=0;
+ for(let i=1;i<path.length;i++){
+  const next=campaign.graph.nodes[path[i]],edge=(campaign.graph.edges[path[i-1]]||[]).find(e=>e.to===path[i]);
+  cost+=(edge?.cost||1)+nodeCost(next)-1;
+ }
+ return cost;
+}
+function nearestRefugeeCity(campaign,group,fromNode,within=Infinity){
+ const choices=[];
+ for(const region of campaign.regions||[]){
+  if(!refugeeCityAccepts(region,group.culture,campaign))continue;
+  const owner=politicalOwner(region);
+  if(owner!==group.owner)continue;
+  const node=refugeeNodeForRegion(campaign,region.id);if(!node)continue;
+  const path=campaignMovementPath(campaign,fromNode,node);if(!path)continue;
+  const cost=refugeePathCost(campaign,path);
+  if(cost<=within)choices.push({region,node,path,cost,load:Number(region.settlement?.population?.total)||0});
+ }
+ choices.sort((a,b)=>a.cost-b.cost||a.load-b.load);
+ return choices[0]||null;
+}
+function absorbRefugees(campaign,group,region){
+ if(!group||!region?.settlement)return 0;
+ const count=Math.max(0,Math.floor(Number(group.count)||0));if(!count)return 0;
+ ensureSettlementState(campaign);
+ const pop=region.settlement.population,cohort=pop.groups.find(g=>g.culture===group.culture);
+ if(cohort)cohort.count+=count;else pop.groups.push({culture:group.culture,count});
+ pop.total=Math.max(0,Number(pop.total)||0)+count;
+ campaign.refugeeGroups=campaign.refugeeGroups.filter(g=>g.id!==group.id);
+ return count;
+}
+function moveRefugeeColumn(campaign,group,destination,allowance){
+ const path=campaignMovementPath(campaign,group.nodeId,destination);if(!path)return false;
+ let spent=0,last=path[0];
+ for(let i=1;i<path.length;i++){
+  const edge=(campaign.graph.edges[path[i-1]]||[]).find(e=>e.to===path[i]);
+  const step=(edge?.cost||1)+nodeCost(campaign.graph.nodes[path[i]])-1;
+  if(spent+step>allowance)break;
+  spent+=step;last=path[i];
+ }
+ if(last===group.nodeId)return false;
+ group.nodeId=last;group.region=campaign.graph.nodes[last]?.region??null;group.movement=Math.max(0,allowance-spent);
+ const reached=campaign.regions.find(r=>Number(r.id)===Number(group.region));
+ if(reached&&politicalOwner(reached)===group.owner&&refugeeCityAccepts(reached,group.culture,campaign)){
+  const n=absorbRefugees(campaign,group,reached);campaign.lastEvent=n.toLocaleString()+" refugees from "+group.originName+" reach "+reached.name+" and resettle.";return true;
+ }
+ return true;
+}
+function createRefugeeColumn(campaign,{owner,culture,count,originRegion,nodeId}){
+ ensureRefugeeState(campaign);
+ const movement=refugeeMovementForCulture(culture),region=campaign.regions.find(r=>Number(r.id)===Number(originRegion));
+ const group={id:"refugees-"+campaign.nextRefugeeId++,owner,culture,count:Math.max(1,Math.floor(count)),originRegion:Number(originRegion),originName:region?.name||"the fallen city",nodeId,region:Number(originRegion),movement,maxMovement:movement,kind:"refugees"};
+ campaign.refugeeGroups.push(group);
+ const target=nearestRefugeeCity(campaign,group,nodeId,Infinity);
+ if(target)moveRefugeeColumn(campaign,group,target.node,movement);
+ return group;
+}
+function resolveRefugeeEncounter(campaign,group,army){
+ if(!group||!army||!campaign.refugeeGroups.some(g=>g.id===group.id))return;
+ const captor=army.owner||army.factionId;if(!captor||captor===group.owner)return;
+ let action="release";
+ if(campaignIsGreenskin(campaign,captor))action="attack";
+ else if(captor===campaign.playerPoliticalFaction){
+  const choice=window.prompt("You encounter "+group.count.toLocaleString()+" civilian refugees. Choose: 1 = attack, 2 = kidnap, 3 = let them go.","2");
+  action=choice==="1"?"attack":choice==="2"?"kidnap":"release";
+ }else action="kidnap";
+ const power=Math.max(0,Number(army.points)||campaignArmyCost(army)||0);
+ const fraction=action==="attack"?Math.min(.65,.18+power/5000):action==="kidnap"?Math.min(.25,.04+power/10000):0;
+ const affected=Math.min(group.count,Math.floor(group.count*fraction));
+ const targetOwner=group.owner;
+ if(action==="attack"){
+  group.count-=affected;
+  setCampaignRelation(campaign,captor,targetOwner,campaignRelation(campaign,captor,targetOwner)-(campaignIsGreenskin(campaign,captor)?18:24));
+  for(const f of campaign.factionStates||[])if(f.id!==captor&&f.id!==targetOwner&&!campaignIsGreenskin(campaign,f.id))setCampaignRelation(campaign,f.id,captor,campaignRelation(campaign,f.id,captor)-10);
+ }else if(action==="kidnap"){
+  group.count-=affected;
+  if(affected>0){
+   const race=FACTION_BY_ID[captor]?.race||campaign.factionStates?.find(f=>f.id===captor)?.race||"human";
+   const city=campaign.regions.find(r=>politicalOwner(r)===captor&&refugeeCityAccepts(r,race,campaign));
+   if(city){const pop=city.settlement.population,existing=pop.groups.find(g=>g.culture===race);if(existing)existing.count+=affected;else pop.groups.push({culture:race,count:affected});pop.total=(Number(pop.total)||0)+affected;}
+  }
+  setCampaignRelation(campaign,captor,targetOwner,campaignRelation(campaign,captor,targetOwner)-18);
+  for(const f of campaign.factionStates||[])if(f.id!==captor&&f.id!==targetOwner&&!campaignIsGreenskin(campaign,f.id))setCampaignRelation(campaign,f.id,captor,campaignRelation(campaign,f.id,captor)-7);
+ }
+ if(group.count<=0)campaign.refugeeGroups=campaign.refugeeGroups.filter(g=>g.id!==group.id);
+ else{
+  const next=nearestRefugeeCity(campaign,group,group.nodeId,Infinity);
+  if(next)moveRefugeeColumn(campaign,group,next.node,group.maxMovement);
+ }
+ campaign.lastEvent=action==="attack"?army.name+" attacks the refugees, killing "+affected.toLocaleString()+". Survivors flee.":action==="kidnap"?army.name+" kidnaps "+affected.toLocaleString()+" refugees; the rest flee.":"The army allows the refugees to pass unharmed.";
+}
+function resolveRefugeeArmyEncounters(campaign){
+ ensureRefugeeState(campaign);
+ for(const group of [...campaign.refugeeGroups]){
+  const army=(campaign.armies||[]).find(a=>(a.nodeId||refugeeNodeForRegion(campaign,a.region))===group.nodeId&&(a.owner||a.factionId)!==group.owner&&(a.roster||[]).length);
+  if(army)resolveRefugeeEncounter(campaign,group,army);
+ }
+}
+function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options={}){
  ensureSettlementState(campaign);
  const region=campaign.regions.find(r=>r.id===Number(regionId)),city=CITIES.find(c=>c.id===Number(regionId));
  if(!region||!city||(!FACTIONS[conquerorFaction]&&!FACTION_BY_ID[conquerorFaction]))throw new Error("Unknown region or conquering faction.");
@@ -521,24 +640,43 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
  const outcome=options.outcome||(isGreenskinConqueror?"sack":"occupy");
  const sameSpecies=conquerorRace===(FACTION_SPECIES[region.nativeFaction]||FACTION_BY_ID[region.ownerFaction]?.race||FACTION_PROFILES[region.id]?.race);
  const isGreenskinDwarfConquest=(conquerorId==="greenskins"||FACTION_BY_ID[conquerorId]?.race==="greenskin")&&region.nativeFaction==="dwarfs";
- const defaultFleeFraction=isGreenskinConqueror&&outcome==="sack"?0:(isGreenskinDwarfConquest?0.2:(sameSpecies?0.05:0.15));
+ const gates=Math.max(1,Math.min(5,Math.floor(Number(settlement.fortification?.gates)||1)));
+ const attackerArmy=options.army||null;
+ const attackerStartingModels=Math.max(1,Number(options.attackerStartingModels)||Number(attackerArmy?.startingModels)||Number(attackerArmy?.initialModels)||Number(attackerArmy?.roster?.reduce((n,u)=>n+Math.max(0,Number(u.models)||0),0))||1);
+ const attackerSurvivingModels=Math.max(0,Number(attackerArmy?.roster?.reduce((n,u)=>n+Math.max(0,Number(u.models)||0),0))||attackerStartingModels);
+ const attackerCasualtyRate=Math.max(0,Math.min(1,1-attackerSurvivingModels/attackerStartingModels));
+ const defaultFleeFraction=Math.max(.55,Math.min(.9,.58+gates*.045+attackerCasualtyRate*.12));
  const fleeFraction=Math.max(0,Math.min(1,Number.isFinite(options.fleeFraction)?options.fleeFraction:defaultFleeFraction));
- let fled=0,killed=0;
+ const escapeSurvival=Math.max(.65,Math.min(.98,.72+gates*.035+attackerCasualtyRate*.16));
+ let fled=0,killed=0,escapeCohorts=[];
+ ensureRefugeeState(campaign);
  for(const group of settlement.population.groups){
   if(group.count<=0)continue;
-  const culture=group.culture.toLowerCase();
+  const culture=String(group.culture||"human").toLowerCase();
   const isDwarf=culture.includes("dwarf");
   const greenskinDwarfMassacre=(conquerorId==="greenskins"||FACTION_BY_ID[conquerorId]?.race==="greenskin")&&isDwarf;
-  const fleeing=Math.round(group.count*fleeFraction);
-  if(fleeing){removePopulation(settlement,group,fleeing);settlement.population.displaced+=fleeing;fled+=fleeing;}
+  const fleeing=Math.min(group.count,Math.round(group.count*fleeFraction));
+  if(fleeing){
+   removePopulation(settlement,group,fleeing);settlement.population.displaced+=fleeing;fled+=fleeing;
+   const escaped=Math.floor(fleeing*escapeSurvival),lost=fleeing-escaped;
+   if(escaped>0)escapeCohorts.push({culture:group.culture,count:escaped});
+   killed+=lost;
+  }
   if(greenskinDwarfMassacre){
-   const remaining=group.count;killed+=removePopulation(settlement,group,remaining);
+   killed+=removePopulation(settlement,group,group.count);
   }else if(outcome==="massacre"){
    killed+=removePopulation(settlement,group,group.count);
   }else if(outcome==="sack"){
    const casualties=isGreenskinConqueror?group.count:Math.round(group.count*0.12);
    killed+=removePopulation(settlement,group,casualties);
   }
+ }
+ for(const cohort of escapeCohorts){
+  const refugee={owner:previousOwner,culture:cohort.culture,count:cohort.count,originRegion:region.id,nodeId:refugeeNodeForRegion(campaign,region.id)};
+  if(!refugee.nodeId)continue;
+  const nearby=nearestRefugeeCity(campaign,{...refugee},refugee.nodeId,refugeeMovementForCulture(cohort.culture));
+  if(nearby){const pop=nearby.region.settlement.population,existing=pop.groups.find(g=>g.culture===cohort.culture);if(existing)existing.count+=cohort.count;else pop.groups.push({culture:cohort.culture,count:cohort.count});pop.total=(Number(pop.total)||0)+cohort.count;}
+  else createRefugeeColumn(campaign,refugee);
  }
  const preserve=options.preserveCivilians??(outcome==="occupy"&&!isGreenskinDwarfConquest);
  settlement.prosperity=Math.max(0,settlement.prosperity-(outcome==="raze"?65:outcome==="sack"?35:preserve?5:18));
