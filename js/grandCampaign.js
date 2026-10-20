@@ -74,6 +74,77 @@ function rosterFactionForPoliticalFaction(id){
  const profile=FACTION_BY_ID[id];return FACTION_ROSTER_OVERRIDES[id]?.roster||RACES[profile?.race]?.defaultRoster||"empire";
 }
 function collectionModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
+function undeadCampaignCaster(unit){
+ return ["necromancer","masterNecromancer","vampireHero","vampireLord"].includes(String(unit?.type||""));
+}
+function undeadArmyHasCaster(army){return (army?.roster||[]).some(undeadCampaignCaster);}
+function collapseCasterlessUndeadArmy(army,campaign=activeCampaign){
+ if(!army||campaignArmyRace(army,campaign)!=="undead"||!army.roster?.length||undeadArmyHasCaster(army))return false;
+ const lost=army.roster.reduce((n,u)=>n+Math.max(0,Number(u.models)||0),0);
+ army.roster=[];army.points=0;army.collapsedByNecromanticLoss=true;
+ return lost>0;
+}
+function necromancyProfile(config){
+ const type=String(config?.type||"");
+ if(["cavalry","wolfRiders","boarBoyz","skeletonHorses"].includes(type)||config?.mounted||["horse","wolf","boar","skeletal_steed"].includes(config?.mountType))
+  return {type:"skeletonHorses",weapon:"handWeapon",rangedWeapon:null,mounted:true,mountType:"skeletal_steed"};
+ if(["dragon","youngDragon","ancientDragon","deepflameDragon","skeletonDragon"].includes(type))return {type:"skeletonDragon",weapon:"handWeapon",rangedWeapon:null};
+ if(["giant","skeletonGiant"].includes(type))return {type:"skeletonGiant",weapon:"handWeapon",rangedWeapon:null};
+ if(["trolls","troll","skeletonTroll"].includes(type))return {type:"skeletonTroll",weapon:"handWeapon",rangedWeapon:null};
+ // Reanimated rank-and-file keep permitted kit, but not upgrades, skills or armour bonuses.
+ const ranged=["bow"].includes(config?.rangedWeapon)||config?.weapon==="bow";
+ const allowedMelee=["handWeapon","spear","halberd","greatWeapon"];
+ const weapon=allowedMelee.includes(config?.weapon)?config.weapon:"handWeapon";
+ return {type:"skeletons",weapon:ranged?"handWeapon":weapon,rangedWeapon:ranged?"bow":null};
+}
+function undeadModelAvailable(profile,army){
+ const models=collectionModels();
+ const assigned=new Set(playerArmies().flatMap(a=>(a.roster||[]).flatMap(u=>[u.machineModelId,...(u.crewModelIds||[])].filter(Boolean))));
+ const type=profile.type,weapon=profile.rangedWeapon==="bow"?"bow":profile.weapon;
+ const deployed=playerArmies().reduce((n,a)=>n+(a.roster||[]).filter(u=>u.type===type&&(profile.rangedWeapon?u.rangedWeapon===profile.rangedWeapon:!u.rangedWeapon&&u.weapon===(profile.weapon||"handWeapon"))).reduce((s,u)=>s+Math.max(0,Number(u.models)||0),0),0);
+ return models.filter(m=>m.faction==="undead"&&m.type===type&&m.weapon===weapon&&!assigned.has(m.id)).length>deployed;
+}
+function undeadReserveKey(profile){return [profile.type,profile.weapon||"handWeapon",profile.rangedWeapon||""].join("|");}
+function raiseBattleCasualties(army,enemyOriginal,enemySurvivors,campaign=activeCampaign){
+ if(!army||campaignArmyRace(army,campaign)!=="undead"||!undeadArmyHasCaster(army))return {raised:0,reserve:0};
+ const pending=army.necromancyReserve&&typeof army.necromancyReserve==="object"?army.necromancyReserve:{};
+ const reserveBefore=Object.values(pending).reduce((n,v)=>n+Math.max(0,Number(v?.models)||0),0);
+ let raised=0;
+ (enemyOriginal||[]).forEach((lostUnit,index)=>{
+  const survivors=Math.max(0,Number(enemySurvivors?.[index]?.models)||0);
+  const casualties=Math.max(0,Math.floor(Number(lostUnit?.models)||0)-survivors);
+  if(!casualties)return;
+  for(let i=0;i<casualties;i++){
+   const profile=necromancyProfile(lostUnit);
+   if(!undeadModelAvailable(profile,army)||Math.random()>=0.1)continue;
+   const key=undeadReserveKey(profile),existing=pending[key]||{type:profile.type,weapon:profile.weapon||"handWeapon",rangedWeapon:profile.rangedWeapon||null,mounted:!!profile.mounted,mountType:profile.mountType||"none",models:0};
+   existing.models++;pending[key]=existing;raised++;
+  }
+ });
+ army.necromancyReserve=pending;
+ // Merge first, then deploy only useful groups; avoid one- and two-model units.
+ for(const [key,p] of Object.entries(pending)){
+  if(p.models<=0)continue;
+  const matching=(army.roster||[]).find(u=>u.type===p.type&&u.weapon===(p.weapon||"handWeapon")&&(u.rangedWeapon||null)===(p.rangedWeapon||null)&&(u.models||0)<30);
+  if(matching){
+   const add=Math.min(p.models,30-matching.models);matching.models+=add;p.models-=add;
+  }
+ }
+ for(const [key,p] of Object.entries(pending)){
+  while(p.models>=5&&(army.roster||[]).length<6){
+   const count=Math.min(30,p.models);
+   if(count<5)break;
+   army.roster.push({type:p.type,models:count,weapon:p.weapon||"handWeapon",meleeWeapons:p.weapon&&p.weapon!=="handWeapon"?["handWeapon",p.weapon]:["handWeapon"],...(p.rangedWeapon?{rangedWeapon:p.rangedWeapon}:{}),...(p.mounted?{mounted:true,mountType:p.mountType||"skeletal_steed"}:{}),champion:false,upgrades:{},skills:{},raisedByNecromancy:true});
+   p.models-=count;
+  }
+  if(p.models<=0)delete pending[key];
+ }
+ army.necromancyReserve=pending;
+ const reserveAfter=Object.values(pending).reduce((n,v)=>n+Math.max(0,Number(v?.models)||0),0);
+ army.points=campaignArmyCost(army);
+ return {raised,reserve:reserveAfter};
+}
+
 function campaignCharacterConfig(id,commander=null){
  const profile=FACTION_BY_ID[id],race=profile?.race||"human";
  let type=race==="dwarf"?"dwarfCaptain":race==="undead"?"necromancer":"captain",model=null;
@@ -1112,13 +1183,19 @@ function launchCampaignBattle(region,attackingArmyOverride=null){
  const playerFaction=playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId),enemyFaction=enemyArmy.rosterFaction||rosterFactionForPoliticalFaction(enemyId);
  const started=window.startPoliticalCampaignBattle({army:playerArmy.roster,faction:playerFaction,enemyArmy:enemyArmy.roster,enemyFaction,onComplete:result=>{
   playerArmy.foughtThisTurn=true;enemyArmy.foughtThisTurn=true;
-  const survivors=(result.playerUnits||[]).filter(u=>u.models>0);
-  const enemySurvivors=(result.enemyUnits||[]).filter(u=>u.models>0);
+  const originalPlayerRoster=playerArmy.roster.map(u=>({...u})),originalEnemyRoster=enemyArmy.roster.map(u=>({...u}));
+  const survivors=result.playerUnits||[],enemySurvivors=result.enemyUnits||[];
   playerArmy.roster=playerArmy.roster.map((config,i)=>({...config,models:Math.max(0,survivors[i]?.models??0),currentDamage:survivors[i]?.damage||0,currentWounds:survivors[i]?.characterWounds})).filter(config=>config.models>0);
   enemyArmy.roster=enemyArmy.roster.map((config,i)=>({...config,models:Math.max(0,enemySurvivors[i]?.models??0),currentDamage:enemySurvivors[i]?.damage||0,currentWounds:enemySurvivors[i]?.characterWounds})).filter(config=>config.models>0);
+  const playerCollapsed=collapseCasterlessUndeadArmy(playerArmy),enemyCollapsed=collapseCasterlessUndeadArmy(enemyArmy);
+  const winningArmy=result.won?playerArmy:enemyArmy,losingArmy=result.won?enemyArmy:playerArmy;
+  let necromancyMessage="";
+  if(result.won&&campaignArmyRace(playerArmy,activeCampaign)==="undead"&&!playerCollapsed){
+   const necromancy=raiseBattleCasualties(playerArmy,originalEnemyRoster,enemySurvivors,activeCampaign);
+   necromancyMessage=" Necromancy raised "+necromancy.raised+" model(s)"+(necromancy.reserve?"; "+necromancy.reserve+" remain in the reserve until they can form useful units":"")+".";
+  }
   playerArmy.points=Math.max(0,Math.round(playerArmy.roster.reduce((sum,u)=>sum+unitCost(u,playerFaction),0)));
   enemyArmy.points=Math.max(0,Math.round(enemyArmy.roster.reduce((sum,u)=>sum+unitCost(u,enemyFaction),0)));
-  const winningArmy=result.won?playerArmy:enemyArmy,losingArmy=result.won?enemyArmy:playerArmy;
   awardGreenskinMomentum(activeCampaign,winningArmy,2);awardGreenskinMomentum(activeCampaign,losingArmy,-2);
   awardGreenskinPlunder(activeCampaign,winningArmy,Math.round(35+Math.max(0,losingArmy.points||0)*0.1));
   const playerState=activeCampaign.factionStates.find(f=>f.id===playerId),enemyState=activeCampaign.factionStates.find(f=>f.id===enemyId);
@@ -1127,12 +1204,12 @@ function launchCampaignBattle(region,attackingArmyOverride=null){
    const sackCity=greenskinPlayer&&window.confirm("Sack "+region.name+" for a large haul of plunder? Its usable population will be destroyed and future city income lost. Choose Cancel to occupy it instead.");
    const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:greenskinPlayer?(sackCity?"sack":"occupy"):"occupy",army:playerArmy});
    playerArmy.region=region.id;playerArmy.nodeId="city-"+region.id;if(selectedPlayerArmy()===playerArmy){activeCampaign.commander.region=region.id;activeCampaign.commander.nodeId="city-"+region.id;}
-   activeCampaign.lastEvent=!playerArmy.roster.length?"Victory at "+region.name+", but your army has been destroyed. Rebuild from your remaining miniatures and treasury.":"Victory at "+region.name+". "+outcome.summary;
+   activeCampaign.lastEvent=playerCollapsed?"Victory at "+region.name+", but your Undead army collapsed after losing its last Vampire or Necromancer.":!playerArmy.roster.length?"Victory at "+region.name+", but your army has been destroyed. Rebuild from your remaining miniatures and treasury.":"Victory at "+region.name+". "+outcome.summary+necromancyMessage;
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
   }else{
    const home=playerState?.homeRegion||activeCampaign.startingRegion,homeNode="city-"+home;
    activeCampaign.commander.region=home;activeCampaign.commander.nodeId=homeNode;playerArmy.region=home;playerArmy.nodeId=homeNode;
-   activeCampaign.lastEvent=!playerArmy.roster.length?"Defeat at "+region.name+". Your army has been destroyed; rebuild from your remaining miniatures and treasury.":"Defeat at "+region.name+". Your surviving forces retreat to "+(CITIES.find(c=>c.id===home)?.name||"your capital")+".";
+   activeCampaign.lastEvent=playerCollapsed?"Defeat at "+region.name+". Your Undead army collapsed after losing its last Vampire or Necromancer.":!playerArmy.roster.length?"Defeat at "+region.name+". Your army has been destroyed; rebuild from your remaining miniatures and treasury.":"Defeat at "+region.name+". Your surviving forces retreat to "+(CITIES.find(c=>c.id===home)?.name||"your capital")+".";
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
   }
   if(playerState){playerState.armyPoints=playerArmies().reduce((sum,a)=>sum+campaignArmyCost(a),0);playerState.roster=(playerArmies().find(a=>a.id===idMainArmy())||playerArmy).roster;playerState.upkeep=playerArmies().reduce((sum,a)=>sum+campaignArmyUpkeep(a),0);}
