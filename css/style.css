@@ -441,3 +441,11 @@ button,[role="button"]{
 
 /* Compact political relationship list for the grand campaign. */
 .grand-campaign-diplomacy h3{margin:0 0 6px;font-size:1rem}.grand-diplomacy-hint{font-size:.75rem;line-height:1.35;opacity:.75;margin:0 0 8px}.grand-diplomacy-row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:5px 0;border-top:1px solid rgba(255,255,255,.09);font-size:.78rem}.grand-diplomacy-row span{min-width:0;overflow-wrap:anywhere}.grand-diplomacy-row b{white-space:nowrap;font-size:.74rem}
+
+/* Civilian refugee columns on the grand campaign map */
+.campaign-refugee-token{cursor:pointer;filter:drop-shadow(0 2px 2px #0009)}
+.campaign-refugee-token .refugee-token-circle{fill:#f1dfb0;stroke:#392b20;stroke-width:2.5}
+.campaign-refugee-token .refugee-token-label{fill:#392b20;font:900 13px system-ui,sans-serif;pointer-events:none}
+.campaign-refugee-token.player-refugee{cursor:pointer}
+.campaign-refugee-token.selected .refugee-token-circle{fill:#e5b84d;stroke:#fff3c4;stroke-width:4}
+.campaign-refugee-token:focus .refugee-token-circle{stroke:#fff;stroke-width:4}
