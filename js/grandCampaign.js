@@ -81,7 +81,7 @@ function undeadArmyHasCaster(army){return (army?.roster||[]).some(undeadCampaign
 function collapseCasterlessUndeadArmy(army,campaign=activeCampaign){
  if(!army||campaignArmyRace(army,campaign)!=="undead"||!army.roster?.length||undeadArmyHasCaster(army))return false;
  const lost=army.roster.reduce((n,u)=>n+Math.max(0,Number(u.models)||0),0);
- army.roster=[];army.points=0;army.collapsedByNecromanticLoss=true;
+ army.roster=[];army.points=0;army.necromancyReserve={};army.collapsedByNecromanticLoss=true;
  return lost>0;
 }
 function necromancyProfile(config){
