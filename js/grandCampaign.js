@@ -1,5 +1,5 @@
 import { getCollectionSnapshot } from "./collection.js?v=20261020-thaurgath-v2";
-import { unitCost, createUnitsFromArmy } from "./units.js?v=20261020-khazvarrak-v1";
+import { unitCost, createUnitsFromArmy } from "./units.js?v=20261020-khazvarrak-v2";
 const FACTIONS = {
  empire:{name:"Human Realms",summary:"The largest and most populous realm, but not a unified kingdom.",strengths:"Broad territory, fertile river valleys, trade roads and the largest pool of settlements.",politics:"Crownfall and Westmere recognise your court. Goldhaven, Stonebridge and Southwatch answer to rival human lords.",playerCities:["Crownfall","Westmere"],armyFaction:"empire"},
  highElves:{name:"High Elves",summary:"An old maritime people whose courts cluster around ancient forests and island harbours.",strengths:"Defensible islands, forest resources, sea access and compact but valuable settlements.",politics:"Aelthir recognises your court. Moonspire and Silvershade retain their own power and may resist your claims.",playerCities:["Aelthir"],armyFaction:"highElves"},
