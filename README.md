@@ -137,3 +137,12 @@ The Army Builder groups owned miniatures, lets players permanently add compatibl
 - Build a temporary warband from owned individual miniatures; no regiments are used. Lords, named characters, chariots and 50 × 50 mm-base monsters are excluded.
 - Each fighter has an individual wound pool and rolls a D6 when their last wound is lost: 1–2 stunned (misses the next turn), 3–4 unconscious (can be revived by an adjacent friendly fighter during the movement/shooting phase; the rescued fighter cannot shoot that turn), 5–6 out of action and treated as dead for this mode.
 - The AI uses a point-matched individual roster. The warband is discarded after each battle. One lootbox is awarded for every three wins in this mode; ordinary Skirmish rewards are unchanged.
+
+
+## Objective battle types
+
+- **Hold / Seize the Ground:** fight for the central objective. At the end of turn 6, the side with more living, deployed fighters within 3.5 inches controls it; a tie is a draw.
+- **Capture the Flag:** each side has a flag in its deployment zone. Pick up the enemy flag and return to your own base while your own flag is home. A dropped flag can be picked up again; the first successful capture wins. A battle without a capture by the end of turn 10 is a draw.
+- **Relic Hunt:** five relics begin in neutral territory. A fighter can carry one relic at a time; carry it back to your deployment side to secure it. Relics drop if their carrier is knocked out or killed. First side to secure three wins; otherwise the score at the end of turn 10 decides.
+
+All three modes use the existing army builder and ownership restrictions. They are selected from the main menu and use the standard battlefield and AI roster generation.
