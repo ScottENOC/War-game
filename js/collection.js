@@ -117,7 +117,7 @@ function load(){
  return starterData();
 }
 
-export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCampaign=()=>{},onRoguelike=()=>{},onMordheim=()=>{},onResetCollection=()=>{}}){
+export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCampaign=()=>{},onRoguelike=()=>{},onMordheim=()=>{},onWarbandExpedition=()=>{},onResetCollection=()=>{}}){
  let data=load(),editingId=null;
  data.lootboxes=Number.isFinite(data.lootboxes)?Math.max(0,data.lootboxes):0;
  data.lastDailyClaim=data.lastDailyClaim||null;
@@ -443,7 +443,8 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
   if(["holdGround","captureFlag","relics"].includes(mode)){onSkirmish(mode);return;}
   if(mode==="narrative"){onNarrativeCampaign();return;}
    if(mode==="roguelike"){onRoguelike();return;}
-  if(mode==="mordheim"){onMordheim();return;}
+  if(mode==="mordheim"||mode==="warbandSkirmish"){onMordheim();return;}
+  if(mode==="warbandExpedition"){onWarbandExpedition();return;}
   const info={
    grand:["Grand Campaign","Lead a faction across a living world. Expand territory, manage resources and fight battles with only the miniatures in your collection."],
    narrative:["Narrative Campaign","Fight a connected story of missions, choices and persistent rewards. Mission rewards can add specific models to your collection."],
