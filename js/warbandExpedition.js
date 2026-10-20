@@ -38,6 +38,12 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
   function configFor(f) {
     const cfg = { ...clone(f), models: 1, name: f.name, isWarbandExpeditionFighter: true };
     if (f.injuries?.leg) cfg.campaignStats = { ...(cfg.campaignStats || {}), M: (cfg.campaignStats?.M || 0) };
+    if (f.injuries?.leftArm) {
+      cfg.shield=false;cfg.offhandWeapon=false;cfg.rangedWeapon=null;cfg.backWeapons=(cfg.backWeapons||[]).filter(w=>!["greatWeapon","halberd","bow","crossbow","firearm","longRifle","magicBow","offhandWeapon"].includes(w));
+      cfg.meleeWeapons=(cfg.meleeWeapons||[]).filter(w=>!["greatWeapon","halberd","offhandWeapon"].includes(w));if(!cfg.meleeWeapons.includes("handWeapon"))cfg.meleeWeapons.unshift("handWeapon");
+      if(["greatWeapon","halberd","bow","crossbow","firearm","longRifle","magicBow"].includes(cfg.weapon))cfg.weapon="handWeapon";
+      if(cfg.type==="archers")cfg.type="swordsmen";
+    }
     return cfg;
   }
   function open() { run = read(); if(run.state==="battle"){run.state="ready";run.lastResult="The unfinished battle was abandoned. No casualties or rewards were recorded.";save();} show(); render(); el("warband-expedition-menu").onclick=()=>{hide();el("mainmenu").hidden=false;}; }
