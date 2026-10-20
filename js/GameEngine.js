@@ -1,7 +1,8 @@
 import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-thaurgath-v2";
 import { createRoguelike } from "./roguelike.js?v=20261020-chariots-v2";
+import { createMordheim } from "./mordheim.js?v=20261020-mordheim-v1";
 import { createArmyBuilder } from "./armyBuilder.js?v=20261020-undead-monsters-v3";
-import { createCollectionManager } from "./collection.js?v=20261020-undead-monsters-v4";
+import { createCollectionManager } from "./collection.js?v=20261020-mordheim-v1";
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js?v=greenskin-roster-v3";
 import { createRules } from "./rules.js?v=20261020-chariots-v2";
@@ -10,7 +11,7 @@ import { createCombat } from "./combat.js?v=20261020-undead-rules-v4";
 import { createRendering } from "./rendering.js?v=20261020-nullification-dome-v1";
 import { createInput } from "./input.js?v=20261020-nullification-dome-v1";
 import { createUI } from "./ui.js?v=20261020-chariots-v2";
-import { createPhases } from "./phases.js?v=20261020-undead-animosity-v2";
+import { createPhases } from "./phases.js?v=20261020-mordheim-v1";
 import { createDice } from "./dice.js";
 import { createMovement } from "./movement.js";
 import { createNarrativeCampaign } from "./campaign.js";
@@ -88,7 +89,7 @@ function pursueAfterBreak(winner,loser,choice=null){
 
 const RULES = createRules({ roll, units, say });
 const { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage:applyRawDamage, meleeAttack, shootingAttack } = RULES;
-function applyDamage(u,wounds,shooting,cascadePlan=null){if(u?.regeneration&&wounds>0&&!cascadePlan){let regenerated=0;for(let i=0;i<Math.floor(wounds);i++)if(roll(1)[0]>=u.regeneration)regenerated++;if(regenerated){wounds-=regenerated;say(u.name+" regenerates "+regenerated+" wound(s) on a 4+.");}}const before=u?.models??0,result=applyRawDamage(u,wounds,shooting,cascadePlan);if(u?.isGiant&&before>0&&u.models<=0&&!u.fallingResolved){u.fallingResolved=true;say(u.name+" falls over as it dies!");for(const v of units().filter(v=>v!==u&&alive(v)&&dist(u,v)<=3)){if(roll(1)[0]>=4){const fallWounds=1+(roll(1)[0]%3);applyDamage(v,fallWounds,false);say(v.name+" is struck by the falling Giant for "+fallWounds+" wound(s).");}}}if(u?.isDragon&&before>0&&u.models<=0&&!u.fallingResolved){u.fallingResolved=true;const rider=(u.attachedCharacters||[]).map(id=>S.units[id]).find(h=>h&&h.models>0&&!h.fled);if(rider){rider.characterWounds=Math.max(0,(rider.characterWounds??rider.stats.W)-1);if(rider.characterWounds<=0)rider.models=0;rider.x=u.x;rider.y=u.y;rider.attachedTo=null;rider.mounted=false;rider.mountType="none";rider.flyingMount=false;rider.flightAltitudeIn=0;rider.baseWidthIn=20/25.4;rider.baseDepthIn=20/25.4;rider.stats.M=5;rider.baseMove=5;u.attachedCharacters=(u.attachedCharacters||[]).filter(id=>id!==rider.id);say(rider.name+" suffers an automatic falling wound as the flying dragon dies"+(rider.models>0?"; they continue on foot.":"."));}}return result;}
+function applyDamage(u,wounds,shooting,cascadePlan=null){if(S.mordheimSkirmish&&u?.isMordheimFighter&&wounds>0){if(u.mordheimStatus==="unconscious"){u.mordheimStatus="outOfAction";u.models=0;say(u.name+" is struck while unconscious and is out of action.");render();return 0;}if(u.mordheimStatus==="outOfAction")return 0;u.mordheimWounds=Math.max(0,(u.mordheimWounds??u.stats.W??1)-Math.max(1,Math.floor(wounds)));u.characterWounds=u.mordheimWounds;if(u.mordheimWounds>0){say(u.name+" suffers a wound ("+u.mordheimWounds+" remaining).");render();return 0;}const injury=roll(1)[0];if(injury<=2){u.mordheimStatus="stunned";u.stunnedUntilTurn=S.turn+1;u.mordheimWounds=0;say("Mordheim injury — "+u.name+" rolls "+injury+": stunned and will miss their next turn.");}else if(injury<=4){u.mordheimStatus="unconscious";u.mordheimWounds=0;say("Mordheim injury — "+u.name+" rolls "+injury+": unconscious. A friendly fighter can revive them while adjacent during movement.");}else{u.mordheimStatus="outOfAction";u.models=0;say("Mordheim injury — "+u.name+" rolls "+injury+": out of action (dead in this one-off skirmish).");}render();return 0;}if(u?.regeneration&&wounds>0&&!cascadePlan){let regenerated=0;for(let i=0;i<Math.floor(wounds);i++)if(roll(1)[0]>=u.regeneration)regenerated++;if(regenerated){wounds-=regenerated;say(u.name+" regenerates "+regenerated+" wound(s) on a 4+.");}}const before=u?.models??0,result=applyRawDamage(u,wounds,shooting,cascadePlan);if(u?.isGiant&&before>0&&u.models<=0&&!u.fallingResolved){u.fallingResolved=true;say(u.name+" falls over as it dies!");for(const v of units().filter(v=>v!==u&&alive(v)&&dist(u,v)<=3)){if(roll(1)[0]>=4){const fallWounds=1+(roll(1)[0]%3);applyDamage(v,fallWounds,false);say(v.name+" is struck by the falling Giant for "+fallWounds+" wound(s).");}}}if(u?.isDragon&&before>0&&u.models<=0&&!u.fallingResolved){u.fallingResolved=true;const rider=(u.attachedCharacters||[]).map(id=>S.units[id]).find(h=>h&&h.models>0&&!h.fled);if(rider){rider.characterWounds=Math.max(0,(rider.characterWounds??rider.stats.W)-1);if(rider.characterWounds<=0)rider.models=0;rider.x=u.x;rider.y=u.y;rider.attachedTo=null;rider.mounted=false;rider.mountType="none";rider.flyingMount=false;rider.flightAltitudeIn=0;rider.baseWidthIn=20/25.4;rider.baseDepthIn=20/25.4;rider.stats.M=5;rider.baseMove=5;u.attachedCharacters=(u.attachedCharacters||[]).filter(id=>id!==rider.id);say(rider.name+" suffers an automatic falling wound as the flying dragon dies"+(rider.models>0?"; they continue on foot.":"."));}}return result;}
 const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H, terrain:()=>S.terrain, BATTLEFIELD_WIDTH_IN });
 const { shoot, fireCannon, breathAttack } = SHOOTING;
 function resolvePursuit(choice){const pending=S.pendingPursuit;if(!pending)return;S.pendingPursuit=null;const winner=S.units[pending.winnerId],loser=S.units[pending.loserId];if(winner&&loser)pursueAfterBreak(winner,loser,choice);if(units().filter(alive).every(v=>v.fled)||units().filter(v=>v.side==="player"&&alive(v)).length===0||units().filter(v=>v.side==="ai"&&alive(v)).length===0){finishBattle(units().some(v=>v.side==="player"&&alive(v)&&!v.fled)?"Player wins the battle!":"Opponent wins the battle!");return;}if(continueBreakTests())return;S.phase="combat";S.combatResolved=true;render();}
@@ -121,7 +122,8 @@ function finishBattle(msg){
  S.finished=true;S.phase="over";
  clearBattleSave();
  const won=msg.toLowerCase().includes("player wins");
- if(won&&collectionManager&&!campaignBattle&&!grandCampaignBattle&&!roguelikeBattle){collectionManager.grantLootbox("skirmish");say("Skirmish victory reward: one lootbox added to your collection.");}
+ if(won&&collectionManager&&!campaignBattle&&!grandCampaignBattle&&!roguelikeBattle&&!mordheimBattle){collectionManager.grantLootbox("skirmish");say("Skirmish victory reward: one lootbox added to your collection.");}
+ if(mordheimBattle){mordheim?.onBattleFinished(won);mordheimBattle=false;S.mordheimSkirmish=false;}
  say('<b>'+msg+'</b>');
  if(grandCampaignBattle){grandCampaignBattle=false;$("battle-return").hidden=true;const result={won,playerUnits:units().filter(u=>u.side==="player").map(u=>({id:u.id,type:u.type,models:u.models,damage:u.damage,characterWounds:u.characterWounds,points:u.points})),enemyUnits:units().filter(u=>u.side==="ai").map(u=>({id:u.id,type:u.type,models:u.models,damage:u.damage,characterWounds:u.characterWounds,points:u.points}))};const complete=grandCampaignBattleComplete;grandCampaignBattleComplete=null;try{complete?.(result);}catch(error){console.error("Campaign battle result handling failed",error);}$("game").hidden=true;const campaignScreen=$("grand-campaign-screen");if(campaignScreen)campaignScreen.hidden=false;return;}
  if(campaignBattle){campaignBattle=false;narrativeCampaign?.onBattleFinished(won);$("battle-return").hidden=true;return;}
@@ -172,13 +174,14 @@ function saveBattleSnapshot() {
 }
 render = () => {
  Object.values(S.units||{}).forEach(u=>{u.magicSuppressed=isInsideNullificationDome(u);});
+ const revive=$("mordheim-revive"),rescuer=S.units[S.selected];if(revive){const target=!!S.mordheimSkirmish&&S.phase==="movement"&&rescuer?.side==="player"&&alive(rescuer)&&!rescuer.mordheimStatus&&!rescuer.fled&&!rescuer.engaged&&units().some(v=>v.side==="player"&&v.mordheimStatus==="unconscious"&&alive(v)&&dist(rescuer,v)<=1.5);revive.hidden=!target;}
  renderUI();
  saveBattleSnapshot();
 };
 window.warGameSaveNow = saveBattleSnapshot;
 const INPUT = createInput({ canvas, S, view, W, H, units, alive, shape, PX_PER_IN, BATTLEFIELD_WIDTH_IN, canPlace, validDeployment, shoot, fireCannon, breathAttack, declareCharge, render, draw, $, say, dist, finishActivation, terrain:()=>S.terrain, rallyingCall, castSpell });
 
-function startBattleWithArmy(army,faction,battleType="skirmish",siegeRole="attacker"){if(roguelikeBuilderMode){roguelikeBuilderMode=false;roguelike?.beginBattle(army,faction,roguelikeArmyPoints(army,faction));return;}campaignBattle=false;S.battleType=battleType;S.siegeRole=siegeRole;S.autoTerrain=true;S.terrainSeed=Date.now();const budgetMultiplier=battleType==="siege"?(siegeRole==="attacker"?1/1.5:1.5):1;const playerForce=createUnitsFromArmy(army,faction),aiRoster=buildOpponentArmy(army,faction,{budgetMultiplier,siege:battleType==="siege"}),aiForce=createUnitsFromArmy(aiRoster,faction);S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};if(battleType==="siege"){const castle={left:.29,right:.71,top:.22,bottom:.78};Object.values(S.units).forEach(u=>{if(u.side==="player"){u.x=siegeRole==="defender"?.5:.12;u.y=.5;}else{u.x=siegeRole==="defender"?.12:.5;u.y=.5;}u.facing=u.side==="player"?(siegeRole==="defender"?0:0):Math.PI;});}const playerPoints=units().filter(u=>u.side==="player").reduce((sum,u)=>sum+(u.points||0),0),aiPoints=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();say((battleType==="siege"?"Siege · you are the "+siegeRole+". ":"Skirmish · ")+"Your army "+playerPoints+" pts; opponent "+aiPoints+" pts ("+(aiPoints>=playerPoints?"+"+(aiPoints-playerPoints):"−"+(playerPoints-aiPoints))+" pts). "+(battleType==="siege"?"The attacker receives 50% more budget; castle walls are T10/10 W and gates T8/6 W.":""));setupCanvas();}
+function startBattleWithArmy(army,faction,battleType="skirmish",siegeRole="attacker"){S.mordheimSkirmish=false;if(roguelikeBuilderMode){roguelikeBuilderMode=false;roguelike?.beginBattle(army,faction,roguelikeArmyPoints(army,faction));return;}campaignBattle=false;S.battleType=battleType;S.siegeRole=siegeRole;S.autoTerrain=true;S.terrainSeed=Date.now();const budgetMultiplier=battleType==="siege"?(siegeRole==="attacker"?1/1.5:1.5):1;const playerForce=createUnitsFromArmy(army,faction),aiRoster=buildOpponentArmy(army,faction,{budgetMultiplier,siege:battleType==="siege"}),aiForce=createUnitsFromArmy(aiRoster,faction);S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};if(battleType==="siege"){const castle={left:.29,right:.71,top:.22,bottom:.78};Object.values(S.units).forEach(u=>{if(u.side==="player"){u.x=siegeRole==="defender"?.5:.12;u.y=.5;}else{u.x=siegeRole==="defender"?.12:.5;u.y=.5;}u.facing=u.side==="player"?(siegeRole==="defender"?0:0):Math.PI;});}const playerPoints=units().filter(u=>u.side==="player").reduce((sum,u)=>sum+(u.points||0),0),aiPoints=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();say((battleType==="siege"?"Siege · you are the "+siegeRole+". ":"Skirmish · ")+"Your army "+playerPoints+" pts; opponent "+aiPoints+" pts ("+(aiPoints>=playerPoints?"+"+(aiPoints-playerPoints):"−"+(playerPoints-aiPoints))+" pts). "+(battleType==="siege"?"The attacker receives 50% more budget; castle walls are T10/10 W and gates T8/6 W.":""));setupCanvas();}
 function roguelikeCampaignStatCost(config,faction){
  const m=config.models||1,dwarf=faction==="dwarfs",elf=faction==="highElves",character=["captain","lord","mageHero","mageLord","starwardenLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric","goblinHero","goblinLord","orcHero","orcLord"].includes(config.type),s=config.campaignStats||{};
  const rate={M:character?(dwarf?8:5):(dwarf?4:2)*m,WS:character?(elf?3:5):(elf?1:2)*m,BS:character?(elf?3:5):(elf?1:2)*m,S:character?6:3*m,T:character?(dwarf?5:elf?10:8):(dwarf?2:elf?6:4)*m,I:character?(dwarf?5:3):(dwarf?3:1)*m,Ld:character?3:m};
@@ -215,6 +218,14 @@ function startPoliticalCampaignBattle({army, faction="empire", enemyArmy, enemyF
  reset();say("Grand campaign battle · "+faction+" against "+enemyFaction+". Victory or defeat will change the campaign.");setupCanvas();return true;
 }
 window.startPoliticalCampaignBattle=startPoliticalCampaignBattle;
+function startMordheimBattle(army,faction,budget){
+  campaignBattle=false;grandCampaignBattle=false;roguelikeBattle=false;mordheimBattle=true;S.mordheimSkirmish=true;S.battleType="skirmish";S.siegeRole="attacker";S.autoTerrain=true;S.terrainSeed=Date.now();
+  const playerForce=createUnitsFromArmy(army,faction),aiRoster=army.map(entry=>({...entry,meleeWeapons:[...(entry.meleeWeapons||[])],mordheimCollectionId:undefined})).sort(()=>Math.random()-.5),aiForce=createUnitsFromArmy(aiRoster,faction);
+  S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};
+  Object.values(S.units).forEach(u=>{u.attachedTo=null;u.attachedCharacters=[];u.isMordheimFighter=true;u.isCharacter=true;u.singleCharacter=true;u.models=1;u.startModels=1;u.mordheimWounds=Math.max(1,u.stats?.W||u.characterWounds||1);u.characterWounds=u.mordheimWounds;u.mordheimStatus=null;u.name=u.name||u.type;});
+  const playerPoints=units().filter(u=>u.side==="player").reduce((sum,u)=>sum+(u.points||0),0),aiPoints=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);
+  $("mainmenu").hidden=true;$("mode-screen").hidden=true;$("mordheim-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();say("Mordheim Skirmish · "+units().filter(u=>u.side==="player").length+" individual fighters · "+playerPoints+" pts; AI "+aiPoints+" pts. Injury rolls are active; the warband is temporary.");setupCanvas();
+}
 function startCampaignBattle(army,enemyConfig){
  S.autoTerrain=true;S.terrainSeed=Date.now();const playerUnits=createUnitsFromArmy(army,"empire");
  const enemyPair=createUnitsFromArmy([{type:"swordsmen",models:20,weapon:"handWeapon",champion:false}], "empire");
@@ -228,6 +239,7 @@ function showSkirmishBuilder(){$("game").hidden=true;$("mainmenu").hidden=true;$
 let collectionManager=null;
 let narrativeCampaign=null;
 let roguelike=null;
+let mordheim=null,mordheimBattle=false;
 let campaignBattle=false,grandCampaignBattle=false,grandCampaignBattleComplete=null,roguelikeBattle=false,roguelikeBuilderMode=false;
 function validateArmy(army,faction){
  if(collectionManager?.getBypass())return "";
@@ -270,7 +282,8 @@ function validateArmy(army,faction){
 let armyBuilder=null;
 armyBuilder=createArmyBuilder({ $, onStart:startBattleWithArmy, onBack:()=>{if(roguelikeBuilderMode){roguelikeBuilderMode=false;roguelike?.open();}else showCollection();}, validateArmy });
 narrativeCampaign=createNarrativeCampaign({$,onStartBattle:startCampaignBattle,onReturnMenu:showMainMenu});
-collectionManager=createCollectionManager({$,onSkirmish:showSkirmishBuilder,onMainMenu:showMainMenu,onNarrativeCampaign:()=>narrativeCampaign.open(),onRoguelike:()=>roguelike?.open(),onResetCollection:()=>roguelike?.resetProgress()});
+collectionManager=createCollectionManager({$,onSkirmish:showSkirmishBuilder,onMainMenu:showMainMenu,onNarrativeCampaign:()=>narrativeCampaign.open(),onRoguelike:()=>roguelike?.open(),onMordheim:()=>mordheim?.open(),onResetCollection:()=>roguelike?.resetProgress()});
+mordheim=createMordheim({$,getInventory:()=>collectionManager?.getInventory()||[],getBypass:()=>collectionManager?.getBypass(),startBattle:startMordheimBattle,grantLootbox:source=>collectionManager?.grantLootbox(source)});
 roguelike=createRoguelike({
  $,
  onBuildArmy:(army,limit,faction)=>{roguelikeBuilderMode=true;armyBuilder.configureCampaign(army,limit,faction);armyBuilder.open();},
@@ -282,6 +295,7 @@ roguelike=createRoguelike({
  resetProgress:()=>{}
 });
 $("battle-return").addEventListener("click",()=>{ $("battle-return").hidden=true;showCollection();collectionManager?.open();});
+$("mordheim-revive").addEventListener("click",()=>{if(!S.mordheimSkirmish||S.phase!=="movement")return;const rescuer=S.units[S.selected];if(!rescuer||rescuer.side!=="player"||!alive(rescuer)||rescuer.mordheimStatus||rescuer.fled||rescuer.engaged)return;const target=units().filter(v=>v.side==="player"&&v.mordheimStatus==="unconscious"&&alive(v)&&dist(rescuer,v)<=1.5).sort((a,b)=>dist(a,rescuer)-dist(b,rescuer))[0];if(!target)return;target.mordheimStatus=null;target.mordheimWounds=1;target.characterWounds=1;target.shot=true;rescuer.activated=true;S.mode=null;say(rescuer.name+" revives "+target.name+". The rescued fighter cannot shoot this turn.");render();});
 function restoreBattleSnapshot() {
  let snapshot = null;
  try {
