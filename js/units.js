@@ -32,6 +32,7 @@ export function unitCost(config, faction) {
   return models*(elf?12:8)+meleeCost+rangedCost+(config.elvenArchery&&elf&&ranged==="bow"?2*models:0)+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0)+(woodElfStyle&&config.heavyArmour?models:0)+(woodElfStyle&&weapons.includes("offhandWeapon")?models:0)+upgrades+skillCost;
 }
 function buildUnit(template,config,faction,opposing=false) {
+  template=template||Object.values(FACTIONS).map(group=>group.units?.[config.type]).find(Boolean)||{name:String(config.type||"Unknown unit"),short:String(config.type||"Unit"),kind:"melee",models:Math.max(1,Number(config.models)||1),stats:{M:4,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:6}};
   if(faction==="dwarfs"&&(config.rangedWeapon==="bow"||config.weapon==="bow"||config.bow)){
     config={...config,rangedWeapon:"crossbow",weapon:config.weapon==="bow"?"handWeapon":config.weapon,bow:false};
   }
