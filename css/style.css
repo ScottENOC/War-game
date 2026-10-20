@@ -455,3 +455,6 @@ button,[role="button"]{
 @media(max-width:650px){.mordheim-model-list{grid-template-columns:1fr;max-height:42vh}.mordheim-model-row{padding:8px}.mordheim-panel .builder-footer{gap:8px;flex-wrap:wrap}}
 
 .mordheim-status-mark{position:absolute;left:2px;bottom:5px;padding:1px 3px;border-radius:4px;background:#5a3929;color:#fff1cf;font-size:8px;font-weight:900;letter-spacing:.2px;z-index:2}.mordheim-unconscious,.mordheim-stunned{outline:1px dashed #e0c276}.mordheim-outOfAction{opacity:.45;filter:grayscale(1)}
+
+/* Objective battle modes */
+.objective-marker{pointer-events:none}
