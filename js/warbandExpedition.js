@@ -148,10 +148,10 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
         const roll=()=>1+Math.floor(Math.random()*6);
         let result=roll(),tries=0;
         while((result===3&&f.injuries?.leg)||(result===4&&f.injuries?.leftArm))result=roll();
-        if(result===1){f.benchFights=Math.max(Number(f.benchFights)||0,1);casualtyReports.push(f.name+": misses the next fight (roll 1).");}
-        else if(result===2){f.benchFights=Math.max(Number(f.benchFights)||0,2);casualtyReports.push(f.name+": misses the next two fights (roll 2).");}
-        else if(result===3){f.injuries=f.injuries||{};f.injuries.leg=true;casualtyReports.push(f.name+": loses a leg; Move −1 (roll 3).");}
-        else if(result===4){f.injuries=f.injuries||{};f.injuries.leftArm=true;f.shield=false;f.offhandWeapon=false;if(["greatWeapon","halberd","bow","crossbow","firearm"].includes(f.weapon)){f.weapon="handWeapon";f.meleeWeapons=["handWeapon"];}f.rangedWeapon=null;casualtyReports.push(f.name+": loses the left arm and can no longer use two-handed weapons, shields or dual wield (roll 4).");}
+        if(result===1){f.benchFights=Math.max(Number(f.benchFights)||0,1);f.woundsCurrent=Number(u.stats?.W)||1;casualtyReports.push(f.name+": misses the next fight (roll 1).");}
+        else if(result===2){f.benchFights=Math.max(Number(f.benchFights)||0,2);f.woundsCurrent=Number(u.stats?.W)||1;casualtyReports.push(f.name+": misses the next two fights (roll 2).");}
+        else if(result===3){f.injuries=f.injuries||{};f.injuries.leg=true;f.woundsCurrent=Number(u.stats?.W)||1;casualtyReports.push(f.name+": loses a leg; Move −1 (roll 3).");}
+        else if(result===4){f.injuries=f.injuries||{};f.injuries.leftArm=true;f.shield=false;f.offhandWeapon=false;f.meleeWeapons=(f.meleeWeapons||[]).filter(w=>!["greatWeapon","halberd","offhandWeapon"].includes(w));if(!f.meleeWeapons.includes("handWeapon"))f.meleeWeapons.unshift("handWeapon");f.backWeapons=(f.backWeapons||[]).filter(w=>!["greatWeapon","halberd","bow","crossbow","firearm","longRifle","magicBow"].includes(w));if(["greatWeapon","halberd","bow","crossbow","firearm","longRifle","magicBow"].includes(f.weapon))f.weapon="handWeapon";f.rangedWeapon=null;f.woundsCurrent=Number(u.stats?.W)||1;casualtyReports.push(f.name+": loses the left arm and can no longer use two-handed weapons, shields or dual wield (roll 4).");}
         else {f.alive=false;casualtyReports.push(f.name+": dies permanently (roll "+result+").");}
       } else if(u.warbandStatus==="stunned"||u.warbandStatus==="unconscious"||u.warbandStatus==="outOfAction") {
         f.woundsCurrent=1;
