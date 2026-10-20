@@ -1,12 +1,12 @@
-import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-chariots-v2";
+import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-greenskin-monsters-v3";
 import { createRoguelike } from "./roguelike.js?v=20261020-chariots-v2";
-import { createArmyBuilder } from "./armyBuilder.js?v=20261020-chariots-v2";
-import { createCollectionManager } from "./collection.js?v=20261020-chariots-v2";
+import { createArmyBuilder } from "./armyBuilder.js?v=20261020-greenskin-monsters-v2";
+import { createCollectionManager } from "./collection.js?v=20261020-greenskin-monsters-v2";
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js?v=greenskin-roster-v3";
 import { createRules } from "./rules.js?v=20261020-chariots-v2";
 import { createShooting } from "./shooting.js?v=20261020-nullification-dome-v1";
-import { createCombat } from "./combat.js?v=20261015-fear-rules-v1";
+import { createCombat } from "./combat.js?v=20261020-greenskin-monsters-v1";
 import { createRendering } from "./rendering.js?v=20261020-nullification-dome-v1";
 import { createInput } from "./input.js?v=20261020-nullification-dome-v1";
 import { createUI } from "./ui.js?v=20261020-chariots-v2";
