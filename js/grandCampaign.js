@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v14-river-crossing-castles";
+const MAP_ID="shattered-realms-v15-goldhaven-junction";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -1240,6 +1240,8 @@ function createMovementGraph(){
  renameNode("waypoint-crossroads-2-crossroads-6-2","river-crossing-oldreach-aelthir",{type:"river",label:"Oldreach–Aelthir River Crossing"});
  // Goldhaven itself is the junction; discard the overlapping generated intersection.
  mergeInto("crossing-337-295","city-3","Goldhaven");
+ mergeInto("crossing-338-295","city-3","Goldhaven");
+ mergeInto("crossroads-3","city-3","Goldhaven");
  if(nodes["city-3"]){nodes["city-3"].type="city";nodes["city-3"].label="Goldhaven";}
  // Human and elven villages lie on the road from the Oldreach forest to Aelthir.
  const oldreachVillage={id:"village-poi-oldreach-human",region:2,type:"village",label:"Oldreach Watch village",x:128,y:177,population:780,prosperity:46,controllerFaction:"empire"};
