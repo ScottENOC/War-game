@@ -1,14 +1,14 @@
-import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-thaurgath-v2";
+import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-wood-elf-v1";
 import { createRoguelike } from "./roguelike.js?v=20261020-chariots-v2";
 import { createWarband } from "./warband.js?v=20261020-warband-v1";
 import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warband-expedition-v4";
 import { createArmyBuilder } from "./armyBuilder.js?v=20261020-undead-monsters-v3";
-import { createCollectionManager } from "./collection.js?v=20261020-warband-v1";
+import { createCollectionManager } from "./collection.js?v=20261020-wood-elf-v1";
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js?v=20261020-vision-v1";
-import { createRules } from "./rules.js?v=20261020-chariots-v2";
+import { createRules } from "./rules.js?v=20261020-wood-elf-v1";
 import { createShooting } from "./shooting.js?v=20261020-vision-v1";
-import { createCombat } from "./combat.js?v=20261020-warband-expedition-v2";
+import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
 import { createRendering } from "./rendering.js?v=20261020-vision-v1";
 import { createInput } from "./input.js?v=20261020-vision-v1";
 import { createUI } from "./ui.js?v=20261020-warband-v1";
