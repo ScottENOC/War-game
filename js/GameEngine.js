@@ -4,11 +4,11 @@ import { createMordheim } from "./mordheim.js?v=20261020-mordheim-v1";
 import { createArmyBuilder } from "./armyBuilder.js?v=20261020-undead-monsters-v3";
 import { createCollectionManager } from "./collection.js?v=20261020-mordheim-v1";
 import { createGameState } from "./gameState.js";
-import { createAI } from "./ai.js?v=greenskin-roster-v3";
+import { createAI } from "./ai.js?v=20261020-objectives-v1";
 import { createRules } from "./rules.js?v=20261020-chariots-v2";
 import { createShooting } from "./shooting.js?v=20261020-nullification-dome-v1";
 import { createCombat } from "./combat.js?v=20261020-mordheim-v1";
-import { createRendering } from "./rendering.js?v=20261020-nullification-dome-v1";
+import { createRendering } from "./rendering.js?v=20261020-objectives-v1";
 import { createInput } from "./input.js?v=20261020-nullification-dome-v1";
 import { createUI } from "./ui.js?v=20261020-mordheim-v1";
 import { createPhases } from "./phases.js?v=20261020-mordheim-v1";
@@ -158,13 +158,13 @@ function updateObjectiveInteractions(){
 }
 function checkObjectiveDeadline(){
  if(!S.objectiveMode)return false;
- if(S.objectiveMode==="holdGround"&&S.turn>=6){
+ if(S.objectiveMode==="holdGround"&&S.turn>=7){
   const ground=S.objectives?.[0],near=units().filter(u=>objectiveActive(u)&&dist(u,ground)<=3.5);
   const p=near.filter(u=>u.side==="player").length,a=near.filter(u=>u.side==="ai").length;
   finishBattle(p===a?"The battle is a draw! (The ground remains contested)":p>a?"Player wins the battle! (Held the central ground)":"Opponent wins the battle! (Held the central ground)");return true;
  }
- if(S.turn>=10&&S.objectiveMode==="captureFlag"){finishBattle("The battle is a draw! (No flag was captured)");return true;}
- if(S.turn>=10&&S.objectiveMode==="relics"){
+ if(S.turn>=11&&S.objectiveMode==="captureFlag"){finishBattle("The battle is a draw! (No flag was captured)");return true;}
+ if(S.turn>=11&&S.objectiveMode==="relics"){
   const p=S.objectiveScore?.player||0,a=S.objectiveScore?.ai||0;
   finishBattle(p===a?"The battle is a draw! (Relics secured: "+p+" each)":p>a?"Player wins the battle! (Relics secured: "+p+" to "+a+")":"Opponent wins the battle! (Relics secured: "+a+" to "+p+")");return true;
  }
@@ -255,6 +255,7 @@ function saveBattleSnapshot() {
 }
 render = () => {
  Object.values(S.units||{}).forEach(u=>{u.magicSuppressed=isInsideNullificationDome(u);});
+ updateObjectiveInteractions();
  const revive=$("mordheim-revive"),rescuer=S.units[S.selected];if(revive){const target=!!S.mordheimSkirmish&&S.phase==="movement"&&rescuer?.side==="player"&&alive(rescuer)&&!rescuer.mordheimStatus&&!rescuer.fled&&!rescuer.engaged&&!rescuer.activated&&units().some(v=>v.side==="player"&&v.mordheimStatus==="unconscious"&&alive(v)&&dist(rescuer,v)<=1.5);revive.hidden=!target;}
  renderUI();
  saveBattleSnapshot();
