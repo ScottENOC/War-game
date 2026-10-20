@@ -1,6 +1,6 @@
 import { unitCost } from "./units.js?v=20261020-thaurgath-v2";
 
-const STORAGE_KEY = "warGameMordheimSkirmishV1";
+const STORAGE_KEY = "warGameWarbandSkirmishV1";
 const NEVER_ALLOWED = new Set([
   "lord","mageLord","starwardenLord","masterNecromancer","vampireLord",
   "legendaryLord","shadowElf","pegasusChampion","dwarfLord","dwarfKingHaldric",
@@ -16,7 +16,7 @@ const CHARACTER_TYPES = new Set([
 ]);
 const RANGED = new Set(["bow","crossbow","firearm","longRifle","magicBow"]);
 
-export function createMordheim({ $, getInventory, getBypass, startBattle, grantLootbox }) {
+export function createWarband({ $, getInventory, getBypass, startBattle, grantLootbox }) {
   let faction = "empire";
   let selected = new Set();
   let inventory = [];
@@ -37,7 +37,7 @@ export function createMordheim({ $, getInventory, getBypass, startBattle, grantL
       meleeWeapons: [...new Set(meleeWeapons.length ? meleeWeapons : ["handWeapon"])],
       rangedWeapon, faction, mounted: !!m.mounted, mountType: m.mountType || "none",
       shield: !!m.shield, lightArmour: !!m.lightArmour, heavyArmour: !!m.heavyArmour,
-      name: m.name || "", mordheimCollectionId: m.id, mordheimFighter: true
+      name: m.name || "", warbandCollectionId: m.id, warbandFighter: true
     };
   }
   function points(m) {
@@ -50,26 +50,26 @@ export function createMordheim({ $, getInventory, getBypass, startBattle, grantL
     $id("mainmenu").hidden = true;
     $id("collection-screen").hidden = true;
     $id("armybuilder").hidden = true;
-    $id("mordheim-screen").hidden = false;
+    $id("warband-screen").hidden = false;
     render();
   }
   function render() {
-    const list = $id("mordheim-model-list");
-    const factionSelect = $id("mordheim-faction");
+    const list = $id("warband-model-list");
+    const factionSelect = $id("warband-faction");
     factionSelect.value = faction;
     const models = inventory.filter(eligible);
     for (const id of [...selected]) if (!models.some(m => m.id === id)) selected.delete(id);
     const selectedModels = models.filter(m => selected.has(m.id));
     const total = selectedModels.reduce((n, m) => n + points(m), 0);
-    $id("mordheim-total").textContent = total + " pts · " + selectedModels.length + " fighters";
-    $id("mordheim-start").disabled = !selectedModels.length || selectedModels.length > 20;
-    $id("mordheim-validation").textContent = models.length
+    $id("warband-total").textContent = total + " pts · " + selectedModels.length + " fighters";
+    $id("warband-start").disabled = !selectedModels.length || selectedModels.length > 20;
+    $id("warband-validation").textContent = models.length
       ? "Choose up to 20 individual fighters. Only miniatures in your collection are available."
       : "No eligible miniatures for this faction. Add models to your collection or choose another faction.";
     list.replaceChildren();
     models.forEach(m => {
       const row = document.createElement("label");
-      row.className = "mordheim-model-row";
+      row.className = "warband-model-row";
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.checked = selected.has(m.id);
@@ -94,25 +94,25 @@ export function createMordheim({ $, getInventory, getBypass, startBattle, grantL
     if (!getBypass()) {
       const current = getInventory() || [];
       if (models.some(m => !current.some(x => x.id === m.id))) {
-        $id("mordheim-validation").textContent = "Collection changed; please select your warband again.";
+        $id("warband-validation").textContent = "Collection changed; please select your warband again.";
         return;
       }
     }
     const army = models.map(configFor);
     const budget = army.reduce((n, c) => n + unitCost(c, faction), 0);
-    $id("mordheim-screen").hidden = true;
+    $id("warband-screen").hidden = true;
     startBattle(army, faction, budget);
   }
   factionSelectSetup();
   function factionSelectSetup() {
-    $id("mordheim-faction").addEventListener("change", e => {
+    $id("warband-faction").addEventListener("change", e => {
       faction = e.target.value;
       selected.clear();
       render();
     });
-    $id("mordheim-start").addEventListener("click", begin);
-    $id("mordheim-back").addEventListener("click", () => {
-      $id("mordheim-screen").hidden = true;
+    $id("warband-start").addEventListener("click", begin);
+    $id("warband-back").addEventListener("click", () => {
+      $id("warband-screen").hidden = true;
       $id("mainmenu").hidden = false;
     });
   }
@@ -121,18 +121,18 @@ export function createMordheim({ $, getInventory, getBypass, startBattle, grantL
       let progress = { wins: 0, boxes: 0 };
       try { progress = { ...progress, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; } catch {}
       progress.wins = (Number(progress.wins) || 0) + 1;
-      let message = "Mordheim victory " + progress.wins + " · warband disbanded.";
+      let message = "Warband victory " + progress.wins + " · warband disbanded.";
       if (progress.wins % 3 === 0) {
-        grantLootbox("mordheim");
+        grantLootbox("warband");
         progress.boxes = (Number(progress.boxes) || 0) + 1;
         message += " Three wins reached: one lootbox earned!";
       } else {
         message += " " + (3 - progress.wins % 3) + " more win(s) until a lootbox.";
       }
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); } catch {}
-      $id("mordheim-result").textContent = message;
+      $id("warband-result").textContent = message;
     } else {
-      $id("mordheim-result").textContent = "Defeat · warband disbanded. Your collection is unchanged.";
+      $id("warband-result").textContent = "Defeat · warband disbanded. Your collection is unchanged.";
     }
   }
   return { open, onBattleFinished, isEligible: eligible };
