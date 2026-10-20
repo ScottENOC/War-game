@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v16-harbour-doglegs";
+const MAP_ID="shattered-realms-v17-goldhaven-village-colours";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -837,7 +837,7 @@ function createInitialCampaignState(faction,city,commander){
  const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;diplomacy[a.id][b.id]=baseFactionRelation(a.id,b.id);}}
  const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints,passive:!!state.passive,boredom:-4,momentum:0,foughtThisTurn:false,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0}));
  const playerState=factionStates.find(f=>f.id===playerPoliticalFaction);
- const graph=createMovementGraph(); const campaign={schemaVersion:8,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,activeAlliances:[],armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph,commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3),maxMovement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3)},armies,lastEvent:commander.name+" begins the campaign at "+city.name+"."}; ensureMinorSettlementState(campaign); for(const state of factionStates){const owned=regions.filter(r=>politicalOwner(r)===state.id);state.income=state.passive?0:owned.reduce((sum,r)=>sum+campaignCityIncome(r,campaign),0)+campaignMinorSettlementIncome(campaign,state.id);} return campaign;
+ const graph=createMovementGraph(); const campaign={schemaVersion:8,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,activeAlliances:[],armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph,commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3),maxMovement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3)},armies,lastEvent:"Your campaign begins at "+city.name+"."}; ensureMinorSettlementState(campaign); for(const state of factionStates){const owned=regions.filter(r=>politicalOwner(r)===state.id);state.income=state.passive?0:owned.reduce((sum,r)=>sum+campaignCityIncome(r,campaign),0)+campaignMinorSettlementIncome(campaign,state.id);} return campaign;
 }
 let selectedFaction="empire",selectedPoliticalFaction="valedorn",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
@@ -1195,6 +1195,16 @@ function createMovementGraph(){
  };
  mergeMapPoints(["sea-crossing-386-361","goldhaven-blackflag-coast-1"],"Goldhaven–Blackflag sea junction");
  mergeMapPoints(["waypoint-ironhold-coastal-sea-waypoint-goldhaven-ironhold-sea-junction-2","goldhaven-south-sea-waypoint"],"Goldhaven southern sea junction");
+ // Keep Goldhaven's southern sea lane connected through the shared Ironhold waypoint
+ // and the named junction, rather than allowing a direct shortcut between them.
+ const goldhavenSouthLane="waypoint-goldhaven-south-sea-waypoint-goldhaven-ironhold-sea-junction-1";
+ const ironholdCoastalJunction="waypoint-ironhold-coastal-sea-waypoint-goldhaven-ironhold-sea-junction-2";
+ const sharedSeaJunction="goldhaven-ironhold-sea-junction";
+ if(nodes[goldhavenSouthLane]&&nodes[ironholdCoastalJunction]&&nodes[sharedSeaJunction]){
+  unlink(goldhavenSouthLane,sharedSeaJunction);
+  link(goldhavenSouthLane,ironholdCoastalJunction,1,"sea");
+  link(ironholdCoastalJunction,sharedSeaJunction,1,"sea");
+ }
  mergeMapPoints(["feature-1-6-land-3","feature-1-6-land-2","feature-1-6-land-1"],"Oldreach–Aelthir road junction");
  mergeMapPoints(["feature-1-2-land-5","feature-1-2-land-4"],"Oldreach western road junction");
  // Give the Goldhaven river bend a direct road connection to the northern mountain chain.
@@ -1667,7 +1677,14 @@ function renderCampaignMap(){
  paintFactionBanners(map,activeCampaign);
  for(const marker of map.querySelectorAll(".grand-city")){const cityId=Number(marker.dataset.city),region=activeCampaign.regions.find(r=>Number(r.id)===cityId||Number(r.cityId)===cityId),owner=region?politicalOwner(region):(FACTION_PROFILES[cityId]?.id||null);const circle=marker.querySelector("circle");if(!circle)continue;let border="#c7c7b5";if(owner===activeCampaign.playerPoliticalFaction)border="#79c987";else if(owner){const relation=campaignRelation(activeCampaign,activeCampaign.playerPoliticalFaction,owner),war=(activeCampaign.activeWars||[]).includes(campaignWarKey(activeCampaign.playerPoliticalFaction,owner));border=war||relation<=-50?"#df5b50":relation>=35?"#69c981":relation<=-20?"#e4a14e":"#d9c66e";}circle.setAttribute("stroke",border);circle.setAttribute("stroke-width","4");}
  map.querySelector("#grand-city-markers").before(road);
- for(const n of Object.values(nodes)){const isCurrent=n.id===movementNode,reach=(edges[movementNode]||[]).some(e=>e.to===n.id&&e.cost+nodeCost(n)-1<=movementLeft),g=svgEl("g",{class:"campaign-node "+n.type+(isCurrent?" current":"")+(n.id===selectedNodeId?" selected":"")+(reach?" reachable":""),tabindex:reach?"0":"-1",role:"button","aria-label":n.label+" (map point ID: "+n.id+")",transform:"translate("+n.x+" "+n.y+")","data-node":n.id});const pointTitle=svgEl("title");pointTitle.textContent=n.label+" · "+n.id;g.append(pointTitle);g.append(svgEl("circle",{r:16,class:"campaign-node-hit"}));g.append(svgEl("circle",{r:n.type==="city"?5:n.type==="crossroads"?3.5:5.5,class:"campaign-node-visible"}));if(n.type==="port")g.append(svgEl("path",{d:"M-3 0 L3 0 M0 -4 L0 2 M-4 2 L4 2"}));if(n.type==="village"||n.type==="farm"){const symbol=svgEl("text",{x:0,y:4,"text-anchor":"middle",class:"campaign-node-symbol"});symbol.textContent=n.type==="farm"?"♧":"⌂";g.append(symbol);}layer.append(g);}
+ for(const n of Object.values(nodes)){const isCurrent=n.id===movementNode,reach=(edges[movementNode]||[]).some(e=>e.to===n.id&&e.cost+nodeCost(n)-1<=movementLeft),g=svgEl("g",{class:"campaign-node "+n.type+(isCurrent?" current":"")+(n.id===selectedNodeId?" selected":"")+(reach?" reachable":""),tabindex:reach?"0":"-1",role:"button","aria-label":n.label+" (map point ID: "+n.id+")",transform:"translate("+n.x+" "+n.y+")","data-node":n.id});const pointTitle=svgEl("title");pointTitle.textContent=n.label+" · "+n.id;g.append(pointTitle);g.append(svgEl("circle",{r:16,class:"campaign-node-hit"}));const visiblePoint=svgEl("circle",{r:n.type==="city"?5:n.type==="crossroads"?3.5:5.5,class:"campaign-node-visible"});
+  if(n.type==="village"){
+   const villageRegion=activeCampaign.regions.find(r=>Number(r.id)===Number(n.region));
+   const villageOwner=villageRegion?politicalOwner(villageRegion):null;
+   const villageProfile=FACTION_BY_ID[villageOwner]||FACTION_PROFILES[Number(n.region)];
+   if(villageProfile?.colours){visiblePoint.setAttribute("fill",villageProfile.colours.main);visiblePoint.setAttribute("stroke",villageProfile.colours.accent);visiblePoint.setAttribute("stroke-width","2");}
+  }
+  g.append(visiblePoint);if(n.type==="port")g.append(svgEl("path",{d:"M-3 0 L3 0 M0 -4 L0 2 M-4 2 L4 2"}));if(n.type==="village"||n.type==="farm"){const symbol=svgEl("text",{x:0,y:4,"text-anchor":"middle",class:"campaign-node-symbol"});symbol.textContent=n.type==="farm"?"♧":"⌂";g.append(symbol);}layer.append(g);}
  map.querySelector("#grand-city-markers").after(layer);
  for(const army of activeCampaign.armies||[]){if(!army?.roster?.length)continue;const p=nodes[army.nodeId];if(!p)continue;const owner=army.owner||army.factionId,isPlayer=owner===activeCampaign.playerPoliticalFaction;const g=svgEl("g",{class:"campaign-army-token"+(isPlayer?" player-army-token":" enemy-army-token"),transform:"translate("+p.x+" "+(p.y-18)+")",role:"button",tabindex:"0","aria-label":(army.name||"Army")+" at "+(p.label||"unknown location")});g.append(svgEl("circle",{r:11,class:"campaign-army-token-circle"}));const t=svgEl("text",{x:0,y:4,"text-anchor":"middle",class:"campaign-army-token-label"});t.textContent=isPlayer?"♟":"⚔";g.append(t);const chooseArmy=()=>{lastCampaignNodeTap=null;if(isPlayer){activeCampaign.selectedArmyId=army.id;activeCampaign.commander.nodeId=army.nodeId;activeCampaign.commander.region=army.region;activeCampaign.commander.movement=army.movement||0;}activeCampaign.selectedArmyPanelId=army.id;activeCampaign.selectedCampaignPanel="army";activeCampaign.selectedRefugeeId=null;activeCampaign.selectedMapNodeId=army.nodeId;activeCampaign.lastEvent="Selected "+(army.name||"army")+". Double-tap a destination to move it.";saveCampaign();renderCampaignMap();};g.addEventListener("click",chooseArmy);g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();chooseArmy();}});armyLayer.append(g);}
  map.append(armyLayer);
