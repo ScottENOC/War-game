@@ -214,13 +214,48 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
  const points=roster.reduce((sum,u)=>sum+unitCost(u,faction),0);
  return {faction,roster,points,politicalFactionId:id};
 }
-function campaignCityIncome(region){
+function campaignBaseCityIncome(region){
  const s=region?.settlement;if(!s)return 0;
  const tier=Math.max(1,Number(s.historicalTier)||1),prosperity=Math.max(0,Math.min(100,Number(s.prosperity)||0));
  const population=Math.max(0,Number(s.population?.total)||0);if(population<=0)return 0;
  const buildings=(s.buildings||[]).reduce((sum,b)=>sum+Math.max(0,Math.min(100,Number(b.condition)||0)),0);
  const infrastructureValue=Number(s.infrastructureCondition),infrastructure=Math.max(.25,Math.min(1,Number.isFinite(infrastructureValue)?infrastructureValue/100:1));
  return Math.round((10+tier*10+prosperity*.35+Math.log10(Math.max(1,population))*6+buildings*.04)*infrastructure);
+}
+function campaignMinorSettlementIncome(campaign,ownerId){
+ return (campaign?.minorSettlements||[]).reduce((sum,place)=>{const region=campaign.regions?.find(r=>r.id===place.region),population=Math.max(0,Number(place.population)||0);if(!region||politicalOwner(region)!==ownerId||population<=0)return sum;return sum+Math.round(Math.sqrt(population)*.12+Math.max(0,Number(place.prosperity)||0)*.04);},0);
+}
+function safeTradePath(campaign,startId,endId,ownerId){
+ const graph=campaign?.graph;if(!graph?.nodes?.[startId]||!graph?.nodes?.[endId])return null;
+ const friendlyOwner=owner=>owner===ownerId||(!((campaign.activeWars||[]).includes(campaignWarKey(ownerId,owner)))&&campaignRelation(campaign,ownerId,owner)>=0);
+ const distances=new Map([[startId,0]]),previous=new Map(),used=new Set();
+ while(true){
+  let at=null,best=Infinity;for(const [id,d] of distances)if(!used.has(id)&&d<best){at=id;best=d;}if(at===null)return null;
+  if(at===endId){let cur=at,hasSea=false;while(previous.has(cur)){const prev=previous.get(cur);if(prev.edge.kind==="sea")hasSea=true;cur=prev.id;}return {distance:best,hasSea};}
+  used.add(at);
+  for(const edge of graph.edges[at]||[]){if(used.has(edge.to))continue;const node=graph.nodes[edge.to];if(!node)continue;
+   if(node.type!=="seaRoute"&&node.type!=="river"&&node.region!=null){const region=campaign.regions?.find(r=>r.id===node.region),owner=region?politicalOwner(region):ownerId;if(!friendlyOwner(owner))continue;}
+   const candidate=best+(edge.kind==="sea"?.75:1)+(node.type==="river"?.5:0);if(candidate<(distances.get(edge.to)??Infinity)){distances.set(edge.to,candidate);previous.set(edge.to,{id:at,edge});}
+  }
+ }
+}
+function campaignTradeIncome(region,campaign){
+ if(!region?.settlement?.population||!campaign?.graph?.nodes)return 0;
+ const owner=politicalOwner(region);let total=0;
+ for(const target of campaign.regions||[]){if(target.id===region.id||!target.settlement?.population)continue;const targetOwner=politicalOwner(target);
+  if(targetOwner!==owner&&(campaign.activeWars||[]).includes(campaignWarKey(owner,targetOwner)))continue;
+  if(targetOwner!==owner&&campaignRelation(campaign,owner,targetOwner)<0)continue;
+  const path=safeTradePath(campaign,"city-"+region.id,"city-"+target.id,owner);if(!path)continue;
+  const population=Math.max(0,Number(target.settlement.population.total)||0),value=4+Math.min(8,Math.log10(Math.max(1,population))*2);
+  total+=value/(1+path.distance*.24)*(path.hasSea?2.4:1);
+ }
+ return Math.round(total);
+}
+function campaignCityIncome(region,campaign=null){return campaignBaseCityIncome(region)+(campaign?campaignTradeIncome(region,campaign):0);}
+function ensureMinorSettlementState(campaign){
+ if(!Array.isArray(campaign.minorSettlements))campaign.minorSettlements=[];
+ const existing=new Map(campaign.minorSettlements.map(p=>[p.id,p]));
+ for(const node of Object.values(campaign.graph?.nodes||{})){if(!["village","farm"].includes(node.type))continue;const previous=existing.get(node.id);if(previous){previous.region=node.region;previous.type=node.type;previous.name=node.label;continue;}campaign.minorSettlements.push({id:node.id,name:node.label,type:node.type,region:node.region,population:Math.max(0,Number(node.population)||0),prosperity:Math.max(0,Number(node.prosperity)||40)});}
 }
 function campaignArmyCost(army){
  return Math.max(0,Math.round((army?.roster||[]).reduce((sum,u)=>sum+unitCost(u,army.rosterFaction||"empire"),0)));
