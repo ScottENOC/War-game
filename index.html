@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#171c20">
 <title>War-game — Miniature Collection</title>
-<link rel="stylesheet" href="css/style.css?v=20261020-warband-expedition-v1">
+<link rel="stylesheet" href="css/style.css?v=20261020-grand-ui-v2">
 </head>
 <body>
 <section id="mainmenu" class="screen menu-screen">
@@ -102,9 +102,11 @@
 <button class="grand-faction-choice active" data-faction="empire"><b>Human Realms</b><small>Most territory · five cities · fractured crowns</small></button><button class="grand-faction-choice" data-faction="highElves"><b>High Elves</b><small>Forests and islands · three cities · divided courts</small></button><button class="grand-faction-choice" data-faction="dwarfs"><b>Dwarfs</b><small>Mountain holds only · two cities · rival clans</small></button><button class="grand-faction-choice" data-faction="greenskins"><b>Greenskin Hordes</b><small>Plains and mountains · six territories</small></button><button class="grand-faction-choice" data-faction="undead"><b>The Undying Courts</b><small>Scattered necropolises · three enclaves</small></button><button class="grand-faction-choice" data-faction="evilHumans"><b>Blackened Principalities</b><small>Hostile human realms · four territories</small></button>
 </div><div id="grand-faction-detail" class="grand-faction-detail" aria-live="polite"></div><div id="grand-city-detail" class="grand-city-detail" aria-live="polite"></div><button id="grand-campaign-begin" class="primary-button" disabled>Start campaign</button></aside></div></div>
 <div id="grand-campaign-world" class="grand-campaign-world" hidden>
-<header class="builder-header grand-world-header"><div><div id="grand-campaign-turn" class="eyebrow">TURN 1</div><h1>The Shattered Realms</h1></div><div class="grand-world-header-actions"><button id="grand-world-back" class="secondary-button">Setup</button><button id="grand-world-menu" class="secondary-button">Main Menu</button></div></header>
+<header class="builder-header grand-world-header"><div><div id="grand-campaign-turn" class="eyebrow">TURN 1</div><h1>The Shattered Realms</h1></div><div class="grand-world-header-actions"><button id="grand-treasury-open" class="grand-compact-treasury" type="button" aria-label="Open treasury details">500 <span id="grand-treasury-net">+0</span></button><button id="grand-diplomacy-open" class="secondary-button grand-utility-button" type="button">Diplomacy</button><button id="grand-world-menu-toggle" class="secondary-button grand-menu-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button><div id="grand-world-menu-dropdown" class="grand-world-menu-dropdown" hidden><button id="grand-menu-diagnostics" type="button">Diagnostics</button><button id="grand-world-back" type="button">Setup</button><button id="grand-world-menu" type="button">Main menu</button><button id="grand-campaign-abandon" type="button" class="danger-button">Abandon campaign</button></div></div></header>
 <div class="grand-world-layout"><section class="grand-live-map-panel"><div class="grand-live-map-legend"><span>● City</span><span>○ Road junction</span><span>◆ Border / crossing</span><span>▲ Your commander</span></div><div id="grand-map-live-wrap" class="grand-map-live-wrap"></div><p class="grand-live-hint">Select a highlighted connected place to move along the roads. Each journey costs movement points; end the turn to replenish them.</p></section>
-<aside class="grand-world-sidebar"><section class="grand-world-card" id="grand-campaign-commander"></section><section class="grand-world-card" id="grand-campaign-node-detail"></section><div class="grand-world-economy"><span>Treasury</span><strong id="grand-campaign-treasury">500 gold</strong></div><section id="grand-army-management" class="grand-world-card grand-army-management"></section><section id="grand-campaign-diplomacy" class="grand-world-card grand-campaign-diplomacy"></section><p id="grand-campaign-event" class="grand-world-event" aria-live="polite">Your campaign begins.</p><button id="grand-campaign-end-turn" class="primary-button">End turn · +100 gold</button></aside></div>
+<aside class="grand-world-sidebar"><section class="grand-world-card" id="grand-campaign-commander"></section><section class="grand-world-card" id="grand-campaign-node-detail"></section><div class="grand-world-economy"><span>Treasury</span><strong id="grand-campaign-treasury">500 gold</strong></div><section id="grand-army-management" class="grand-world-card grand-army-management"></section><section id="grand-campaign-diplomacy" class="grand-world-card grand-campaign-diplomacy" hidden></section><p id="grand-campaign-event" class="grand-world-event" aria-live="polite">Your campaign begins.</p></aside></div>
+<div id="grand-campaign-overlay" class="grand-campaign-overlay" hidden><section class="grand-campaign-dialog" role="dialog" aria-modal="true" aria-labelledby="grand-overlay-title"><header><h2 id="grand-overlay-title">Diplomacy</h2><button id="grand-overlay-close" type="button" aria-label="Close">×</button></header><div id="grand-overlay-content"></div></section></div>
+<button id="grand-campaign-end-turn" class="primary-button grand-floating-end-turn" type="button">End turn</button>
 </div>
 </div></section>
 
@@ -174,7 +176,7 @@
  window.__warGameStartupReady=false;
 })();
 </script>
-<div id="startup-diagnostics-toggle-wrap"><button id="startup-diagnostics-toggle" type="button">Diagnostics</button></div>
+<div id="startup-diagnostics-toggle-wrap" hidden><button id="startup-diagnostics-toggle" type="button">Diagnostics</button></div>
 <section id="startup-diagnostics" role="alert" aria-live="assertive" hidden>
  <div id="startup-diagnostics-card">
   <h2>Game diagnostics</h2>
@@ -184,5 +186,5 @@
  </div>
 </section>
 
-<script type="module" src="js/main.js?v=20261020-wood-elf-v2"></script>
+<script type="module" src="js/main.js?v=20261020-grand-ui-v2"></script>
 </body></html>
