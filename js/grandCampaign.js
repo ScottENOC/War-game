@@ -1314,8 +1314,9 @@ function processGreenskinAnimosity(campaign,army){
  army.lastAnimosityTurn=campaign.turn;
  if(passed)return {interrupted:false,message:(army.name||campaign.factionStates.find(f=>f.id===(army.owner||army.factionId))?.name||"Greenskin army")+" passes its animosity test ("+dice.join("+")+"="+total+"; Ld "+leadership+", boredom "+army.boredom+")."};
  const result=1+Math.floor(Math.random()*6),name=army.name||campaign.factionStates.find(f=>f.id===(army.owner||army.factionId))?.name||"Greenskin army";
- if(result<=2)return {interrupted:true,message:name+" bickers ("+dice.join("+")+"="+total+", animosity roll "+result+") and does nothing this turn."};
+ if(result<=2){army.movement=0;return {interrupted:true,message:name+" bickers ("+dice.join("+")+"="+total+", animosity roll "+result+") and does nothing this turn."};}
  if(result<=4){
+  army.movement=0;
   const message=campaignResolveSquabble(campaign,army);
   return {interrupted:true,message:name+" squabbles ("+dice.join("+")+"="+total+", animosity roll "+result+"). "+message};
  }
