@@ -340,8 +340,8 @@ function startCampaignBattle(army,enemyConfig){
  S.units={...Object.fromEntries(Object.entries(playerUnits).filter(([id])=>id.startsWith("p"))),a1:enemy};
  campaignBattle=true;$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();setupCanvas();
 }
-function showMainMenu(){$("game").hidden=true;$("armybuilder").hidden=true;$("collection-screen").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("roguelike-screen").hidden=true;$("warband-screen").hidden=true;$("warband-expedition-screen").hidden=true;$("river-siege-test-screen").hidden=true;$("mainmenu").hidden=false;}
-function showCollection(){$("game").hidden=true;$("armybuilder").hidden=true;$("mode-screen").hidden=true;$("mainmenu").hidden=true;$("river-siege-test-screen").hidden=true;$("collection-screen").hidden=false;if($("battle-type"))$("battle-type").disabled=false;if($("battle-type")?.closest("label"))$("battle-type").closest("label").hidden=false;}
+function showMainMenu(){S.customSiegeMap=null;$("game").hidden=true;$("armybuilder").hidden=true;$("collection-screen").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("roguelike-screen").hidden=true;$("warband-screen").hidden=true;$("warband-expedition-screen").hidden=true;$("river-siege-test-screen").hidden=true;$("mainmenu").hidden=false;}
+function showCollection(){S.customSiegeMap=null;$("game").hidden=true;$("armybuilder").hidden=true;$("mode-screen").hidden=true;$("mainmenu").hidden=true;$("river-siege-test-screen").hidden=true;$("collection-screen").hidden=false;if($("battle-type"))$("battle-type").disabled=false;if($("battle-type")?.closest("label"))$("battle-type").closest("label").hidden=false;}
 let pendingObjectiveMode=null;
 function showSkirmishBuilder(objectiveMode=null){pendingObjectiveMode=objectiveMode;$("game").hidden=true;$("mainmenu").hidden=true;$("mode-screen").hidden=true;$("collection-screen").hidden=true;$("roguelike-screen").hidden=true;armyBuilder?.configureSkirmish();armyBuilder?.open();}
 let collectionManager=null;
