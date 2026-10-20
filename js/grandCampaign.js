@@ -426,7 +426,7 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
  const previousOwner=region.ownerFaction||region.owner||region.nativeFaction;
  const conquerorId=FACTION_BY_ID[conquerorFaction]?.id||conquerorFaction;
  if(previousOwner===conquerorId)return {region,summary:city.name+" is already under this faction's control."};
- const settlement=region.settlement,conquerorRace=FACTION_BY_ID[conquerorId]?.race||FACTION_SPECIES[conquerorFaction];
+ const settlement=region.settlement,initialPopulation=Math.max(0,Number(region.settlement?.population?.total)||0),conquerorRace=FACTION_BY_ID[conquerorId]?.race||FACTION_SPECIES[conquerorFaction];
  const isGreenskinConqueror=conquerorRace==="greenskin";
  const outcome=options.outcome||(isGreenskinConqueror?"sack":"occupy");
  const sameSpecies=conquerorRace===(FACTION_PROFILES[region.id]?.race||FACTION_SPECIES[region.nativeFaction]);
@@ -460,11 +460,21 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
  settlement.infrastructureCondition=Math.max(0,settlement.infrastructureCondition-(outcome==="raze"?90:outcome==="sack"?40:preserve?5:20));
  if(outcome==="raze"){settlement.historicalTier=Math.max(1,settlement.historicalTier);settlement.ruins=true;}
  region.ownerFaction=conquerorId;region.politicalFactionId=conquerorId;region.owner=conquerorId;region.occupationPolicy=preserve?"local-administration":"military-occupation";settlement.occupationPolicy=region.occupationPolicy;settlement.monthsUnderOccupation=0;
+ let plunder=0;
+ if(isGreenskinConqueror&&outcome==="sack"){
+  const tier=Math.max(1,Number(settlement.historicalTier)||1),prosperity=Math.max(0,Number(settlement.prosperity)||0);
+  const survivingBuildings=(settlement.buildings||[]).reduce((sum,b)=>sum+Math.max(0,Number(b.condition)||0)/100,0);
+  plunder=Math.round(tier*100+prosperity*2+Math.log10(Math.max(1,initialPopulation))*80+survivingBuildings*25);
+  const treasuryState=campaign.factionStates?.find(f=>f.id===conquerorId);
+  if(treasuryState)treasuryState.treasury=Math.max(0,Number(treasuryState.treasury)||0)+plunder;
+  if(conquerorId===campaign.playerPoliticalFaction)campaign.treasury=Math.max(0,Number(campaign.treasury)||0)+plunder;
+ }
+ if(isGreenskinConqueror){const army=(campaign.armies||[]).find(a=>(a.owner||a.factionId)===conquerorId&&a.roster?.length);if(army)awardGreenskinMomentum(campaign,army,1);}
  const factionName=FACTION_BY_ID[conquerorId]?.name||FACTIONS[conquerorFaction]?.name||conquerorId;
  const special=(conquerorId==="greenskins"||FACTION_BY_ID[conquerorId]?.race==="greenskin")&&region.nativeFaction==="dwarfs"?" Orcs slaughtered the dwarves who could not escape; surviving escapees are displaced.":"";
- const summary=city.name+" falls to "+factionName+". "+fled.toLocaleString()+" inhabitants flee; "+killed.toLocaleString()+" are killed."+special+" Its "+settlement.fortification.style+" fortifications remain in place, damaged but not replaced.";
+ const summary=city.name+" falls to "+factionName+". "+fled.toLocaleString()+" inhabitants flee; "+killed.toLocaleString()+" are killed."+(plunder?" Greenskin plunder: "+plunder.toLocaleString()+" gold; the settlement has no usable population.":"")+special+" Its "+settlement.fortification.style+" fortifications remain in place, damaged but not replaced.";
  campaign.lastEvent=summary;
- return {region,summary,fled,killed,previousOwner,conquerorFaction};
+ return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
 const MAP_ID="shattered-realms-v5";
@@ -978,7 +988,9 @@ function launchCampaignBattle(region,attackingArmyOverride=null){
   enemyArmy.points=Math.max(0,Math.round(enemyArmy.roster.reduce((sum,u)=>sum+unitCost(u,enemyFaction),0)));
   const playerState=activeCampaign.factionStates.find(f=>f.id===playerId),enemyState=activeCampaign.factionStates.find(f=>f.id===enemyId);
   if(result.won){
-   const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:"occupy"});
+   const greenskinPlayer=campaignIsGreenskin(activeCampaign,playerId);
+   const sackCity=greenskinPlayer&&window.confirm("Sack "+region.name+" for a large haul of plunder? Its usable population will be destroyed and future city income lost. Choose Cancel to occupy it instead.");
+   const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:greenskinPlayer?(sackCity?"sack":"occupy"):"occupy"});
    playerArmy.region=region.id;playerArmy.nodeId="city-"+region.id;if(selectedPlayerArmy()===playerArmy){activeCampaign.commander.region=region.id;activeCampaign.commander.nodeId="city-"+region.id;}
    activeCampaign.lastEvent=!playerArmy.roster.length?"Victory at "+region.name+", but your army has been destroyed. Rebuild from your remaining miniatures and treasury.":"Victory at "+region.name+". "+outcome.summary;
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
@@ -1212,7 +1224,7 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  applyStrategicArmyLosses(loseArmy,winner===attacker?.42:.55);
  for(const state of campaign.factionStates){const army=state.id===winner.id?winArmy:state.id===loser.id?loseArmy:null;if(army){state.armyPoints=army.points;state.roster=army.roster;if(!army.roster.length)state.alive=false;}}
  if(winner===attacker){
-  const result=resolveGrandCampaignConquest(campaign,target.id,attacker.id,{outcome:"occupy"});
+  const result=resolveGrandCampaignConquest(campaign,target.id,attacker.id);
   if(attacking){attacking.region=target.id;attacking.nodeId="city-"+target.id;}
   campaign.lastEvent=attacker.name+" defeats "+defender.name+" at "+target.name+" and captures the settlement. "+result.summary;
  }else{
