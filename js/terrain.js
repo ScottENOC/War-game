@@ -60,10 +60,7 @@ export function generateRiverCrossingCastleTerrain(seed=Date.now(),city="crownfa
   terrain.push(wall(left,bottom,left,top,"west"));
  }
  // A northern assault on Aelthir begins at sea, under the northern battlements.
- if(approach==="north"&&String(city).toLowerCase()==="aelthir"){
-  terrain.push({type:"lake",x:.5,y:.02,rx:.8,ry:.20,ocean:true,label:"Sea approaches"});
- }
- // Add a gate on the wall facing a conventional land assault, except on the exposed north face.
+  // Add a gate on the wall facing a conventional land assault, except on the exposed north face.
  if(approach==="west"){
   terrain.splice(terrain.findIndex(t=>t.type==="wall"&&t.side==="west"),1,wall(left,bottom,left,.5+gateHalf,"west-south"),gate(left,.5+gateHalf,left,.5-gateHalf,"west-gate"),wall(left,.5-gateHalf,left,top,"west-north"));
  }
