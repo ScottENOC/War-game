@@ -54,11 +54,7 @@ export function generateRiverCrossingCastleTerrain(seed=Date.now(),city="crownfa
  // East wall and its gate face the bridge; defenders can concentrate fire on the crossing.
  terrain.push(wall(right,top,right,.5+gateHalf,"east-north"),gate(right,.5+gateHalf,right,.5-gateHalf,"east-bridge-gate"),wall(right,.5-gateHalf,right,bottom,"east-south"));
  terrain.push(wall(right,bottom,left,bottom,"south"));
- if(approach==="south"){
-  terrain.push(wall(left,bottom,left,.5+gateHalf,"west-south"),gate(left,.5+gateHalf,left,.5-gateHalf,"west-gate"),wall(left,.5-gateHalf,left,top,"west-north"));
- }else{
-  terrain.push(wall(left,bottom,left,top,"west"));
- }
+ terrain.push(wall(left,bottom,left,top,"west"));
  // A northern assault on Aelthir begins at sea, under the northern battlements.
   // Add a gate on the wall facing a conventional land assault, except on the exposed north face.
  if(approach==="west"){
