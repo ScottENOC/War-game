@@ -40,7 +40,8 @@ const FACTION_PROFILES = {
  20:{id:"blackthorn",name:"House Blackthorn",race:"human",colours:{main:"#581F2A",accent:"#98999A"},emblem:"thorn"},
  21:{id:"ironMarshal",name:"The Iron Marshal",race:"human",colours:{main:"#29292D",accent:"#B66A35"},emblem:"spear"},
  22:{id:"varkesh",name:"The Principality of Varkesh",race:"human",colours:{main:"#7C342D",accent:"#D6B77B"},emblem:"sun"},
- 23:{id:"ashenCouncil",name:"The Ashen Council",race:"human",colours:{main:"#68645B",accent:"#B66A35"},emblem:"gate"}
+ 23:{id:"ashenCouncil",name:"The Ashen Council",race:"human",colours:{main:"#68645B",accent:"#B66A35"},emblem:"gate"},
+ 24:{id:"deepflame",name:"Thaurgath the Rune-Eater",race:"dragon",passive:true,colours:{main:"#493A59",accent:"#D7A94D"},emblem:"dragon"}
 };
 const FACTION_BY_ID = Object.fromEntries(Object.values(FACTION_PROFILES).map(f=>[f.id,f]));
 
@@ -93,6 +94,7 @@ function campaignCharacterConfig(id,commander=null){
  return config;
 }
 function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=null}={}){
+ if(id==="deepflame"){const roster=[{type:"deepflameDragon",models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],casterLevel:4,spells:["fireBolt","nullificationDome"],champion:false,upgrades:{},skills:{}}];return {faction:"highElves",roster,points:unitCost(roster[0],"highElves"),politicalFactionId:id};}
  const faction=rosterFactionForPoliticalFaction(id),profile=FACTION_BY_ID[id],race=profile?.race||"human";
  const basicType=race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":"swordsmen",rangedType=race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":"archers";
  const character=campaignCharacterConfig(id,player?commander:null);
@@ -325,10 +327,10 @@ const CITIES = [
 ];
 const REGION_NEIGHBORS = {
  1:[2,3,4,6],2:[1,6,17],3:[1,8,10,12,21],4:[1,5,9,20,23],5:[4,8,18,20],
- 6:[1,2,7,17],7:[6,8],8:[3,5,7,10],9:[4,10,13,14],10:[3,8,9,13,14,21],
+ 6:[1,2,7,17],7:[6,8],8:[3,5,7,10],9:[4,10,13,14,24],10:[3,8,9,13,14,21,24],
  11:[13,14],12:[3,14,15,16],13:[9,10,11,14],14:[9,10,11,12,13,15,21],
  15:[12,14,16,18],16:[12,15,18,22],17:[2,6,20],18:[5,15,16,20,22,23],
- 19:[21,22],20:[4,5,17,18,23],21:[3,10,14,19,22],22:[16,18,19,21,23],23:[4,18,20,22]
+ 19:[21,22],20:[4,5,17,18,23],21:[3,10,14,19,22],22:[16,18,19,21,23],23:[4,18,20,22,24],24:[9,10,23]
 };
 
 const CITY_PROFILES = {
