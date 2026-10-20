@@ -1,4 +1,4 @@
-import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-undead-rules-v4";
+import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-thaurgath-v1";
 import { createRoguelike } from "./roguelike.js?v=20261020-chariots-v2";
 import { createArmyBuilder } from "./armyBuilder.js?v=20261020-undead-rules-v5";
 import { createCollectionManager } from "./collection.js?v=20261020-undead-rules-v3";
