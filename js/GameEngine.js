@@ -1,6 +1,6 @@
 import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-undead-roster-v1";
 import { createRoguelike } from "./roguelike.js?v=20261020-chariots-v2";
-import { createArmyBuilder } from "./armyBuilder.js?v=20261020-undead-rules-v2";
+import { createArmyBuilder } from "./armyBuilder.js?v=20261020-undead-rules-v3";
 import { createCollectionManager } from "./collection.js?v=20261020-undead-rules-v2";
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js?v=greenskin-roster-v3";
