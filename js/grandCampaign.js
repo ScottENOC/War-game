@@ -1320,7 +1320,7 @@ function renderCampaignMap(){
  const firstRender=!map;if(!map){map=byId("grand-world-map").cloneNode(true);map.id="grand-campaign-world-map";map.querySelectorAll(".grand-city").forEach(m=>m.classList.remove("other-faction","selected","character-locked"));host.replaceChildren(map);installCampaignMapNavigation(host,map);}
  ensureRefugeeState(activeCampaign);
  const {nodes,edges}=activeCampaign.graph;
- map.querySelectorAll("#campaign-road-layer,#campaign-node-layer,#campaign-commander-layer,#campaign-refugee-layer").forEach(e=>e.remove());
+ map.querySelectorAll("#campaign-road-layer,#campaign-node-layer,#campaign-commander-layer,#campaign-army-layer,#campaign-refugee-layer").forEach(e=>e.remove());
  const selectedRefugee=activeCampaign.refugeeGroups.find(g=>g.id===activeCampaign.selectedRefugeeId&&g.owner===activeCampaign.playerPoliticalFaction);
  const movementNode=selectedRefugee?.nodeId||currentArmy?.nodeId||activeCampaign.commander.nodeId,movementLeft=selectedRefugee?.movement??currentArmy?.movement??activeCampaign.commander.movement;
  const selectedNodeId=nodes[activeCampaign.selectedMapNodeId]?activeCampaign.selectedMapNodeId:movementNode;activeCampaign.selectedMapNodeId=selectedNodeId;
