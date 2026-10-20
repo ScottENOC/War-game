@@ -133,7 +133,7 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
       const u=battleById.get(f.id);
       if(!u){if(f.benchFights>0)f.benchFights=Math.max(0,f.benchFights-1);return;}
       if(u.warbandXpEarned)f.xp=(Number(f.xp)||0)+(Number(u.warbandXpEarned)||0);
-      if(u.warbandStatus==="outOfAction"||u.models<=0){
+      if(u.warbandKilledInBattle){
         const roll=()=>1+Math.floor(Math.random()*6);
         let result=roll(),tries=0;
         while((result===3&&f.injuries?.leg)||(result===4&&f.injuries?.leftArm))result=roll();
@@ -142,7 +142,7 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
         else if(result===3){f.injuries=f.injuries||{};f.injuries.leg=true;casualtyReports.push(f.name+": loses a leg; Move −1 (roll 3).");}
         else if(result===4){f.injuries=f.injuries||{};f.injuries.leftArm=true;f.shield=false;f.offhandWeapon=false;if(["greatWeapon","halberd","bow","crossbow","firearm"].includes(f.weapon)){f.weapon="handWeapon";f.meleeWeapons=["handWeapon"];}f.rangedWeapon=null;casualtyReports.push(f.name+": loses the left arm and can no longer use two-handed weapons, shields or dual wield (roll 4).");}
         else {f.alive=false;casualtyReports.push(f.name+": dies permanently (roll "+result+").");}
-      } else if(u.warbandStatus==="stunned"||u.warbandStatus==="unconscious") {
+      } else if(u.warbandStatus==="stunned"||u.warbandStatus==="unconscious"||u.warbandStatus==="outOfAction") {
         f.woundsCurrent=1;
       } else if(u.models>0) {
         f.woundsCurrent=Math.max(1,Number(u.characterWounds)||Number(u.stats?.W)||1);
