@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v12-sea-routes";
+const MAP_ID="shattered-realms-v13-westmere-crownfall-road";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -1072,7 +1072,7 @@ function createMovementGraph(){
   const neighbors=REGION_NEIGHBORS[c.id]||[];
   const target=neighbors.map(id=>routes.find(r=>r.kind==="land"&&r.regionA===c.id&&r.regionB===id||r.kind==="land"&&r.regionA===id&&r.regionB===c.id)).find(Boolean);
   if(target){
-   wanted.slice(0,3).forEach((f,i)=>{
+   wanted.filter(f=>!(f.type==="river"&&(c.id===1||c.id===2))).slice(0,3).forEach((f,i)=>{
     const t=target.regionA===c.id?(0.24+i*0.12):(0.76-i*0.12);
     target.marks.push({t,region:c.id,type:f.type,label:c.name+" "+f.label.toLowerCase()});
    });
