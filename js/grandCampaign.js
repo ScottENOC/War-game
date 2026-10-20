@@ -62,9 +62,9 @@ const FACTION_ROSTER_OVERRIDES={
  ironjaw:{roster:"greenskins",units:["orcBoyz","boarBoyz","orcBoyz","orcHero"]},
  mudgut:{roster:"greenskins",units:["wolfRiders","goblins","boarBoyz","goblinHero"]},
  bonefield:{roster:"greenskins",units:["goblins","orcBoyz","wolfRiders","orcHero"]},
- paleRegent:{roster:"empire",units:["swordsmen","swordsmen","archers","lord"]},
- fenCourt:{roster:"empire",units:["swordsmen","archers","cavalry","captain"]},
- ashenSepulchre:{roster:"empire",units:["swordsmen","archers","cannon","lord"]},
+ paleRegent:{roster:"undead",units:["skeletons","zombies","skeletons","necromancer"]},
+ fenCourt:{roster:"undead",units:["skeletons","zombies","skeletons","necromancer"]},
+ ashenSepulchre:{roster:"undead",units:["skeletons","zombies","skeletons","masterNecromancer"]},
  blackthorn:{roster:"empire",units:["swordsmen","archers","cavalry","captain"]},
  ironMarshal:{roster:"empire",units:["swordsmen","cannon","archers","captain"]},
  varkesh:{roster:"empire",units:["swordsmen","cavalry","archers","lord"]},
@@ -76,7 +76,7 @@ function rosterFactionForPoliticalFaction(id){
 function collectionModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
 function campaignCharacterConfig(id,commander=null){
  const profile=FACTION_BY_ID[id],race=profile?.race||"human";
- let type=race==="dwarf"?"dwarfCaptain":"captain",model=null;
+ let type=race==="dwarf"?"dwarfCaptain":race==="undead"?"necromancer":"captain",model=null;
  if(commander){
   const models=collectionModels();model=models.find(m=>m.id===commander.modelId)||models.find(m=>m.name===commander.name);
   if(commander.id==="edric_voss")type="legendaryLord";
@@ -96,13 +96,13 @@ function campaignCharacterConfig(id,commander=null){
 function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=null}={}){
  if(id==="deepflame"){const roster=[{type:"deepflameDragon",models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],casterLevel:4,spells:["fireBolt","nullificationDome"],champion:false,upgrades:{},skills:{}}];return {faction:"highElves",roster,points:unitCost(roster[0],"highElves"),politicalFactionId:id};}
  const faction=rosterFactionForPoliticalFaction(id),profile=FACTION_BY_ID[id],race=profile?.race||"human";
- const basicType=race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":"swordsmen",rangedType=race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":"archers";
+ const basicType=race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":race==="undead"?"skeletons":"swordsmen",rangedType=race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":race==="undead"?"zombies":"archers";
  const character=campaignCharacterConfig(id,player?commander:null);
  let roster=[];
  if(player){
   const models=collectionModels(),count=(type,weaponFilter=null)=>models.filter(m=>m.faction===faction&&m.type===type&&(!weaponFilter||weaponFilter(m))).length;
   const meleeAvailable=count(basicType,m=>m.weapon==="handWeapon");
-  const rangedAvailable=race==="dwarf"?count("dwarfInfantry",m=>m.weapon==="crossbow"):count("archers",m=>m.weapon==="bow");
+  const rangedAvailable=race==="dwarf"?count("dwarfInfantry",m=>m.weapon==="crossbow"):race==="undead"?count("zombies",m=>m.weapon==="handWeapon"):count("archers",m=>m.weapon==="bow");
   const pushStartingUnit=(type,models,rangedWeapon=null)=>{
    roster.push({type,models,weapon:"handWeapon",meleeWeapons:["handWeapon"],...(rangedWeapon?{rangedWeapon}:{}),champion:false,upgrades:{},skills:{}});
   };
@@ -120,13 +120,13 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
   // Ranged models form one separate unit, which appears as soon as five
   // compatible archers (or dwarf crossbowmen) are owned.
   const rangedDeployed=Math.min(30,rangedAvailable);
-  if(rangedDeployed>=5)pushStartingUnit(rangedType,rangedDeployed,race==="dwarf"?"crossbow":"bow");
+  if(rangedDeployed>=5)pushStartingUnit(rangedType,rangedDeployed,race==="undead"?null:race==="dwarf"?"crossbow":"bow");
   if(commander)roster.push(character);
  }else{
   roster=[
    {type:basicType,models:15,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
    {type:basicType,models:15,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
-   {type:rangedType,models:10,weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:race==="dwarf"?"crossbow":"bow",champion:false,upgrades:{},skills:{}},
+   {type:rangedType,models:10,weapon:"handWeapon",meleeWeapons:["handWeapon"],...(race==="undead"?{}:{rangedWeapon:race==="dwarf"?"crossbow":"bow"}),champion:false,upgrades:{},skills:{}},
    character
   ];
  }
@@ -179,7 +179,7 @@ function ensureSettlementRecruitment(region){
 }
 function recruitmentPoolAvailable(faction,region){
  const race=faction?.race||FACTION_BY_ID[faction?.id]?.race||"human";
- if(race==="greenskin")return Infinity;
+ if(race==="greenskin"||race==="undead")return Infinity;
  const pools=ensureSettlementRecruitment(region);
  return Math.max(0,Math.floor(Number(pools?.[race]?.available)||0));
 }
@@ -214,7 +214,7 @@ function consumeRecruitmentPool(faction,region,count){
  count=Math.max(0,Math.floor(Number(count)||0));
  if(!faction||!region||count<=0)return false;
  const race=faction.race||FACTION_BY_ID[faction.id]?.race||"human";
- if(race==="greenskin")return true;
+ if(race==="greenskin"||race==="undead")return true;
  const pools=ensureSettlementRecruitment(region),pool=pools?.[race];
  if(!pool||Math.floor(Number(pool.available)||0)<count)return false;
  pool.available-=count;
@@ -222,6 +222,7 @@ function consumeRecruitmentPool(faction,region,count){
 }
 function civilianPopulation(region,race=null){
  const groups=region?.settlement?.population?.groups||[];
+ if(race==="undead")return Math.max(0,Math.floor(groups.filter(g=>["human","elf","dwarf"].includes(recruitmentRaceForCulture(g.culture))).reduce((n,g)=>n+Math.max(0,Number(g.count)||0),0)));
  if(race)return Math.max(0,Math.floor(groups.filter(g=>recruitmentRaceForCulture(g.culture)===race).reduce((n,g)=>n+Math.max(0,Number(g.count)||0),0)));
  return Math.max(0,Math.floor(Number(region?.settlement?.population?.total)||0));
 }
@@ -231,7 +232,7 @@ function consumeCivilianPopulation(region,count,race=null){
  const population=region.settlement.population;
  const totalBefore=civilianPopulation(region);
  let remaining=count;
- const eligible=(population.groups||[]).filter(g=>!race||recruitmentRaceForCulture(g.culture)===race).sort((a,b)=>(b.count||0)-(a.count||0));
+ const eligible=(population.groups||[]).filter(g=>!race||(race==="undead"?["human","elf","dwarf"].includes(recruitmentRaceForCulture(g.culture)):recruitmentRaceForCulture(g.culture)===race)).sort((a,b)=>(b.count||0)-(a.count||0));
  for(const group of eligible){
   const loss=Math.min(Math.max(0,group.count||0),remaining);
   group.count-=loss;remaining-=loss;if(!remaining)break;
@@ -253,7 +254,8 @@ function recruitArmyModels(army,faction,budget,campaign,factionState){
  let spent=0,added=0;
  const region=campaign?.regions?.find(r=>r.id===army.region),race=factionState?.race||FACTION_BY_ID[factionState?.id]?.race||"human";
  while(added<5&&budget-spent>0&&recruitmentPoolAvailable(factionState,region)>0&&civilianPopulation(region,race)>0){
-  const unit=(army.roster||[]).find(u=>["swordsmen","dwarfInfantry","archers","goblins","orcBoyz"].includes(u.type)&&u.models<30);
+  const recruitableTypes=race==="undead"?["skeletons","zombies"]:["swordsmen","dwarfInfantry","archers","goblins","orcBoyz"];
+  const unit=(army.roster||[]).find(u=>recruitableTypes.includes(u.type)&&u.models<30);
   if(!unit)break;
   const before=unitCost({...unit,models:unit.models},faction),after=unitCost({...unit,models:unit.models+1},faction),price=Math.max(1,after-before);
   if(budget-spent<price)break;
@@ -360,10 +362,14 @@ const CITY_PROFILES = {
 };
 const CULTURE_BY_FACTION = {empire:"Human",highElves:"High Elf",dwarfs:"Dwarf",greenskins:"Greenskin",undead:"Undead",evilHumans:"Human"};
 const FACTION_SPECIES = {empire:"human",highElves:"elf",dwarfs:"dwarf",greenskins:"greenskin",undead:"undead",evilHumans:"human"};
+function cityArchitectureType(city){
+ const race=city?.faction==="undead"?"human":FACTION_SPECIES[city?.faction]||"human";
+ return ["human","elf","dwarf","greenskin"].includes(race)?race:"human";
+}
 function initialSettlement(city){
  const p=CITY_PROFILES[city.id]||{tier:1,population:10000,prosperity:40,fortification:{style:"human-layered",material:"stone",circuits:1,gates:1,wounds:30},buildings:[]};
- const pop=p.population;
- return {historicalTier:p.tier,prosperity:p.prosperity,unrest:0,foodStores:8,maxFoodStores:8,siegeTurns:0,besiegedBy:null,population:{total:pop,groups:[{culture:CULTURE_BY_FACTION[city.faction]||"Local",count:pop}],displaced:0},buildings:p.buildings.map(id=>({id,condition:100})),fortification:{...p.fortification,condition:100,damage:0,upgrades:[]},infrastructureCondition:100,occupationPolicy:"local-administration",monthsUnderOccupation:0};
+ const pop=p.population,architectureType=cityArchitectureType(city),culture=city?.faction==="undead"?"Human":CULTURE_BY_FACTION[city.faction]||"Local";
+ return {historicalTier:p.tier,architectureType,prosperity:p.prosperity,unrest:0,foodStores:8,maxFoodStores:8,siegeTurns:0,besiegedBy:null,population:{total:pop,capacity:Math.round(pop*1.5),groups:[{culture,count:pop}],displaced:0,displacedGroups:[]},buildings:p.buildings.map(id=>({id,condition:100})),fortification:{...p.fortification,condition:100,damage:0,upgrades:[]},infrastructureCondition:100,occupationPolicy:"local-administration",monthsUnderOccupation:0};
 }
 function ensureSettlementState(campaign){
  
@@ -380,6 +386,10 @@ function ensureSettlementState(campaign){
   if(!region.politicalFactionId)region.politicalFactionId=FACTION_PROFILES[region.id]?.id||FACTION_PROFILES[city.id]?.id;
   if(!region.nativeCulture)region.nativeCulture=CULTURE_BY_FACTION[city.faction]||"Local";
   if(!region.settlement.population)region.settlement.population=initialSettlement(city).population;
+  if(!Number.isFinite(Number(region.settlement.population.capacity)))region.settlement.population.capacity=Math.round((CITY_PROFILES[city.id]?.population||region.settlement.population.total||10000)*1.5);
+  if(!Array.isArray(region.settlement.population.displacedGroups))region.settlement.population.displacedGroups=[];
+  if(!region.settlement.architectureType)region.settlement.architectureType=cityArchitectureType(city);
+  if(city.faction==="undead")for(const group of region.settlement.population.groups||[])if(String(group.culture||"").toLowerCase()==="undead")group.culture="Human";
   if(!Array.isArray(region.settlement.buildings))region.settlement.buildings=initialSettlement(city).buildings;
   if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
   ensureSettlementRecruitment(region);
@@ -406,6 +416,7 @@ function ensureSettlementState(campaign){
   const player=campaign.factionStates.find(f=>f.id===campaign.playerPoliticalFaction);if(player)campaign.treasury=player.treasury;
  }
  const dragonState=campaign.factionStates.find(f=>f.id==="deepflame");if(dragonState){dragonState.passive=true;dragonState.race="dragon";dragonState.income=0;dragonState.upkeep=0;dragonState.treasury=0;dragonState.rosterFaction="highElves";dragonState.roster=[{type:"deepflameDragon",models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],casterLevel:4,spells:["fireBolt","nullificationDome"],champion:false,upgrades:{},skills:{}}];dragonState.armyPoints=unitCost(dragonState.roster[0],"highElves");}if(!(campaign.armies||[]).some(a=>(a.owner||a.factionId)==="deepflame")){const generated=createCampaignArmyRoster("deepflame",500);campaign.armies.push({id:"deepflame-main",owner:"deepflame",factionId:"deepflame",rosterFaction:generated.faction,roster:generated.roster,region:24,nodeId:"city-24",points:generated.points,movement:0,supplies:3,maxSupplies:3,passive:true});}
+ enforcePopulationResidency(campaign);
  if(campaign.commander){const selected=(campaign.armies||[]).find(a=>a.id===campaign.selectedArmyId)|| (campaign.armies||[]).find(a=>(a.owner||a.factionId)===campaign.playerPoliticalFaction);campaign.commander.maxMovement=campaignArmyMovementProfile(selected,campaign).points;campaign.commander.movement=Math.min(campaign.commander.maxMovement,Number(campaign.commander.movement)||campaign.commander.maxMovement);}
  for(const army of campaign.armies||[])if(army.owner===campaign.playerPoliticalFaction||army.factionId===campaign.playerPoliticalFaction)army.movement=Math.min(campaignArmyMovementProfile(army,campaign).points,Number(army.movement)||0);
  return campaign;
@@ -479,7 +490,9 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
  if(isGreenskinConqueror){if(settlement.population.total<=0)settlement.recruitmentPools={};const army=options.army||(campaign.armies||[]).find(a=>(a.owner||a.factionId)===conquerorId&&a.roster?.length);if(army)awardGreenskinMomentum(campaign,army,1);}
  const factionName=FACTION_BY_ID[conquerorId]?.name||FACTIONS[conquerorFaction]?.name||conquerorId;
  const special=(conquerorId==="greenskins"||FACTION_BY_ID[conquerorId]?.race==="greenskin")&&region.nativeFaction==="dwarfs"?" Orcs slaughtered the dwarves who could not escape; surviving escapees are displaced.":"";
- const summary=city.name+" falls to "+factionName+". "+fled.toLocaleString()+" inhabitants flee; "+killed.toLocaleString()+" are killed."+(plunder?" Greenskin plunder: "+plunder.toLocaleString()+" gold; the settlement has no usable population.":"")+special+dwarfRecallMessage+" Its "+settlement.fortification.style+" fortifications remain in place, damaged but not replaced.";
+ enforcePopulationResidency(campaign);
+ const forcedDisplacement=(settlement.population.displacedGroups||[]).reduce((n,g)=>n+Math.max(0,Number(g.count)||0),0);
+ const summary=city.name+" falls to "+factionName+". "+fled.toLocaleString()+" inhabitants flee; "+killed.toLocaleString()+" are killed."+(plunder?" Greenskin plunder: "+plunder.toLocaleString()+" gold; the settlement has no usable population.":"")+(forcedDisplacement?" "+forcedDisplacement.toLocaleString()+" people are displaced because their culture cannot reside under this ruler.":"")+special+dwarfRecallMessage+" Its "+settlement.fortification.style+" fortifications remain in place, damaged but not replaced.";
  campaign.lastEvent=summary;
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
@@ -754,6 +767,114 @@ function createMovementGraph(){
 }
 function svgEl(name,attrs={}){const el=document.createElementNS("http://www.w3.org/2000/svg",name);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el;}
 function saveCampaign(){try{localStorage.setItem("warGameGrandCampaignStateV1",JSON.stringify(activeCampaign));}catch{}}
+function populationRace(group){return recruitmentRaceForCulture(group?.culture);}
+function ownerRace(owner,campaign){return FACTION_BY_ID[owner]?.race||campaign?.factionStates?.find(f=>f.id===owner)?.race||"human";}
+function migrationRisk(region,campaign){
+ if(!region)return 1;
+ let risk=Math.max(0,Math.min(1,(Number(region.settlement?.unrest)||0)/100))*0.45;
+ if(region.settlement?.besiegedBy)risk+=0.8;
+ if(campaign.warRegions?.includes(region.id))risk+=0.65;
+ for(const neighborId of region.neighbors||[]){
+  const neighbor=campaign.regions.find(r=>r.id===neighborId);if(!neighbor)continue;
+  const a=politicalOwner(region),b=politicalOwner(neighbor);
+  if(a!==b&&campaign.activeWars?.includes(campaignWarKey(a,b)))risk+=0.3;
+ }
+ if((campaign.armies||[]).some(a=>a.region===region.id&&campaign.activeWars?.some(w=>w.split(":").includes(a.owner||a.factionId))))risk+=0.2;
+ return Math.min(1,risk);
+}
+function migrationOccupancy(region){
+ const p=region?.settlement?.population;if(!p)return 1;
+ const capacity=Math.max(1,Number(p.capacity)||((CITY_PROFILES[region.id]?.population||Number(p.total)||1)*1.5));
+ return Math.max(0,Number(p.total)||0)/capacity;
+}
+function migrationTargetAccepts(region,group,campaign){
+ const race=populationRace(group),rulerRace=ownerRace(politicalOwner(region),campaign);
+ return rulerRace==="greenskin"?race==="greenskin":race!=="greenskin";
+}
+function safeMigrationPath(campaign,from,to,owner){
+ if(!from||!to||from.id===to.id||politicalOwner(from)!==owner||politicalOwner(to)!==owner)return null;
+ const queue=[[from.id]],seen=new Set([from.id]);
+ while(queue.length){
+  const path=queue.shift(),id=path[path.length-1];
+  if(id===to.id)return path;
+  const region=campaign.regions.find(r=>r.id===id);
+  for(const nextId of region?.neighbors||[]){
+   if(seen.has(nextId))continue;
+   const next=campaign.regions.find(r=>r.id===nextId);
+   if(!next||politicalOwner(next)!==owner)continue;
+   if(next.id!==to.id&&migrationRisk(next,campaign)>=0.55)continue;
+   if(next.id===to.id&&migrationRisk(next,campaign)>=0.65)continue;
+   seen.add(nextId);queue.push([...path,nextId]);
+  }
+ }
+ return null;
+}
+function addPopulationGroup(region,culture,count){
+ if(count<=0)return;
+ const population=region.settlement.population;
+ let group=population.groups.find(g=>g.culture===culture);
+ if(!group){group={culture,count:0};population.groups.push(group);}
+ group.count+=count;population.total=Math.max(0,Number(population.total)||0)+count;
+}
+function displacePopulationGroup(region,group,count){
+ count=Math.min(Math.max(0,Math.floor(Number(count)||0)),Math.max(0,Math.floor(Number(group?.count)||0)));
+ if(!count)return 0;
+ const population=region.settlement.population;
+ group.count-=count;population.total=Math.max(0,(Number(population.total)||0)-count);
+ population.displaced=Math.max(0,Number(population.displaced)||0)+count;
+ if(!Array.isArray(population.displacedGroups))population.displacedGroups=[];
+ let displaced=population.displacedGroups.find(g=>g.culture===group.culture);
+ if(!displaced){displaced={culture:group.culture,count:0};population.displacedGroups.push(displaced);}
+ displaced.count+=count;
+ return count;
+}
+function enforcePopulationResidency(campaign){
+ for(const region of campaign.regions||[]){
+  const groups=region.settlement?.population?.groups||[];
+  for(const group of groups){
+   if(!group||group.count<=0)continue;
+   if(!migrationTargetAccepts(region,group,campaign))displacePopulationGroup(region,group,group.count);
+  }
+  const population=region.settlement?.population;if(population)population.groups=population.groups.filter(g=>g.count>0);
+ }
+}
+function settleMonthlyMigration(campaign){
+ const plans=[];
+ const regions=(campaign.regions||[]).filter(r=>r.settlement?.population);
+ enforcePopulationResidency(campaign);
+ for(const source of regions){
+  const owner=politicalOwner(source),sourceRisk=migrationRisk(source,campaign),sourceOccupancy=migrationOccupancy(source);
+  for(const group of [...(source.settlement.population.groups||[])].sort((a,b)=>(b.count||0)-(a.count||0))){
+   if(group.count<=0)continue;
+   let best=null;
+   for(const target of regions){
+    if(target.id===source.id||politicalOwner(target)!==owner||!migrationTargetAccepts(target,group,campaign))continue;
+    const path=safeMigrationPath(campaign,source,target,owner);if(!path)continue;
+    const targetRisk=migrationRisk(target,campaign),targetOccupancy=migrationOccupancy(target);
+    const targetArchitecture=String(target.settlement.architectureType||cityArchitectureType(CITIES.find(c=>c.id===target.id)));
+    const sourceArchitecture=String(source.settlement.architectureType||cityArchitectureType(CITIES.find(c=>c.id===source.id)));
+    const targetPreference=targetArchitecture===populationRace(group)?1:0,sourcePreference=sourceArchitecture===populationRace(group)?1:0;
+    const riskGain=sourceRisk-targetRisk,spaceGain=sourceOccupancy-targetOccupancy;
+    const score=riskGain*2+spaceGain+(targetPreference-sourcePreference)*0.5-(path.length-1)*0.025;
+    const motivated=riskGain>=0.12||spaceGain>=0.12||(targetPreference>sourcePreference&&targetOccupancy<=sourceOccupancy+0.05);
+    if(!motivated||score<=0)continue;
+    if(!best||score>best.score)best={target,score};
+   }
+   if(best)plans.push({source,target:best.target,group,culture:group.culture,count:Math.min(group.count,Math.max(1,Math.floor(Math.min(1000,group.count*0.01))))});
+  }
+ }
+ // Execute planned transfers only after selection; no migrant moves twice in one month.
+ for(const plan of plans){
+  const current=plan.source.settlement.population.groups.find(g=>g.culture===plan.culture);
+  if(!current||current.count<plan.count)continue;
+  current.count-=plan.count;plan.source.settlement.population.total=Math.max(0,plan.source.settlement.population.total-plan.count);
+  addPopulationGroup(plan.target,plan.culture,plan.count);
+ }
+ for(const region of regions){
+  const p=region.settlement.population;p.groups=p.groups.filter(g=>g.count>0);
+  p.total=p.groups.reduce((n,g)=>n+Math.max(0,Number(g.count)||0),0);
+ }
+}
 function settleMonthlyPopulation(campaign){
  for(const region of campaign.regions||[]){
   const s=region.settlement;if(!s||!s.population)continue;
@@ -1514,7 +1635,7 @@ function runAIFactionTurn(campaign,faction){
 function endCampaignTurn(){
  if(!activeCampaign)return;
  let playerAnimosityMessage="";
- ensureSettlementState(activeCampaign);settleMonthlyPopulation(activeCampaign);
+ ensureSettlementState(activeCampaign);settleMonthlyPopulation(activeCampaign);settleMonthlyMigration(activeCampaign);
  const order=activeCampaign.factionTurnOrder||[],states=activeCampaign.factionStates||[];
  const playerId=activeCampaign.playerPoliticalFaction||FACTION_PROFILES[activeCampaign.startingRegion]?.id;
  activeCampaign.activeWars=activeCampaign.activeWars||[];
