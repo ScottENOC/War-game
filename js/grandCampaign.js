@@ -567,7 +567,7 @@ function ensureSettlementState(campaign){
   campaign.regions=(campaign.regions||[]).filter(region=>CITIES.some(city=>city.id===region.id)&&!(region.id===26&&/deadman/i.test(String(region.name||""))));
   for(const region of campaign.regions||[])region.neighbors=[...(REGION_NEIGHBORS[region.id]||[])];
  if(campaign.mapId!==MAP_ID||!campaign.graph?.nodes||!campaign.graph?.edges){
-  campaign.graph=createMovementGraph();campaign.mapId=MAP_ID;
+  campaign.graph=createMovementGraph();campaign.mapId=MAP_ID;if(String(campaign.lastEvent||"").includes(" begins the campaign at "))campaign.lastEvent="Campaign map updated.";
   for(const army of campaign.armies||[])if(!campaign.graph.nodes[army.nodeId])army.nodeId="city-"+(army.region||army.homeRegion||campaign.startingRegion);
   if(campaign.commander&&!campaign.graph.nodes[campaign.commander.nodeId])campaign.commander.nodeId="city-"+(campaign.commander.region||campaign.startingRegion);
  }
