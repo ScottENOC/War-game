@@ -1066,7 +1066,7 @@ function recruitCatalog(){
   ...(race==="greenskin"?[]:[{key:"halberdiers",label:"Halberdiers",type:basic,weapon:"halberd",min:5,max:30,modelType:basic,modelWeapon:"halberd"}]),
   {key:"greatWeapons",label:"Great-weapon infantry",type:basic,weapon:"greatWeapon",min:5,max:30,modelType:basic,modelWeapon:"greatWeapon"},
   ...(race!=="dwarf"&&race!=="greenskin"&&race!=="undead"?[{key:"cavalry",label:race==="elf"?"High Elf cavalry":"Cavalry",type:"cavalry",weapon:"handWeapon",min:5,max:15,modelType:"cavalry"}]:[]),
-  ...(race==="greenskin"?[]:[{key:"artillery",label:race==="elf"?"Bolt thrower":race==="dwarf"?"Dwarf cannon":"Cannon",type:race==="elf"?"boltThrower":"cannon",weapon:"handWeapon",min:race==="elf"?2:3,max:race==="elf"?2:3,modelType:race==="elf"?"boltThrower":"cannon",modelWeapon:"none",fixed:true,crewType:race==="dwarf"?"dwarfInfantry":"swordsmen",crewWeapon:race==="elf"?"spear":"handWeapon"}]),
+  ...(race==="greenskin"||race==="undead"?[]:[{key:"artillery",label:race==="elf"?"Bolt thrower":race==="dwarf"?"Dwarf cannon":"Cannon",type:race==="elf"?"boltThrower":"cannon",weapon:"handWeapon",min:race==="elf"?2:3,max:race==="elf"?2:3,modelType:race==="elf"?"boltThrower":"cannon",modelWeapon:"none",fixed:true,crewType:race==="dwarf"?"dwarfInfantry":"swordsmen",crewWeapon:race==="elf"?"spear":"handWeapon"}]),
   ...(race==="greenskin"?[]:race==="dwarf"?[
    {key:"dwarfCaptain",label:"Dwarf thane",type:"dwarfCaptain",weapon:"handWeapon",min:1,max:1,modelType:"dwarfCaptain",character:true},
    {key:"dwarfLord",label:"Dwarf lord",type:"dwarfLord",weapon:"handWeapon",min:1,max:1,modelType:"dwarfLord",character:true},
