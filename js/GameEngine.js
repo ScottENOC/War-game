@@ -209,7 +209,7 @@ function finishBattle(msg){
  S.finished=true;S.phase="over";
  clearBattleSave();
  const won=msg.toLowerCase().includes("player wins");
- if(won&&collectionManager&&!campaignBattle&&!grandCampaignBattle&&!roguelikeBattle&&!warbandBattle){collectionManager.grantLootbox("skirmish");say("Skirmish victory reward: one lootbox added to your collection.");}
+ if(won&&collectionManager&&!campaignBattle&&!grandCampaignBattle&&!roguelikeBattle&&!warbandBattle&&!warbandExpeditionBattle){collectionManager.grantLootbox("skirmish");say("Skirmish victory reward: one lootbox added to your collection.");}
  if(warbandExpeditionBattle){warbandExpeditionBattle=false;warbandExpedition?.onBattleFinished(won,units().filter(u=>u.side==="player"),S.warbandKills||0);S.warbandExpedition=false;S.warbandSkirmish=false;return;}
  if(warbandBattle){warband?.onBattleFinished(won);warbandBattle=false;S.warbandSkirmish=false;}
  say('<b>'+msg+'</b>');
