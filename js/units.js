@@ -1,4 +1,4 @@
-import { FACTIONS } from "./factions.js?v=20261020-thaurgath-v1";
+import { FACTIONS } from "./factions.js?v=20261020-thaurgath-v2";
 
 export function unitCost(config, faction) {
   const elf=faction==="highElves",dwarf=faction==="dwarfs",green=faction==="greenskins",undead=faction==="undead",type=config.type,models=config.models||1,character=["captain","lord","mageHero","mageLord","starwardenLord","necromancer","masterNecromancer","vampireHero","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric","goblinHero","goblinLord","orcHero","orcLord"].includes(type),eagleKit=elf&&(character||type==="cavalry")&&(config.mountType==="eagle"||type==="pegasusChampion"),dragonCosts={youngDragon:140,dragon:220,ancientDragon:320,deepflameDragon:450,wyvern:100,skeletonChariot:75},chariotTypes=["humanChariot","elfChariot","goblinChariot","orcChariot","skeletonChariot"],mageStatCost=["M","BS","T","I","Ld"].reduce((sum,k)=>sum+(config.upgrades?.[k]?({M:dwarf?8:5,BS:5,T:dwarf?5:8,I:dwarf?5:3,Ld:3}[k]||0):0),0);
