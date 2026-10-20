@@ -73,8 +73,8 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
           ["lightArmour", "Light armour", 3, !f.lightArmour && !f.heavyArmour],
           ["heavyArmour", "Heavy armour", 7, !f.heavyArmour],
           ["shield", "Shield", 3, !f.shield && !f.injuries?.leftArm && !["greatWeapon","halberd","bow","crossbow","firearm"].includes(f.weapon)],
-          ["greatWeapon", "Great weapon", 6, !f.injuries?.leftArm && !f.shield && !f.offhandWeapon && f.weapon !== "greatWeapon"],
-          ["offhandWeapon", "Second sword", 5, !f.injuries?.leftArm && !f.shield && !["greatWeapon","halberd","bow","crossbow","firearm"].includes(f.weapon) && !f.offhandWeapon]
+          ["greatWeapon", "Great weapon", 6, !f.injuries?.leftArm && !f.shield && !f.offhandWeapon && !f.rangedWeapon && f.weapon !== "greatWeapon"],
+          ["offhandWeapon", "Second sword", 5, !f.injuries?.leftArm && !f.shield && !f.rangedWeapon && !["greatWeapon","halberd","bow","crossbow","firearm"].includes(f.weapon) && !f.offhandWeapon]
         ];
         choices.forEach(([key,label,cost,allowed]) => { if (!allowed) return; const btn = document.createElement("button"); btn.className = "secondary-button"; btn.textContent = label + " · " + cost; btn.disabled = run.bank < cost; btn.addEventListener("click", () => buyEquipment(f.id,key,cost)); gear.append(btn); });
         row.append(gear);
