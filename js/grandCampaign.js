@@ -517,7 +517,8 @@ function ensureSettlementState(campaign){
   for(const army of campaign.armies||[])if(!campaign.graph.nodes[army.nodeId])army.nodeId="city-"+(army.region||army.homeRegion||campaign.startingRegion);
   if(campaign.commander&&!campaign.graph.nodes[campaign.commander.nodeId])campaign.commander.nodeId="city-"+(campaign.commander.region||campaign.startingRegion);
  }
- campaign.schemaVersion=7;
+ ensureMinorSettlementState(campaign);
+  campaign.schemaVersion=8;
  if(!campaign.factionStates){campaign.factionStates=Object.values(FACTION_PROFILES).map(profile=>{const home=CITIES.find(c=>FACTION_PROFILES[c.id].id===profile.id),generated=createCampaignArmyRoster(profile.id,profile.id===campaign.playerPoliticalFaction?1000:500);return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:generated.faction,roster:generated.roster,homeRegion:home.id,alive:true,treasury:profile.id===campaign.playerPoliticalFaction?Number(campaign.treasury)||500:300,income:100,armyPoints:profile.id===campaign.playerPoliticalFaction?1000:500,turnsTaken:0,relations:{},};});campaign.factionTurnOrder=campaign.factionStates.map(f=>f.id);campaign.playerPoliticalFaction=campaign.playerPoliticalFaction||FACTION_PROFILES[campaign.startingRegion]?.id||FACTION_PROFILES[1].id;campaign.activeFaction=campaign.activeFaction||campaign.playerPoliticalFaction;}
  for(const state of campaign.factionStates){if((!Array.isArray(state.roster)||!state.roster.length)&&state.alive!==false&&!state.passive){const generated=createCampaignArmyRoster(state.id,state.armyPoints||500);state.rosterFaction=generated.faction;state.roster=generated.roster;}}
  if(!campaign.factionStates.some(f=>f.id==="deepflame")){const profile=FACTION_BY_ID.deepflame,generated=createCampaignArmyRoster("deepflame",500);campaign.factionStates.push({id:profile.id,name:profile.name,race:profile.race,rosterFaction:generated.faction,roster:generated.roster,homeRegion:24,alive:true,passive:true,treasury:0,income:0,upkeep:0,armyPoints:generated.points,turnsTaken:0,relations:{}});campaign.factionTurnOrder=campaign.factionTurnOrder||campaign.factionStates.filter(f=>f.id!=="deepflame").map(f=>f.id);if(!campaign.factionTurnOrder.includes("deepflame"))campaign.factionTurnOrder.push("deepflame");}
@@ -1202,7 +1203,8 @@ function settleMonthlyPopulation(campaign){
   }
  }
 }
-function nodeCost(n){return n.type==="river"?2:1;}
+for(const place of campaign.minorSettlements||[]){const population=Math.max(0,Number(place.population)||0),rate=place.prosperity>=65?.0015:.0005;place.population=Math.max(0,Math.round(population*(1+rate)));}
+ function nodeCost(n){return n.type==="river"?2:1;}
 function supplyOwnerAtNode(campaign,nodeId){const n=campaign.graph?.nodes?.[nodeId];if(!n)return null;const region=campaign.regions.find(r=>r.id===n.region);return region?politicalOwner(region):null;}
 function campaignSupplyPath(campaign,army){
  if(!army||!campaign.graph?.nodes||!campaign.graph?.edges)return [];
@@ -2059,7 +2061,7 @@ function runAIFactionTurn(campaign,faction){
  for(const fieldArmy of factionArmies){fieldArmy.movement=campaignArmyMovementProfile(fieldArmy,campaign).points;const animosity=processGreenskinAnimosity(campaign,fieldArmy);if(animosity.interrupted){faction.armyPoints=fieldArmy.points;faction.roster=fieldArmy.roster;return animosity.message;}}
  growFactionRecruitment(campaign,faction);
  const owned=campaign.regions.filter(r=>politicalOwner(r)===faction.id);
- faction.income=owned.reduce((sum,r)=>sum+campaignCityIncome(r),0);
+ faction.income=owned.reduce((sum,r)=>sum+campaignCityIncome(r,campaign),0)+campaignMinorSettlementIncome(campaign,faction.id);
  faction.turnsTaken=(faction.turnsTaken||0)+1;
  faction.upkeep=campaignArmyUpkeep(army);
  faction.treasury=Math.max(0,(faction.treasury||0)+faction.income-faction.upkeep);
@@ -2124,7 +2126,7 @@ function endCampaignTurn(){
  const player=states.find(f=>f.id===playerId);
  if(player){
   const owned=activeCampaign.regions.filter(r=>politicalOwner(r)===playerId);
-  player.income=owned.reduce((sum,r)=>sum+campaignCityIncome(r),0);
+  player.income=owned.reduce((sum,r)=>sum+campaignCityIncome(r,activeCampaign),0)+campaignMinorSettlementIncome(activeCampaign,playerId);
   const armies=playerArmies();
   player.upkeep=armies.reduce((sum,a)=>sum+campaignArmyUpkeep(a),0);
   player.treasury=Math.max(0,(player.treasury||0)+player.income-player.upkeep);
