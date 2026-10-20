@@ -887,7 +887,7 @@ function createMovementGraph(){
  const ports=[
   {id:"port-5",region:5,type:"port",label:"Southwatch harbour",x:625,y:515,city:5},
   {id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:119,y:76,city:6},
-  {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:561,y:163,city:7},
+  {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:541,y:116,city:7},
   {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:773,y:226,city:8},
   {id:"port-17",region:17,type:"port",label:"Barrowmere harbour",x:123,y:450,city:17}
  ];
@@ -899,7 +899,17 @@ function createMovementGraph(){
   if(seaLinks.has(key)){
    const pA=ports.find(p=>p.city===c.id)||ports.find(p=>p.city===other);
    const pB=ports.find(p=>p.city===other&&p!==pA)||ports.find(p=>p.city===c.id&&p!==pA);
-   if(pA&&pB){if(key==="6-7"){const northA={id:"aelthir-north-sea-waypoint",region:6,type:"seaRoute",label:"Northern sea passage",x:190,y:42},northB={id:"greyward-north-sea-waypoint",region:7,type:"seaRoute",label:"Greyward northern passage",x:315,y:32},northC={id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55};for(const n of [northA,northB,northC])add(n);route(pA.id,northA.id,"sea",c.id,other);route(northA.id,northB.id,"sea",c.id,other);route(northB.id,northC.id,"sea",c.id,other);route(northC.id,pB.id,"sea",c.id,other);}else route(pA.id,pB.id,"sea",c.id,other);}
+   if(pA&&pB){
+    if(key==="6-7"){
+     const waypoints=[{id:"aelthir-north-sea-waypoint",region:6,type:"seaRoute",label:"Northern sea passage",x:190,y:42},{id:"greyward-north-sea-waypoint",region:7,type:"seaRoute",label:"Greyward northern passage",x:315,y:32},{id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55}];
+     for(const n of waypoints)add(n);
+     const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+    }else if(key==="6-17"){
+     const waypoints=[{id:"barrowmere-west-sea-1",region:17,type:"seaRoute",label:"Western coastal passage",x:62,y:155},{id:"barrowmere-west-sea-2",region:17,type:"seaRoute",label:"Western island passage",x:48,y:260},{id:"barrowmere-west-sea-3",region:17,type:"seaRoute",label:"Barrowmere outer passage",x:64,y:365}];
+     for(const n of waypoints)add(n);
+     const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+    }else route(pA.id,pB.id,"sea",c.id,other);
+   }
    continue;
   }
   // Island cities have no mainland road links; onward travel is by sea.
