@@ -60,7 +60,9 @@ export const FACTIONS = {
   undead: { name:"Undead", undead:true, units:{
     zombies:{name:"Zombies",short:"Zombies",kind:"melee",models:20,points:6,undead:true,causesFear:true,stats:{M:4,WS:2,BS:0,S:3,T:3,W:1,I:1,A:1,Ld:2}},
     skeletons:{name:"Skeleton Warriors",short:"Skeletons",kind:"melee",models:20,points:8,undead:true,causesFear:true,stats:{M:4,WS:2,BS:2,S:3,T:3,W:1,I:2,A:1,Ld:3}},
-    skeletonHorses:{name:"Skeletal Steeds",short:"Skeletal Steeds",kind:"cavalry",models:5,points:12,undead:true,causesFear:true,isSkeletalCavalry:true,mountStats:{A:0,WS:2,I:2,S:0},stats:{M:8,WS:2,BS:0,S:3,T:3,W:1,I:2,A:1,Ld:3}},
+    skeletonHorses:{name:"Skeleton Horsemen",short:"Skeleton Horsemen",kind:"cavalry",models:5,points:12,undead:true,causesFear:true,isSkeletalCavalry:true,mountStats:{A:0,WS:2,I:2,S:0},stats:{M:8,WS:2,BS:2,S:3,T:3,W:1,I:2,A:1,Ld:3}},
+    skeletonChariot:{name:"Skeleton Chariot",short:"Skeleton Chariot",kind:"chariot",models:3,points:75,undead:true,causesFear:true,chariot:true,isSkeletalChariot:true,stats:{M:8,WS:2,BS:2,S:3,T:4,W:4,I:2,A:1,Ld:5},mountStats:{A:1,WS:2,I:2,S:3},impactStrength:4,armourSave:5},
+    catapult:{name:"Skeleton Catapult",short:"Skeleton Catapult",kind:"artillery",models:3,points:70,undead:true,isCatapult:true,stats:{M:0,WS:2,BS:2,S:3,T:3,W:2,I:2,A:1,Ld:3}},
     necromancer:{name:"Necromancer",short:"Necromancer",kind:"hero",models:1,points:55,undead:true,spellcaster:true,baseCasterLevel:1,necromancer:true,stats:{M:4,WS:3,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:7}},
     masterNecromancer:{name:"Master Necromancer",short:"Master Necromancer",kind:"hero",models:1,points:100,undead:true,spellcaster:true,baseCasterLevel:3,necromancer:true,isGeneral:true,stats:{M:4,WS:3,BS:3,S:3,T:4,W:3,I:3,A:1,Ld:8}},
     vampireHero:{name:"Vampire Thrall",short:"Vampire",kind:"hero",models:1,points:75,undead:true,vampire:true,stats:{M:4,WS:6,BS:5,S:5,T:4,W:2,I:6,A:2,Ld:7}},
