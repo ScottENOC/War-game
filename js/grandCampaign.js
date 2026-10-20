@@ -469,7 +469,7 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
   if(treasuryState)treasuryState.treasury=Math.max(0,Number(treasuryState.treasury)||0)+plunder;
   if(conquerorId===campaign.playerPoliticalFaction)campaign.treasury=Math.max(0,Number(campaign.treasury)||0)+plunder;
  }
- if(isGreenskinConqueror){if(settlement.population.total<=0)settlement.recruitmentPools={};const army=(campaign.armies||[]).find(a=>(a.owner||a.factionId)===conquerorId&&a.roster?.length);if(army)awardGreenskinMomentum(campaign,army,1);}
+ if(isGreenskinConqueror){if(settlement.population.total<=0)settlement.recruitmentPools={};const army=options.army||(campaign.armies||[]).find(a=>(a.owner||a.factionId)===conquerorId&&a.roster?.length);if(army)awardGreenskinMomentum(campaign,army,1);}
  const factionName=FACTION_BY_ID[conquerorId]?.name||FACTIONS[conquerorFaction]?.name||conquerorId;
  const special=(conquerorId==="greenskins"||FACTION_BY_ID[conquerorId]?.race==="greenskin")&&region.nativeFaction==="dwarfs"?" Orcs slaughtered the dwarves who could not escape; surviving escapees are displaced.":"";
  const summary=city.name+" falls to "+factionName+". "+fled.toLocaleString()+" inhabitants flee; "+killed.toLocaleString()+" are killed."+(plunder?" Greenskin plunder: "+plunder.toLocaleString()+" gold; the settlement has no usable population.":"")+special+" Its "+settlement.fortification.style+" fortifications remain in place, damaged but not replaced.";
@@ -990,7 +990,7 @@ function launchCampaignBattle(region,attackingArmyOverride=null){
   if(result.won){
    const greenskinPlayer=campaignIsGreenskin(activeCampaign,playerId);
    const sackCity=greenskinPlayer&&window.confirm("Sack "+region.name+" for a large haul of plunder? Its usable population will be destroyed and future city income lost. Choose Cancel to occupy it instead.");
-   const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:greenskinPlayer?(sackCity?"sack":"occupy"):"occupy"});
+   const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:greenskinPlayer?(sackCity?"sack":"occupy"):"occupy",army:playerArmy});
    playerArmy.region=region.id;playerArmy.nodeId="city-"+region.id;if(selectedPlayerArmy()===playerArmy){activeCampaign.commander.region=region.id;activeCampaign.commander.nodeId="city-"+region.id;}
    activeCampaign.lastEvent=!playerArmy.roster.length?"Victory at "+region.name+", but your army has been destroyed. Rebuild from your remaining miniatures and treasury.":"Victory at "+region.name+". "+outcome.summary;
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
@@ -1159,6 +1159,7 @@ function declareCampaignWar(campaign,attackerId,defenderId){
  const key=campaignWarKey(attackerId,defenderId);
  if(campaign.activeWars.includes(key))return false;
  campaign.activeWars.push(key);
+ campaign.activeAlliances=(campaign.activeAlliances||[]).filter(k=>k!==campaignAllianceKey(attackerId,defenderId));
  setCampaignRelation(campaign,attackerId,defenderId,campaignRelation(campaign,attackerId,defenderId)-25);
  setCampaignRelation(campaign,defenderId,attackerId,campaignRelation(campaign,defenderId,attackerId)-25);
  for(const third of campaign.factionStates||[]){
@@ -1228,7 +1229,7 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  applyStrategicArmyLosses(loseArmy,winner===attacker?.42:.55);
  for(const state of campaign.factionStates){const army=state.id===winner.id?winArmy:state.id===loser.id?loseArmy:null;if(army){state.armyPoints=army.points;state.roster=army.roster;if(!army.roster.length)state.alive=false;}}
  if(winner===attacker){
-  const result=resolveGrandCampaignConquest(campaign,target.id,attacker.id);
+  const result=resolveGrandCampaignConquest(campaign,target.id,attacker.id,{army:attacking});
   if(attacking){attacking.region=target.id;attacking.nodeId="city-"+target.id;}
   campaign.lastEvent=attacker.name+" defeats "+defender.name+" at "+target.name+" and captures the settlement. "+result.summary;
  }else{
@@ -1378,6 +1379,8 @@ function campaignStrategicFieldBattle(campaign,attackerArmy,defenderArmy){
  const attackPower=Math.max(1,attackerArmy.points||campaignArmyCost(attackerArmy)||100)*(.8+Math.random()*.4);
  const defencePower=Math.max(1,defenderArmy.points||campaignArmyCost(defenderArmy)||100)*(.8+Math.random()*.4);
  const winner=attackPower>=defencePower?attackerArmy:defenderArmy,loser=winner===attackerArmy?defenderArmy:attackerArmy;
+ awardGreenskinMomentum(campaign,winner,2);
+ awardGreenskinMomentum(campaign,loser,-2);
  applyStrategicArmyLosses(winner,.72);applyStrategicArmyLosses(loser,.42);
  for(const army of [attackerArmy,defenderArmy]){army.foughtThisTurn=true;const state=campaign.factionStates.find(f=>f.id===(army.owner||army.factionId));if(state){state.armyPoints=army.points;state.roster=army.roster;if(!army.roster.length)state.alive=false;}}
  const loserOwner=loser.owner||loser.factionId,loserState=campaign.factionStates.find(f=>f.id===loserOwner),home=loserState?.homeRegion||loser.region;
