@@ -16,7 +16,7 @@ import { createPhases } from "./phases.js?v=20261020-vision-v1";
 import { createDice } from "./dice.js";
 import { createMovement } from "./movement.js?v=20261021-impassable-river-v1";
 import { createNarrativeCampaign } from "./campaign.js";
-import { generateSkirmishTerrain, generateRiverCrossingCastleTerrain } from "./terrain.js?v=20261021-river-crossing-castles-v3";
+import { generateSkirmishTerrain, generateRiverCrossingCastleTerrain } from "./terrain.js?v=20261021-river-crossing-castles-v4";
 import { createVision } from "./vision.js?v=20261020-vision-v1";
 
 export function startGame() {
