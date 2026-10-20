@@ -92,8 +92,13 @@ export function createUnitsFromArmy(army,faction="empire") {
       if((entry.freeCavalryOption||"bow")==="bow")aiEntry.bow=true;
       else if(!["lance","greatWeapon"].includes(aiEntry.weapon))aiEntry.weapon="spear";
     }
+    const chariotMount=playerFaction==="undead"&&entry.mountType==="skeletonChariot"&&["necromancer","masterNecromancer","vampireHero","vampireLord"].includes(entry.type);
     const dragonMount=(playerFaction==="highElves"&&entry.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(entry.mountType))||(playerFaction==="greenskins"&&entry.type==="orcLord"&&entry.mountType==="wyvern");
-    if(dragonMount){
+    if(chariotMount){
+      const chariotTemplate=FACTIONS.undead.units.skeletonChariot,host=buildUnit(chariotTemplate,{type:"skeletonChariot",id:"p"+n,index:n,models:3,side:"player",x:.22,y,facing:0},playerFaction,false);
+      const rider=buildUnit(FACTIONS.undead.units[entry.type],{...playerEntry,type:entry.type,mounted:false,mountType:"none",id:"p"+n+"r",index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
+      host.points=chariotTemplate.points;rider.points=Math.max(0,unitCost(entry,playerFaction)-host.points);rider.mounted=true;rider.mountType="skeletonChariot";rider.isChariotRider=true;rider.baseWidthIn=host.baseWidthIn;rider.baseDepthIn=host.baseDepthIn;rider.heightIn=host.heightIn;rider.attachedTo=host.id;host.attachedCharacters=[rider.id];units[host.id]=host;units[rider.id]=rider;
+    }else if(dragonMount){
       const dragonType=entry.mountType,mountFaction=dragonType==="wyvern"?"greenskins":"highElves",dragonTemplate=FACTIONS[mountFaction].units[dragonType],host=buildUnit(dragonTemplate,{type:dragonType,id:"p"+n,index:n,models:1,side:"player",x:.22,y,facing:0},playerFaction,false);
       host.points=dragonTemplate.points;host.isDragonMount=true;host.mounted=true;host.isCavalry=true;host.mountType=dragonType;
       const riderType=entry.type==="orcLord"?"orcLord":"lord",rider=buildUnit(FACTIONS[playerFaction].units[riderType],{...playerEntry,type:riderType,mounted:false,mountType:"none",id:"p"+n+"r",index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
