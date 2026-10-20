@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v13-westmere-crownfall-road";
+const MAP_ID="shattered-realms-v14-river-crossing-castles";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -1208,6 +1208,64 @@ function createMovementGraph(){
   oldreachAelthirCrossroads.type="crossroads";
   oldreachAelthirCrossroads.label="Oldreach–Aelthir Crossroads";
  }
+ // Local campaign-map revisions: explicit roads, villages, harbours and river crossings.
+ const removeAndSplice=(id)=>{
+  if(!nodes[id])return;
+  const neighbours=(edges[id]||[]).filter(e=>nodes[e.to]).map(e=>({id:e.to,kind:e.kind||"land"}));
+  for(let i=0;i<neighbours.length;i++)for(let j=i+1;j<neighbours.length;j++)if(neighbours[i].id!==neighbours[j].id&&neighbours[i].kind===neighbours[j].kind)link(neighbours[i].id,neighbours[j].id,1,neighbours[i].kind);
+  for(const list of Object.values(edges))for(let i=list.length-1;i>=0;i--)if(list[i].to===id)list.splice(i,1);
+  delete nodes[id];delete edges[id];
+ };
+ const renameNode=(oldId,newId,overrides={})=>{
+  const node=nodes[oldId];if(!node)return null;
+  if(nodes[newId]&&newId!==oldId)removeAndSplice(newId);
+  delete nodes[oldId];delete edges[oldId];Object.assign(node,overrides,{id:newId});nodes[newId]=node;edges[newId]=edges[newId]||[];
+  for(const [from,list] of Object.entries(edges)){for(const edge of list)if(edge.to===oldId)edge.to=newId;const seen=new Set();edges[from]=list.filter(e=>{const k=e.to+"|"+e.kind;if(seen.has(k))return false;seen.add(k);return e.to!==from;});}
+  return node;
+ };
+ const mergeInto=(sourceId,targetId,label)=>{
+  const source=nodes[sourceId],target=nodes[targetId];if(!source||!target)return;
+  if(label)target.label=label;
+  for(const edge of edges[sourceId]||[])if(edge.to!==targetId)link(targetId,edge.to,edge.cost||1,edge.kind||"land");
+  for(const list of Object.values(edges))for(const edge of list)if(edge.to===sourceId)edge.to=targetId;
+  delete nodes[sourceId];delete edges[sourceId];
+  for(const [from,list] of Object.entries(edges)){const seen=new Set();edges[from]=list.filter(e=>{const k=e.to+"|"+e.kind;if(from===e.to||seen.has(k))return false;seen.add(k);return true;});}
+ };
+ // Remove redundant/meaningless points, keeping their adjoining routes connected.
+ removeAndSplice("crossroad-1");
+ removeAndSplice("crossroads-1");
+ removeAndSplice("feature-1-2-land-2");
+ removeAndSplice("forest-poi-central");
+ // Replace the old crossroads ID with a genuine river-crossing node at the same location.
+ renameNode("waypoint-crossroads-2-crossroads-6-2","river-crossing-oldreach-aelthir",{type:"river",label:"Oldreach–Aelthir River Crossing"});
+ // Goldhaven itself is the junction; discard the overlapping generated intersection.
+ mergeInto("crossing-337-295","city-3","Goldhaven");
+ if(nodes["city-3"]){nodes["city-3"].type="crossroads";nodes["city-3"].label="Goldhaven";}
+ // Human and elven villages lie on the road from the Oldreach forest to Aelthir.
+ const oldreachVillage={id:"village-poi-oldreach-human",region:2,type:"village",label:"Oldreach Watch village",x:128,y:177,population:780,prosperity:46,controllerFaction:"empire"};
+ const aelthirVillage={id:"village-poi-aelthir-elf",region:6,type:"village",label:"Lethariel's Grove",x:151,y:132,population:620,prosperity:58,controllerFaction:"highElves"};
+ for(const n of [oldreachVillage,aelthirVillage])add(n);
+ link("forest-poi-west-1",oldreachVillage.id,1,"land");
+ link(oldreachVillage.id,aelthirVillage.id,1,"land");
+ link(aelthirVillage.id,"city-6",1,"land");
+ // Goldhaven's western road crosses the nearby river, then runs north through a village to the northern mountain road.
+ const goldhavenWestCrossing={id:"river-crossing-goldhaven-west",region:3,type:"river",label:"Goldhaven Western River Crossing",x:273,y:294};
+ const goldhavenNorthVillage={id:"village-poi-goldhaven-north",region:3,type:"village",label:"Northbank village",x:258,y:226,population:840,prosperity:49,controllerFaction:"empire"};
+ for(const n of [goldhavenWestCrossing,goldhavenNorthVillage])add(n);
+ link("city-3",goldhavenWestCrossing.id,1,"land");
+ link(goldhavenWestCrossing.id,goldhavenNorthVillage.id,1,"land");
+ link(goldhavenNorthVillage.id,"waypoint-mountain-poi-north-crossroads-6-1",1,"land");
+ // The western mountain road and river bend form a connected defensive road network.
+ link("waypoint-mountain-poi-west-crossroads-3-1","river-poi-north",1,"land");
+ link("farm-poi-goldfields","waypoint-mountain-poi-west-crossroads-3-1",1,"land");
+ link("farm-poi-goldfields","goldhaven-north-sea-2",1,"sea");
+ link("sea-crossing-386-361","goldhaven-north-sea-1",1,"sea");
+ // A small coastal settlement provides a land connection to Goldhaven and a sea-lane connection.
+ const southcoastHarbourVillage={id:"village-poi-goldhaven-harbour",region:3,type:"village",label:"Southcoast Harbour Village",x:319,y:369,population:690,prosperity:52,controllerFaction:"empire",harbour:true};
+ add(southcoastHarbourVillage);
+ link(southcoastHarbourVillage.id,"city-3",1,"land");
+ link(southcoastHarbourVillage.id,"waypoint-goldhaven-south-sea-waypoint-goldhaven-ironhold-sea-junction-1",1,"sea");
+
  // Coastal travel can only enter or leave the sea at a named harbour.
  // Existing save files are migrated to this graph while city IDs remain stable.
  // Give every map point a unique human-readable label while preserving its stable ID.
