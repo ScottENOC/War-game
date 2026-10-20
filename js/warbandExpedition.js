@@ -76,6 +76,11 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
       roster.append(row);
     });
     content.append(roster);
+    if (run.state === "defeat") {
+      const start=document.createElement("button");start.className="primary-button";start.textContent="Start new expedition";start.addEventListener("click",startNewRun);actions.append(start);
+      const menu=document.createElement("button");menu.className="secondary-button";menu.textContent="Main Menu";menu.addEventListener("click",()=>{hide();el("mainmenu").hidden=false;});actions.append(menu);
+      return;
+    }
     if (run.state === "setup") {
       const factionLabel = document.createElement("label"); factionLabel.className = "faction-choice"; factionLabel.textContent = "Faction ";
       const select = document.createElement("select"); select.id = "warband-expedition-faction";
@@ -89,13 +94,13 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
       const note=document.createElement("p");note.className="subtle";note.textContent="Choose exactly five fighters. Models must be in your collection; this mode does not consume the physical collection models.";content.append(note);
       return;
     }
-    const available = inventory().filter(m => !run.fighters.some(f => f.collectionId === m.id && f.alive));
+    const available = inventory().filter(m => !run.fighters.some(f => f.collectionId === m.id));
     const shopTitle=document.createElement("h2");shopTitle.textContent="Recruit from your collection";shop.append(shopTitle);
     const shopIntro=document.createElement("p");shopIntro.className="subtle";shopIntro.textContent="Recruit an available miniature for its point cost. The model stays in your collection, but this fighter's injuries and experience persist in this expedition.";shop.append(shopIntro);
     const recruitList=document.createElement("div");recruitList.className="warband-model-list";
     available.slice(0,100).forEach(m=>{const row=document.createElement("div");row.className="warband-model-row";const span=document.createElement("span");span.textContent=m.name||m.type;const price=costOf(fighterFromModel(m,"preview"),run.faction);const btn=document.createElement("button");btn.className="secondary-button";btn.textContent="Recruit · "+price;btn.disabled=run.bank<price||run.fighters.filter(f=>f.alive).length>=MAX_FIGHTERS;btn.addEventListener("click",()=>{if(run.bank<price||run.fighters.filter(f=>f.alive).length>=MAX_FIGHTERS)return;run.bank-=price;run.fighters.push(fighterFromModel(m,"fighter-"+run.nextFighterId++));run.lastResult="Recruited "+(m.name||m.type)+" for "+price+" points.";save();render();});row.append(span,btn);recruitList.append(row);});
     if(!available.length){const p=document.createElement("p");p.className="subtle";p.textContent="No unassigned eligible miniatures are available to recruit.";recruitList.append(p);}shop.append(recruitList);
-    const next=document.createElement("button");next.className="primary-button";next.textContent="Fight next battle";next.disabled=!run.fighters.some(f=>f.alive&&f.benchFights===0);next.addEventListener("click",startNextBattle);actions.append(next);
+    const next=document.createElement("button");next.className="primary-button";next.textContent="Fight next battle";next.disabled=!run.fighters.some(f=>f.alive);next.addEventListener("click",startNextBattle);actions.append(next);
     const menu=document.createElement("button");menu.className="secondary-button";menu.textContent="Main Menu";menu.addEventListener("click",()=>{hide();el("mainmenu").hidden=false;});actions.append(menu);
     const abandon=document.createElement("button");abandon.className="danger-button";abandon.textContent="Abandon expedition";abandon.addEventListener("click",()=>{if(!window.confirm("Abandon this expedition and lose its roster, points and experience?"))return;run=NEW_RUN();save();render();});actions.append(abandon);
   }
