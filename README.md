@@ -132,11 +132,19 @@ The Army Builder groups owned miniatures, lets players permanently add compatibl
 - The current prototype supports a basic pike-and-shot loadout by equipping infantry with spears and firearms together. Spear infantry still gain an extra fighting rank only when they did not charge. A unit that charges into stationary spear-armed defenders loses its +10 Initiative charge bonus and its charge-only spear/lance Strength bonus unless the defenders counter-charge. A true mixed regiment with separate pike/shield and firearm model groups is not yet represented: all models in a unit currently share the unit's weapon profile, and shields do not currently support a firearm-ready stance.
 
 
-## Mordheim Skirmish (one-off mode)
+## Warband Skirmish (one-off mode)
 
 - Build a temporary warband from owned individual miniatures; no regiments are used. Lords, named characters, chariots and 50 × 50 mm-base monsters are excluded.
-- Each fighter has an individual wound pool and rolls a D6 when their last wound is lost: 1–2 stunned (misses the next turn), 3–4 unconscious (can be revived by an adjacent friendly fighter during the movement/shooting phase; the rescued fighter cannot shoot that turn), 5–6 out of action and treated as dead for this mode.
-- The AI uses a point-matched individual roster. The warband is discarded after each battle. One lootbox is awarded for every three wins in this mode; ordinary Skirmish rewards are unchanged.
+- Each fighter has an individual wound pool and rolls a D6 when their last wound is lost: 1–2 stunned (misses the next turn), 3–4 unconscious (can be revived by an adjacent friendly fighter during the movement/shooting phase; the rescued fighter cannot shoot that turn), 5–6 out of action and treated as dead for this one-off battle.
+- The AI uses an individual-fighter roster. The warband is discarded after each battle. One lootbox is awarded for every three wins in this mode; ordinary Skirmish rewards are unchanged.
+
+## Warband Expedition (persistent small-force roguelike)
+
+- Start with five individual fighters from your collection, with a maximum of eight living fighters in the expedition. Models remain in the collection; the expedition keeps its own persistent fighter records.
+- Each opposing fighter taken out of action grants 1 XP to the nearest available friendly fighter. At 4 XP, spend the experience on +1 to Movement, Weapon Skill, Ballistic Skill, Strength, Toughness, Initiative or Leadership. Unspent XP carries over.
+- Victory awards 50 points. Spend points between battles to recruit another eligible model from your collection or buy equipment; unspent points remain banked. Defeat awards no points, but the expedition continues while at least one fighter survives.
+- A fighter who rolls 5–6 when their final wound is lost is out of action and receives a second, post-battle D6 injury roll: 1 misses the next fight; 2 misses the next two fights; 3 loses a leg (−1 Movement); 4 loses the left arm (no two-handed weapons, shields or dual wielding); 5–6 dies permanently. Results 3 or 4 are rerolled if that injury already exists.
+- Individual wounds, XP, equipment, injuries, deaths and banked points persist between fights. If all fighters die, the expedition ends.
 
 
 ## Objective battle types
