@@ -63,9 +63,10 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
       if (run.state !== "setup" && f.alive) {
         if ((Number(f.xp)||0) >= 4) {
           const upgrades = document.createElement("div"); upgrades.className = "warband-gear";
-          [["M","+1 Movement"],["WS","+1 Weapon Skill"],["BS","+1 Ballistic Skill"],["S","+1 Strength"],["T","+1 Toughness"],["I","+1 Initiative"],["Ld","+1 Leadership"]].forEach(([stat,label]) => {
-            const btn=document.createElement("button");btn.className="secondary-button";btn.textContent="XP upgrade: "+label;btn.addEventListener("click",()=>applyExperienceUpgrade(f.id,stat));upgrades.append(btn);
+          experienceChoices(f).forEach(choice => {
+            const btn=document.createElement("button");btn.className="secondary-button";btn.textContent="XP upgrade: "+choice.label;btn.title=choice.description||"";btn.addEventListener("click",()=>applyExperienceUpgrade(f.id,choice));upgrades.append(btn);
           });
+          if(!upgrades.childElementCount){const note=document.createElement("span");note.textContent="No eligible experience upgrades remain for this fighter.";upgrades.append(note);}
           row.append(upgrades);
         }
         const gear = document.createElement("div"); gear.className = "warband-gear";
@@ -110,10 +111,31 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
     const menu=document.createElement("button");menu.className="secondary-button";menu.textContent="Main Menu";menu.addEventListener("click",()=>{hide();el("mainmenu").hidden=false;});actions.append(menu);
     const abandon=document.createElement("button");abandon.className="danger-button";abandon.textContent="Abandon expedition";abandon.addEventListener("click",()=>{if(!window.confirm("Abandon this expedition and lose its roster, points and experience?"))return;run=NEW_RUN();save();render();});actions.append(abandon);
   }
-  function applyExperienceUpgrade(id, stat) {
+  const skillChoices=[
+    {key:"rerollOnesMelee",label:"Melee Mastery",description:"Reroll natural 1s to hit in melee."},
+    {key:"rerollOnesShooting",label:"Marksman",description:"Reroll natural 1s to hit when shooting."},
+    {key:"steadfast",label:"Steadfast",description:"Ignore combat-result penalties on break tests."},
+    {key:"skirmish",label:"Skirmish",description:"Gain skirmisher movement and 360° shooting."}
+  ];
+  const veteranStats=[{key:"M",label:"+1 Movement"},{key:"WS",label:"+1 Weapon Skill"},{key:"BS",label:"+1 Ballistic Skill"},{key:"S",label:"+1 Strength"},{key:"T",label:"+1 Toughness"},{key:"I",label:"+1 Initiative"},{key:"Ld",label:"+1 Leadership"}];
+  function experienceChoices(f) {
+    const hasRanged=!!f.rangedWeapon||RANGED.has(f.weapon)||["archers","shadowElf","rifleman"].includes(f.type)||(f.type==="cavalry"&&(f.bow||f.freeCavalryOption==="bow"));
+    const available=skillChoices.filter(s=>!f.skills?.[s.key]&&(s.key!=="rerollOnesShooting"||hasRanged));
+    const restrictedMage=["mageHero","mageLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"].includes(f.type)&&run.faction!=="highElves";
+    const allowedStats=veteranStats.filter(s=>!(restrictedMage&&["WS","S"].includes(s.key)));
+    const earnedStats=allowedStats.filter(s=>!(Number(f.campaignStats?.[s.key])>0)).map(s=>({kind:"stat",key:s.key,label:s.label}));
+    const hybridCaster=run.faction==="highElves"&&["captain","lord"].includes(f.type)&&(Number(f.casterLevel)||0)<(f.type==="lord"?2:1)?[{kind:"caster",key:"casterLevel",label:"+1 Caster Level",description:"Unlock or improve spellcasting and gain one power die per turn."}]:[];
+    const choices=[...available.map(s=>({kind:"skill",...s})),...hybridCaster,...(earnedStats.length?earnedStats:(!available.length?allowedStats.map(s=>({kind:"stat",key:s.key,label:s.label})):[]))];
+    return choices;
+  }
+  function applyExperienceUpgrade(id, choice) {
     const f=run.fighters.find(x=>x.id===id);if(!f||!f.alive||(Number(f.xp)||0)<4)return;
-    f.xp-=4;f.campaignStats=f.campaignStats||{};f.campaignStats[stat]=(Number(f.campaignStats[stat])||0)+1;
-    run.lastResult=f.name+" earned "+({M:"+1 Movement",WS:"+1 Weapon Skill",BS:"+1 Ballistic Skill",S:"+1 Strength",T:"+1 Toughness",I:"+1 Initiative",Ld:"+1 Leadership"}[stat])+" for 4 XP.";
+    const valid=experienceChoices(f).some(x=>x.kind===choice.kind&&x.key===choice.key);if(!valid)return;
+    f.xp-=4;
+    if(choice.kind==="skill"){f.skills=f.skills||{};f.skills[choice.key]=true;}
+    else if(choice.kind==="caster"){f.casterLevel=Math.min(f.type==="lord"?2:1,(Number(f.casterLevel)||0)+1);f.spells=[...(f.spells||[]),"fireBolt"].slice(0,f.casterLevel);}
+    else {f.campaignStats=f.campaignStats||{};f.campaignStats[choice.key]=(Number(f.campaignStats[choice.key])||0)+1;}
+    run.lastResult=f.name+" earned "+choice.label+" for 4 XP.";
     save();render();
   }
   function buyEquipment(id,key,cost) {
