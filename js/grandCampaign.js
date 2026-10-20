@@ -447,7 +447,7 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
  const settlement=region.settlement,initialPopulation=Math.max(0,Number(region.settlement?.population?.total)||0),conquerorRace=FACTION_BY_ID[conquerorId]?.race||FACTION_SPECIES[conquerorFaction];
  const isGreenskinConqueror=conquerorRace==="greenskin";
  const outcome=options.outcome||(isGreenskinConqueror?"sack":"occupy");
- const sameSpecies=conquerorRace===(FACTION_PROFILES[region.id]?.race||FACTION_SPECIES[region.nativeFaction]);
+ const sameSpecies=conquerorRace===(FACTION_SPECIES[region.nativeFaction]||FACTION_BY_ID[region.ownerFaction]?.race||FACTION_PROFILES[region.id]?.race);
  const isGreenskinDwarfConquest=(conquerorId==="greenskins"||FACTION_BY_ID[conquerorId]?.race==="greenskin")&&region.nativeFaction==="dwarfs";
  const defaultFleeFraction=isGreenskinConqueror&&outcome==="sack"?0:(isGreenskinDwarfConquest?0.2:(sameSpecies?0.05:0.15));
  const fleeFraction=Math.max(0,Math.min(1,Number.isFinite(options.fleeFraction)?options.fleeFraction:defaultFleeFraction));
