@@ -57,6 +57,15 @@ export const FACTIONS = {
     goblinChariot:{name:"Goblin Wolf Chariot",short:"Wolf Chariot",kind:"chariot",models:3,points:65,greenskin:true,chariot:true,stats:{M:8,WS:2,BS:3,S:3,T:4,W:4,I:2,A:1,Ld:6},mountStats:{A:2,WS:3,I:3,S:3},impactStrength:4,armourSave:5},
     orcChariot:{name:"Orc Boar Chariot",short:"Boar Chariot",kind:"chariot",models:3,points:100,greenskin:true,chariot:true,stats:{M:6,WS:3,BS:3,S:4,T:5,W:4,I:2,A:1,Ld:7},mountStats:{A:2,WS:3,I:2,S:3},impactStrength:5,armourSave:4}
   }},
+  undead: { name:"Undead", undead:true, units:{
+    zombies:{name:"Zombies",short:"Zombies",kind:"melee",models:20,points:3,undead:true,causesFear:true,stats:{M:4,WS:2,BS:0,S:3,T:3,W:1,I:1,A:1,Ld:2}},
+    skeletons:{name:"Skeleton Warriors",short:"Skeletons",kind:"melee",models:20,points:8,undead:true,causesFear:true,stats:{M:4,WS:2,BS:2,S:3,T:3,W:1,I:2,A:1,Ld:3}},
+    skeletonHorses:{name:"Skeletal Steeds",short:"Skeletal Steeds",kind:"cavalry",models:5,points:12,undead:true,causesFear:true,isSkeletalCavalry:true,mountStats:{A:0,WS:2,I:2,S:0},stats:{M:8,WS:2,BS:0,S:3,T:3,W:1,I:2,A:1,Ld:3}},
+    necromancer:{name:"Necromancer",short:"Necromancer",kind:"hero",models:1,points:55,undead:true,spellcaster:true,baseCasterLevel:1,necromancer:true,stats:{M:4,WS:3,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:7}},
+    masterNecromancer:{name:"Master Necromancer",short:"Master Necromancer",kind:"hero",models:1,points:100,undead:true,spellcaster:true,baseCasterLevel:3,necromancer:true,isGeneral:true,stats:{M:4,WS:3,BS:3,S:3,T:4,W:3,I:3,A:1,Ld:8}},
+    vampireHero:{name:"Vampire Thrall",short:"Vampire",kind:"hero",models:1,points:75,undead:true,vampire:true,stats:{M:4,WS:6,BS:5,S:5,T:4,W:2,I:6,A:2,Ld:7}},
+    vampireLord:{name:"Vampire Lord",short:"Vampire Lord",kind:"hero",models:1,points:120,undead:true,vampire:true,isGeneral:true,spellcaster:true,baseCasterLevel:2,stats:{M:4,WS:7,BS:6,S:5,T:5,W:3,I:7,A:4,Ld:10}}
+  }},
   opposing: { name:"Opposing Host", units:{
     swordsmen:{name:"Opposing Swordsmen",short:"Swordsmen",kind:"melee",models:20,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
     archers:{name:"Opposing Archers",short:"Infantry",kind:"archer",models:10,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},range:24},
