@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v15-goldhaven-junction";
+const MAP_ID="shattered-realms-v16-harbour-doglegs";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -1218,6 +1218,24 @@ function createMovementGraph(){
   if(edges[a])edges[a]=edges[a].filter(e=>e.to!==b);
   if(edges[b])edges[b]=edges[b].filter(e=>e.to!==a);
  };
+ // Keep harbour access as a short dog-leg off the main sea lanes.
+ const aelthirSeaDogleg={id:"aelthir-harbour-sea-dogleg",region:6,type:"seaRoute",label:"Aelthir harbour sea spur",x:96,y:57};
+ add(aelthirSeaDogleg);
+ unlink("port-6","waypoint-port-6-barrowmere-west-sea-1-1");
+ unlink("port-6","waypoint-port-6-aelthir-north-sea-waypoint-1");
+ link("port-6",aelthirSeaDogleg.id,1,"sea");
+ link(aelthirSeaDogleg.id,"waypoint-port-6-barrowmere-west-sea-1-1",1,"sea");
+ link(aelthirSeaDogleg.id,"waypoint-port-6-aelthir-north-sea-waypoint-1",1,"sea");
+ // Barrowmere gets a single northern sea-lane junction; all existing sea approaches
+ // now meet the junction rather than terminating directly at the harbour.
+ const barrowmereSeaDogleg={id:"barrowmere-harbour-sea-dogleg",region:17,type:"seaRoute",label:"Barrowmere harbour sea junction",x:150,y:366};
+ const barrowmereSeaNeighbours=(edges["port-17"]||[]).filter(e=>e.kind==="sea").map(e=>e.to);
+ add(barrowmereSeaDogleg);
+ for(const seaNodeId of barrowmereSeaNeighbours){
+  unlink("port-17",seaNodeId);
+  link(barrowmereSeaDogleg.id,seaNodeId,1,"sea");
+ }
+ link("port-17",barrowmereSeaDogleg.id,1,"sea");
  const removeAndSplice=(id)=>{
   if(!nodes[id])return;
   const neighbours=(edges[id]||[]).filter(e=>nodes[e.to]).map(e=>({id:e.to,kind:e.kind||"land"}));
