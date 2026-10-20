@@ -968,6 +968,10 @@ function createMovementGraph(){
  const nodes={},edges={},routes=[];
  const add=n=>{nodes[n.id]=n;edges[n.id]=edges[n.id]||[];};
  const link=(a,b,cost=1,kind="land")=>{if(!edges[a]||!edges[b]||a===b)return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost,kind});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost,kind});};
+ const unlink=(a,b)=>{
+  if(edges[a])edges[a]=edges[a].filter(e=>e.to!==b);
+  if(edges[b])edges[b]=edges[b].filter(e=>e.to!==a);
+ };
  const route=(a,b,kind="land",regionA=null,regionB=null)=>routes.push({a,b,kind,regionA,regionB,marks:[],cuts:[0,1]});
  const positions=CITY_POSITIONS;
  const seaLinks=new Set(["3-7","3-8","3-9","3-27","6-7","6-8","6-17","8-21","8-25","8-26","17-27","21-25","25-26"]);
@@ -1228,10 +1232,7 @@ function createMovementGraph(){
   for(const list of Object.values(edges))for(let i=list.length-1;i>=0;i--)if(list[i].to===id)list.splice(i,1);
   delete nodes[id];delete edges[id];
  };
- const unlink=(a,b)=>{
-  if(edges[a])edges[a]=edges[a].filter(e=>e.to!==b);
-  if(edges[b])edges[b]=edges[b].filter(e=>e.to!==a);
- };
+
  // Keep harbour access as a short dog-leg off the main sea lanes.
  const aelthirSeaDogleg={id:"aelthir-harbour-sea-dogleg",region:6,type:"seaRoute",label:"Aelthir harbour sea spur",x:96,y:57};
  add(aelthirSeaDogleg);
@@ -1324,6 +1325,8 @@ function createMovementGraph(){
   while(usedLabels.has(label.toLocaleLowerCase()))label=base+" ("+(index++)+")";
   node.label=label;usedLabels.add(label.toLocaleLowerCase());
  }
+ // Blackflag Cay is intentionally a multi-exit pirate port. Preserve its existing links and add the requested bypass around the harbour.
+ link("waypoint-barrowmere-blackflag-east-port-27-1","waypoint-ironhold-coastal-sea-waypoint-goldhaven-ironhold-sea-junction-2",1,"sea");
  return {nodes,edges};
 }
 function svgEl(name,attrs={}){const el=document.createElementNS("http://www.w3.org/2000/svg",name);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el;}
