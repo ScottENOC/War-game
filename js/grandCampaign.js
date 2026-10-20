@@ -1096,7 +1096,6 @@ function createMovementGraph(){
   {id:"mountain-poi-west",region:9,type:"mountain",label:"Western high peaks",x:375,y:155},
   {id:"mountain-poi-central",region:9,type:"mountain",label:"Central mountain pass",x:510,y:375},
   {id:"mountain-poi-east",region:10,type:"mountain",label:"Eastern crags",x:645,y:300},
-  {id:"river-poi-west",region:1,type:"river",label:"Oldreach upper river",x:195,y:170},
   {id:"river-poi-north",region:3,type:"river",label:"Goldhaven river bend",x:315,y:190},
   {id:"river-poi-south",region:4,type:"river",label:"Southlands river ford",x:530,y:390},
   {id:"river-poi-east",region:10,type:"river",label:"Eastern river crossing",x:690,y:365}
@@ -1203,16 +1202,11 @@ function createMovementGraph(){
  if(!nodes[riverRoadPoint.id])add(riverRoadPoint);
  link("river-poi-north",riverRoadPoint.id,1,"land");
  link(riverRoadPoint.id,"mountain-poi-north",1,"land");
- // Move the western river POI southwest along the existing road alignment so
- // the road meets the drawn river course at the point of interest.
- if(nodes["river-poi-west"]){nodes["river-poi-west"].x=175;nodes["river-poi-west"].y=190;}
- // Keep this generated waypoint exactly halfway between its two route neighbours.
- const midpointId="waypoint-crossroads-2-crossroads-6-2";
- const midpointNode=nodes[midpointId];
- const midpointNeighbours=(edges[midpointId]||[]).map(edge=>nodes[edge.to]).filter(Boolean);
- if(midpointNode&&midpointNeighbours.length===2){
-  midpointNode.x=(midpointNeighbours[0].x+midpointNeighbours[1].x)/2;
-  midpointNode.y=(midpointNeighbours[0].y+midpointNeighbours[1].y)/2;
+ // Promote the existing route waypoint to a named, traversable crossroads.
+ const oldreachAelthirCrossroads=nodes["waypoint-crossroads-2-crossroads-6-2"];
+ if(oldreachAelthirCrossroads){
+  oldreachAelthirCrossroads.type="crossroads";
+  oldreachAelthirCrossroads.label="Oldreach–Aelthir Crossroads";
  }
  // Coastal travel can only enter or leave the sea at a named harbour.
  // Existing save files are migrated to this graph while city IDs remain stable.
