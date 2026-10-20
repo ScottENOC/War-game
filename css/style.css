@@ -545,3 +545,6 @@ button,[role="button"]{
 .campaign-army-token.enemy-army-token .campaign-army-token-circle{fill:#6e2929;stroke:#f5c3a9}
 .campaign-army-token:focus .campaign-army-token-circle{stroke:#fff;stroke-width:4}
 #grand-campaign-node-detail button{margin-top:5px;width:100%;font-size:11px;min-height:34px}
+
+/* Double-tap campaign movement should not trigger browser double-tap zoom. */
+#grand-campaign-world .campaign-node{touch-action:manipulation}
