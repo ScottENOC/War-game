@@ -1209,12 +1209,20 @@ function createMovementGraph(){
   oldreachAelthirCrossroads.label="Oldreach–Aelthir Crossroads";
  }
  // Local campaign-map revisions: explicit roads, villages, harbours and river crossings.
+ const removeWithoutSplice=(id)=>{
+  if(!nodes[id])return;
+  for(const list of Object.values(edges))for(let i=list.length-1;i>=0;i--)if(list[i].to===id)list.splice(i,1);
+  delete nodes[id];delete edges[id];
+ };
+ const unlink=(a,b)=>{
+  if(edges[a])edges[a]=edges[a].filter(e=>e.to!==b);
+  if(edges[b])edges[b]=edges[b].filter(e=>e.to!==a);
+ };
  const removeAndSplice=(id)=>{
   if(!nodes[id])return;
   const neighbours=(edges[id]||[]).filter(e=>nodes[e.to]).map(e=>({id:e.to,kind:e.kind||"land"}));
   for(let i=0;i<neighbours.length;i++)for(let j=i+1;j<neighbours.length;j++)if(neighbours[i].id!==neighbours[j].id&&neighbours[i].kind===neighbours[j].kind)link(neighbours[i].id,neighbours[j].id,1,neighbours[i].kind);
-  for(const list of Object.values(edges))for(let i=list.length-1;i>=0;i--)if(list[i].to===id)list.splice(i,1);
-  delete nodes[id];delete edges[id];
+  removeWithoutSplice(id);
  };
  const renameNode=(oldId,newId,overrides={})=>{
   const node=nodes[oldId];if(!node)return null;
@@ -1236,8 +1244,13 @@ function createMovementGraph(){
  removeAndSplice("crossroads-1");
  removeAndSplice("feature-1-2-land-2");
  removeAndSplice("forest-poi-central");
- // Replace the old crossroads ID with a genuine river-crossing node at the same location.
+ // Remove both shortcuts across the major river without splicing their neighbours together.
+ // These nodes must not leave a replacement edge that bypasses the city.
  renameNode("waypoint-crossroads-2-crossroads-6-2","river-crossing-oldreach-aelthir",{type:"river",label:"Oldreach–Aelthir River Crossing"});
+ removeWithoutSplice("river-crossing-oldreach-aelthir");
+ removeWithoutSplice("waypoint-crossroads-2-crossroads-6-1");
+ // Keep both map points, but remove their direct cross-river connection.
+ unlink("feature-1-2-land-1","feature-1-6-land-3");
  // Goldhaven itself is the junction; discard the overlapping generated intersection.
  mergeInto("crossing-337-295","city-3","Goldhaven");
  mergeInto("crossing-338-295","city-3","Goldhaven");
@@ -1251,7 +1264,7 @@ function createMovementGraph(){
  link(oldreachVillage.id,aelthirVillage.id,1,"land");
  link(aelthirVillage.id,"city-6",1,"land");
  // Goldhaven's western road crosses the nearby river, then runs north through a village to the northern mountain road.
- const goldhavenWestCrossing={id:"river-crossing-goldhaven-west",region:3,type:"river",label:"Goldhaven Western River Crossing",x:273,y:294};
+ const goldhavenWestCrossing={id:"river-crossing-goldhaven-west",region:3,type:"river",label:"Goldhaven Western River Crossing",x:281,y:294};
  const goldhavenNorthVillage={id:"village-poi-goldhaven-north",region:3,type:"village",label:"Northbank village",x:258,y:226,population:840,prosperity:49,controllerFaction:"empire"};
  for(const n of [goldhavenWestCrossing,goldhavenNorthVillage])add(n);
  link("city-3",goldhavenWestCrossing.id,1,"land");
@@ -1263,7 +1276,7 @@ function createMovementGraph(){
  link("farm-poi-goldfields","goldhaven-north-sea-2",1,"sea");
  link("sea-crossing-386-361","goldhaven-north-sea-1",1,"sea");
  // A small coastal settlement provides a land connection to Goldhaven and a sea-lane connection.
- const southcoastHarbourVillage={id:"village-poi-goldhaven-harbour",region:3,type:"village",label:"Southcoast Harbour Village",x:319,y:369,population:690,prosperity:52,controllerFaction:"empire",harbour:true};
+ const southcoastHarbourVillage={id:"village-poi-goldhaven-harbour",region:3,type:"village",label:"Southcoast Harbour Village",x:319,y:344,population:690,prosperity:52,controllerFaction:"empire",harbour:true};
  add(southcoastHarbourVillage);
  link(southcoastHarbourVillage.id,"city-3",1,"land");
  link(southcoastHarbourVillage.id,"waypoint-goldhaven-south-sea-waypoint-goldhaven-ironhold-sea-junction-1",1,"sea");
