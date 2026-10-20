@@ -517,3 +517,8 @@ button,[role="button"]{
  .grand-live-map-legend{display:none}
  .grand-world-sidebar{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+
+/* Keep the campaign's secondary controls genuinely secondary. */
+#grand-world-back{display:none!important}
+.grand-live-hint{display:none!important}
+#grand-army-management small{display:none!important}
