@@ -1,4 +1,4 @@
-import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-wood-elf-v1";
+import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-grinhold-battle-fix-v1";
 import { createRoguelike } from "./roguelike.js?v=20261020-chariots-v2";
 import { createWarband } from "./warband.js?v=20261020-warband-v1";
 import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warband-expedition-v4";
