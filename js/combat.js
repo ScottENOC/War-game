@@ -56,7 +56,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
       const levels=[...new Set(combatants.map(c=>effectiveI(c.u,c.host,c.component)))].sort((a,b)=>b-a);
       levels.forEach(initiative=>{
         const shownInitiative=initiative;
-        const attackers=combatants.filter(c=>(alive(c.host)||c.host.delayedDeath)&&!c.host.fled&&effectiveI(c.u,c.host,c.component)===initiative);
+        const attackers=combatants.filter(c=>(alive(c.host)||c.host.delayedDeath)&&!c.host.fled&&!(c.u.isGiant&&c.u.fallen&&c.u.fallenTurn===S.turn)&&effectiveI(c.u,c.host,c.component)===initiative);
         // Entitlements and snapshots span every Initiative level. A rider dying
         // before their mount acts must not erase the mount's separate attack.
         const pending=new Map(attackers.map(c=>[keyOf(c),{snapshot:snapshots.get(keyOf(c)),attacked:attackedPackets.has(keyOf(c))}]));
@@ -85,13 +85,41 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           const rerollMisses=component==="rider"&&!!u.alwaysStrikesFirst&&attackerI-targetI>=11;
           const attackModels=strikeState.skirmishRound?Math.min(strikeState.eligibleModels,Math.max(1,Math.floor(u.formationWidth||5))):strikeState.eligibleModels;
           const attackContext={attackingModels:attackModels,attackingChampion:strikeState.eligibleChampion,charging:!!host.charged&&!host.defendedWallCombat&&!linked(host).some(v=>v.spears&&!v.charged&&v.side!==host.side),attackComponent:component,rerollMisses,onlySixes:!!(host.failedFearAgainst===target.id&&host.failedFearCombatRound===S.combatRound),targetComponent:target.isDragon?(S.targetComponentByUnit?.[target.id]||"dragon"):undefined};
-          let result;
+          let result,specialLog="";
           if(u.isTroll&&u.trollVomitSelected&&component!=="mount"){
             const vomit={...u,weapon:"handWeapon",meleeWeapons:["handWeapon"],ignoreArmourSaves:true,stats:{...u.stats,S:5,A:1}};
             result=meleeAttack(vomit,target,{...attackContext,attacker:vomit,attackingModels:attackModels,attackingChampion:false,automaticHits:attackModels});
-            say("<b>Troll Vomit — "+u.name+" attacks "+target.name+"</b>: "+attackModels+" automatic Strength 5 hit(s), no armour saves.");
+            specialLog="<b>Troll Vomit — "+u.name+" attacks "+target.name+"</b>: "+attackModels+" automatic Strength 5 hit(s), no armour saves.";
+          }else if(u.isGiant&&component!=="mount"){
+            const rollD6=()=>roll(1)[0],bigTarget=!!(target.isGiant||target.isTroll||target.isDragon||target.isChariot||target.stats.W>=3);
+            const special=rollD6(),proxy={...u,weapon:"handWeapon",meleeWeapons:["handWeapon"],stats:{...u.stats,S:6,A:1}};
+            if(bigTarget&&special>=2&&special<=4){
+              const initiativeRoll=rollD6();
+              if(initiativeRoll>(target.stats.I||0)){const wounds=roll(2).reduce((n,x)=>n+x,0);result={wounds,attacks:1,hits:1,pools:[],cascadePlan:null};specialLog="<b>Giant Thump With Club</b>: "+target.name+" fails Initiative ("+initiativeRoll+" vs I"+target.stats.I+"); "+wounds+" wounds, no armour saves.";}
+              else {result={wounds:0,attacks:1,hits:0,pools:[],cascadePlan:null};specialLog="<b>Giant Thump With Club</b>: "+target.name+" avoids the blow with an Initiative test ("+initiativeRoll+").";}
+            }else if(bigTarget&&special>=5){
+              result={wounds:1,attacks:1,hits:1,pools:[],cascadePlan:null};target.stunnedUntilRound=S.combatRound+1;specialLog="<b>Giant 'Eadbutt</b>: "+target.name+" suffers one unsaved wound and is dazed.";
+            }else if(!bigTarget&&special===3){
+              const pick=rollD6();
+              if(pick===1||pick===4||pick===5){const lost=Math.min(1,target.models||0);target.models=Math.max(0,target.models-lost);if(target.isCharacter)target.characterWounds=0;result={wounds:0,attacks:1,hits:0,pools:[],cascadePlan:null};specialLog="<b>Giant Pick Up And...</b>: "+target.name+" is picked up and removed from the fight (roll "+pick+").";}
+              else {result={wounds:1,attacks:1,hits:1,pools:[],cascadePlan:null};specialLog="<b>Giant Pick Up And...</b>: the victim escapes the worst of it but suffers one unsaved wound (roll "+pick+").";}
+            }else if(!bigTarget&&special===1){
+              result={wounds:0,attacks:0,hits:0,pools:[],cascadePlan:null};u.giantYellAndBawl=true;specialLog="<b>Giant Yell And Bawl</b>: the Giant bellows instead of making a normal attack. (Combat-resolution effect is simplified.)";
+            }else{
+              let hits=bigTarget?1:(special===2?roll(2).reduce((n,x)=>n+x,0):rollD6());
+              if(!bigTarget&&special===2&&rollD6()===1){
+                u.fallen=true;u.fallenTurn=S.turn;applyDamage(u,1,false);
+                const nearby=units().filter(v=>v!==u&&alive(v)&&dist(u,v)<=3);
+                for(const v of nearby)if(rollD6()>=4)applyDamage(v,1+(rollD6()%3),false);
+                result={wounds:0,attacks:0,hits:0,pools:[],cascadePlan:null};specialLog="<b>Giant Fall Over</b>: it falls while attempting to Jump Up And Down, injures itself and may crush nearby models.";
+              }else{
+                const stomp={...proxy,stats:{...proxy.stats,A:hits}};
+                result=meleeAttack(stomp,target,{...attackContext,attacker:stomp,attackingModels:1,attackingChampion:false,automaticHits:hits});
+                specialLog="<b>Giant special attack</b>: "+(bigTarget?"Thump With Club":"Swing With Club / Jump Up And Down")+" — "+hits+" automatic Strength 6 hit(s).";
+              }
+            }
           }else result=meleeAttack(u,target,attackContext);
-          say('<b>Melee dice — '+u.name+(component==="mount"?" (mount)":"")+' attacks '+target.name+'</b>'+diceStack(u,result));
+          say(specialLog||('<b>Melee dice — '+u.name+(component==="mount"?" (mount)":"")+' attacks '+target.name+'</b>'+diceStack(u,result)));
           wounds.set(host.id,(wounds.get(host.id)||0)+result.wounds);
           applyDamage(target,result.wounds,false,result.cascadePlan);
           entitlement.attacked=true;attackedPackets.add(key);
