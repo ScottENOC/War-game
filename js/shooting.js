@@ -1,5 +1,5 @@
 import { terrainShotEffect, terrainElevationAt, terrainRangeModifier } from "./terrain.js";
-export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H, terrain = () => [], BATTLEFIELD_WIDTH_IN = 48 }) {
+export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTarget, saveTarget, applyDamage, say, diceStack, $, shootingAttack, panicNearby, shape, corners, W, H, terrain = () => [], BATTLEFIELD_WIDTH_IN = 48, revealUnit = () => {} }) {
   function showAttack(label, u, target, result, kind) {
     const extras=[];
     if(result.longRange)extras.push("long range (−"+(result.longRangePenalty||1)+")");if(result.elevationRange)extras.push("elevation range "+(result.elevationRange>0?"+":"")+result.elevationRange+"″");
@@ -86,7 +86,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     return {visibleModels:visible.length,visibleModelsList:visible,visibleChampion,overUnitPenalty:visiblePenalties.length?Math.max(...visiblePenalties):0,arcShot:visibleArcShot,friendlyBlockers:[...friendlyBlockers],friendlyShotCount};
   }
   function shoot(u,target,standShoot) {if(u?.magicSuppressed&&u.rangedWeapon==="magicBow"){say(u.name+" cannot use its magical bow while inside a Nullification Dome.");return false;}
-    if(u?.isCannon)return fireCannon(u,target.x,target.y,target);if(u?.isCatapult)return fireCannon(u,target.x,target.y,target);
+    if(u?.isCannon){revealUnit(u);return fireCannon(u,target.x,target.y,target);}if(u?.isCatapult){revealUnit(u);return fireCannon(u,target.x,target.y,target);}
     if(u?.isSiegeEngine&&u.moved&&!u.moveAndFire){say(u.name+" cannot fire after moving without the Move and Fire upgrade.");return false;}
     const host=u.attachedTo?S.units[u.attachedTo]:null;
     if(!alive(u)||!alive(target)||!u.hasRangedWeapon||u.shot||u.engaged||host?.engaged)return false;if(u.wallDefence?.posture==="hunker"){say(u.name+" is hunkered behind the wall and cannot shoot until it adopts an active posture.");return false;}if(u.ownsShield&&u.rangedMode!=="bow"){say(u.name+" has its shield ready; switch to bow before shooting.");return false;}
@@ -134,7 +134,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     }
     result.friendlyFireCount=friendlyFireCount;
     result.hitModifier=result.pools.length?result.pools[0].hitModifier:0;
-    const targetDiceStack=diceStack(u,result);u.shot=true;showAttack(standShoot?"Stand and shoot":"Shooting",u,target,result,"shoot");
+    const targetDiceStack=diceStack(u,result);u.shot=true;revealUnit(u);showAttack(standShoot?"Stand and shoot":"Shooting",u,target,result,"shoot");
     let killed=0;
     if(target.isChariot){target.chariotWounds=Math.max(0,target.chariotWounds-cannonBodyWounds);target.crewArmourBonus=target.chariotWounds>0?2:0;killed=cannonCrewWounds?applyDamage(target,cannonCrewWounds,true,crewCascadePlan):0;if(cannonBodyWounds)say(target.name+" chariot takes "+cannonBodyWounds+" wound(s); "+target.chariotWounds+"/"+target.chariotStartWounds+" remain.");if(cannonCrewWounds)say(target.name+" crew take "+cannonCrewWounds+" wound(s) and lose "+killed+" model(s).");}else if(target.isCannon||target.isBoltThrower){
       target.artilleryWounds=Math.max(0,target.artilleryWounds-cannonBodyWounds);
