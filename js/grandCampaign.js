@@ -134,7 +134,8 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
 function campaignCityIncome(region){
  const s=region?.settlement;if(!s)return 0;
  const tier=Math.max(1,Number(s.historicalTier)||1),prosperity=Math.max(0,Math.min(100,Number(s.prosperity)||0));
- const population=Math.max(0,Number(s.population?.total)||0),buildings=(s.buildings||[]).reduce((sum,b)=>sum+Math.max(0,Math.min(100,Number(b.condition)||0)),0);
+ const population=Math.max(0,Number(s.population?.total)||0);if(population<=0)return 0;
+ const buildings=(s.buildings||[]).reduce((sum,b)=>sum+Math.max(0,Math.min(100,Number(b.condition)||0)),0);
  const infrastructureValue=Number(s.infrastructureCondition),infrastructure=Math.max(.25,Math.min(1,Number.isFinite(infrastructureValue)?infrastructureValue/100:1));
  return Math.round((10+tier*10+prosperity*.35+Math.log10(Math.max(1,population))*6+buildings*.04)*infrastructure);
 }
@@ -425,11 +426,12 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
  const previousOwner=region.ownerFaction||region.owner||region.nativeFaction;
  const conquerorId=FACTION_BY_ID[conquerorFaction]?.id||conquerorFaction;
  if(previousOwner===conquerorId)return {region,summary:city.name+" is already under this faction's control."};
- const settlement=region.settlement,outcome=options.outcome||"occupy";
- const conquerorRace=FACTION_BY_ID[conquerorId]?.race||FACTION_SPECIES[conquerorFaction];
+ const settlement=region.settlement,conquerorRace=FACTION_BY_ID[conquerorId]?.race||FACTION_SPECIES[conquerorFaction];
+ const isGreenskinConqueror=conquerorRace==="greenskin";
+ const outcome=options.outcome||(isGreenskinConqueror?"sack":"occupy");
  const sameSpecies=conquerorRace===(FACTION_PROFILES[region.id]?.race||FACTION_SPECIES[region.nativeFaction]);
  const isGreenskinDwarfConquest=(conquerorId==="greenskins"||FACTION_BY_ID[conquerorId]?.race==="greenskin")&&region.nativeFaction==="dwarfs";
- const defaultFleeFraction=isGreenskinDwarfConquest?0.2:(sameSpecies?0.05:0.15);
+ const defaultFleeFraction=isGreenskinConqueror&&outcome==="sack"?0:(isGreenskinDwarfConquest?0.2:(sameSpecies?0.05:0.15));
  const fleeFraction=Math.max(0,Math.min(1,Number.isFinite(options.fleeFraction)?options.fleeFraction:defaultFleeFraction));
  let fled=0,killed=0;
  for(const group of settlement.population.groups){
@@ -444,7 +446,8 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
   }else if(outcome==="massacre"){
    killed+=removePopulation(settlement,group,group.count);
   }else if(outcome==="sack"){
-   const casualties=Math.round(group.count*0.12);killed+=removePopulation(settlement,group,casualties);
+   const casualties=isGreenskinConqueror?group.count:Math.round(group.count*0.12);
+   killed+=removePopulation(settlement,group,casualties);
   }
  }
  const preserve=options.preserveCivilians??(outcome==="occupy"&&!isGreenskinDwarfConquest);
