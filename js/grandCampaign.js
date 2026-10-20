@@ -1249,6 +1249,7 @@ function recruitCatalog(){
    ])
   ])
  ];
+ if(activeCampaign.playerPoliticalFaction==="verdantCourt")options.push({key:"woodElfChariot",label:"Wood Elf chariot",type:"elfChariot",weapon:"handWeapon",min:3,max:3,modelType:"elfChariot",fixed:true,crewType:"swordsmen",crewWeapon:"handWeapon"});
  return options;
 }
 function assignedSiegeModelIds(){return new Set(playerArmies().flatMap(a=>(a.roster||[]).flatMap(u=>[u.machineModelId,...(u.crewModelIds||[])].filter(Boolean))));}
