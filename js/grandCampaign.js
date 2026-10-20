@@ -42,7 +42,9 @@ const FACTION_PROFILES = {
  21:{id:"ironMarshal",name:"The Iron Marshal",race:"human",colours:{main:"#29292D",accent:"#B66A35"},emblem:"spear"},
  22:{id:"varkesh",name:"The Principality of Varkesh",race:"human",colours:{main:"#7C342D",accent:"#D6B77B"},emblem:"sun"},
  23:{id:"ashenCouncil",name:"The Ashen Council",race:"human",colours:{main:"#68645B",accent:"#B66A35"},emblem:"gate"},
- 24:{id:"deepflame",name:"Thaurgath the Rune-Eater",race:"dragon",passive:true,colours:{main:"#493A59",accent:"#D7A94D"},emblem:"dragon"}
+ 24:{id:"deepflame",name:"Thaurgath the Rune-Eater",race:"dragon",passive:true,colours:{main:"#493A59",accent:"#D7A94D"},emblem:"dragon"},
+ 25:{id:"eastwatch",name:"Eastwatch Harbour Council",race:"human",colours:{main:"#456B79",accent:"#D9C48A"},emblem:"tower"},
+ 26:{id:"deadmanCourt",name:"The Deadman Court",race:"undead",colours:{main:"#41384A",accent:"#B3A4C4"},emblem:"skull"}
 };
 const FACTION_BY_ID = Object.fromEntries(Object.values(FACTION_PROFILES).map(f=>[f.id,f]));
 
@@ -444,9 +446,9 @@ function recruitPlayerArmyFromCollection(army,faction,budget,commander=null){
 const CITIES = [
 {id:1,name:"Crownfall",faction:"empire",ruler:"House Valedorn",status:"Player court",terrain:"River confluence; fertile plains",description:"The old human capital sits where two navigable rivers meet. Roads from western farms and central lowlands converge here.",requiredCharacters:["edric_voss"]},
 {id:2,name:"Westmere",faction:"empire",ruler:"House Merrow",status:"Player court",terrain:"Western forest edge and river crossing",description:"A prosperous river town guarding the western approach and timber trade.",requiredCharacters:[]},
-{id:3,name:"Goldhaven",faction:"empire",ruler:"Prince Odran of House Kest",status:"Rival human lord",terrain:"Eastern grain belt",description:"A rich market city whose prince commands much of the eastern farmland and dislikes Crownfall's taxes.",requiredCharacters:[]},
+{id:3,name:"Goldhaven",faction:"empire",ruler:"Prince Odran of House Kest",status:"Rival human lord",terrain:"Eastern grain belt and coast",description:"A rich coastal market city whose prince commands much of the eastern farmland and dislikes Crownfall's taxes.",requiredCharacters:[]},
 {id:4,name:"Stonebridge",faction:"empire",ruler:"Duchess Elira Vane",status:"Rival human lord",terrain:"Southern river crossing",description:"A fortified bridge-city controlling the safest crossing into the southern continent. Its duchess bargains as an equal.",requiredCharacters:[]},
-{id:5,name:"Southwatch",faction:"empire",ruler:"Lord-Marshal Caedmon",status:"Rival human lord",terrain:"Southern coast and trade road",description:"A coastal fortress and customs port, rich from sea trade and wary of central authority.",requiredCharacters:[]},
+{id:5,name:"Southwatch",faction:"empire",ruler:"Lord-Marshal Caedmon",status:"Rival human lord",terrain:"Southern marches and trade road",description:"A fortified southern watch-city controlling an important overland trade road and wary of central authority.",requiredCharacters:[]},
 {id:6,name:"Aelthir",faction:"highElves",ruler:"The Verdant Court",status:"Player court",terrain:"Ancient forest, north-west coast",description:"An old elven city among giant trees beside a sheltered harbour. Its influence reaches the western woodland.",requiredCharacters:["aelthir_dawnwing"]},
 {id:7,name:"Moonspire",faction:"highElves",ruler:"The Moonlit Princes",status:"Rival elven court",terrain:"Wooded Greyward Isles",description:"A secluded island court guarding wooded isles and a valuable sea lane.",requiredCharacters:["lethariel_starweaver"]},
 {id:8,name:"Silvershade",faction:"highElves",ruler:"The Silver Admiralty",status:"Autonomous elven court",terrain:"Eastern island forest and deep harbour",description:"A wealthy harbour-city whose admirals command the eastern island passages.",requiredCharacters:[]},
@@ -465,14 +467,17 @@ const CITIES = [
 {id:21,name:"Dreadmarch",faction:"evilHumans",ruler:"The Iron Marshal",status:"Militarised border state",terrain:"Eastern marches and rough hills",description:"A fortress-state controlling a hard road through the eastern borderlands.",requiredCharacters:[]},
 {id:22,name:"Varkesh",faction:"evilHumans",ruler:"The Prince of Varkesh",status:"Independent principality",terrain:"Far southern plains",description:"A distant human principality with fertile plains, mercenary companies and ambitions of conquest.",requiredCharacters:[]},
 {id:23,name:"Ashenford",faction:"evilHumans",ruler:"The Ashen Council",status:"Independent principality",terrain:"Southern river crossing",description:"A fortified crossing ruled by a council of rival nobles who cooperate only when threatened.",requiredCharacters:[]},
-{id:24,name:"Khaz Varrak",faction:"dwarfs",ruler:"Thaurgath the Rune-Eater",status:"Ancient dragon lair",terrain:"High mountains; carved dwarven halls and rune-forges",description:"A vast dwarven hold cut into the high peaks, its bridges, gates and rune-forges still intact beneath the rule of Thaurgath the Rune-Eater, an ancient spellcasting dragon. No dwarven army garrisons the city.",requiredCharacters:[],passiveOccupant:true} 
+{id:24,name:"Khaz Varrak",faction:"dwarfs",ruler:"Thaurgath the Rune-Eater",status:"Ancient dragon lair",terrain:"High mountains; carved dwarven halls and rune-forges",description:"A vast dwarven hold cut into the high peaks, its bridges, gates and rune-forges still intact beneath the rule of Thaurgath the Rune-Eater, an ancient spellcasting dragon. No dwarven army garrisons the city.",requiredCharacters:[],passiveOccupant:true},
+{id:25,name:"Eastwatch",faction:"empire",ruler:"Harbour Council of Eastwatch",status:"Independent human city",terrain:"Eastern coast of the central continent",description:"A coastal city guarding the eastern approaches, trading with the island courts and the mountain holds.",requiredCharacters:[]},
+{id:26,name:"Deadman",faction:"undead",ruler:"The Deadman Court",status:"Undead port-city",terrain:"Eastern continent; haunted coast",description:"A grim port on the eastern continent, linked by sea to Eastwatch and Silvershade rather than by roads across the ocean.",requiredCharacters:[]}
 ];
 const REGION_NEIGHBORS = {
- 1:[2,6],2:[1,6],3:[8,9],4:[5,20,23],5:[4,8,18,20],
- 6:[1,2,7,8,17],7:[6,17],8:[3,5,6],9:[3,10,24],10:[9,24],
+ 1:[2,6],2:[1,6],3:[8,9],4:[5,20,23],5:[4,18,20],
+ 6:[1,2,7,8,17],7:[6,17],8:[3,6,25,26],9:[3,10,24],10:[9,24,25],
  11:[13,14],12:[14,15,16],13:[11,14],14:[11,12,13,15,21],
  15:[12,14,16],16:[12,15],17:[6,7],18:[5,20,22,23],
- 19:[21],20:[4,5,18,23],21:[14,19,22],22:[18,21,23],23:[4,18,20,22],24:[9,10]
+ 19:[21],20:[4,5,18,23],21:[14,19,22],22:[18,21,23],23:[4,18,20,22],24:[9,10],
+ 25:[8,10,26],26:[8,25]
 };
 
 const CITY_PROFILES = {
@@ -480,7 +485,7 @@ const CITY_PROFILES = {
  2:{tier:2,population:24000,prosperity:65,fortification:{style:"human-layered",material:"stone-and-timber",circuits:1,gates:2,wounds:45},buildings:["market","mill","river-crossing"]},
  3:{tier:3,population:62000,prosperity:75,fortification:{style:"human-layered",material:"stone",circuits:2,gates:3,wounds:70},buildings:["grain-market","guildhall","granaries"]},
  4:{tier:3,population:38000,prosperity:70,fortification:{style:"human-layered",material:"stone",circuits:2,gates:2,wounds:80},buildings:["bridgeworks","tollhouse","barracks"]},
- 5:{tier:3,population:31000,prosperity:72,fortification:{style:"human-layered",material:"stone",circuits:2,gates:2,wounds:75},buildings:["harbour","customs-house","shipyards"]},
+ 5:{tier:3,population:31000,prosperity:72,fortification:{style:"human-layered",material:"stone",circuits:2,gates:2,wounds:75},buildings:["customs-house","barracks","road-station"]},
  6:{tier:5,population:68000,prosperity:82,fortification:{style:"elven-star-fort",material:"enchanted-stone",circuits:1,gates:3,wounds:85},buildings:["ancient-groves","star-bastions","arcane-archive","great-harbour"]},
  7:{tier:4,population:34000,prosperity:76,fortification:{style:"elven-star-fort",material:"pale-stone",circuits:1,gates:2,wounds:70},buildings:["island-harbour","star-bastions","moon-shrine"]},
  8:{tier:3,population:46000,prosperity:80,fortification:{style:"elven-star-fort",material:"pale-stone",circuits:1,gates:3,wounds:65},buildings:["deep-harbour","admiralty","arcane-archive"]},
@@ -499,7 +504,9 @@ const CITY_PROFILES = {
  21:{tier:3,population:22000,prosperity:43,fortification:{style:"human-layered",material:"stone",circuits:2,gates:2,wounds:72},buildings:["march-fort","barracks","road-station"]},
  22:{tier:2,population:19000,prosperity:60,fortification:{style:"human-layered",material:"stone-and-timber",circuits:1,gates:2,wounds:42},buildings:["market","mercenary-yard"]},
  23:{tier:2,population:16000,prosperity:52,fortification:{style:"human-layered",material:"stone",circuits:1,gates:2,wounds:50},buildings:["river-crossing","tollhouse","market"]},
- 24:{tier:4,population:24000,prosperity:58,fortification:{style:"dwarven-heavy",material:"rune-carved-deep-stone",circuits:2,gates:1,wounds:175,cannonPlatforms:8},buildings:["ancient-deep-mines","rune-forges","sealed-vaults","deep-roads"]}
+ 24:{tier:4,population:24000,prosperity:58,fortification:{style:"dwarven-heavy",material:"rune-carved-deep-stone",circuits:2,gates:1,wounds:175,cannonPlatforms:8},buildings:["ancient-deep-mines","rune-forges","sealed-vaults","deep-roads"]},
+ 25:{tier:3,population:36000,prosperity:70,fortification:{style:"human-layered",material:"stone",circuits:1,gates:2,wounds:60},buildings:["harbour","market","watchtower"]},
+ 26:{tier:3,population:19000,prosperity:26,fortification:{style:"human-layered",material:"weathered-stone",circuits:1,gates:1,wounds:48},buildings:["crypt-harbour","old-walls"]}
 };
 const CULTURE_BY_FACTION = {empire:"Human",highElves:"High Elf",dwarfs:"Dwarf",greenskins:"Greenskin",undead:"Undead",evilHumans:"Human"};
 const FACTION_SPECIES = {empire:"human",highElves:"elf",dwarfs:"dwarf",greenskins:"greenskin",undead:"undead",evilHumans:"human"};
@@ -535,7 +542,7 @@ function ensureSettlementState(campaign){
   if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
   ensureSettlementRecruitment(region);
  }
- if(!(campaign.regions||[]).some(r=>r.id===24)){const city=CITIES.find(c=>c.id===24),settlement=initialSettlement(city);campaign.regions.push({id:24,name:city.name,faction:city.faction,politicalFactionId:"deepflame",ownerFaction:"deepflame",owner:"deepflame",nativeFaction:"dwarfs",nativeCulture:"Dwarf",terrain:city.terrain,neighbors:[...(REGION_NEIGHBORS[24]||[])],ruler:city.ruler,status:city.status,settlement});}
+ for(const id of [24,25,26])if(!(campaign.regions||[]).some(r=>r.id===id)){const city=CITIES.find(c=>c.id===id),profile=FACTION_PROFILES[id],settlement=initialSettlement(city);campaign.regions.push({id:city.id,name:city.name,faction:city.faction,politicalFactionId:profile.id,ownerFaction:profile.id,owner:profile.id,nativeFaction:city.faction,nativeCulture:CULTURE_BY_FACTION[city.faction]||"Local",terrain:city.terrain,neighbors:[...(REGION_NEIGHBORS[id]||[])],ruler:city.ruler,status:city.status,settlement});}
  if(campaign.mapId!==MAP_ID||!campaign.graph?.nodes||!campaign.graph?.edges){
   campaign.graph=createMovementGraph();campaign.mapId=MAP_ID;
   for(const army of campaign.armies||[])if(!campaign.graph.nodes[army.nodeId])army.nodeId="city-"+(army.region||army.homeRegion||campaign.startingRegion);
@@ -787,7 +794,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v8";
+const MAP_ID="shattered-realms-v9";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -838,7 +845,7 @@ const byId=id=>document.getElementById(id);
   },{passive:false});
   campaignMapNav.set(host,state);
  }
-const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[515,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1207,515],20:[548,602],21:[944,462],22:[846,680],23:[629,642],24:[584,260]};
+const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[515,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1207,515],20:[548,602],21:[944,462],22:[846,680],23:[629,642],24:[584,260],25:[851,370],26:[978,330]};
 const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
 function collectionBypassEnabled(){try{return getCollectionSnapshot()?.bypass===true;}catch{return false;}}
 function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
@@ -931,7 +938,7 @@ function createMovementGraph(){
  const link=(a,b,cost=1,kind="land")=>{if(!edges[a]||!edges[b]||a===b)return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost,kind});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost,kind});};
  const route=(a,b,kind="land",regionA=null,regionB=null)=>routes.push({a,b,kind,regionA,regionB,marks:[],cuts:[0,1]});
  const positions=CITY_POSITIONS;
- const seaLinks=new Set(["3-8","3-9","5-8","6-7","6-8","6-17","7-17"]);
+ const seaLinks=new Set(["3-8","3-9","6-7","6-8","6-17","7-17","8-25","8-26","25-26"]);
  const isSeaLink=(a,b)=>seaLinks.has([a,b].sort((x,y)=>x-y).join("-"));
  for(const c of CITIES){const [x,y]=positions[c.id];add({id:"city-"+c.id,region:c.id,type:"city",label:c.name,x,y});}
  for(const c of CITIES){
@@ -945,13 +952,14 @@ function createMovementGraph(){
   route("city-"+c.id,"crossroads-"+c.id,"land",c.id,c.id);
  }
  const ports=[
-  {id:"port-3",region:3,type:"port",label:"Goldhaven harbour",x:302,y:315,city:3},
-  {id:"port-5",region:5,type:"port",label:"Southwatch harbour",x:625,y:515,city:5},
+  {id:"port-3",region:3,type:"port",label:"Goldhaven harbour",x:369,y:311,city:3},
   {id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:119,y:76,city:6},
   {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:561,y:163,city:7},
   {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:773,y:226,city:8},
   {id:"port-17",region:17,type:"port",label:"Barrowmere harbour",x:150,y:397,city:17},
-  {id:"port-9",region:9,type:"port",label:"Ironhold harbour",x:488,y:333,city:9}
+  {id:"port-9",region:9,type:"port",label:"Ironhold harbour",x:488,y:333,city:9},
+  {id:"port-25",region:25,type:"port",label:"Eastwatch harbour",x:882,y:365,city:25},
+  {id:"port-26",region:26,type:"port",label:"Deadman harbour",x:921,y:331,city:26}
  ];
  for(const p of ports){add(p);route("city-"+p.city,p.id,"land",p.city,p.city);}
  const seen=new Set();
@@ -967,10 +975,18 @@ function createMovementGraph(){
     }else if(key==="6-8"){
      const waypoints=[{id:"aelthir-north-sea-waypoint",region:6,type:"seaRoute",label:"Northern sea passage",x:190,y:42},{id:"greyward-north-sea-waypoint",region:7,type:"seaRoute",label:"Greyward northern passage",x:315,y:32},{id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55},{id:"eastern-north-sea-waypoint",region:8,type:"seaRoute",label:"Eastern northern sea passage",x:600,y:48},{id:"silvershade-north-sea-waypoint",region:8,type:"seaRoute",label:"Silvershade northern passage",x:720,y:80},{id:"silvershade-coastal-sea-waypoint",region:8,type:"seaRoute",label:"Silvershade coastal approach",x:770,y:150}];
      for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+    }else if(key==="3-8"){
+     const waypoints=[{id:"goldhaven-north-sea-1",region:3,type:"seaRoute",label:"Goldhaven northern passage",x:400,y:300},{id:"goldhaven-north-sea-2",region:8,type:"seaRoute",label:"Central coast passage",x:450,y:275},{id:"goldhaven-north-sea-3",region:8,type:"seaRoute",label:"Northern island approach",x:540,y:250},{id:"goldhaven-north-sea-4",region:8,type:"seaRoute",label:"Silvershade approach",x:650,y:245},{id:"goldhaven-north-sea-5",region:8,type:"seaRoute",label:"Silvershade coastal passage",x:730,y:215}];for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="3-9"){
      const waypoints=[{id:"goldhaven-south-sea-waypoint",region:3,type:"seaRoute",label:"Goldhaven southern sea passage",x:340,y:365},{id:"ironhold-coastal-sea-waypoint",region:9,type:"seaRoute",label:"Ironhold coastal passage",x:410,y:355}];for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="7-17"){
      const waypoints=[{id:"barrowmere-moonspire-strait-east",region:7,type:"seaRoute",label:"Barrowmere–Moonspire Strait",x:410,y:240},{id:"barrowmere-moonspire-strait-middle",region:7,type:"seaRoute",label:"Barrowmere–Moonspire Strait",x:315,y:310},{id:"barrowmere-moonspire-strait-west",region:17,type:"seaRoute",label:"Barrowmere–Moonspire Strait",x:225,y:370}];for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+    }else if(key==="8-25"){
+     const waypoints=[{id:"eastwatch-silvershade-coast-1",region:25,type:"seaRoute",label:"Eastern coast passage",x:861,y:322},{id:"eastwatch-silvershade-coast-2",region:8,type:"seaRoute",label:"Island approach",x:830,y:270}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===25).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===8).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+    }else if(key==="8-26"){
+     const waypoints=[{id:"deadman-north-coast-1",region:26,type:"seaRoute",label:"Deadman northern passage",x:908,y:300},{id:"deadman-north-coast-2",region:8,type:"seaRoute",label:"Silvershade eastern approach",x:855,y:260},{id:"deadman-north-coast-3",region:8,type:"seaRoute",label:"Silvershade island approach",x:825,y:250}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===26).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===8).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+    }else if(key==="25-26"){
+     const waypoints=[{id:"eastwatch-deadman-channel",region:25,type:"seaRoute",label:"Eastern channel",x:902,y:350}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===25).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===26).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="6-17"){
      const waypoints=[{id:"barrowmere-west-sea-1",region:17,type:"seaRoute",label:"Western coastal passage",x:62,y:155},{id:"barrowmere-west-sea-2",region:17,type:"seaRoute",label:"Western island passage",x:48,y:260},{id:"barrowmere-west-sea-3",region:17,type:"seaRoute",label:"Barrowmere outer passage",x:64,y:365}];
      for(const n of waypoints)add(n);
