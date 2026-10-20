@@ -1345,6 +1345,8 @@ function launchCampaignBattle(region,attackingArmyOverride=null){
  const started=window.startPoliticalCampaignBattle({army:playerArmy.roster,faction:playerFaction,enemyArmy:enemyArmy.roster,enemyFaction,onComplete:result=>{
   playerArmy.foughtThisTurn=true;enemyArmy.foughtThisTurn=true;
   const originalPlayerRoster=playerArmy.roster.map(u=>({...u})),originalEnemyRoster=enemyArmy.roster.map(u=>({...u}));
+  playerArmy.startingModels=originalPlayerRoster.reduce((sum,u)=>sum+Math.max(0,Number(u.models)||0),0);
+  enemyArmy.startingModels=originalEnemyRoster.reduce((sum,u)=>sum+Math.max(0,Number(u.models)||0),0);
   const survivors=result.playerUnits||[],enemySurvivors=result.enemyUnits||[];
   playerArmy.roster=playerArmy.roster.map((config,i)=>({...config,models:Math.max(0,survivors[i]?.models??0),currentDamage:survivors[i]?.damage||0,currentWounds:survivors[i]?.characterWounds})).filter(config=>config.models>0);
   enemyArmy.roster=enemyArmy.roster.map((config,i)=>({...config,models:Math.max(0,enemySurvivors[i]?.models??0),currentDamage:enemySurvivors[i]?.damage||0,currentWounds:enemySurvivors[i]?.characterWounds})).filter(config=>config.models>0);
