@@ -94,6 +94,9 @@ function pursueAfterBreak(winner,loser,choice=null){
 const RULES = createRules({ roll, units, say });
 const { rankBonus, hitTarget, woundTarget, saveTarget, applyDamage:applyRawDamage, meleeAttack, shootingAttack } = RULES;
 const OBJECTIVE_NAMES={holdGround:"Hold / Seize the Ground",captureFlag:"Capture the Flag",relics:"Relic Hunt"};
+const EXPEDITION_OBJECTIVE_MODES=[null,"holdGround","captureFlag","relics"];
+function chooseExpeditionObjective(){return EXPEDITION_OBJECTIVE_MODES[Math.floor(Math.random()*EXPEDITION_OBJECTIVE_MODES.length)];}
+function expeditionObjectiveLabel(mode){return mode?OBJECTIVE_NAMES[mode]:"Standard Skirmish";}
 function initializeObjectives(){
  S.objectiveScore={player:0,ai:0};
  S.objectives=[];
@@ -291,11 +294,12 @@ function startRoguelikeBattle(army,faction,round,targetPoints,battleType="skirmi
  const siegeMultiplier=battleType==="siege"?(siegeRole==="defender"?1.5:1/1.5):1,enemyTarget=Math.round(targetPoints*siegeMultiplier);
  const aiRoster=buildOpponentArmy(army,faction,{budgetMultiplier:enemyTarget/Math.max(1,basePoints),siege:battleType==="siege"}),aiForce=createUnitsFromArmy(aiRoster,faction);
  S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};
+ S.objectiveMode=battleType==="skirmish"?chooseExpeditionObjective():null;initializeObjectives();
  $("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("roguelike-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;
  reset();
  army.forEach((cfg,i)=>{const id="p"+(i+1),u=S.units[id];if(!u)return;if(cfg.currentDamage!=null)u.damage=Math.max(0,Number(cfg.currentDamage)||0);if(cfg.currentWounds!=null&&u.isCharacter)u.characterWounds=Math.max(0,Math.min(u.stats.W,cfg.currentWounds));if(cfg.currentArtilleryWounds!=null&&u.isSiegeEngine)u.artilleryWounds=Math.max(0,Math.min(u.artilleryStartWounds,cfg.currentArtilleryWounds));if(cfg.currentChariotWounds!=null&&u.isChariot)u.chariotWounds=Math.max(0,Math.min(u.chariotStartWounds,cfg.currentChariotWounds));if(cfg.type==="lord"&&["youngDragon","dragon","ancientDragon"].includes(cfg.mountType)){const rider=S.units[id+"r"];if(rider&&cfg.currentWounds!=null)rider.characterWounds=Math.max(0,Math.min(rider.stats.W,cfg.currentWounds));}});
  const actualEnemy=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);
- say("Roguelike · Round "+round+" · "+(battleType==="siege"?"Siege — you are the "+siegeRole+". ":"Skirmish. ")+"Your army "+playerPoints+" pts; opponent "+actualEnemy+" pts (target "+enemyTarget+")."+(battleType==="siege"?" The attacker must breach the castle by the end of turn 10; otherwise the defender wins.":""));setupCanvas();
+ say("Roguelike · Round "+round+" · "+(battleType==="siege"?"Siege — you are the "+siegeRole+". ":expeditionObjectiveLabel(S.objectiveMode)+". ")+"Your army "+playerPoints+" pts; opponent "+actualEnemy+" pts (target "+enemyTarget+")."+(battleType==="siege"?" The attacker must breach the castle by the end of turn 10; otherwise the defender wins.":""));setupCanvas();
 }
 function startPoliticalCampaignBattle({army, faction="empire", enemyArmy, enemyFaction="empire", onComplete}){
  if(!Array.isArray(army)||!army.length||!Array.isArray(enemyArmy)||!enemyArmy.length)return false;
@@ -318,14 +322,14 @@ function startWarbandBattle(army,faction,budget){
   $("mainmenu").hidden=true;$("mode-screen").hidden=true;$("warband-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();say("Warband Skirmish · "+units().filter(u=>u.side==="player").length+" individual fighters · "+playerPoints+" pts; AI "+aiPoints+" pts. Injury rolls are active; the warband is temporary.");setupCanvas();
 }
 function startWarbandExpeditionBattle(army,faction,round){
- S.objectiveMode=null;S.objectives=[];S.flags=null;S.objectiveScore={player:0,ai:0};
  campaignBattle=false;grandCampaignBattle=false;roguelikeBattle=false;warbandBattle=false;warbandExpeditionBattle=true;S.warbandSkirmish=true;S.warbandExpedition=true;S.warbandKills=0;S.battleType="skirmish";S.siegeRole="attacker";S.autoTerrain=true;S.terrainSeed=Date.now();
  const playerForce=createUnitsFromArmy(army,faction),rivalArmy=army.map(f=>({...f,name:"Rival · "+(f.name||f.type),injuries:{},xp:undefined,benchFights:0})),aiForce=createUnitsFromArmy(rivalArmy,faction);
  S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};
+ S.objectiveMode=chooseExpeditionObjective();initializeObjectives();
  Object.values(S.units).forEach(u=>{u.attachedTo=null;u.attachedCharacters=[];u.isWarbandFighter=true;u.isWarbandExpeditionFighter=true;u.isCharacter=true;u.singleCharacter=true;u.models=1;u.startModels=1;u.warbandWounds=Math.max(1,u.stats?.W||u.characterWounds||1);u.characterWounds=u.warbandWounds;u.warbandStatus=null;u.warbandXpEarned=0;u.name=u.name||u.type;});
  $("mainmenu").hidden=true;$("mode-screen").hidden=true;$("warband-screen").hidden=true;$("warband-expedition-screen").hidden=true;$("campaign-screen").hidden=true;$("roguelike-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;$("battle-return").hidden=true;reset();
  army.forEach((cfg,i)=>{const u=S.units["p"+(i+1)];if(!u)return;u.warbandFighterId=cfg.id;if(cfg.woundsCurrent!=null)u.characterWounds=u.warbandWounds=Math.max(1,Math.min(u.stats.W,Number(cfg.woundsCurrent)||1));if(cfg.injuries?.leg){u.stats.M=Math.max(1,u.stats.M-1);u.baseMove=Math.max(1,(u.baseMove??u.stats.M)-1);}if(cfg.injuries?.leftArm){u.rangedWeapon=null;u.hasBow=false;u.hasRangedWeapon=false;u.range=0;u.shield=false;u.offhandWeapon=false;u.meleeWeapons=(u.meleeWeapons||[]).filter(w=>!["greatWeapon","halberd","offhandWeapon"].includes(w));if(!u.meleeWeapons.includes("handWeapon"))u.meleeWeapons.unshift("handWeapon");if(["greatWeapon","halberd","bow","crossbow","firearm","longRifle","magicBow"].includes(u.weapon))u.weapon="handWeapon";}});
- say("Warband Expedition · Fight "+round+" · "+army.length+" individual fighters. Fighters who go out of action face a post-battle injury roll; opponents removed in battle grant 1 XP to the nearest available fighter. Set up and fight.");setupCanvas();
+ say("Warband Expedition · Fight "+round+" · "+army.length+" individual fighters · Mission: "+expeditionObjectiveLabel(S.objectiveMode)+". Fighters who go out of action face a post-battle injury roll; opponents removed in battle grant 1 XP to the nearest available fighter. Set up and fight.");setupCanvas();
 }
 function startCampaignBattle(army,enemyConfig){
  S.objectiveMode=null;S.objectives=[];S.flags=null;S.objectiveScore={player:0,ai:0};
