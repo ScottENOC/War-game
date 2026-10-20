@@ -28,7 +28,7 @@ export const FACTIONS = {
     youngDragon:{name:"Young Dragon",short:"Young Dragon",kind:"monster",models:1,points:140,isDragon:true,breathStrength:3,intrinsicArmourSave:5,stats:{M:8,WS:4,BS:0,S:5,T:5,W:4,I:4,A:3,Ld:6}},
     dragon:{name:"Dragon",short:"Dragon",kind:"monster",models:1,points:220,isDragon:true,breathStrength:4,intrinsicArmourSave:4,stats:{M:8,WS:5,BS:0,S:6,T:6,W:6,I:5,A:4,Ld:7}},
     ancientDragon:{name:"Ancient Dragon",short:"Ancient Dragon",kind:"monster",models:1,points:320,isDragon:true,breathStrength:5,intrinsicArmourSave:3,stats:{M:8,WS:6,BS:0,S:7,T:7,W:8,I:6,A:5,Ld:8}},
-    deepflameDragon:{name:"Thaurgath the Rune-Eater",short:"Thaurgath",kind:"monster",models:1,points:450,isDragon:true,namedCharacter:true,spellcaster:true,baseCasterLevel:4,dispelBonus:1,breathStrength:5,intrinsicArmourSave:2,stats:{M:8,WS:7,BS:0,S:7,T:7,W:10,I:7,A:6,Ld:9}},
+    deepflameDragon:{name:"Thaurgath the Rune-Eater",short:"Thaurgath",kind:"monster",models:1,points:450,isDragon:true,namedCharacter:true,spellcaster:true,baseCasterLevel:4,breathStrength:5,intrinsicArmourSave:2,stats:{M:8,WS:7,BS:0,S:7,T:7,W:10,I:7,A:6,Ld:8}},
     elfChariot:{name:"High Elf Chariot",short:"Elven Chariot",kind:"chariot",models:3,points:110,chariot:true,alwaysStrikesFirst:true,stats:{M:8,WS:4,BS:4,S:3,T:4,W:4,I:4,A:1,Ld:8},mountStats:{A:2,WS:3,I:4,S:3},impactStrength:5,armourSave:4}
   }},
   dwarfs: { name:"Dwarfs", units:{
