@@ -1,4 +1,4 @@
-import { getCollectionSnapshot } from "./collection.js?v=20261020-undead-monsters-v3";
+import { getCollectionSnapshot } from "./collection.js?v=20261020-undead-monsters-v4";
 import { unitCost, createUnitsFromArmy } from "./units.js?v=20261020-undead-monsters-v2";
 const FACTIONS = {
  empire:{name:"Human Realms",summary:"The largest and most populous realm, but not a unified kingdom.",strengths:"Broad territory, fertile river valleys, trade roads and the largest pool of settlements.",politics:"Crownfall and Westmere recognise your court. Goldhaven, Stonebridge and Southwatch answer to rival human lords.",playerCities:["Crownfall","Westmere"],armyFaction:"empire"},
