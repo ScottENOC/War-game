@@ -258,6 +258,7 @@ function saveBattleSnapshot() {
  }
 }
 render = () => {
+ updateAiMemory();
  Object.values(S.units||{}).forEach(u=>{u.magicSuppressed=isInsideNullificationDome(u);});
  updateObjectiveInteractions();
  const revive=$("mordheim-revive"),rescuer=S.units[S.selected];if(revive){const target=!!S.mordheimSkirmish&&S.phase==="movement"&&rescuer?.side==="player"&&alive(rescuer)&&!rescuer.mordheimStatus&&!rescuer.fled&&!rescuer.engaged&&!rescuer.activated&&units().some(v=>v.side==="player"&&v.mordheimStatus==="unconscious"&&alive(v)&&dist(rescuer,v)<=1.5);revive.hidden=!target;}
