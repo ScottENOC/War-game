@@ -43,7 +43,9 @@ const FACTION_PROFILES = {
  22:{id:"varkesh",name:"The Principality of Varkesh",race:"human",colours:{main:"#7C342D",accent:"#D6B77B"},emblem:"sun"},
  23:{id:"ashenCouncil",name:"The Ashen Council",race:"human",colours:{main:"#68645B",accent:"#B66A35"},emblem:"gate"},
  24:{id:"deepflame",name:"Thaurgath the Rune-Eater",race:"dragon",passive:true,colours:{main:"#493A59",accent:"#D7A94D"},emblem:"dragon"},
- 25:{id:"eastwatch",name:"Eastwatch Harbour Council",race:"human",colours:{main:"#456B79",accent:"#D9C48A"},emblem:"tower"}
+ 25:{id:"eastwatch",name:"Eastwatch Harbour Council",race:"human",colours:{main:"#456B79",accent:"#D9C48A"},emblem:"tower"},
+ 26:{id:"pirateFreehold",name:"The Freebooters' Haven",race:"human",colours:{main:"#5C4635",accent:"#D8B56D"},emblem:"skull"},
+ 27:{id:"corsairHaven",name:"The Black Flag Corsairs",race:"human",colours:{main:"#343C48",accent:"#C7D1D9"},emblem:"crossed-swords"}
 };
 const FACTION_BY_ID = Object.fromEntries(Object.values(FACTION_PROFILES).map(f=>[f.id,f]));
 
@@ -70,7 +72,9 @@ const FACTION_ROSTER_OVERRIDES={
  blackthorn:{roster:"empire",units:["swordsmen","archers","cavalry","captain"]},
  ironMarshal:{roster:"empire",units:["swordsmen","cannon","archers","captain"]},
  varkesh:{roster:"empire",units:["swordsmen","cavalry","archers","lord"]},
- ashenCouncil:{roster:"empire",units:["swordsmen","archers","cannon","captain"]}
+ ashenCouncil:{roster:"empire",units:["swordsmen","archers","cannon","captain"]},
+ pirateFreehold:{roster:"empire",units:["swordsmen","firearmInfantry","rifleman","cannon","captain"]},
+ corsairHaven:{roster:"empire",units:["swordsmen","firearmInfantry","rifleman","cannon","captain"]}
 };
 function rosterFactionForPoliticalFaction(id){
  const profile=FACTION_BY_ID[id];return FACTION_ROSTER_OVERRIDES[id]?.roster||RACES[profile?.race]?.defaultRoster||"empire";
@@ -172,9 +176,22 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
  const woodElfStyle=id==="verdantCourt";
  if(id==="deepflame"){const roster=[{type:"deepflameDragon",models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],casterLevel:4,spells:["fireBolt","nullificationDome"],champion:false,upgrades:{},skills:{}}];return {faction:"highElves",roster,points:unitCost(roster[0],"highElves"),politicalFactionId:id};}
  const faction=rosterFactionForPoliticalFaction(id),profile=FACTION_BY_ID[id],race=profile?.race||"human";
+ const pirate=["pirateFreehold","corsairHaven"].includes(id);
  const basicType=race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":race==="undead"?"skeletons":"swordsmen",rangedType=race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":race==="undead"?"zombies":"archers";
  const character=campaignCharacterConfig(id,player?commander:null);
  let roster=[];
+ if(pirate){
+  if(player){
+   const owned=collectionModels().filter(m=>m.faction===faction&&m.type==="swordsmen");
+   const guns=owned.filter(m=>m.weapon==="firearm").length,deckhands=owned.filter(m=>m.weapon==="handWeapon").length;
+   if(guns>=5)roster.push({type:"swordsmen",models:Math.min(30,guns),weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:"firearm",champion:false,upgrades:{}});
+   if(deckhands>=5)roster.push({type:"swordsmen",models:Math.min(30,deckhands),weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{}});
+   if(commander)roster.push(character);
+  }else{
+   roster=[{type:"swordsmen",models:12,weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:"firearm",champion:false,upgrades:{},skills:{}},{type:"swordsmen",models:12,weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:"firearm",champion:false,upgrades:{},skills:{}},{type:"swordsmen",models:10,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},{type:"cannon",models:3,weapon:"handWeapon",champion:false,upgrades:{}},{...character,rangedWeapon:"firearm"}];
+  }
+  const points=roster.reduce((sum,u)=>sum+unitCost(u,faction),0);return {faction,roster,points,politicalFactionId:id};
+ }
  if(player){
   const models=collectionModels(),count=(type,weaponFilter=null)=>models.filter(m=>m.faction===faction&&m.type===type&&(!weaponFilter||weaponFilter(m))).length;
   const meleeAvailable=count(basicType,m=>m.weapon==="handWeapon"&&(!woodElfStyle||m.components?.includes("left_sword")||m.offhandWeapon));
@@ -468,14 +485,16 @@ const CITIES = [
 {id:23,name:"Ashenford",faction:"evilHumans",ruler:"The Ashen Council",status:"Independent principality",terrain:"Southern river crossing",description:"A fortified crossing ruled by a council of rival nobles who cooperate only when threatened.",requiredCharacters:[]},
 {id:24,name:"Khaz Varrak",faction:"dwarfs",ruler:"Thaurgath the Rune-Eater",status:"Ancient dragon lair",terrain:"High mountains; carved dwarven halls and rune-forges",description:"A vast dwarven hold cut into the high peaks, its bridges, gates and rune-forges still intact beneath the rule of Thaurgath the Rune-Eater, an ancient spellcasting dragon. No dwarven army garrisons the city.",requiredCharacters:[],passiveOccupant:true},
 {id:25,name:"Eastwatch",faction:"empire",ruler:"Harbour Council of Eastwatch",status:"Independent human city",terrain:"Eastern coast of the central continent",description:"A coastal city guarding the eastern approaches, trading with the island courts and the mountain holds.",requiredCharacters:[]},
+ {id:26,name:"Freebooter's Haven",faction:"empire",ruler:"The Freebooters",status:"Pirate port",terrain:"Far Shoals island; rocky coves and hidden anchorages",description:"A fortified pirate harbour where gun crews, smugglers and freebooters prey on passing merchant vessels.",requiredCharacters:[]},
+ {id:27,name:"Blackflag Cay",faction:"empire",ruler:"The Black Flag Corsairs",status:"Pirate port",terrain:"Southern island; sheltered coves and salt cliffs",description:"A corsair stronghold built around a sheltered anchorage, notorious for firearm volleys and fast raids against coastal shipping.",requiredCharacters:[]},
 ];
 const REGION_NEIGHBORS = {
- 1:[2,6],2:[1,6],3:[8,9],4:[5,20,23],5:[4,18,20],
- 6:[1,2,7,8,17],7:[6,17],8:[3,6,21,25],9:[3,10,24],10:[9,24,25],
+ 1:[2,6],2:[1,6],3:[8,9,27],4:[5,20,23],5:[4,18,20],
+ 6:[1,2,7,8,17],7:[6,17],8:[3,6,21,25,26],9:[3,10,24],10:[9,24,25],
  11:[13,14],12:[14,15,16],13:[11,14],14:[11,12,13,15,21],
- 15:[12,14,16],16:[12,15],17:[6,7],18:[5,20,22,23],
+ 15:[12,14,16],16:[12,15],17:[6,7,27],18:[5,20,22,23],
  19:[21],20:[4,5,18,23],21:[8,14,19,22,25],22:[18,21,23],23:[4,18,20,22],24:[9,10],
- 25:[8,10,21]
+ 25:[8,10,21,26],26:[8,25],27:[3,17]
 };
 
 const CITY_PROFILES = {
@@ -504,6 +523,8 @@ const CITY_PROFILES = {
  23:{tier:2,population:16000,prosperity:52,fortification:{style:"human-layered",material:"stone",circuits:1,gates:2,wounds:50},buildings:["river-crossing","tollhouse","market"]},
  24:{tier:4,population:24000,prosperity:58,fortification:{style:"dwarven-heavy",material:"rune-carved-deep-stone",circuits:2,gates:1,wounds:175,cannonPlatforms:8},buildings:["ancient-deep-mines","rune-forges","sealed-vaults","deep-roads"]},
  25:{tier:3,population:36000,prosperity:70,fortification:{style:"human-layered",material:"stone",circuits:1,gates:2,wounds:60},buildings:["harbour","market","watchtower"]},
+ 26:{tier:2,population:12500,prosperity:46,fortification:{style:"human-layered",material:"weathered-stone-and-timber",circuits:1,gates:1,wounds:42},buildings:["pirate-harbour","powder-magazine","black-market"]},
+ 27:{tier:2,population:9800,prosperity:40,fortification:{style:"human-layered",material:"salt-worn-stone",circuits:1,gates:1,wounds:35},buildings:["corsair-harbour","powder-magazine","shipwrights"]},
 };
 const CULTURE_BY_FACTION = {empire:"Human",highElves:"High Elf",dwarfs:"Dwarf",greenskins:"Greenskin",undead:"Undead",evilHumans:"Human"};
 const FACTION_SPECIES = {empire:"human",highElves:"elf",dwarfs:"dwarf",greenskins:"greenskin",undead:"undead",evilHumans:"human"};
@@ -539,10 +560,12 @@ function ensureSettlementState(campaign){
   if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
   ensureSettlementRecruitment(region);
  }
- campaign.regions=(campaign.regions||[]).filter(region=>region.id!==26);
- for(const army of campaign.armies||[])if(army.region===26||army.homeRegion===26||army.nodeId==="city-26"){army.region=21;army.homeRegion=army.homeRegion===26?21:army.homeRegion;army.nodeId="city-21";}
- for(const id of [24,25])if(!(campaign.regions||[]).some(r=>r.id===id)){const city=CITIES.find(c=>c.id===id),profile=FACTION_PROFILES[id],settlement=initialSettlement(city);campaign.regions.push({id:city.id,name:city.name,faction:city.faction,politicalFactionId:profile.id,ownerFaction:profile.id,owner:profile.id,nativeFaction:city.faction,nativeCulture:CULTURE_BY_FACTION[city.faction]||"Local",terrain:city.terrain,neighbors:[...(REGION_NEIGHBORS[id]||[])],ruler:city.ruler,status:city.status,settlement});}
- for(const region of campaign.regions||[])region.neighbors=[...(REGION_NEIGHBORS[region.id]||[])];
+ // Legacy Deadman data is identified by name below; region 26 is now a pirate island.
+ for(const id of [24,25,26,27])if(!(campaign.regions||[]).some(r=>r.id===id)){const city=CITIES.find(c=>c.id===id),profile=FACTION_PROFILES[id],settlement=initialSettlement(city);campaign.regions.push({id:city.id,name:city.name,faction:city.faction,politicalFactionId:profile.id,ownerFaction:profile.id,owner:profile.id,nativeFaction:city.faction,nativeCulture:CULTURE_BY_FACTION[city.faction]||"Local",terrain:city.terrain,neighbors:[...(REGION_NEIGHBORS[id]||[])],ruler:city.ruler,status:city.status,settlement});}
+ const legacyDeadman=(campaign.regions||[]).some(region=>region.id===26&&/deadman/i.test(String(region.name||"")));
+  if(legacyDeadman)for(const army of campaign.armies||[])if(army.region===26||army.homeRegion===26||army.nodeId==="city-26"||army.owner==="deadman"||army.factionId==="deadman"){army.region=21;army.homeRegion=army.homeRegion===26?21:army.homeRegion;army.nodeId="city-21";if(army.owner==="deadman")army.owner="ironMarshal";if(army.factionId==="deadman")army.factionId="ironMarshal";}
+  campaign.regions=(campaign.regions||[]).filter(region=>CITIES.some(city=>city.id===region.id)&&!(region.id===26&&/deadman/i.test(String(region.name||""))));
+  for(const region of campaign.regions||[])region.neighbors=[...(REGION_NEIGHBORS[region.id]||[])];
  if(campaign.mapId!==MAP_ID||!campaign.graph?.nodes||!campaign.graph?.edges){
   campaign.graph=createMovementGraph();campaign.mapId=MAP_ID;
   for(const army of campaign.armies||[])if(!campaign.graph.nodes[army.nodeId])army.nodeId="city-"+(army.region||army.homeRegion||campaign.startingRegion);
@@ -564,7 +587,15 @@ function ensureSettlementState(campaign){
   });
   const player=campaign.factionStates.find(f=>f.id===campaign.playerPoliticalFaction);if(player)campaign.treasury=player.treasury;
  }
- const dragonState=campaign.factionStates.find(f=>f.id==="deepflame");if(dragonState){dragonState.passive=true;dragonState.race="dragon";dragonState.income=0;dragonState.upkeep=0;dragonState.treasury=0;dragonState.rosterFaction="highElves";if(dragonState.alive!==false&&politicalOwner(campaign.regions.find(r=>r.id===24))==="deepflame"){dragonState.roster=[{type:"deepflameDragon",models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],casterLevel:4,spells:["fireBolt","nullificationDome"],champion:false,upgrades:{},skills:{}}];dragonState.armyPoints=unitCost(dragonState.roster[0],"highElves");}}const dragonArmy=(campaign.armies||[]).find(a=>(a.owner||a.factionId)==="deepflame");if(dragonArmy){dragonArmy.passive=true;dragonArmy.movement=0;if(politicalOwner(campaign.regions.find(r=>r.id===24))==="deepflame"){dragonArmy.region=24;dragonArmy.nodeId="city-24";}}else if(politicalOwner(campaign.regions.find(r=>r.id===24))==="deepflame"){const generated=createCampaignArmyRoster("deepflame",500);campaign.armies.push({id:"deepflame-main",owner:"deepflame",factionId:"deepflame",rosterFaction:generated.faction,roster:generated.roster,region:24,nodeId:"city-24",points:generated.points,movement:0,supplies:3,maxSupplies:3,passive:true});}
+ campaign.factionStates=campaign.factionStates||[];campaign.armies=campaign.armies||[];campaign.factionTurnOrder=campaign.factionTurnOrder||campaign.factionStates.filter(f=>f.id!=="deepflame").map(f=>f.id);
+  for(const profile of Object.values(FACTION_PROFILES)){
+   if(campaign.factionStates.some(f=>f.id===profile.id))continue;
+   const home=CITIES.find(c=>FACTION_PROFILES[c.id]?.id===profile.id);if(!home)continue;
+   const generated=createCampaignArmyRoster(profile.id,500),state={id:profile.id,name:profile.name,race:profile.race,rosterFaction:generated.faction,roster:generated.roster,homeRegion:home.id,alive:true,passive:!!profile.passive,treasury:profile.passive?0:300,income:profile.passive?0:campaignCityIncome(campaign.regions.find(r=>r.id===home.id)),upkeep:profile.passive?0:campaignArmyUpkeep({roster:generated.roster,rosterFaction:generated.faction}),armyPoints:generated.points,turnsTaken:0,relations:{}};
+   campaign.factionStates.push(state);if(!campaign.factionTurnOrder.includes(profile.id))campaign.factionTurnOrder.push(profile.id);
+   campaign.armies.push({id:profile.id+"-main",owner:profile.id,factionId:profile.id,rosterFaction:generated.faction,roster:generated.roster,region:home.id,nodeId:"city-"+home.id,points:generated.points,passive:!!profile.passive,boredom:-4,momentum:0,foughtThisTurn:false,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0});
+  }
+  const dragonState=campaign.factionStates.find(f=>f.id==="deepflame");if(dragonState){dragonState.passive=true;dragonState.race="dragon";dragonState.income=0;dragonState.upkeep=0;dragonState.treasury=0;dragonState.rosterFaction="highElves";if(dragonState.alive!==false&&politicalOwner(campaign.regions.find(r=>r.id===24))==="deepflame"){dragonState.roster=[{type:"deepflameDragon",models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],casterLevel:4,spells:["fireBolt","nullificationDome"],champion:false,upgrades:{},skills:{}}];dragonState.armyPoints=unitCost(dragonState.roster[0],"highElves");}}const dragonArmy=(campaign.armies||[]).find(a=>(a.owner||a.factionId)==="deepflame");if(dragonArmy){dragonArmy.passive=true;dragonArmy.movement=0;if(politicalOwner(campaign.regions.find(r=>r.id===24))==="deepflame"){dragonArmy.region=24;dragonArmy.nodeId="city-24";}}else if(politicalOwner(campaign.regions.find(r=>r.id===24))==="deepflame"){const generated=createCampaignArmyRoster("deepflame",500);campaign.armies.push({id:"deepflame-main",owner:"deepflame",factionId:"deepflame",rosterFaction:generated.faction,roster:generated.roster,region:24,nodeId:"city-24",points:generated.points,movement:0,supplies:3,maxSupplies:3,passive:true});}
  enforcePopulationResidency(campaign);
  if(campaign.commander){const selected=(campaign.armies||[]).find(a=>a.id===campaign.selectedArmyId)|| (campaign.armies||[]).find(a=>(a.owner||a.factionId)===campaign.playerPoliticalFaction);campaign.commander.maxMovement=campaignArmyMovementProfile(selected,campaign).points;campaign.commander.movement=Math.min(campaign.commander.maxMovement,Number(campaign.commander.movement)||campaign.commander.maxMovement);}
  for(const army of campaign.armies||[])if(army.owner===campaign.playerPoliticalFaction||army.factionId===campaign.playerPoliticalFaction)army.movement=Math.min(campaignArmyMovementProfile(army,campaign).points,Number(army.movement)||0);
@@ -794,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v10";
+const MAP_ID="shattered-realms-v11-pirate-isles";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -845,7 +876,7 @@ const byId=id=>document.getElementById(id);
   },{passive:false});
   campaignMapNav.set(host,state);
  }
-const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[515,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1207,515],20:[548,602],21:[1167,420],22:[846,680],23:[629,642],24:[584,260],25:[851,370]};
+const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[515,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[846,680],23:[629,642],24:[584,260],25:[851,370],26:[925,275],27:[365,435]};
 const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
 function collectionBypassEnabled(){try{return getCollectionSnapshot()?.bypass===true;}catch{return false;}}
 function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
@@ -938,13 +969,13 @@ function createMovementGraph(){
  const link=(a,b,cost=1,kind="land")=>{if(!edges[a]||!edges[b]||a===b)return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost,kind});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost,kind});};
  const route=(a,b,kind="land",regionA=null,regionB=null)=>routes.push({a,b,kind,regionA,regionB,marks:[],cuts:[0,1]});
  const positions=CITY_POSITIONS;
- const seaLinks=new Set(["3-8","3-9","6-7","6-8","6-17","7-17","8-21","8-25","21-25"]);
+ const seaLinks=new Set(["3-8","3-9","3-27","6-7","6-8","6-17","7-17","8-21","8-25","8-26","17-27","21-25","25-26"]);
  const isSeaLink=(a,b)=>seaLinks.has([a,b].sort((x,y)=>x-y).join("-"));
  for(const c of CITIES){const [x,y]=positions[c.id];add({id:"city-"+c.id,region:c.id,type:"city",label:c.name,x,y});}
  for(const c of CITIES){
   // Moonspire and Silvershade are island ports: connect each city directly
   // to its harbour, with no redundant inland crossroads.
-  if(c.id===7||c.id===8||c.id===17)continue;
+  if(c.id===7||c.id===8||c.id===17||c.id===26||c.id===27)continue;
   const [x,y]=positions[c.id],ns=(REGION_NEIGHBORS[c.id]||[]).filter(id=>!isSeaLink(c.id,id)&&id!==7&&id!==8&&id!==17);
   const avg=ns.length?ns.reduce((p,id)=>({x:p.x+positions[id][0]/ns.length,y:p.y+positions[id][1]/ns.length}),{x:0,y:0}):{x:x+18,y:y+12};
   const jx=Math.max(30,Math.min(1270,x+(avg.x-x)*.12)),jy=Math.max(30,Math.min(720,y+(avg.y-y)*.12));
@@ -959,7 +990,9 @@ function createMovementGraph(){
   {id:"port-17",region:17,type:"port",label:"Barrowmere harbour",x:150,y:397,city:17},
   {id:"port-9",region:9,type:"port",label:"Ironhold harbour",x:488,y:333,city:9},
   {id:"port-25",region:25,type:"port",label:"Eastwatch harbour",x:882,y:365,city:25},
-  {id:"port-21",region:21,type:"port",label:"Dreadmarch harbour",x:1192,y:418,city:21}
+  {id:"port-21",region:21,type:"port",label:"Dreadmarch harbour",x:1192,y:418,city:21},
+  {id:"port-26",region:26,type:"port",label:"Freebooter's Haven harbour",x:952,y:280,city:26},
+  {id:"port-27",region:27,type:"port",label:"Blackflag Cay harbour",x:397,y:441,city:27}
  ];
  for(const p of ports){add(p);route("city-"+p.city,p.id,"land",p.city,p.city);}
  const seen=new Set();
@@ -987,7 +1020,15 @@ function createMovementGraph(){
      const waypoints=[{id:"dreadmarch-silvershade-coast-1",region:21,type:"seaRoute",label:"Dreadmarch northern passage",x:1125,y:300},{id:"dreadmarch-silvershade-coast-2",region:8,type:"seaRoute",label:"Eastern island approach",x:950,y:260},{id:"dreadmarch-silvershade-coast-3",region:8,type:"seaRoute",label:"Silvershade island approach",x:825,y:250}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===8).id,...waypoints.slice().reverse().map(n=>n.id),ports.find(p=>p.city===21).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="21-25"){
      const waypoints=[{id:"eastwatch-dreadmarch-channel",region:21,type:"seaRoute",label:"Eastern channel",x:1120,y:370}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===21).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===25).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
-    }else if(key==="6-17"){
+    }else if(key==="8-26"){
+      const waypoints=[{id:"freebooter-north-channel",region:26,type:"seaRoute",label:"Freebooter northern channel",x:865,y:205},{id:"freebooter-west-approach",region:26,type:"seaRoute",label:"Far Shoals approach",x:915,y:230}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===8).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===26).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+     }else if(key==="25-26"){
+      const waypoints=[{id:"eastwatch-far-shoals-channel",region:25,type:"seaRoute",label:"Far Shoals channel",x:900,y:330},{id:"far-shoals-south-approach",region:26,type:"seaRoute",label:"Southern island approach",x:940,y:310}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===25).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===26).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+     }else if(key==="3-27"){
+      const waypoints=[{id:"goldhaven-blackflag-coast-1",region:3,type:"seaRoute",label:"Southern Goldhaven passage",x:385,y:355},{id:"goldhaven-blackflag-coast-2",region:27,type:"seaRoute",label:"Blackflag Cay approach",x:390,y:400}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===3).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===27).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+     }else if(key==="17-27"){
+      const waypoints=[{id:"barrowmere-blackflag-west",region:17,type:"seaRoute",label:"Western pirate passage",x:205,y:405},{id:"barrowmere-blackflag-east",region:27,type:"seaRoute",label:"Blackflag Cay western approach",x:290,y:425}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===17).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===27).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+     }else if(key==="6-17"){
      const waypoints=[{id:"barrowmere-west-sea-1",region:17,type:"seaRoute",label:"Western coastal passage",x:62,y:155},{id:"barrowmere-west-sea-2",region:17,type:"seaRoute",label:"Western island passage",x:48,y:260},{id:"barrowmere-west-sea-3",region:17,type:"seaRoute",label:"Barrowmere outer passage",x:64,y:365}];
      for(const n of waypoints)add(n);
      const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
@@ -996,7 +1037,7 @@ function createMovementGraph(){
    continue;
   }
   // Island cities have no mainland road links; onward travel is by sea.
-  if(c.id===7||other===7||c.id===8||other===8||c.id===17||other===17)continue;
+  if(c.id===7||other===7||c.id===8||other===8||c.id===17||other===17||c.id===26||other===26||c.id===27||other===27)continue;
   // Grinhold shares a short approach before the road branches toward Skullcrag
   // and Ironjaw Pass, avoiding two almost parallel roads leaving the stronghold.
   if(c.id===11||other===11)continue;
@@ -1313,9 +1354,10 @@ function selectedPlayerArmy(){
  return army;
 }
 function recruitCatalog(){
+ const pirate=isPirateFaction(activeCampaign.playerPoliticalFaction);
  const race=FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race||"human",basic=race==="undead"?"skeletons":race==="greenskin"?"goblins":race==="dwarf"?"dwarfInfantry":"swordsmen";
  const options=[
-  {key:"melee",label:activeCampaign.playerPoliticalFaction==="verdantCourt"?"Wood Elf dual-wielders":race==="dwarf"?"Dwarf melee infantry":race==="elf"?"High Elf spearmen":race==="greenskin"?"Goblin mobs":"Melee infantry",type:basic,weapon:race==="elf"&&activeCampaign.playerPoliticalFaction!=="verdantCourt"?"spear":"handWeapon",min:5,max:30,modelType:basic,modelWeapon:race==="elf"&&activeCampaign.playerPoliticalFaction!=="verdantCourt"?"spear":"handWeapon"},
+  {key:"melee",label:pirate?"Deckhands":activeCampaign.playerPoliticalFaction==="verdantCourt"?"Wood Elf dual-wielders":race==="dwarf"?"Dwarf melee infantry":race==="elf"?"High Elf spearmen":race==="greenskin"?"Goblin mobs":"Melee infantry",type:basic,weapon:race==="elf"&&activeCampaign.playerPoliticalFaction!=="verdantCourt"?"spear":"handWeapon",min:5,max:30,modelType:basic,modelWeapon:race==="elf"&&activeCampaign.playerPoliticalFaction!=="verdantCourt"?"spear":"handWeapon"},
   ...(race==="greenskin"?[
    {key:"orcBoyz",label:"Orc Boyz",type:"orcBoyz",weapon:"handWeapon",min:5,max:30,modelType:"orcBoyz",modelWeapon:"handWeapon"},
    {key:"goblinBows",label:"Goblin short bows",type:"goblins",weapon:"handWeapon",rangedWeapon:"bow",min:5,max:30,modelType:"goblins",modelWeapon:"bow"},
@@ -1371,7 +1413,8 @@ function recruitCatalog(){
   ])
  ];
  if(activeCampaign.playerPoliticalFaction==="verdantCourt")options.push({key:"woodElfChariot",label:"Wood Elf chariot",type:"elfChariot",weapon:"handWeapon",min:3,max:3,modelType:"elfChariot",fixed:true,crewType:"swordsmen",crewWeapon:"handWeapon"});
- return options;
+ if(pirate)return options.filter(o=>!["archers","crossbowmen","cavalry","spearmen"].includes(o.key)).map(o=>o.key==="firearmInfantry"?{...o,label:"Pirate handgunners"}:o.key==="artillery"?{...o,label:"Shipboard cannon"}:o);
+  return options;
 }
 function assignedSiegeModelIds(){return new Set(playerArmies().flatMap(a=>(a.roster||[]).flatMap(u=>[u.machineModelId,...(u.crewModelIds||[])].filter(Boolean))));}
 function optionMatchesModel(o,m){const woodElfStyle=activeCampaign.playerPoliticalFaction==="verdantCourt",needsDualWield=woodElfStyle&&(o.key==="melee"||String(o.key||"").startsWith("crew-"));return m?.faction===rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction)&&m.type===o.modelType&&(!o.modelWeapon||m.weapon===o.modelWeapon)&&(!needsDualWield||m.components?.includes("left_sword")||m.offhandWeapon); }
@@ -1775,9 +1818,14 @@ function updateGreenskinDiplomacy(campaign){
   }
  }
 }
+function isPirateFaction(id){return id==="pirateFreehold"||id==="corsairHaven";}
 function baseFactionRelation(a,b){
  const pa=profileForFaction(a),pb=profileForFaction(b);
  if(!pa||!pb)return 0;
+ if(isPirateFaction(a)||isPirateFaction(b)){
+  if(isPirateFaction(a)&&isPirateFaction(b))return -10;
+  if(pa.race==="human"&&pb.race==="human")return -45;
+ }
  return (RACES[pa.race]?.attitudes?.[pb.race]??0)+(pa.race===pb.race?10:0);
 }
 function campaignRelation(campaign,a,b){
@@ -1816,7 +1864,7 @@ function updatePeaceAndWarRelations(campaign){
   if(a.id===b.id)continue;
   const atWar=wars.has(campaignWarKey(a.id,b.id)),current=campaignRelation(campaign,a.id,b.id);
   if(atWar)setCampaignRelation(campaign,a.id,b.id,current-3);
-  else setCampaignRelation(campaign,a.id,b.id,Math.min(60,current+1));
+  else setCampaignRelation(campaign,a.id,b.id,Math.min(isPirateFaction(a.id)||isPirateFaction(b.id)?baseFactionRelation(a.id,b.id):60,current+1));
  }
 }
 function renderDiplomacy(){
