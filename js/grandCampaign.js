@@ -1421,8 +1421,10 @@ function launchCampaignBattle(region,attackingArmyOverride=null,defendingArmyOve
  const playerId=activeCampaign.playerPoliticalFaction,playerArmy=attackingArmyOverride||selectedPlayerArmy();
  const targetId=targetNodeId||"city-"+region.id;
  const node=activeCampaign.graph.nodes[targetId];
- const occupying=defendingArmyOverride?[defendingArmyOverride]:campaignArmyAtNode(activeCampaign,targetId,playerArmy).filter(a=>(a.owner||a.factionId)!==playerId);
- const enemyId=occupying[0]?(occupying[0].owner||occupying[0].factionId):politicalOwner(region);
+ const stationedAtTarget=campaignArmyAtNode(activeCampaign,targetId,playerArmy).filter(a=>(a.owner||a.factionId)!==playerId);
+ const enemyId=defendingArmyOverride?(defendingArmyOverride.owner||defendingArmyOverride.factionId):(stationedAtTarget[0]?(stationedAtTarget[0].owner||stationedAtTarget[0].factionId):politicalOwner(region));
+ const occupying=stationedAtTarget.filter(a=>(a.owner||a.factionId)===enemyId);
+ if(defendingArmyOverride&&!occupying.includes(defendingArmyOverride))occupying.unshift(defendingArmyOverride);
  if(!enemyId||enemyId===playerId||!playerArmy?.roster?.length)return;
  declareCampaignWar(activeCampaign,playerId,enemyId);
  // All hostile armies sharing the battle node fight as one defending force.
