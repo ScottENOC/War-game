@@ -9,14 +9,14 @@ import { createAI } from "./ai.js?v=20261020-vision-v1";
 import { createRules } from "./rules.js?v=20261020-wood-elf-v1";
 import { createShooting } from "./shooting.js?v=20261020-vision-v1";
 import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
-import { createRendering } from "./rendering.js?v=20261021-river-crossing-castles-v1";
+import { createRendering } from "./rendering.js?v=20261021-river-crossing-castles-v2";
 import { createInput } from "./input.js?v=20261020-vision-v1";
 import { createUI } from "./ui.js?v=20261020-warband-v1";
 import { createPhases } from "./phases.js?v=20261020-vision-v1";
 import { createDice } from "./dice.js";
 import { createMovement } from "./movement.js?v=20261021-impassable-river-v1";
 import { createNarrativeCampaign } from "./campaign.js";
-import { generateSkirmishTerrain, generateRiverCrossingCastleTerrain } from "./terrain.js?v=20261021-river-crossing-castles-v1";
+import { generateSkirmishTerrain, generateRiverCrossingCastleTerrain } from "./terrain.js?v=20261021-river-crossing-castles-v2";
 import { createVision } from "./vision.js?v=20261020-vision-v1";
 
 export function startGame() {
