@@ -386,7 +386,6 @@ button,[role="button"]{
 #grand-campaign-world .grand-world-card strong{font-size:14px}
 #grand-campaign-world #grand-campaign-commander span:nth-of-type(n+2){display:none}
 #grand-campaign-world #grand-campaign-node-detail span{font-size:10px}
-#grand-campaign-world #grand-campaign-node-detail span:nth-of-type(n+2){display:none}
 #grand-campaign-world .grand-world-economy{padding:8px 10px;border-radius:9px;background:rgba(44,48,40,.68);font-size:11px}
 #grand-campaign-world .grand-world-economy strong{font-size:13px}
 #grand-campaign-world .grand-world-event{margin:0;padding:7px 9px;font-size:10px;line-height:1.3;border-left-width:2px;background:rgba(32,41,42,.6);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
@@ -537,3 +536,12 @@ button,[role="button"]{
 .grand-world-sidebar>.grand-world-card[hidden]{display:none!important}
 
 #grand-campaign-world[hidden] .grand-floating-end-turn{display:none!important}
+
+/* Grand campaign inspection and army selection */
+.campaign-node.selected circle{stroke:#fff4a8;stroke-width:5;filter:drop-shadow(0 0 5px #fff0a0)}
+.campaign-army-token{cursor:pointer;filter:drop-shadow(0 2px 2px #0009);outline:none}
+.campaign-army-token-circle{fill:#26352c;stroke:#f5e5b4;stroke-width:2.5}
+.campaign-army-token-label{fill:#fff0c2;font:900 13px system-ui,sans-serif;pointer-events:none}
+.campaign-army-token.enemy-army-token .campaign-army-token-circle{fill:#6e2929;stroke:#f5c3a9}
+.campaign-army-token:focus .campaign-army-token-circle{stroke:#fff;stroke-width:4}
+#grand-campaign-node-detail button{margin-top:5px;width:100%;font-size:11px;min-height:34px}
