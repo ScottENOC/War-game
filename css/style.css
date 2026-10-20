@@ -50,10 +50,10 @@ button:active{transform:scale(.96)}button:disabled{opacity:.3}
 #mainmenu{overflow:hidden;padding:calc(env(safe-area-inset-top) + 8px) 10px calc(env(safe-area-inset-bottom) + 8px)}
 #mainmenu .menu-panel{padding:clamp(14px,3.5vw,24px) 16px;border-radius:18px}
 #mainmenu h1{margin:0 0 10px;font-size:clamp(27px,7vw,40px);line-height:1.05}
-#mainmenu .mode-grid{gap:8px;margin:12px 0}
-#mainmenu .mode-card{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;min-height:82px;padding:10px;gap:5px}
-#mainmenu .mode-card strong{font-size:13px}
-#mainmenu .mode-card small{grid-column:1;font-size:10px;line-height:1.25}
+#mainmenu .mode-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:row;align-items:stretch;gap:8px;margin:12px 0}
+#mainmenu .mode-card{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:min-content min-content;align-content:center;justify-items:start;text-align:left;min-width:0;min-height:82px;padding:10px;gap:5px;white-space:normal;overflow-wrap:anywhere}
+#mainmenu .mode-card strong{display:block;grid-column:1;grid-row:1;align-self:end;font-size:13px;line-height:1.2;min-width:0;overflow-wrap:anywhere}
+#mainmenu .mode-card small{display:block;grid-column:1;grid-row:2;align-self:start;font-size:10px;line-height:1.3;min-width:0;white-space:normal;overflow-wrap:anywhere}
 #mainmenu .primary-button{margin:8px 0 0;min-height:46px;font-size:15px}
 .eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:11px;font-weight:800;color:var(--gold)}
 h1{font-size:clamp(28px,6vw,44px);line-height:1.1;margin:10px 0 16px;letter-spacing:.04em}
