@@ -1,0 +1,82 @@
+export const FACTIONS = {
+  empire: { name:"Empire", units:{
+    swordsmen:{name:"Empire Swordsmen",short:"Swordsmen",kind:"melee",models:20,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
+    archers:{name:"Empire Archers",short:"Infantry",kind:"archer",models:10,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},range:24},
+    captain:{name:"Empire Captain",short:"Captain",kind:"hero",models:1,points:50,stats:{M:4,WS:5,BS:5,S:4,T:4,W:2,I:5,A:2,Ld:8}},
+    mageHero:{name:"Empire Mage",short:"Mage",kind:"hero",models:1,points:55,spellcaster:true,baseCasterLevel:1,stats:{M:4,WS:3,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:7}},
+    mageLord:{name:"Empire Wizard Lord",short:"Wizard Lord",kind:"hero",models:1,points:100,spellcaster:true,baseCasterLevel:3,stats:{M:4,WS:3,BS:3,S:3,T:4,W:3,I:3,A:1,Ld:8}},
+    lord:{name:"Empire General",short:"General",kind:"hero",models:1,points:80,stats:{M:4,WS:5,BS:5,S:4,T:4,W:3,I:5,A:3,Ld:9}},
+    legendaryLord:{name:"Lord-Marshal Edric Voss",short:"Edric Voss",kind:"hero",models:1,points:160,namedCharacter:true,ignoreArmourSaves:true,defaultHeavyArmour:true,defaultShield:true,stats:{M:4,WS:6,BS:5,S:5,T:5,W:4,I:6,A:4,Ld:10}},
+    rifleman:{name:"Matthias Keller, Imperial Marksman",short:"Keller",kind:"hero",models:1,points:65,namedCharacter:true,stats:{M:4,WS:4,BS:5,S:3,T:3,W:2,I:4,A:1,Ld:8}},
+    captainWeiss:{name:"Captain Marta Weiss",short:"Marta Weiss",kind:"hero",models:1,points:70,namedCharacter:true,rallyingCall:true,stats:{M:4,WS:5,BS:4,S:4,T:4,W:3,I:4,A:2,Ld:8}},
+    cavalry:{name:"Empire Cavalry",short:"Cavalry",kind:"cavalry",models:5,points:16,stats:{M:8,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},mountStats:{A:1,WS:3,I:3,S:3},range:24},
+    cannon:{name:"Empire Cannon",short:"Cannon",kind:"artillery",models:3,points:80,stats:{M:0,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
+    humanChariot:{name:"Empire War Chariot",short:"War Chariot",kind:"chariot",models:3,points:95,chariot:true,stats:{M:7,WS:3,BS:3,S:3,T:4,W:4,I:3,A:1,Ld:7},mountStats:{A:2,WS:3,I:3,S:3},impactStrength:5,armourSave:3}
+  }},
+  highElves: { name:"High Elves", units:{
+    swordsmen:{name:"High Elf Spearmen",short:"Spearmen",kind:"melee",models:20,points:12,stats:{M:5,WS:5,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},alwaysStrikesFirst:true},
+    archers:{name:"High Elf Archers",short:"Infantry",kind:"archer",models:10,points:15,stats:{M:5,WS:5,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},alwaysStrikesFirst:true,range:30},
+    captain:{name:"High Elf Hero",short:"Hero",kind:"hero",models:1,points:75,stats:{M:5,WS:6,BS:6,S:4,T:4,W:2,I:6,A:2,Ld:9},alwaysStrikesFirst:true},
+    lord:{name:"High Elf Lord",short:"Lord",kind:"hero",models:1,points:120,stats:{M:5,WS:6,BS:6,S:4,T:4,W:3,I:6,A:3,Ld:10},alwaysStrikesFirst:true},
+    mageHero:{name:"High Elf Mage",short:"Mage",kind:"hero",models:1,points:95,spellcaster:true,baseCasterLevel:1,dispelBonus:1,alwaysStrikesFirst:true,stats:{M:5,WS:4,BS:4,S:3,T:3,W:2,I:5,A:1,Ld:8}},
+    mageLord:{name:"High Elf Archmage",short:"Archmage",kind:"hero",models:1,points:225,spellcaster:true,baseCasterLevel:3,dispelBonus:1,alwaysStrikesFirst:true,stats:{M:5,WS:4,BS:4,S:3,T:3,W:3,I:5,A:1,Ld:9}},
+    starwardenLord:{name:"Eldrin Starwarden",short:"Starwarden",kind:"hero",models:1,points:300,namedCharacter:true,spellcaster:true,baseCasterLevel:5,dispelBonus:1,alwaysStrikesFirst:true,specialSpell:"fateward",isGeneral:true,stats:{M:5,WS:6,BS:6,S:4,T:4,W:3,I:6,A:3,Ld:10}},
+    pegasusChampion:{name:"Aelthir, the Dawnwing",short:"Dawnwing",kind:"hero",models:1,points:110,namedCharacter:true,alwaysStrikesFirst:true,stats:{M:5,WS:6,BS:6,S:5,T:4,W:2,I:6,A:3,Ld:9}},
+    shadowElf:{name:"Lethariel Starweaver",short:"Lethariel",kind:"hero",models:1,points:165,namedCharacter:true,gender:"female",canDeployAnywhere:true,coverHitPenaltyBonus:true,grantsSkirmish:true,dualWield:true,magicBow:true,defaultHeavyArmour:true,stats:{M:5,WS:7,BS:7,S:4,T:3,W:3,I:7,A:3,Ld:10},alwaysStrikesFirst:true},
+    cavalry:{name:"High Elf Cavalry",short:"Cavalry",kind:"cavalry",models:5,points:24,stats:{M:9,WS:4,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},mountStats:{A:1,WS:3,I:3,S:3},alwaysStrikesFirst:true,range:24},
+    boltThrower:{name:"High Elf Bolt Thrower",short:"Bolt Thrower",kind:"artillery",models:2,points:60,stats:{M:0,WS:3,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},range:48},
+    youngDragon:{name:"Young Dragon",short:"Young Dragon",kind:"monster",models:1,points:140,isDragon:true,breathStrength:3,intrinsicArmourSave:5,stats:{M:8,WS:4,BS:0,S:5,T:5,W:4,I:4,A:3,Ld:6}},
+    dragon:{name:"Dragon",short:"Dragon",kind:"monster",models:1,points:220,isDragon:true,breathStrength:4,intrinsicArmourSave:4,stats:{M:8,WS:5,BS:0,S:6,T:6,W:6,I:5,A:4,Ld:7}},
+    ancientDragon:{name:"Ancient Dragon",short:"Ancient Dragon",kind:"monster",models:1,points:320,isDragon:true,breathStrength:5,intrinsicArmourSave:3,stats:{M:8,WS:6,BS:0,S:7,T:7,W:8,I:6,A:5,Ld:8}},
+    deepflameDragon:{name:"Thaurgath the Rune-Eater",short:"Thaurgath",kind:"monster",models:1,points:450,isDragon:true,namedCharacter:true,spellcaster:true,baseCasterLevel:4,breathStrength:5,intrinsicArmourSave:2,stats:{M:8,WS:7,BS:0,S:7,T:7,W:10,I:7,A:6,Ld:8}},
+    elfChariot:{name:"High Elf Chariot",short:"Elven Chariot",kind:"chariot",models:3,points:110,chariot:true,alwaysStrikesFirst:true,stats:{M:8,WS:4,BS:4,S:3,T:4,W:4,I:4,A:1,Ld:8},mountStats:{A:2,WS:3,I:4,S:3},impactStrength:5,armourSave:4}
+  }},
+  dwarfs: { name:"Dwarfs", units:{
+    dwarfInfantry:{name:"Dwarf Infantry",short:"Infantry",kind:"melee",models:20,points:8,stats:{M:3,WS:4,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:9}},
+    dwarfCaptain:{name:"Dwarf Thane",short:"Thane",kind:"hero",models:1,points:55,stats:{M:3,WS:6,BS:4,S:4,T:5,W:2,I:3,A:3,Ld:9}},
+    dwarfLord:{name:"Dwarf Lord",short:"Lord",kind:"hero",models:1,points:100,stats:{M:3,WS:7,BS:4,S:4,T:5,W:3,I:4,A:4,Ld:10}},
+    dwarfKingHaldric:{name:"King Haldric Stoneward",short:"Haldric Stoneward",kind:"hero",models:1,points:210,namedCharacter:true,defaultHeavyArmour:true,defaultShield:true,magicArmour:true,stubborn:true,grantsStubbornAura:true,wardSave:5,wardSaveFrontOnly:true,isGeneral:true,stats:{M:3,WS:7,BS:4,S:4,T:5,W:4,I:4,A:4,Ld:10}},
+    cannon:{name:"Dwarf Cannon",short:"Cannon",kind:"artillery",models:3,points:85,stats:{M:0,WS:3,BS:3,S:3,T:3,W:1,I:2,A:1,Ld:9}}
+  }},
+  greenskins: { name:"Greenskins", units:{
+    goblins:{name:"Goblin Mob",short:"Goblins",kind:"melee",models:20,points:2,greenskin:true,stats:{M:4,WS:2,BS:3,S:3,T:3,W:1,I:2,A:1,Ld:6}},
+    orcBoyz:{name:"Orc Boyz",short:"Orcs",kind:"melee",models:20,points:7,greenskin:true,stats:{M:4,WS:3,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:7}},
+    goblinHero:{name:"Goblin Big Boss",short:"Goblin Boss",kind:"hero",models:1,points:35,greenskin:true,stats:{M:4,WS:4,BS:3,S:4,T:4,W:2,I:4,A:3,Ld:6}},
+    goblinLord:{name:"Goblin Warboss",short:"Goblin Warboss",kind:"hero",models:1,points:65,greenskin:true,stats:{M:4,WS:5,BS:3,S:4,T:4,W:3,I:5,A:4,Ld:8}},
+    goblinShaman:{name:"Goblin Shaman",short:"Goblin Shaman",kind:"hero",models:1,points:55,greenskin:true,spellcaster:true,baseCasterLevel:1,stats:{M:4,WS:2,BS:3,S:3,T:3,W:2,I:2,A:1,Ld:6}},
+    goblinGreatShaman:{name:"Goblin Great Shaman",short:"Great Shaman",kind:"hero",models:1,points:115,greenskin:true,spellcaster:true,baseCasterLevel:3,stats:{M:4,WS:2,BS:3,S:3,T:4,W:3,I:2,A:1,Ld:7}},
+    orcHero:{name:"Orc Big Boss",short:"Orc Boss",kind:"hero",models:1,points:50,greenskin:true,stats:{M:4,WS:5,BS:3,S:4,T:5,W:2,I:4,A:3,Ld:8}},
+    orcLord:{name:"Orc Warboss",short:"Orc Warboss",kind:"hero",models:1,points:85,greenskin:true,stats:{M:4,WS:6,BS:3,S:5,T:5,W:3,I:4,A:4,Ld:9}},
+    orcShaman:{name:"Orc Shaman",short:"Orc Shaman",kind:"hero",models:1,points:65,greenskin:true,spellcaster:true,baseCasterLevel:1,stats:{M:4,WS:3,BS:3,S:3,T:4,W:2,I:2,A:1,Ld:7}},
+    orcGreatShaman:{name:"Orc Great Shaman",short:"Great Shaman",kind:"hero",models:1,points:180,greenskin:true,spellcaster:true,baseCasterLevel:3,stats:{M:4,WS:3,BS:3,S:4,T:4,W:3,I:2,A:1,Ld:8}},
+    wolfRiders:{name:"Goblin Wolf Riders",short:"Wolf Riders",kind:"cavalry",models:5,points:11,greenskin:true,stats:{M:9,WS:2,BS:3,S:3,T:3,W:1,I:2,A:1,Ld:6},mountStats:{A:1,WS:3,I:3,S:3},mountType:"wolf"},
+    boarBoyz:{name:"Orc Boar Riders",short:"Boar Boyz",kind:"cavalry",models:5,points:18,greenskin:true,stats:{M:7,WS:3,BS:3,S:3,T:4,W:1,I:2,A:1,Ld:7},mountStats:{A:1,WS:3,I:3,S:3},mountType:"boar"},
+    wyvern:{name:"Wyvern",short:"Wyvern",kind:"monster",models:1,points:100,isDragon:true,breathStrength:0,intrinsicArmourSave:5,stats:{M:8,WS:4,BS:0,S:5,T:5,W:4,I:3,A:3,Ld:6}},
+    catapult:{name:"Goblin Rock Lobber",short:"Rock Lobber",kind:"artillery",models:3,points:70,greenskin:true,stats:{M:0,WS:2,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:5}},
+    trolls:{name:"Trolls",short:"Trolls",kind:"monster",models:3,points:50,greenskin:true,isTroll:true,regeneration:4,causesFear:true,stupidity:true,trollVomit:true,stats:{M:6,WS:3,BS:1,S:5,T:4,W:3,I:1,A:3,Ld:4}},
+    giant:{name:"Giant",short:"Giant",kind:"monster",models:1,points:205,greenskin:true,isGiant:true,causesTerror:true,largeTarget:true,ignoresGreenskinPanic:true,giantSpecialAttacks:true,fallOver:true,stats:{M:6,WS:3,BS:3,S:6,T:5,W:6,I:3,A:1,Ld:10}},
+    goblinChariot:{name:"Goblin Wolf Chariot",short:"Wolf Chariot",kind:"chariot",models:3,points:65,greenskin:true,chariot:true,stats:{M:8,WS:2,BS:3,S:3,T:4,W:4,I:2,A:1,Ld:6},mountStats:{A:2,WS:3,I:3,S:3},impactStrength:4,armourSave:5},
+    orcChariot:{name:"Orc Boar Chariot",short:"Boar Chariot",kind:"chariot",models:3,points:100,greenskin:true,chariot:true,stats:{M:6,WS:3,BS:3,S:4,T:5,W:4,I:2,A:1,Ld:7},mountStats:{A:2,WS:3,I:2,S:3},impactStrength:5,armourSave:4}
+  }},
+  undead: { name:"Undead", undead:true, units:{
+    zombies:{name:"Zombies",short:"Zombies",kind:"melee",models:20,points:6,undead:true,causesFear:true,stats:{M:4,WS:2,BS:0,S:3,T:3,W:1,I:1,A:1,Ld:2}},
+    skeletons:{name:"Skeleton Warriors",short:"Skeletons",kind:"melee",models:20,points:8,undead:true,causesFear:true,stats:{M:4,WS:2,BS:2,S:3,T:3,W:1,I:2,A:1,Ld:3}},
+    skeletonHorses:{name:"Skeleton Horsemen",short:"Skeleton Horsemen",kind:"cavalry",models:5,points:12,undead:true,causesFear:true,isSkeletalCavalry:true,mountStats:{A:0,WS:2,I:2,S:0},stats:{M:8,WS:2,BS:2,S:3,T:3,W:1,I:2,A:1,Ld:3}},
+    skeletonChariot:{name:"Skeleton Chariot",short:"Skeleton Chariot",kind:"chariot",models:3,points:75,undead:true,causesFear:true,chariot:true,isSkeletalChariot:true,stats:{M:8,WS:2,BS:2,S:3,T:4,W:4,I:2,A:1,Ld:5},mountStats:{A:1,WS:2,I:2,S:3},impactStrength:4,armourSave:5},
+    skeletonDragon:{name:"Skeleton Dragon",short:"Skeleton Dragon",kind:"monster",models:1,points:130,undead:true,isDragon:true,isSkeletonDragon:true,causesFear:true,causesTerror:true,largeTarget:true,breathStrength:2,intrinsicArmourSave:5,stats:{M:6,WS:3,BS:0,S:5,T:5,W:4,I:2,A:3,Ld:3}},
+    skeletonGiant:{name:"Skeleton Giant",short:"Skeleton Giant",kind:"monster",models:1,points:150,undead:true,isGiant:true,isSkeletonGiant:true,causesFear:true,causesTerror:true,largeTarget:true,giantSpecialAttacks:true,fallOver:true,stats:{M:5,WS:2,BS:0,S:5,T:5,W:5,I:1,A:1,Ld:3}},
+    skeletonTroll:{name:"Skeleton Trolls",short:"Skeleton Trolls",kind:"monster",models:3,points:45,undead:true,isTroll:true,isSkeletonTroll:true,causesFear:true,stats:{M:5,WS:2,BS:0,S:4,T:4,W:3,I:1,A:2,Ld:3}},
+    catapult:{name:"Skeleton Catapult",short:"Skeleton Catapult",kind:"artillery",models:3,points:70,undead:true,isCatapult:true,range:48,minRange:10,stats:{M:0,WS:2,BS:2,S:3,T:3,W:2,I:2,A:1,Ld:3}},
+    necromancer:{name:"Necromancer",short:"Necromancer",kind:"hero",models:1,points:55,undead:true,spellcaster:true,baseCasterLevel:1,necromancer:true,stats:{M:4,WS:3,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:7}},
+    masterNecromancer:{name:"Master Necromancer",short:"Master Necromancer",kind:"hero",models:1,points:100,undead:true,spellcaster:true,baseCasterLevel:3,necromancer:true,isGeneral:true,stats:{M:4,WS:3,BS:3,S:3,T:4,W:3,I:3,A:1,Ld:8}},
+    vampireHero:{name:"Vampire Thrall",short:"Vampire",kind:"hero",models:1,points:75,undead:true,vampire:true,stats:{M:4,WS:6,BS:5,S:5,T:4,W:2,I:6,A:2,Ld:7}},
+    vampireLord:{name:"Vampire Lord",short:"Vampire Lord",kind:"hero",models:1,points:120,undead:true,vampire:true,isGeneral:true,spellcaster:true,baseCasterLevel:2,stats:{M:4,WS:7,BS:6,S:5,T:5,W:3,I:7,A:4,Ld:10}}
+  }},
+  opposing: { name:"Opposing Host", units:{
+    swordsmen:{name:"Opposing Swordsmen",short:"Swordsmen",kind:"melee",models:20,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
+    archers:{name:"Opposing Archers",short:"Infantry",kind:"archer",models:10,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},range:24},
+    captain:{name:"Opposing Captain",short:"Captain",kind:"hero",models:1,points:50,stats:{M:4,WS:5,BS:5,S:4,T:4,W:2,I:5,A:2,Ld:8}},
+    lord:{name:"Opposing General",short:"General",kind:"hero",models:1,points:80,stats:{M:4,WS:5,BS:5,S:4,T:4,W:3,I:5,A:3,Ld:9}},
+    cavalry:{name:"Opposing Cavalry",short:"Cavalry",kind:"cavalry",models:5,points:16,stats:{M:8,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},mountStats:{A:1,WS:3,I:3,S:3},range:24}
+  }}
+};

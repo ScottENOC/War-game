@@ -1,0 +1,19 @@
+{
+  "name": "War-game",
+  "short_name": "War-game",
+  "description": "Fantasy miniature wargame and campaign",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#171c20",
+  "theme_color": "#171c20",
+  "icons": [
+    {
+      "src": "icons/war-game.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
