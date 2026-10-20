@@ -445,7 +445,7 @@ const CITIES = [
 ];
 const REGION_NEIGHBORS = {
  1:[2,6],2:[1,6],3:[8,9,10,12,21],4:[5,9,20,23],5:[4,8,18,20],
- 6:[1,2,7,17],7:[6,8,17],8:[3,5,7,10],9:[3,4,10,13,14,24],10:[3,8,9,13,14,21,24],
+ 6:[1,2,7,8,17],7:[6,8,17],8:[3,5,6,7,10],9:[3,4,10,13,14,24],10:[3,8,9,13,14,21,24],
  11:[13,14],12:[3,14,15,16],13:[9,10,11,14],14:[9,10,11,12,13,15,21],
  15:[12,14,16,18],16:[12,15,18,22],17:[6,7],18:[5,15,16,20,22,23],
  19:[21,22],20:[4,5,17,18,23],21:[3,10,14,19,22],22:[16,18,19,21,23],23:[4,18,20,22,24],24:[9,10,23]
@@ -907,7 +907,7 @@ function createMovementGraph(){
  const link=(a,b,cost=1,kind="land")=>{if(!edges[a]||!edges[b]||a===b)return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost,kind});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost,kind});};
  const route=(a,b,kind="land",regionA=null,regionB=null)=>routes.push({a,b,kind,regionA,regionB,marks:[],cuts:[0,1]});
  const positions=CITY_POSITIONS;
- const seaLinks=new Set(["3-9","5-8","6-7","6-17","7-8","7-17"]);
+ const seaLinks=new Set(["3-8","3-9","5-8","6-7","6-8","6-17","7-8","7-17"]);
  const isSeaLink=(a,b)=>seaLinks.has([a,b].sort((x,y)=>x-y).join("-"));
  for(const c of CITIES){const [x,y]=positions[c.id];add({id:"city-"+c.id,region:c.id,type:"city",label:c.name,x,y});}
  for(const c of CITIES){
@@ -939,9 +939,10 @@ function createMovementGraph(){
    const pB=ports.find(p=>p.city===other&&p!==pA)||ports.find(p=>p.city===c.id&&p!==pA);
    if(pA&&pB){
     if(key==="6-7"){
-     const waypoints=[{id:"aelthir-north-sea-waypoint",region:6,type:"seaRoute",label:"Northern sea passage",x:190,y:42},{id:"greyward-north-sea-waypoint",region:7,type:"seaRoute",label:"Greyward northern passage",x:315,y:32},{id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55}];
-     for(const n of waypoints)add(n);
-     const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+     const join={id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55};add(join);route(pB.id,join.id,"sea",c.id,other);
+    }else if(key==="6-8"){
+     const waypoints=[{id:"aelthir-north-sea-waypoint",region:6,type:"seaRoute",label:"Northern sea passage",x:190,y:42},{id:"greyward-north-sea-waypoint",region:7,type:"seaRoute",label:"Greyward northern passage",x:315,y:32},{id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55},{id:"eastern-north-sea-waypoint",region:8,type:"seaRoute",label:"Eastern northern sea passage",x:600,y:48},{id:"silvershade-north-sea-waypoint",region:8,type:"seaRoute",label:"Silvershade northern passage",x:720,y:80},{id:"silvershade-coastal-sea-waypoint",region:8,type:"seaRoute",label:"Silvershade coastal approach",x:770,y:150}];
+     for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="3-9"){
      const waypoints=[{id:"goldhaven-south-sea-waypoint",region:3,type:"seaRoute",label:"Goldhaven southern sea passage",x:340,y:365},{id:"ironhold-coastal-sea-waypoint",region:9,type:"seaRoute",label:"Ironhold coastal passage",x:410,y:355}];for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="7-17"){
