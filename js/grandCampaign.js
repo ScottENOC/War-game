@@ -241,8 +241,8 @@ function safeTradePath(campaign,startId,endId,ownerId){
 }
 function campaignTradeIncome(region,campaign){
  if(!region?.settlement?.population||!campaign?.graph?.nodes)return 0;
- const owner=politicalOwner(region);let total=0;
- for(const target of campaign.regions||[]){if(target.id===region.id||!target.settlement?.population)continue;const targetOwner=politicalOwner(target);
+ const owner=politicalOwner(region);if(FACTION_BY_ID[owner]?.passive)return 0;let total=0;
+ for(const target of campaign.regions||[]){if(target.id===region.id||!target.settlement?.population)continue;const targetOwner=politicalOwner(target);if(FACTION_BY_ID[targetOwner]?.passive)continue;
   if(targetOwner!==owner&&(campaign.activeWars||[]).includes(campaignWarKey(owner,targetOwner)))continue;
   if(targetOwner!==owner&&campaignRelation(campaign,owner,targetOwner)<0)continue;
   const path=safeTradePath(campaign,"city-"+region.id,"city-"+target.id,owner);if(!path)continue;
