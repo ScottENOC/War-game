@@ -1204,7 +1204,10 @@ function recruitCatalog(){
   ]:race==="undead"?[
    {key:"zombies",label:"Zombies",type:"zombies",weapon:"handWeapon",min:5,max:30,modelType:"zombies",modelWeapon:"handWeapon"},
    {key:"skeletonBows",label:"Skeleton archers",type:"skeletons",weapon:"handWeapon",rangedWeapon:"bow",min:5,max:30,modelType:"skeletons",modelWeapon:"bow"},
-   {key:"skeletonHorses",label:"Skeleton cavalry",type:"skeletonHorses",weapon:"handWeapon",min:5,max:15,modelType:"skeletonHorses",modelWeapon:"handWeapon"}
+   {key:"skeletonHorses",label:"Skeleton cavalry",type:"skeletonHorses",weapon:"handWeapon",min:5,max:15,modelType:"skeletonHorses",modelWeapon:"handWeapon"},
+   {key:"skeletonDragon",label:"Skeleton dragon",type:"skeletonDragon",weapon:"handWeapon",min:1,max:1,modelType:"skeletonDragon",modelWeapon:"handWeapon"},
+   {key:"skeletonGiant",label:"Skeleton giant",type:"skeletonGiant",weapon:"handWeapon",min:1,max:1,modelType:"skeletonGiant",modelWeapon:"handWeapon"},
+   {key:"skeletonTroll",label:"Skeleton trolls",type:"skeletonTroll",weapon:"handWeapon",min:3,max:6,modelType:"skeletonTroll",modelWeapon:"handWeapon"}
   ]:[{key:"archers",label:"Archers",type:"archers",weapon:"handWeapon",rangedWeapon:"bow",min:5,max:30,modelType:"archers",modelWeapon:"bow"}]),
   ...(race==="human"?[
    {key:"crossbowmen",label:"Crossbow infantry",type:"swordsmen",weapon:"handWeapon",rangedWeapon:"crossbow",min:5,max:30,modelType:"swordsmen",modelWeapon:"crossbow"},
