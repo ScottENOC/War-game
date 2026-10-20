@@ -58,7 +58,7 @@ export const FACTIONS = {
     orcChariot:{name:"Orc Boar Chariot",short:"Boar Chariot",kind:"chariot",models:3,points:100,greenskin:true,chariot:true,stats:{M:6,WS:3,BS:3,S:4,T:5,W:4,I:2,A:1,Ld:7},mountStats:{A:2,WS:3,I:2,S:3},impactStrength:5,armourSave:4}
   }},
   undead: { name:"Undead", undead:true, units:{
-    zombies:{name:"Zombies",short:"Zombies",kind:"melee",models:20,points:3,undead:true,causesFear:true,stats:{M:4,WS:2,BS:0,S:3,T:3,W:1,I:1,A:1,Ld:2}},
+    zombies:{name:"Zombies",short:"Zombies",kind:"melee",models:20,points:6,undead:true,causesFear:true,stats:{M:4,WS:2,BS:0,S:3,T:3,W:1,I:1,A:1,Ld:2}},
     skeletons:{name:"Skeleton Warriors",short:"Skeletons",kind:"melee",models:20,points:8,undead:true,causesFear:true,stats:{M:4,WS:2,BS:2,S:3,T:3,W:1,I:2,A:1,Ld:3}},
     skeletonHorses:{name:"Skeletal Steeds",short:"Skeletal Steeds",kind:"cavalry",models:5,points:12,undead:true,causesFear:true,isSkeletalCavalry:true,mountStats:{A:0,WS:2,I:2,S:0},stats:{M:8,WS:2,BS:0,S:3,T:3,W:1,I:2,A:1,Ld:3}},
     necromancer:{name:"Necromancer",short:"Necromancer",kind:"hero",models:1,points:55,undead:true,spellcaster:true,baseCasterLevel:1,necromancer:true,stats:{M:4,WS:3,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:7}},
