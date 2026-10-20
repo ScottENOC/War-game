@@ -1302,12 +1302,17 @@ function campaignStrategicFieldBattle(campaign,attackerArmy,defenderArmy){
  campaign.lastEvent=(winner.owner||winner.factionId)===attackerId?attacker.name+" defeats "+defender.name+" in a field battle.":" "+defender.name+" repels "+attacker.name+" in a field battle.";
  return campaign.lastEvent.trim();
 }
+function updateGreenskinBoredom(campaign,army){
+ if(!army||campaignArmyRace(army,campaign)!=="greenskin"||!army.roster?.length)return;
+ if(army.lastBoredomUpdateTurn===campaign.turn)return;
+ army.boredom=Math.max(-4,Math.min(10,Number.isFinite(army.boredom)?army.boredom:-4));
+ army.boredom=Math.max(-4,Math.min(10,army.boredom+(army.foughtThisTurn?-3:1)));
+ army.foughtThisTurn=false;
+ army.lastBoredomUpdateTurn=campaign.turn;
+}
 function processGreenskinAnimosity(campaign,army){
  if(!army||campaignArmyRace(army,campaign)!=="greenskin"||!army.roster?.length)return {interrupted:false,message:""};
- const previousFight=!!army.foughtThisTurn;
  army.boredom=Math.max(-4,Math.min(10,Number.isFinite(army.boredom)?army.boredom:-4));
- army.boredom=Math.max(-4,Math.min(10,army.boredom+(previousFight?-3:1)));
- army.foughtThisTurn=false;
  const built=campaignArmyBattleUnits(army),leadership=Math.max(0,...built.map(x=>Number(x.unit.stats?.Ld)||0));
  const dice=[1+Math.floor(Math.random()*6),1+Math.floor(Math.random()*6)],total=dice[0]+dice[1],target=leadership-army.boredom;
  const passed=total===2||(total!==12&&total<=target);
@@ -1423,6 +1428,8 @@ function endCampaignTurn(){
   player.turnsTaken=(player.turnsTaken||0)+1;
  }
  for(const region of activeCampaign.regions||[])if(politicalOwner(region)===player.id)growSettlementRecruitment(region);
+ // Boredom changes at the end of the campaign turn; the next turn's animosity test reads this stored value.
+ for(const army of activeCampaign.armies||[])updateGreenskinBoredom(activeCampaign,army);
  activeCampaign.turn++;activeCampaign.activeFaction=playerId;
  activeCampaign.commander.maxMovement=campaignArmyMovementProfile(selectedPlayerArmy(),activeCampaign).points;activeCampaign.commander.movement=activeCampaign.commander.maxMovement;for(const army of playerArmies())army.movement=campaignArmyMovementProfile(army,activeCampaign).points;
  const activeArmy=selectedPlayerArmy();if(activeArmy){activeCampaign.commander.nodeId=activeArmy.nodeId;activeCampaign.commander.region=activeArmy.region;activeCampaign.commander.movement=activeArmy.movement;}
