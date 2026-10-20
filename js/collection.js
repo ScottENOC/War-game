@@ -234,7 +234,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     else arms=["right_sword","right_spear","both_bow","both_greatWeapon","both_halberd"];
     
     arms.forEach(id=>{const d=bitDefs.find(b=>b.id===id);const o=document.createElement("option");o.value=id;o.textContent=monsterBody?"Intrinsic monster attacks (no weapon bit)":named?(body.kind==="legendaryLord"?"Signature sword and shield (included)":body.kind==="pegasusChampion"?"Magical lance and shield (included)":body.kind==="starwardenLord"?"Fateward spell (included)":"Magical longbow and dual swords (included)"):d.label+" ("+bitCount(id)+" owned)";weapon.append(o);});
-    horseWrap.parentElement.hidden=body.faction==="dwarfs"||(named&&body.kind==="shadowElf"?!cavalry:!cavalry&&!hero);
+    horseWrap.parentElement.hidden=body.faction==="dwarfs"||monsterBody||(named&&body.kind==="shadowElf"?!cavalry:!cavalry&&!hero);
     if(!cavalry&&!hero)horseWrap.value="no";
     if(cavalry)horseWrap.value="yes";
     if(named&&body.kind==="shadowElf")horseWrap.value="no";
