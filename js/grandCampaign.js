@@ -543,6 +543,7 @@ function ensureSettlementState(campaign){
   ensureSettlementRecruitment(region);
  }
  for(const id of [24,25,26])if(!(campaign.regions||[]).some(r=>r.id===id)){const city=CITIES.find(c=>c.id===id),profile=FACTION_PROFILES[id],settlement=initialSettlement(city);campaign.regions.push({id:city.id,name:city.name,faction:city.faction,politicalFactionId:profile.id,ownerFaction:profile.id,owner:profile.id,nativeFaction:city.faction,nativeCulture:CULTURE_BY_FACTION[city.faction]||"Local",terrain:city.terrain,neighbors:[...(REGION_NEIGHBORS[id]||[])],ruler:city.ruler,status:city.status,settlement});}
+ for(const region of campaign.regions||[])region.neighbors=[...(REGION_NEIGHBORS[region.id]||[])];
  if(campaign.mapId!==MAP_ID||!campaign.graph?.nodes||!campaign.graph?.edges){
   campaign.graph=createMovementGraph();campaign.mapId=MAP_ID;
   for(const army of campaign.armies||[])if(!campaign.graph.nodes[army.nodeId])army.nodeId="city-"+(army.region||army.homeRegion||campaign.startingRegion);
