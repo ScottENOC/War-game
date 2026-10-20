@@ -1,4 +1,4 @@
-import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-greenskin-monsters-v3";
+import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-undead-roster-v1";
 import { createRoguelike } from "./roguelike.js?v=20261020-chariots-v2";
 import { createArmyBuilder } from "./armyBuilder.js?v=20261020-greenskin-monsters-v2";
 import { createCollectionManager } from "./collection.js?v=20261020-greenskin-monsters-v2";
