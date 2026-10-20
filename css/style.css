@@ -474,7 +474,7 @@ button,[role="button"]{
 .grand-world-header{position:relative;z-index:30;gap:12px;align-items:center}
 .grand-world-header-actions{position:relative;display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
 .grand-world-header-actions button{min-height:36px}
-.grand-menu-toggle{min-width:42px;padding:5px 10px;font-size:20px;line-height:1}
+.grand-menu-toggle{width:auto;min-width:0;flex:0 0 auto;padding:4px 4px;font-size:20px;line-height:1}
 .grand-world-menu-dropdown{position:absolute;right:0;top:calc(100% + 7px);z-index:100;display:flex;flex-direction:column;gap:4px;min-width:190px;padding:7px;border:1px solid #ffffff30;border-radius:12px;background:#17201ff7;box-shadow:0 10px 32px #0009}
 .grand-world-menu-dropdown[hidden]{display:none}
 .grand-world-menu-dropdown button{width:100%;text-align:left;padding:10px 12px;min-height:40px}
@@ -511,7 +511,7 @@ button,[role="button"]{
  .grand-world-header-actions button{min-height:34px;font-size:12px}
  .grand-compact-treasury{gap:5px;padding:5px 7px;font-size:12px;white-space:nowrap}
  .grand-utility-button{padding:5px 7px}
- .grand-menu-toggle{min-width:36px;padding:4px 7px;font-size:18px}
+ .grand-menu-toggle{width:auto;min-width:0;padding:3px 3px;font-size:18px}
  .grand-live-map-legend{font-size:10px;gap:6px;flex-wrap:wrap}
  .grand-map-live-wrap{min-height:0}
  .grand-world-sidebar{grid-template-columns:minmax(0,1fr);padding-bottom:56px}
