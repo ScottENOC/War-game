@@ -55,6 +55,13 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
       detail.textContent = "XP " + (f.xp || 0) + "/4 · " + (f.alive ? costOf(f, run.faction) + " pts" : "dead") + (injuries.length ? " · " + injuries.join(" · ") : "");
       info.append(name, detail); row.append(info);
       if (run.state !== "setup" && f.alive) {
+        if ((Number(f.xp)||0) >= 4) {
+          const upgrades = document.createElement("div"); upgrades.className = "warband-gear";
+          [["M","+1 Movement"],["WS","+1 Weapon Skill"],["BS","+1 Ballistic Skill"],["S","+1 Strength"],["T","+1 Toughness"],["I","+1 Initiative"],["Ld","+1 Leadership"]].forEach(([stat,label]) => {
+            const btn=document.createElement("button");btn.className="secondary-button";btn.textContent="XP upgrade: "+label;btn.addEventListener("click",()=>applyExperienceUpgrade(f.id,stat));upgrades.append(btn);
+          });
+          row.append(upgrades);
+        }
         const gear = document.createElement("div"); gear.className = "warband-gear";
         const choices = [
           ["lightArmour", "Light armour", 3, !f.lightArmour && !f.heavyArmour],
@@ -92,6 +99,12 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
     const menu=document.createElement("button");menu.className="secondary-button";menu.textContent="Main Menu";menu.addEventListener("click",()=>{hide();el("mainmenu").hidden=false;});actions.append(menu);
     const abandon=document.createElement("button");abandon.className="danger-button";abandon.textContent="Abandon expedition";abandon.addEventListener("click",()=>{if(!window.confirm("Abandon this expedition and lose its roster, points and experience?"))return;run=NEW_RUN();save();render();});actions.append(abandon);
   }
+  function applyExperienceUpgrade(id, stat) {
+    const f=run.fighters.find(x=>x.id===id);if(!f||!f.alive||(Number(f.xp)||0)<4)return;
+    f.xp-=4;f.campaignStats=f.campaignStats||{};f.campaignStats[stat]=(Number(f.campaignStats[stat])||0)+1;
+    run.lastResult=f.name+" earned "+({M:"+1 Movement",WS:"+1 Weapon Skill",BS:"+1 Ballistic Skill",S:"+1 Strength",T:"+1 Toughness",I:"+1 Initiative",Ld:"+1 Leadership"}[stat])+" for 4 XP.";
+    save();render();
+  }
   function buyEquipment(id,key,cost) {
     const f=run.fighters.find(x=>x.id===id);if(!f||!f.alive||run.bank<cost)return;
     if(f.injuries?.leftArm && ["shield","greatWeapon","offhandWeapon"].includes(key))return;
@@ -114,7 +127,7 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
     run.fighters.forEach(f=>{
       if(!f.alive)return;
       const u=battleById.get(f.id);
-      if(!u)return;
+      if(!u){if(f.benchFights>0)f.benchFights=Math.max(0,f.benchFights-1);return;}
       if(u.warbandXpEarned)f.xp=(Number(f.xp)||0)+(Number(u.warbandXpEarned)||0);
       if(u.mordheimStatus==="outOfAction"||u.models<=0){
         const roll=()=>1+Math.floor(Math.random()*6);
@@ -130,7 +143,6 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
       } else if(u.models>0) {
         f.woundsCurrent=Math.max(1,Number(u.characterWounds)||Number(u.stats?.W)||1);
       }
-      if(f.benchFights>0)f.benchFights=Math.max(0,f.benchFights-1);
     });
     const gained=won?50:0;run.bank+=gained;run.fights=(Number(run.fights)||0)+1;run.round++;
     const survivors=run.fighters.filter(f=>f.alive);
