@@ -1,7 +1,7 @@
 import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-thaurgath-v2";
 import { createRoguelike } from "./roguelike.js?v=20261020-chariots-v2";
 import { createWarband } from "./warband.js?v=20261020-warband-v1";
-import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warband-expedition-v2";
+import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warband-expedition-v3";
 import { createArmyBuilder } from "./armyBuilder.js?v=20261020-undead-monsters-v3";
 import { createCollectionManager } from "./collection.js?v=20261020-warband-v1";
 import { createGameState } from "./gameState.js";
