@@ -1,5 +1,5 @@
 import { getCollectionSnapshot } from "./collection.js?v=20261020-wood-elf-v1";
-import { unitCost, createUnitsFromArmy } from "./units.js?v=20261020-wood-elf-v1";
+import { unitCost, createUnitsFromArmy } from "./units.js?v=20261020-grinhold-battle-fix-v1";
 let lastCampaignNodeTap = null;
 const FACTIONS = {
  empire:{name:"Human Realms",summary:"The largest and most populous realm, but not a unified kingdom.",strengths:"Broad territory, fertile river valleys, trade roads and the largest pool of settlements.",politics:"Crownfall and Westmere recognise your court. Goldhaven, Stonebridge and Southwatch answer to rival human lords.",playerCities:["Crownfall","Westmere"],armyFaction:"empire"},
@@ -1403,9 +1403,7 @@ function renderCampaignMap(){
    battleRegion=n.type==="city"?settlementRegion:null;
   }
  const playerId=activeCampaign.playerPoliticalFaction,defenderId=battleRegion&&politicalOwner(battleRegion);
- if(panelMode==="location"&&battleRegion&&defenderId&&defenderId!==playerId&&activeCampaign.factionStates.some(f=>f.id===defenderId&&f.alive)){
-  const battleButton=document.createElement("button");battleButton.type="button";battleButton.className="primary-button grand-campaign-battle-button";battleButton.textContent="Fight for "+battleRegion.name;battleButton.addEventListener("click",()=>launchCampaignBattle(battleRegion));byId("grand-campaign-node-detail").append(battleButton);
- }
+
  if(panelMode==="location"&&battleRegion&&politicalOwner(battleRegion)===playerId&&battleRegion.settlement&&!battleRegion.settlement.besiegedBy){
   const st=battleRegion.settlement,stockButton=document.createElement("button");stockButton.type="button";stockButton.className="secondary-button";stockButton.textContent="Stock city provisions · 40 gold";
   stockButton.disabled=(st.foodStores||0)>=12||(selectedFactionTreasury()?.treasury||0)<40;
@@ -1548,6 +1546,14 @@ function moveCommander(id){
   cost+=(step?.cost||1)+nodeCost(next)-1;
  }
  if(cost>movement){activeCampaign.lastEvent="Not enough movement remaining to reach "+n.label+".";renderCampaignMap();return;}
+ const ownId=army?.owner||army?.factionId||activeCampaign.playerPoliticalFaction;
+ const targetRegion=n.type==="city"?activeCampaign.regions.find(r=>Number(r.id)===Number(n.region)):null;
+ const enemyAtDestination=campaignArmyAtNode(activeCampaign,id,army).find(other=>(other.owner||other.factionId)!==ownId);
+ const enemyOwner=enemyAtDestination?(enemyAtDestination.owner||enemyAtDestination.factionId):(targetRegion?politicalOwner(targetRegion):null);
+ if(enemyOwner&&enemyOwner!==ownId&&activeCampaign.factionStates.some(f=>f.id===enemyOwner&&f.alive)){
+  if(targetRegion){launchCampaignBattle(targetRegion,army);return;}
+  activeCampaign.lastEvent="An enemy army occupies "+n.label+". Move onto an enemy-held settlement to initiate battle.";renderCampaignMap();return;
+ }
  activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement=movement-cost;
  if(army){army.nodeId=id;army.region=n.region;army.movement=movement-cost;}
  activeCampaign.lastEvent=(army?.name||activeCampaign.commander.name)+(flying&&path.length>2?" leaps over an intervening army and moves along the road network to ":" moves to ")+n.label+". "+activeCampaign.commander.movement+" movement remaining.";
