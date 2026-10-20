@@ -1185,12 +1185,14 @@ function renderDiplomacy(){
  const host=byId("grand-campaign-diplomacy");if(!host||!activeCampaign)return;
  const playerId=activeCampaign.playerPoliticalFaction,wars=new Set(activeCampaign.activeWars||[]);
  const rows=(activeCampaign.factionStates||[]).filter(f=>f.id!==playerId).map(f=>{
-  const score=campaignRelation(activeCampaign,playerId,f.id),war=wars.has(campaignWarKey(playerId,f.id));
-  const label=war?"War":score>=35?"Friendly":score>=10?"Cordial":score<=-50?"Hostile":score<=-20?"Strained":"Neutral";
+  const score=campaignRelation(activeCampaign,playerId,f.id),war=wars.has(campaignWarKey(playerId,f.id)),allied=campaignAreAllied(activeCampaign,playerId,f.id);
+  const label=war?"War":allied?"Allied":score>=35?"Friendly":score>=10?"Cordial":score<=-50?"Hostile":score<=-20?"Strained":"Neutral";
   const colour=war||score<=-50?"#d66b63":score>=35?"#83c58d":score<=-20?"#d6ad65":"#b9c4d0";
   return '<div class="grand-diplomacy-row"><span>'+f.name+'</span><b style="color:'+colour+'">'+label+' · '+(score>0?"+":"")+score+'</b></div>';
  }).join("");
- host.innerHTML='<h3>Diplomacy</h3><p class="grand-diplomacy-hint">Peace improves relations; war erodes them. Race and past conflicts shape the starting point.</p>'+rows;
+ const playerArmy=(activeCampaign.armies||[]).find(a=>(a.owner||a.factionId)===playerId&&a.roster?.length);
+ const momentumNote=campaignIsGreenskin(activeCampaign,playerId)?' <p class="grand-diplomacy-hint">Greenskin momentum: '+campaignArmyMomentum(playerArmy)+'/5. Victories and captures build it; inactivity erodes it. Strong, successful warbosses attract allies and confederations.</p>':"";
+ host.innerHTML='<h3>Diplomacy</h3><p class="grand-diplomacy-hint">Greenskin relations respond to relative strength and momentum. Alliances prevent attacks; confederation transfers existing settlements and armies.</p>'+momentumNote+rows;
 }
 function factionArmy(campaign,id){
  let army=campaign.armies.find(a=>a.owner===id||a.factionId===id||a.id===id+"-main");
@@ -1356,8 +1358,8 @@ function launchCampaignFieldBattle(attackingArmy,defendingArmy){
   const update=(army,units,faction)=>{army.roster=army.roster.map((config,i)=>({...config,models:Math.max(0,units[i]?.models??0),currentDamage:units[i]?.damage||0,currentWounds:units[i]?.characterWounds})).filter(config=>config.models>0);army.points=Math.max(0,Math.round(army.roster.reduce((sum,u)=>sum+unitCost(u,faction),0)));};
   update(attackingArmy,result.playerUnits||[],attackerFaction);update(defendingArmy,result.enemyUnits||[],defenderFaction);
   const winner=result.won?attackingArmy:defendingArmy,loser=result.won?defendingArmy:attackingArmy;
-  awardGreenskinMomentum(activeCampaign,winner,result.won?2:1);
-  if(result.won)awardGreenskinMomentum(activeCampaign,loser,-2);
+  awardGreenskinMomentum(activeCampaign,winner,2);
+  awardGreenskinMomentum(activeCampaign,loser,-2);
   if(result.won){winner.nodeId=targetNode;winner.region=activeCampaign.graph.nodes[targetNode]?.region??defendingArmy.region;}
   const loserState=activeCampaign.factionStates.find(f=>f.id===(loser.owner||loser.factionId)),home=loserState?.homeRegion||loser.region;
   loser.nodeId="city-"+home;loser.region=home;
