@@ -18,7 +18,8 @@
       <button class="mode-card" data-mode="narrative"><span class="mode-mark">II</span><strong>Narrative Campaign</strong><small>A branching fantasy war story</small></button>
       <button class="mode-card" data-mode="roguelike"><span class="mode-mark">III</span><strong>Roguelike Expedition</strong><small>FTL-style runs · earn miniatures</small></button>
       <button class="mode-card" data-mode="skirmish"><span class="mode-mark">IV</span><strong>Skirmish</strong><small>Quick battle with your collection</small></button>
-      <button class="mode-card" data-mode="mordheim"><span class="mode-mark">V</span><strong>Mordheim Skirmish</strong><small>One-off warband · individual fighters · injury rolls</small></button>
+      <button class="mode-card" data-mode="warbandSkirmish"><span class="mode-mark">V</span><strong>Warband Skirmish</strong><small>One-off fantasy skirmish · individual fighters · injury rolls</small></button>
+      <button class="mode-card" data-mode="warbandExpedition"><span class="mode-mark">IX</span><strong>Warband Expedition</strong><small>Persistent fighters · experience · lasting injuries · recruit and equip</small></button>
       <button class="mode-card" data-mode="holdGround"><span class="mode-mark">VI</span><strong>Hold / Seize Ground</strong><small>Control the central objective by the end of turn 6</small></button>
       <button class="mode-card" data-mode="captureFlag"><span class="mode-mark">VII</span><strong>Capture the Flag</strong><small>Steal the enemy flag and bring it back to your own base</small></button>
       <button class="mode-card" data-mode="relics"><span class="mode-mark">VIII</span><strong>Relic Hunt</strong><small>Recover and extract at least 3 of 5 neutral relics</small></button>
@@ -120,13 +121,23 @@
 </div></section>
 <section id="mordheim-screen" class="screen builder-screen" hidden>
 <div class="builder-panel campaign-panel mordheim-panel">
-<header class="builder-header"><div><div class="eyebrow">One-off campaign skirmish</div><h1>Mordheim Skirmish</h1></div><button id="mordheim-back" class="secondary-button">Main Menu</button></header>
+<header class="builder-header"><div><div class="eyebrow">One-off campaign skirmish</div><h1>Warband Skirmish</h1></div><button id="mordheim-back" class="secondary-button">Main Menu</button></header>
 <p class="builder-intro">Build a temporary warband from models you own. Every fighter acts independently. The warband disappears after the battle; your collection does not.</p>
 <label class="faction-choice">Warband faction <select id="mordheim-faction"><option value="empire">Empire</option><option value="highElves">High Elves</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label>
 <div id="mordheim-validation" class="roster-note">Choose fighters from your collection.</div><div id="mordheim-model-list" class="mordheim-model-list"></div>
 <div class="builder-footer"><div class="army-total"><span>Warband</span><strong id="mordheim-total">0 pts · 0 fighters</strong></div><button id="mordheim-start" class="primary-button" disabled>Fight AI Warband →</button></div>
 <p id="mordheim-result" class="subtle" aria-live="polite"></p><p class="subtle">No Lords, named characters, chariots or 50 × 50 mm base models. Every three wins earns one lootbox.</p>
 </div></section>
+
+<section id="warband-expedition-screen" class="screen builder-screen" hidden>
+  <div class="builder-panel campaign-panel mordheim-panel">
+    <header class="builder-header"><div><div class="eyebrow">Persistent small-force campaign</div><h1 id="warband-expedition-title">Warband Expedition</h1></div><button id="warband-expedition-menu" class="secondary-button">Main Menu</button></header>
+    <p id="warband-expedition-description" class="builder-intro">Choose five fighters from your collection. Survivors gain experience, while serious injuries can permanently change or end a fighter's career.</p>
+    <div id="warband-expedition-content"></div>
+    <div id="warband-expedition-shop"></div>
+    <div id="warband-expedition-actions" class="campaign-actions"></div>
+  </div>
+</section>
 <section id="armybuilder" class="screen builder-screen" hidden><div class="builder-panel">
 <header class="builder-header"><div><div class="eyebrow">Skirmish preparation</div><h1>Battle Roster</h1></div><button id="builder-back" class="secondary-button">Collection</button></header>
 <p class="builder-intro">Choose up to six units from your collection. The opponent builds a different army with a similar points total. In siege battles, the attacker receives a 50% larger points budget.</p>
@@ -173,5 +184,5 @@
  </div>
 </section>
 
-<script type="module" src="js/main.js?v=20261020-vision-v1"></script>
+<script type="module" src="js/main.js?v=20261020-warband-expedition-v1"></script>
 </body></html>
