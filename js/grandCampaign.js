@@ -1062,6 +1062,67 @@ function moveCommander(id){
 }
 function politicalOwner(region){return region?.ownerFaction||region?.politicalFactionId||FACTION_PROFILES[region?.id]?.id;}
 function profileForFaction(id){return FACTION_BY_ID[id]||null;}
+function campaignIsGreenskin(campaign,id){return (FACTION_BY_ID[id]?.race||campaign?.factionStates?.find(f=>f.id===id)?.race)==="greenskin";}
+function campaignArmyMomentum(army){return Math.max(0,Math.min(5,Math.round(Number(army?.momentum)||0)));}
+function awardGreenskinMomentum(campaign,army,amount){
+ if(!army||!campaignIsGreenskin(campaign,army.owner||army.factionId))return 0;
+ const before=campaignArmyMomentum(army);army.momentum=Math.max(0,Math.min(5,before+amount));
+ if(amount>0)army.lastMomentumActivityTurn=campaign.turn;
+ const state=campaign.factionStates?.find(f=>f.id===(army.owner||army.factionId));if(state)state.momentum=army.momentum;
+ return army.momentum-before;
+}
+function campaignFactionStrength(campaign,id){
+ const state=campaign.factionStates?.find(f=>f.id===id);
+ const armies=(campaign.armies||[]).filter(a=>(a.owner||a.factionId)===id&&a.roster?.length);
+ const armyPower=armies.reduce((n,a)=>n+Math.max(Number(a.points)||0,campaignArmyCost(a)),0);
+ const territory=(campaign.regions||[]).filter(r=>politicalOwner(r)===id).length;
+ return Math.max(1,armyPower+territory*220+Math.max(0,Number(state?.treasury)||0)*0.2);
+}
+function campaignFactionMomentum(campaign,id){
+ const armies=(campaign.armies||[]).filter(a=>(a.owner||a.factionId)===id);
+ return armies.length?Math.max(...armies.map(campaignArmyMomentum)):0;
+}
+function campaignAllianceKey(a,b){return [a,b].sort().join(":");}
+function campaignAreAllied(campaign,a,b){return (campaign.activeAlliances||[]).includes(campaignAllianceKey(a,b));}
+function establishGreenskinAlliance(campaign,a,b){
+ campaign.activeAlliances=campaign.activeAlliances||[];const key=campaignAllianceKey(a,b);
+ if(!campaign.activeAlliances.includes(key))campaign.activeAlliances.push(key);
+ setCampaignRelation(campaign,a,b,Math.max(campaignRelation(campaign,a,b),55));setCampaignRelation(campaign,b,a,Math.max(campaignRelation(campaign,b,a),55));
+}
+function confederateGreenskinFaction(campaign,leaderId,absorbedId){
+ const leader=campaign.factionStates.find(f=>f.id===leaderId),absorbed=campaign.factionStates.find(f=>f.id===absorbedId);
+ if(!leader||!absorbed||!leader.alive||!absorbed.alive||leaderId===absorbedId)return false;
+ for(const region of campaign.regions||[])if(politicalOwner(region)===absorbedId){region.ownerFaction=leaderId;region.owner=leaderId;region.politicalFactionId=leaderId;}
+ for(const army of campaign.armies||[])if((army.owner||army.factionId)===absorbedId){army.owner=leaderId;army.factionId=leaderId;army.id=leaderId+"-warband-"+String(campaign.turn||1)+"-"+String(campaign.armies.indexOf(army));}
+ leader.treasury=Math.max(0,Number(leader.treasury)||0)+Math.max(0,Number(absorbed.treasury)||0);
+ absorbed.treasury=0;absorbed.alive=false;absorbed.confederatedInto=leaderId;
+ campaign.activeAlliances=(campaign.activeAlliances||[]).filter(k=>!k.split(":").includes(absorbedId));
+ campaign.lastEvent=(campaign.lastEvent?campaign.lastEvent+" ":"")+absorbed.name+" joins "+leader.name+" in a Greenskin confederation; its settlements, treasury and surviving armies pass to the dominant warboss.";
+ return true;
+}
+function updateGreenskinDiplomacy(campaign){
+ const greens=(campaign.factionStates||[]).filter(f=>f.alive&&f.race==="greenskin");
+ for(const a of greens)for(const b of greens){
+  if(a.id===b.id)continue;
+  const strengthA=campaignFactionStrength(campaign,a.id),strengthB=campaignFactionStrength(campaign,b.id);
+  const relative=Math.max(-25,Math.min(35,Math.round(Math.log(strengthB/strengthA)*18)));
+  const momentumEffect=Math.max(-24,Math.min(30,(campaignFactionMomentum(campaign,b.id)-campaignFactionMomentum(campaign,a.id))*6));
+  const target=Math.max(-85,Math.min(90,baseFactionRelation(a.id,b.id)+relative+momentumEffect));
+  const current=campaignRelation(campaign,a.id,b.id);setCampaignRelation(campaign,a.id,b.id,current+Math.max(-8,Math.min(8,target-current)));
+ }
+ for(const small of greens)for(const large of greens){
+  if(small.id===large.id||!small.alive||!large.alive|| (campaign.activeWars||[]).includes(campaignWarKey(small.id,large.id)))continue;
+  const smallPower=campaignFactionStrength(campaign,small.id),largePower=campaignFactionStrength(campaign,large.id);
+  const relation=campaignRelation(campaign,small.id,large.id),momentum=campaignFactionMomentum(campaign,large.id);
+  if(largePower<smallPower*1.35||momentum<2||relation<35)continue;
+  if(relation>=72&&largePower>=smallPower*1.8&&momentum>=4){
+   if(Math.random()<0.22&&confederateGreenskinFaction(campaign,large.id,small.id))break;
+  }else if(relation>=48&&!campaignAreAllied(campaign,small.id,large.id)&&Math.random()<0.2){
+   establishGreenskinAlliance(campaign,small.id,large.id);
+   campaign.lastEvent=(campaign.lastEvent?campaign.lastEvent+" ":"")+small.name+" allies with "+large.name+", the rising Greenskin power.";
+  }
+ }
+}
 function baseFactionRelation(a,b){
  const pa=profileForFaction(a),pb=profileForFaction(b);
  if(!pa||!pb)return 0;
