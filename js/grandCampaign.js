@@ -475,7 +475,7 @@ export function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,
   if(treasuryState)treasuryState.treasury=Math.max(0,Number(treasuryState.treasury)||0)+plunder;
   if(conquerorId===campaign.playerPoliticalFaction)campaign.treasury=Math.max(0,Number(campaign.treasury)||0)+plunder;
  }
- if(isGreenskinConqueror){if(settlement.population.total<=0)settlement.recruitmentPools={};const army=options.army||(campaign.armies||[]).find(a=>(a.owner||a.factionId)===conquerorId&&a.roster?.length);if(army)awardGreenskinMomentum(campaign,army,1);}
+ if(region.id===24&&conquerorRace==="dwarf"&&!settlement.dwarvenMigrationTriggered){let civiliansMoved=0,reservesMoved=0;ensureSettlementRecruitment(region);for(const source of campaign.regions.filter(r=>r.id!==24&&r.nativeFaction==="dwarfs")){const sourceSettlement=source.settlement;if(!sourceSettlement?.population)continue;for(const group of [...(sourceSettlement.population.groups||[])]){const moved=Math.floor(Math.max(0,Number(group.count)||0)*0.05);if(moved<=0)continue;removePopulation(sourceSettlement,group,moved);addDisplacedPeople(settlement,group.culture,moved);civiliansMoved+=moved;}const sourcePools=ensureSettlementRecruitment(source)||{},targetPools=ensureSettlementRecruitment(region)||{},pool=sourcePools.dwarf;if(pool){const moved=Math.floor(Math.max(0,Number(pool.available)||0)*0.05),progressMoved=Math.max(0,Number(pool.progress)||0)*0.05;pool.available=Math.max(0,(Number(pool.available)||0)-moved);pool.progress=Math.max(0,(Number(pool.progress)||0)-progressMoved);targetPools.dwarf=targetPools.dwarf||{available:0,progress:0};targetPools.dwarf.available+=moved;targetPools.dwarf.progress+=progressMoved;reservesMoved+=moved;}}settlement.dwarvenMigrationTriggered=true;campaign.lastEvent+=" The Dwarven Recall awakens: "+civiliansMoved.toLocaleString()+" civilians and "+reservesMoved+" trained reserves migrate from the other mountain holds to Khaz Varrak.";}\n if(isGreenskinConqueror){if(settlement.population.total<=0)settlement.recruitmentPools={};const army=options.army||(campaign.armies||[]).find(a=>(a.owner||a.factionId)===conquerorId&&a.roster?.length);if(army)awardGreenskinMomentum(campaign,army,1);}
  const factionName=FACTION_BY_ID[conquerorId]?.name||FACTIONS[conquerorFaction]?.name||conquerorId;
  const special=(conquerorId==="greenskins"||FACTION_BY_ID[conquerorId]?.race==="greenskin")&&region.nativeFaction==="dwarfs"?" Orcs slaughtered the dwarves who could not escape; surviving escapees are displaced.":"";
  const summary=city.name+" falls to "+factionName+". "+fled.toLocaleString()+" inhabitants flee; "+killed.toLocaleString()+" are killed."+(plunder?" Greenskin plunder: "+plunder.toLocaleString()+" gold; the settlement has no usable population.":"")+special+" Its "+settlement.fortification.style+" fortifications remain in place, damaged but not replaced.";
@@ -490,7 +490,7 @@ function createInitialCampaignState(faction,city,commander){
  const factionStates=Object.values(FACTION_PROFILES).map(profile=>{
   const home=CITIES.find(x=>FACTION_PROFILES[x.id].id===profile.id),isPlayer=profile.id===playerPoliticalFaction;
   const army=createCampaignArmyRoster(profile.id,isPlayer?1000:500,{player:isPlayer,commander:isPlayer?commander:null});
-  return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,treasury:isPlayer?500:300,income:campaignCityIncome(regions.find(r=>r.id===home.id)),upkeep:Math.ceil(army.points*.04),armyPoints:army.points,turnsTaken:0,relations:{},};
+  return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,passive:!!profile.passive,treasury:profile.passive?0:isPlayer?500:300,income:profile.passive?0:campaignCityIncome(regions.find(r=>r.id===home.id)),upkeep:profile.passive?0:Math.ceil(army.points*.04),armyPoints:army.points,turnsTaken:0,relations:{},};
  });
  const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;diplomacy[a.id][b.id]=baseFactionRelation(a.id,b.id);}}
  const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints,boredom:-4,momentum:0,foughtThisTurn:false,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0}));
@@ -1466,6 +1466,7 @@ function processGreenskinAnimosity(campaign,army){
 }
 
 function runAIFactionTurn(campaign,faction){
+ if(faction.passive||FACTION_BY_ID[faction.id]?.passive)return faction.name+" remains passive.";
  const factionArmies=(campaign.armies||[]).filter(a=>(a.owner||a.factionId)===faction.id&&a.roster?.length);
  const army=factionArmy(campaign,faction.id);if(!army)return faction.name+" had no field army.";
  if(!factionArmies.includes(army))factionArmies.unshift(army);
@@ -1521,7 +1522,7 @@ function endCampaignTurn(){
  const playerIndex=order.indexOf(playerId),processed=[];
  for(let step=1;step<order.length;step++){
   const id=order[(Math.max(0,playerIndex)+step)%order.length],f=states.find(x=>x.id===id);
-  if(!f||!f.alive)continue;
+  if(!f||!f.alive||f.passive||FACTION_BY_ID[id]?.passive)continue;
   processed.push(runAIFactionTurn(activeCampaign,f));
  }
  const logisticsEvents=processCampaignLogistics(activeCampaign);
