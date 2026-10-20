@@ -1,4 +1,4 @@
-import { unitCost } from "./units.js?v=20261020-undead-monsters-v2";
+import { unitCost } from "./units.js?v=20261020-thaurgath-v2";
 
 const STORAGE_KEY = "warGameMordheimSkirmishV1";
 const NEVER_ALLOWED = new Set([
