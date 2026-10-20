@@ -1055,7 +1055,7 @@ function syncPlayerArmyState(){
 }
 function campaignMessage(message){activeCampaign.lastEvent=message;saveCampaign();renderCampaignMap();}
 function regionForArmy(army){return activeCampaign?.regions?.find(r=>r.id===army?.region)||null;}
-function applyKhazVarrakArmour(config,army,region){if(!config||region?.id!==24||campaignArmyRace(army,activeCampaign)!=="dwarf")return config;const type=config.type;if(!FACTIONS.dwarfs.units[type]||type==="deepflameDragon")return config;return {...config,dwarvenEnchantedArmour:true,magicArmour:true};}
+function applyKhazVarrakArmour(config,army,region){if(!config||region?.id!==24||campaignArmyRace(army,activeCampaign)!=="dwarf")return config;const type=config.type;if(!["dwarfInfantry","dwarfCaptain","dwarfLord","dwarfKingHaldric","cannon"].includes(type))return config;return {...config,dwarvenEnchantedArmour:true,magicArmour:true};}
 function renderArmyManagement(){
  const host=byId("grand-army-management");if(!host||!activeCampaign)return;ensureLogisticsState(activeCampaign);
  const armies=playerArmies(),army=selectedPlayerArmy();if(!army){host.textContent="No field army.";return;}
