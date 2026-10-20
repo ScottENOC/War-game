@@ -461,3 +461,59 @@ button,[role="button"]{
 
 /* Persistent individual-fighter expedition */
 .warband-fighter-row{display:flex;flex-direction:column;gap:8px;padding:12px;margin:8px 0;border:1px solid var(--line);border-radius:12px;background:#111a1bcc}.warband-fighter-row>div:first-child{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}.warband-fighter-row span{opacity:.78;font-size:14px}.warband-gear{display:flex;gap:6px;flex-wrap:wrap}.warband-gear button{font-size:13px;min-height:34px;padding:5px 8px}.warband-gear button:disabled{opacity:.35}#warband-expedition-shop{margin-top:18px}#warband-expedition-shop h2{margin-bottom:6px}#warband-expedition-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+
+
+/* Grand campaign: map-first controls, compact popovers and phone-safe layout */
+.grand-world-header{position:relative;z-index:30;gap:12px;align-items:center}
+.grand-world-header-actions{position:relative;display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.grand-world-header-actions button{min-height:36px}
+.grand-menu-toggle{min-width:42px;padding:5px 10px;font-size:20px;line-height:1}
+.grand-world-menu-dropdown{position:absolute;right:0;top:calc(100% + 7px);z-index:100;display:flex;flex-direction:column;gap:4px;min-width:190px;padding:7px;border:1px solid #ffffff30;border-radius:12px;background:#17201ff7;box-shadow:0 10px 32px #0009}
+.grand-world-menu-dropdown[hidden]{display:none}
+.grand-world-menu-dropdown button{width:100%;text-align:left;padding:10px 12px;min-height:40px}
+.grand-compact-treasury{display:flex;gap:7px;align-items:center;justify-content:center;border:1px solid #d8c68b80;border-radius:9px;background:#1b2825;color:#f4e6bb;padding:6px 10px;font-weight:800;font-variant-numeric:tabular-nums}
+.grand-compact-treasury span{color:#9fd6a4}
+.grand-utility-button{padding:6px 10px}
+.grand-world-layout{display:flex!important;flex-direction:column;gap:10px;align-items:stretch!important}
+.grand-live-map-panel{width:100%;min-width:0}
+.grand-world-sidebar{width:100%;min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
+.grand-world-sidebar>.grand-world-card,.grand-world-sidebar>.grand-world-economy,.grand-world-sidebar>.grand-world-event{min-width:0;margin:0}
+.grand-world-sidebar>.grand-world-economy{display:none}
+.grand-world-sidebar>.grand-world-event{grid-column:1/-1;padding:5px 8px;font-size:12px}
+#grand-campaign-diplomacy[hidden]{display:none!important}
+#grand-army-management:empty{display:none}
+.grand-floating-end-turn{position:fixed!important;right:calc(env(safe-area-inset-right) + 14px);bottom:calc(env(safe-area-inset-bottom) + 14px);z-index:80;width:auto;min-width:0;min-height:42px;padding:9px 15px;border-radius:999px;box-shadow:0 4px 18px #0009;font-size:14px}
+.grand-campaign-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 16px) calc(env(safe-area-inset-right) + 14px) calc(env(safe-area-inset-bottom) + 16px) calc(env(safe-area-inset-left) + 14px);background:#080d0dd9}
+.grand-campaign-overlay[hidden]{display:none!important}
+.grand-campaign-dialog{width:min(640px,100%);max-height:100%;overflow:auto;border:1px solid #ffffff35;border-radius:14px;background:#17201f;color:#f3ead2;padding:14px;box-shadow:0 15px 45px #0009}
+.grand-campaign-dialog>header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+.grand-campaign-dialog h2{margin:0;font-size:20px}
+.grand-campaign-dialog #grand-overlay-close{min-width:38px;min-height:38px;font-size:24px}
+.grand-campaign-dialog #grand-campaign-diplomacy{display:block!important;border:0;padding:0;margin:0;background:transparent}
+.grand-campaign-dialog .grand-diplomacy-hint{display:none}
+.grand-treasury-details{display:grid;gap:10px}
+.grand-treasury-details .grand-stat{display:flex;justify-content:space-between;gap:12px}
+.grand-treasury-details button{justify-self:start}
+#startup-diagnostics-toggle-wrap{display:none!important}
+@media(max-width:650px){
+ .grand-campaign-panel{width:100%;max-width:none;max-height:none;height:100dvh;overflow:auto;padding:calc(env(safe-area-inset-top) + 8px) calc(env(safe-area-inset-right) + 8px) calc(env(safe-area-inset-bottom) + 8px) calc(env(safe-area-inset-left) + 8px)}
+ .grand-world-header{align-items:flex-start;padding-top:4px}
+ .grand-world-header h1{font-size:clamp(18px,5vw,25px);margin:0}
+ .grand-world-header .eyebrow{font-size:10px}
+ .grand-world-header-actions{gap:5px;flex-wrap:nowrap}
+ .grand-world-header-actions button{min-height:34px;font-size:12px}
+ .grand-compact-treasury{gap:5px;padding:5px 7px;font-size:12px;white-space:nowrap}
+ .grand-utility-button{padding:5px 7px}
+ .grand-menu-toggle{min-width:36px;padding:4px 7px;font-size:18px}
+ .grand-live-map-legend{font-size:10px;gap:6px;flex-wrap:wrap}
+ .grand-map-live-wrap{min-height:0}
+ .grand-world-sidebar{grid-template-columns:minmax(0,1fr);padding-bottom:56px}
+ .grand-world-sidebar>.grand-world-event{grid-column:auto}
+ .grand-floating-end-turn{right:calc(env(safe-area-inset-right) + 10px);bottom:calc(env(safe-area-inset-bottom) + 10px);min-height:40px;padding:8px 13px}
+}
+@media(orientation:landscape) and (max-height:500px){
+ .grand-campaign-panel{max-height:100dvh;height:100dvh;overflow:auto}
+ .grand-world-header{padding-top:2px;padding-bottom:2px}
+ .grand-live-map-legend{display:none}
+ .grand-world-sidebar{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
