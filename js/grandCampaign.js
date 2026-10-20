@@ -1000,6 +1000,8 @@ function createMovementGraph(){
  for(const c of CITIES)for(const other of REGION_NEIGHBORS[c.id]||[]){
   const key=[c.id,other].sort((a,b)=>a-b).join("-");
   if(seen.has(key))continue;seen.add(key);
+  // Remove the redundant southern sea lane into Moonspire. The northern passage remains.
+  if(key==="3-7")continue;
   if(seaLinks.has(key)){
    const pA=ports.find(p=>p.city===c.id)||ports.find(p=>p.city===other);
    const pB=ports.find(p=>p.city===other&&p!==pA)||ports.find(p=>p.city===c.id&&p!==pA);
