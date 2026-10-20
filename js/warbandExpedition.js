@@ -31,7 +31,7 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
   function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(run)); } catch {} }
   function hide() { el("warband-expedition-screen").hidden = true; }
   function show() {
-    for (const id of ["mainmenu","mode-screen","campaign-screen","roguelike-screen","mordheim-screen","collection-screen","armybuilder","game"]) if (el(id)) el(id).hidden = true;
+    for (const id of ["mainmenu","mode-screen","campaign-screen","roguelike-screen","warband-screen","collection-screen","armybuilder","game"]) if (el(id)) el(id).hidden = true;
     el("warband-expedition-screen").hidden = false;
   }
   const inventory = () => (getInventory() || []).filter(m => m && m.faction === run.faction && !m.namedCharacter && !m.isNamedCharacter && !m.legendary && !FORBIDDEN.has(m.type) && !["eagle","greatEagle","wyvern","youngDragon","dragon","ancientDragon","deepflameDragon","skeletonDragon"].includes(m.mountType) && !m.siegeMachine && !m.type.toLowerCase().includes("chariot"));
@@ -82,8 +82,8 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
       [["empire","Humans"],["highElves","High Elves"],["dwarfs","Dwarfs"],["greenskins","Greenskins"],["undead","Undead"]].forEach(([value,label]) => { const o=document.createElement("option");o.value=value;o.textContent=label;select.append(o); });
       select.value = run.faction; select.addEventListener("change",()=>{run.faction=select.value;run.fighters=[];save();render();}); content.prepend(factionLabel); factionLabel.append(select);
       const models = inventory(); const picked = new Set(run.fighters.map(f=>f.collectionId));
-      const list = document.createElement("div"); list.className = "mordheim-model-list";
-      models.forEach(m => { const label=document.createElement("label");label.className="mordheim-model-row";const check=document.createElement("input");check.type="checkbox";check.checked=picked.has(m.id);check.addEventListener("change",()=>{if(check.checked){if(run.fighters.length>=START_FIGHTERS){check.checked=false;return;}run.fighters.push(fighterFromModel(m,"fighter-"+run.nextFighterId++));}else run.fighters=run.fighters.filter(f=>f.collectionId!==m.id);save();render();});const span=document.createElement("span");span.textContent=m.name||m.type;const cost=document.createElement("strong");cost.textContent=costOf(fighterFromModel(m,"preview"),run.faction)+" pts";label.append(check,span,cost);list.append(label); });
+      const list = document.createElement("div"); list.className = "warband-model-list";
+      models.forEach(m => { const label=document.createElement("label");label.className="warband-model-row";const check=document.createElement("input");check.type="checkbox";check.checked=picked.has(m.id);check.addEventListener("change",()=>{if(check.checked){if(run.fighters.length>=START_FIGHTERS){check.checked=false;return;}run.fighters.push(fighterFromModel(m,"fighter-"+run.nextFighterId++));}else run.fighters=run.fighters.filter(f=>f.collectionId!==m.id);save();render();});const span=document.createElement("span");span.textContent=m.name||m.type;const cost=document.createElement("strong");cost.textContent=costOf(fighterFromModel(m,"preview"),run.faction)+" pts";label.append(check,span,cost);list.append(label); });
       content.append(list);
       const start=document.createElement("button");start.className="primary-button";start.textContent="Begin expedition";start.disabled=run.fighters.length!==START_FIGHTERS;start.addEventListener("click",()=>{if(run.fighters.length!==START_FIGHTERS)return;run.state="ready";run.round=1;run.bank=0;run.lastResult="Your expedition begins with five fighters.";save();startNextBattle();});actions.append(start);
       const note=document.createElement("p");note.className="subtle";note.textContent="Choose exactly five fighters. Models must be in your collection; this mode does not consume the physical collection models.";content.append(note);
@@ -92,8 +92,8 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
     const available = inventory().filter(m => !run.fighters.some(f => f.collectionId === m.id && f.alive));
     const shopTitle=document.createElement("h2");shopTitle.textContent="Recruit from your collection";shop.append(shopTitle);
     const shopIntro=document.createElement("p");shopIntro.className="subtle";shopIntro.textContent="Recruit an available miniature for its point cost. The model stays in your collection, but this fighter's injuries and experience persist in this expedition.";shop.append(shopIntro);
-    const recruitList=document.createElement("div");recruitList.className="mordheim-model-list";
-    available.slice(0,100).forEach(m=>{const row=document.createElement("div");row.className="mordheim-model-row";const span=document.createElement("span");span.textContent=m.name||m.type;const price=costOf(fighterFromModel(m,"preview"),run.faction);const btn=document.createElement("button");btn.className="secondary-button";btn.textContent="Recruit · "+price;btn.disabled=run.bank<price||run.fighters.filter(f=>f.alive).length>=MAX_FIGHTERS;btn.addEventListener("click",()=>{if(run.bank<price||run.fighters.filter(f=>f.alive).length>=MAX_FIGHTERS)return;run.bank-=price;run.fighters.push(fighterFromModel(m,"fighter-"+run.nextFighterId++));run.lastResult="Recruited "+(m.name||m.type)+" for "+price+" points.";save();render();});row.append(span,btn);recruitList.append(row);});
+    const recruitList=document.createElement("div");recruitList.className="warband-model-list";
+    available.slice(0,100).forEach(m=>{const row=document.createElement("div");row.className="warband-model-row";const span=document.createElement("span");span.textContent=m.name||m.type;const price=costOf(fighterFromModel(m,"preview"),run.faction);const btn=document.createElement("button");btn.className="secondary-button";btn.textContent="Recruit · "+price;btn.disabled=run.bank<price||run.fighters.filter(f=>f.alive).length>=MAX_FIGHTERS;btn.addEventListener("click",()=>{if(run.bank<price||run.fighters.filter(f=>f.alive).length>=MAX_FIGHTERS)return;run.bank-=price;run.fighters.push(fighterFromModel(m,"fighter-"+run.nextFighterId++));run.lastResult="Recruited "+(m.name||m.type)+" for "+price+" points.";save();render();});row.append(span,btn);recruitList.append(row);});
     if(!available.length){const p=document.createElement("p");p.className="subtle";p.textContent="No unassigned eligible miniatures are available to recruit.";recruitList.append(p);}shop.append(recruitList);
     const next=document.createElement("button");next.className="primary-button";next.textContent="Fight next battle";next.disabled=!run.fighters.some(f=>f.alive&&f.benchFights===0);next.addEventListener("click",startNextBattle);actions.append(next);
     const menu=document.createElement("button");menu.className="secondary-button";menu.textContent="Main Menu";menu.addEventListener("click",()=>{hide();el("mainmenu").hidden=false;});actions.append(menu);
@@ -133,7 +133,7 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
       const u=battleById.get(f.id);
       if(!u){if(f.benchFights>0)f.benchFights=Math.max(0,f.benchFights-1);return;}
       if(u.warbandXpEarned)f.xp=(Number(f.xp)||0)+(Number(u.warbandXpEarned)||0);
-      if(u.mordheimStatus==="outOfAction"||u.models<=0){
+      if(u.warbandStatus==="outOfAction"||u.models<=0){
         const roll=()=>1+Math.floor(Math.random()*6);
         let result=roll(),tries=0;
         while((result===3&&f.injuries?.leg)||(result===4&&f.injuries?.leftArm))result=roll();
@@ -142,7 +142,7 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
         else if(result===3){f.injuries=f.injuries||{};f.injuries.leg=true;casualtyReports.push(f.name+": loses a leg; Move −1 (roll 3).");}
         else if(result===4){f.injuries=f.injuries||{};f.injuries.leftArm=true;f.shield=false;f.offhandWeapon=false;if(["greatWeapon","halberd","bow","crossbow","firearm"].includes(f.weapon)){f.weapon="handWeapon";f.meleeWeapons=["handWeapon"];}f.rangedWeapon=null;casualtyReports.push(f.name+": loses the left arm and can no longer use two-handed weapons, shields or dual wield (roll 4).");}
         else {f.alive=false;casualtyReports.push(f.name+": dies permanently (roll "+result+").");}
-      } else if(u.mordheimStatus==="stunned"||u.mordheimStatus==="unconscious") {
+      } else if(u.warbandStatus==="stunned"||u.warbandStatus==="unconscious") {
         f.woundsCurrent=1;
       } else if(u.models>0) {
         f.woundsCurrent=Math.max(1,Number(u.characterWounds)||Number(u.stats?.W)||1);
