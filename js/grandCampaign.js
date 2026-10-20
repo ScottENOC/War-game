@@ -1296,17 +1296,30 @@ function renderCampaignMap(){
  const currentArmy=selectedPlayerArmy();if(currentArmy){activeCampaign.commander.nodeId=currentArmy.nodeId;activeCampaign.commander.region=currentArmy.region;activeCampaign.commander.movement=currentArmy.movement;}
  const host=byId("grand-map-live-wrap");let map=byId("grand-campaign-world-map");
  const firstRender=!map;if(!map){map=byId("grand-world-map").cloneNode(true);map.id="grand-campaign-world-map";map.querySelectorAll(".grand-city").forEach(m=>m.classList.remove("other-faction","selected","character-locked"));host.replaceChildren(map);installCampaignMapNavigation(host,map);}
- map.querySelectorAll("#campaign-road-layer,#campaign-node-layer,#campaign-commander-layer").forEach(e=>e.remove());
- const road=svgEl("g",{id:"campaign-road-layer","pointer-events":"none"}),layer=svgEl("g",{id:"campaign-node-layer"}),token=svgEl("g",{id:"campaign-commander-layer","pointer-events":"none"}),{nodes,edges}=activeCampaign.graph;
+ ensureRefugeeState(activeCampaign);
+ map.querySelectorAll("#campaign-road-layer,#campaign-node-layer,#campaign-commander-layer,#campaign-refugee-layer").forEach(e=>e.remove());
+ const selectedRefugee=activeCampaign.refugeeGroups.find(g=>g.id===activeCampaign.selectedRefugeeId&&g.owner===activeCampaign.playerPoliticalFaction);
+ const movementNode=selectedRefugee?.nodeId||activeCampaign.commander.nodeId,movementLeft=selectedRefugee?.movement??activeCampaign.commander.movement;
+ const road=svgEl("g",{id:"campaign-road-layer","pointer-events":"none"}),layer=svgEl("g",{id:"campaign-node-layer"}),token=svgEl("g",{id:"campaign-commander-layer","pointer-events":"none"}),refugeeLayer=svgEl("g",{id:"campaign-refugee-layer"}),{nodes,edges}=activeCampaign.graph;
  for(const [id,list] of Object.entries(edges))for(const e of list){if(id.localeCompare(e.to)>=0)continue;const a=nodes[id],b=nodes[e.to];road.append(svgEl("path",{d:"M "+a.x+" "+a.y+" L "+b.x+" "+b.y,class:"campaign-road"+(a.type==="river"||b.type==="river"?" river-road":"")}));}
  paintFactionBanners(map,activeCampaign);
  map.querySelector("#grand-city-markers").before(road);
- for(const n of Object.values(nodes)){const isCurrent=n.id===activeCampaign.commander.nodeId,reach=(edges[activeCampaign.commander.nodeId]||[]).some(e=>e.to===n.id&&e.cost+nodeCost(n)-1<=activeCampaign.commander.movement),g=svgEl("g",{class:"campaign-node "+n.type+(isCurrent?" current":"")+(reach?" reachable":""),tabindex:reach?"0":"-1",role:"button","aria-label":n.label,transform:"translate("+n.x+" "+n.y+")","data-node":n.id});g.append(svgEl("circle",{r:16,class:"campaign-node-hit"}));g.append(svgEl("circle",{r:n.type==="city"?5:n.type==="crossroads"?3.5:5.5,class:"campaign-node-visible"}));if(n.type==="port")g.append(svgEl("path",{d:"M-3 0 L3 0 M0 -4 L0 2 M-4 2 L4 2"}));layer.append(g);}
+ for(const n of Object.values(nodes)){const isCurrent=n.id===movementNode,reach=(edges[movementNode]||[]).some(e=>e.to===n.id&&e.cost+nodeCost(n)-1<=movementLeft),g=svgEl("g",{class:"campaign-node "+n.type+(isCurrent?" current":"")+(reach?" reachable":""),tabindex:reach?"0":"-1",role:"button","aria-label":n.label,transform:"translate("+n.x+" "+n.y+")","data-node":n.id});g.append(svgEl("circle",{r:16,class:"campaign-node-hit"}));g.append(svgEl("circle",{r:n.type==="city"?5:n.type==="crossroads"?3.5:5.5,class:"campaign-node-visible"}));if(n.type==="port")g.append(svgEl("path",{d:"M-3 0 L3 0 M0 -4 L0 2 M-4 2 L4 2"}));layer.append(g);}
  map.querySelector("#grand-city-markers").after(layer);
  const current=nodes[activeCampaign.commander.nodeId];token.append(svgEl("circle",{cx:current.x,cy:current.y-17,r:11,class:"commander-token"}));const initials=activeCampaign.commander.name.split(/\s+/).map(s=>s[0]).join("").slice(0,2).toUpperCase(),label=svgEl("text",{x:current.x,y:current.y-13,"text-anchor":"middle",class:"commander-initials"});label.textContent=initials;token.append(label);map.append(token);
+ for(const group of activeCampaign.refugeeGroups){
+  const p=nodes[group.nodeId];if(!p)continue;
+  const own=group.owner===activeCampaign.playerPoliticalFaction,selected=group.id===activeCampaign.selectedRefugeeId;
+  const g=svgEl("g",{class:"campaign-refugee-token"+(selected?" selected":"")+(own?" player-refugee":""),transform:"translate("+p.x+" "+(p.y+19)+")",role:"button",tabindex:own?"0":"-1","aria-label":group.count+" refugees from "+group.originName,"pointer-events":own?"all":"none"});
+  g.append(svgEl("circle",{r:11,class:"refugee-token-circle"}));
+  const t=svgEl("text",{x:0,y:4,"text-anchor":"middle",class:"refugee-token-label"});t.textContent="⚑";g.append(t);
+  if(own){const choose=()=>{activeCampaign.selectedRefugeeId=group.id;activeCampaign.lastEvent="Selected "+group.count.toLocaleString()+" refugees. Choose a connected road to move them.";renderCampaignMap();};g.addEventListener("click",choose);g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();choose();}});}
+  refugeeLayer.append(g);
+ }
+ map.append(refugeeLayer);
  layer.querySelectorAll("[data-node]").forEach(g=>{const move=()=>moveCommander(g.dataset.node);g.addEventListener("click",move);g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();move();}});});
  const n=nodes[activeCampaign.commander.nodeId];const settlementRegion=activeCampaign.regions.find(r=>r.id===n.region);byId("grand-campaign-turn").textContent="TURN "+activeCampaign.turn;const playerState=activeCampaign.factionStates.find(f=>f.id===activeCampaign.playerPoliticalFaction);if(playerState)playerState.upkeep=playerArmies().reduce((sum,a)=>sum+campaignArmyUpkeep(a),0);byId("grand-campaign-treasury").textContent=activeCampaign.treasury+" gold · +"+(playerState?.income||0)+" / −"+(playerState?.upkeep||0);
- byId("grand-campaign-commander").innerHTML="<strong>♟ "+activeCampaign.commander.name+"</strong><span>"+(activeCampaign.commander.kind==="legendary"?"Legendary":"Commander")+" · "+activeCampaign.commander.movement+"/"+activeCampaign.commander.maxMovement+" MP"+(currentArmy&&campaignArmyRace(currentArmy,activeCampaign)==="greenskin"?" · Boredom "+Math.max(-4,Math.min(10,Number.isFinite(currentArmy.boredom)?currentArmy.boredom:-4)):"")+"</span>";
+ byId("grand-campaign-commander").innerHTML=selectedRefugee?"<strong>⚑ Civilian refugees</strong><span>"+selectedRefugee.count.toLocaleString()+" people · "+selectedRefugee.culture+" · "+selectedRefugee.movement+"/"+selectedRefugee.maxMovement+" MP</span>":"<strong>♟ "+activeCampaign.commander.name+"</strong><span>"+(activeCampaign.commander.kind==="legendary"?"Legendary":"Commander")+" · "+activeCampaign.commander.movement+"/"+activeCampaign.commander.maxMovement+" MP"+(currentArmy&&campaignArmyRace(currentArmy,activeCampaign)==="greenskin"?" · Boredom "+Math.max(-4,Math.min(10,Number.isFinite(currentArmy.boredom)?currentArmy.boredom:-4)):"")+"</span>";
  byId("grand-campaign-node-detail").innerHTML="<strong>"+(n.type==="city"?"⌂ ":"◆ ")+n.label+"</strong>"+(n.type==="city"&&settlementRegion?.settlement?("<span>"+(FACTION_BY_ID[settlementRegion.ownerFaction]?.name||FACTIONS[settlementRegion.ownerFaction]?.name||settlementRegion.ownerFaction)+" · "+Math.round(settlementRegion.settlement.population.total).toLocaleString()+" · Food "+(settlementRegion.settlement.foodStores??8)+"/"+(settlementRegion.settlement.maxFoodStores||8)+(settlementRegion.settlement.besiegedBy?" · BESIEGED":"")+"</span>"):"<span>"+({crossroads:"Road junction",port:"Port",river:"River crossing",border:"Border"}[n.type]||"Road")+"</span>");
  const battleRegion=n.type==="city"?activeCampaign.regions.find(r=>r.id===n.region):null;
  const playerId=activeCampaign.playerPoliticalFaction,defenderId=battleRegion&&politicalOwner(battleRegion);
@@ -1413,6 +1426,23 @@ function campaignMovementPath(campaign,from,to){
 }
 function moveCommander(id){
  if(!activeCampaign)return;
+ ensureRefugeeState(activeCampaign);
+ const selectedRefugee=activeCampaign.refugeeGroups.find(g=>g.id===activeCampaign.selectedRefugeeId&&g.owner===activeCampaign.playerPoliticalFaction);
+ if(selectedRefugee){
+  const from=selectedRefugee.nodeId,n=activeCampaign.graph.nodes[id],path=campaignMovementPath(activeCampaign,from,id);
+  if(!n||!path||path.length<2){activeCampaign.lastEvent="Choose a connected road destination for the refugees.";renderCampaignMap();return;}
+  const cost=refugeePathCost(activeCampaign,path);
+  if(cost>selectedRefugee.movement){activeCampaign.lastEvent="The refugees do not have enough movement to reach "+n.label+".";renderCampaignMap();return;}
+  selectedRefugee.nodeId=id;selectedRefugee.region=n.region;selectedRefugee.movement-=cost;
+  const city=activeCampaign.regions.find(r=>Number(r.id)===Number(n.region));
+  if(city&&politicalOwner(city)===selectedRefugee.owner&&refugeeCityAccepts(city,selectedRefugee.culture,activeCampaign)){
+   const count=absorbRefugees(activeCampaign,selectedRefugee,city);activeCampaign.lastEvent=count.toLocaleString()+" refugees safely resettle in "+city.name+".";
+  }else{
+   resolveRefugeeArmyEncounters(activeCampaign);
+   if(activeCampaign.refugeeGroups.some(g=>g.id===selectedRefugee.id))activeCampaign.lastEvent="Refugees move to "+n.label+". "+selectedRefugee.movement+" movement remaining.";
+  }
+  saveCampaign();renderCampaignMap();return;
+ }
  const army=selectedPlayerArmy(),from=army?.nodeId||activeCampaign.commander.nodeId,n=activeCampaign.graph.nodes[id],edge=(activeCampaign.graph.edges[from]||[]).find(e=>e.to===id);
  const profile=army?campaignArmyMovementProfile(army,activeCampaign):{allFlying:false};
  const path=campaignMovementPath(activeCampaign,from,id),flying=!!profile.allFlying;
@@ -1888,6 +1918,15 @@ function endCampaignTurn(){
   processed.push(runAIFactionTurn(activeCampaign,f));
  }
  const logisticsEvents=processCampaignLogistics(activeCampaign);
+ ensureRefugeeState(activeCampaign);
+ for(const group of [...activeCampaign.refugeeGroups]){
+  group.movement=group.maxMovement||refugeeMovementForCulture(group.culture);
+  if(group.owner!==activeCampaign.playerPoliticalFaction){
+   const target=nearestRefugeeCity(activeCampaign,group,group.nodeId,Infinity);
+   if(target)moveRefugeeColumn(activeCampaign,group,target.node,group.movement);
+  }
+ }
+ resolveRefugeeArmyEncounters(activeCampaign);
  const player=states.find(f=>f.id===playerId);
  if(player){
   const owned=activeCampaign.regions.filter(r=>politicalOwner(r)===playerId);
@@ -1910,6 +1949,8 @@ function endCampaignTurn(){
   updateGreenskinBoredom(activeCampaign,army);
  }
  activeCampaign.turn++;activeCampaign.activeFaction=playerId;
+ for(const group of activeCampaign.refugeeGroups||[])group.movement=group.maxMovement||refugeeMovementForCulture(group.culture);
+ activeCampaign.selectedRefugeeId=null;
  activeCampaign.commander.maxMovement=campaignArmyMovementProfile(selectedPlayerArmy(),activeCampaign).points;activeCampaign.commander.movement=activeCampaign.commander.maxMovement;for(const army of playerArmies())army.movement=campaignArmyMovementProfile(army,activeCampaign).points;
  const activeArmy=selectedPlayerArmy();if(activeArmy){activeCampaign.commander.nodeId=activeArmy.nodeId;activeCampaign.commander.region=activeArmy.region;activeCampaign.commander.movement=activeArmy.movement;}
  // Test Greenskin animosity at the beginning of the newly opened player turn,
