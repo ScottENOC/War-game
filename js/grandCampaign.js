@@ -1324,7 +1324,7 @@ function processGreenskinAnimosity(campaign,army){
  targets.sort((a,b)=>a.priority-b.priority||a.cost-b.cost);
  const bestPriority=targets[0].priority,bestCost=targets[0].cost;
  const tied=targets.filter(t=>t.priority===bestPriority&&t.cost===bestCost),choice=campaignRandomChoice(tied);
- const movement=campaignArmyMovementProfile(army,campaign).points;
+ const movement=Math.max(0,Number(army.movement)||0);
  if(choice.cost<=movement){
   const own=army.owner||army.factionId;
   if(choice.owner===own){
@@ -1396,13 +1396,6 @@ function runAIFactionTurn(campaign,faction){
 function endCampaignTurn(){
  if(!activeCampaign)return;
  let playerAnimosityMessage="";
- for(const playerArmy of playerArmies()){
-  if(campaignArmyRace(playerArmy,activeCampaign)!=="greenskin"||playerArmy.lastAnimosityTurn===activeCampaign.turn)continue;
-  const animosity=processGreenskinAnimosity(activeCampaign,playerArmy);
-  if(animosity.message)playerAnimosityMessage+=(playerAnimosityMessage?" ":"")+animosity.message;
-  if(animosity.battleRegion){activeCampaign.lastEvent=animosity.message;saveCampaign();launchCampaignBattle(animosity.battleRegion,animosity.battleArmy||playerArmy);return;}
-  if(animosity.fieldBattle){activeCampaign.lastEvent=animosity.message;saveCampaign();launchCampaignFieldBattle(animosity.battleArmies[0],animosity.battleArmies[1]);return;}
- }
  ensureSettlementState(activeCampaign);settleMonthlyPopulation(activeCampaign);
  const order=activeCampaign.factionTurnOrder||[],states=activeCampaign.factionStates||[];
  const playerId=activeCampaign.playerPoliticalFaction||FACTION_PROFILES[activeCampaign.startingRegion]?.id;
@@ -1432,7 +1425,18 @@ function endCampaignTurn(){
  activeCampaign.turn++;activeCampaign.activeFaction=playerId;
  activeCampaign.commander.maxMovement=campaignArmyMovementProfile(selectedPlayerArmy(),activeCampaign).points;activeCampaign.commander.movement=activeCampaign.commander.maxMovement;for(const army of playerArmies())army.movement=campaignArmyMovementProfile(army,activeCampaign).points;
  const activeArmy=selectedPlayerArmy();if(activeArmy){activeCampaign.commander.nodeId=activeArmy.nodeId;activeCampaign.commander.region=activeArmy.region;activeCampaign.commander.movement=activeArmy.movement;}
- activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Cities provide income; armies cost upkeep and supplies. "+(playerAnimosityMessage?playerAnimosityMessage+" ":"")+processed.length+" AI faction turns completed. "+(logisticsEvents.slice(0,2).join(" ")+" ") +(processed.slice(0,2).join(" ")||"The realms consolidate their positions.")+" Your movement is replenished.";
+ // Test Greenskin animosity at the beginning of the newly opened player turn,
+ // after each player army has received its movement allowance.
+ for(const playerArmy of playerArmies()){
+  if(campaignArmyRace(playerArmy,activeCampaign)!=="greenskin"||playerArmy.lastAnimosityTurn===activeCampaign.turn)continue;
+  const animosity=processGreenskinAnimosity(activeCampaign,playerArmy);
+  if(animosity.message)playerAnimosityMessage+=(playerAnimosityMessage?" ":"")+animosity.message;
+  if(animosity.battleRegion){activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. "+animosity.message;saveCampaign();launchCampaignBattle(animosity.battleRegion,animosity.battleArmy||playerArmy);return;}
+  if(animosity.fieldBattle){activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. "+animosity.message;saveCampaign();launchCampaignFieldBattle(animosity.battleArmies[0],animosity.battleArmies[1]);return;}
+  if(/ bickers /.test(animosity.message)||/ squabbles /.test(animosity.message))playerArmy.movement=0;
+ }
+ if(activeArmy)activeCampaign.commander.movement=activeArmy.movement;
+ activeCampaign.lastEvent="Turn "+activeCampaign.turn+" begins. Cities provide income; armies cost upkeep and supplies. "+(playerAnimosityMessage?playerAnimosityMessage+" ":"")+processed.length+" AI faction turns completed. "+(logisticsEvents.slice(0,2).join(" ")+ " ") +(processed.slice(0,2).join(" ")||"The realms consolidate their positions.")+" Your movement is replenished.";
  saveCampaign();renderCampaignMap();
 }
 function showCampaignWorld(c){activeCampaign=c;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();}
