@@ -986,6 +986,9 @@ function launchCampaignBattle(region,attackingArmyOverride=null){
   enemyArmy.roster=enemyArmy.roster.map((config,i)=>({...config,models:Math.max(0,enemySurvivors[i]?.models??0),currentDamage:enemySurvivors[i]?.damage||0,currentWounds:enemySurvivors[i]?.characterWounds})).filter(config=>config.models>0);
   playerArmy.points=Math.max(0,Math.round(playerArmy.roster.reduce((sum,u)=>sum+unitCost(u,playerFaction),0)));
   enemyArmy.points=Math.max(0,Math.round(enemyArmy.roster.reduce((sum,u)=>sum+unitCost(u,enemyFaction),0)));
+  const winningArmy=result.won?playerArmy:enemyArmy,losingArmy=result.won?enemyArmy:playerArmy;
+  awardGreenskinMomentum(activeCampaign,winningArmy,2);awardGreenskinMomentum(activeCampaign,losingArmy,-2);
+  awardGreenskinPlunder(activeCampaign,winningArmy,Math.round(35+Math.max(0,losingArmy.points||0)*0.1));
   const playerState=activeCampaign.factionStates.find(f=>f.id===playerId),enemyState=activeCampaign.factionStates.find(f=>f.id===enemyId);
   if(result.won){
    const greenskinPlayer=campaignIsGreenskin(activeCampaign,playerId);
@@ -1371,7 +1374,6 @@ function launchCampaignFieldBattle(attackingArmy,defendingArmy){
   const winner=result.won?attackingArmy:defendingArmy,loser=result.won?defendingArmy:attackingArmy;
   awardGreenskinMomentum(activeCampaign,winner,2);
   awardGreenskinMomentum(activeCampaign,loser,-2);
-  awardGreenskinPlunder(activeCampaign,winner,Math.round(35+Math.max(0,loser.points||0)*0.1));
   awardGreenskinPlunder(activeCampaign,winner,Math.round(35+Math.max(0,loser.points||0)*0.1));
   if(result.won){winner.nodeId=targetNode;winner.region=activeCampaign.graph.nodes[targetNode]?.region??defendingArmy.region;}
   const loserState=activeCampaign.factionStates.find(f=>f.id===(loser.owner||loser.factionId)),home=loserState?.homeRegion||loser.region;
