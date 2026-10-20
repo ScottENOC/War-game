@@ -1418,54 +1418,81 @@ function renderCampaignMap(){
 }
 function launchCampaignBattle(region,attackingArmyOverride=null,defendingArmyOverride=null,targetNodeId=null){
  if(!activeCampaign||!region||typeof window.startPoliticalCampaignBattle!=="function")return;
- const playerId=activeCampaign.playerPoliticalFaction,enemyId=defendingArmyOverride?.owner||defendingArmyOverride?.factionId||politicalOwner(region);
- if(!enemyId||enemyId===playerId)return;
+ const playerId=activeCampaign.playerPoliticalFaction,playerArmy=attackingArmyOverride||selectedPlayerArmy();
+ const targetId=targetNodeId||"city-"+region.id;
+ const node=activeCampaign.graph.nodes[targetId];
+ const occupying=defendingArmyOverride?[defendingArmyOverride]:campaignArmyAtNode(activeCampaign,targetId,playerArmy).filter(a=>(a.owner||a.factionId)!==playerId);
+ const enemyId=occupying[0]?(occupying[0].owner||occupying[0].factionId):politicalOwner(region);
+ if(!enemyId||enemyId===playerId||!playerArmy?.roster?.length)return;
  declareCampaignWar(activeCampaign,playerId,enemyId);
- const playerArmy=attackingArmyOverride||selectedPlayerArmy(),enemyArmy=defendingArmyOverride||factionArmy(activeCampaign,enemyId);
- if(!playerArmy?.roster?.length||!enemyArmy?.roster?.length){activeCampaign.lastEvent="Cannot muster a valid army for this battle.";renderCampaignMap();return;}
- const playerFaction=playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId),enemyFaction=enemyArmy.rosterFaction||rosterFactionForPoliticalFaction(enemyId);
- const started=window.startPoliticalCampaignBattle({army:playerArmy.roster,faction:playerFaction,enemyArmy:enemyArmy.roster,enemyFaction,onComplete:result=>{
-  playerArmy.foughtThisTurn=true;enemyArmy.foughtThisTurn=true;
-  const originalPlayerRoster=playerArmy.roster.map(u=>({...u})),originalEnemyRoster=enemyArmy.roster.map(u=>({...u}));
-  playerArmy.startingModels=originalPlayerRoster.reduce((sum,u)=>sum+Math.max(0,Number(u.models)||0),0);
-  enemyArmy.startingModels=originalEnemyRoster.reduce((sum,u)=>sum+Math.max(0,Number(u.models)||0),0);
+ // All hostile armies sharing the battle node fight as one defending force.
+ let defenderArmies=occupying.filter(a=>(a.owner||a.factionId)===enemyId&&a.roster?.length);
+ if(!defenderArmies.length){
+  const fallback=factionArmy(activeCampaign,enemyId);
+  if(fallback?.roster?.length)defenderArmies=[fallback];
+ }
+ if(!defenderArmies.length){activeCampaign.lastEvent="Cannot muster a valid defending army for this battle.";renderCampaignMap();return;}
+ // Friendly armies on nodes directly connected to the battle location can volunteer as reinforcements.
+ const attackerArmies=[playerArmy],adjacentIds=new Set((activeCampaign.graph.edges[targetId]||[]).map(e=>e.to));
+ for(const candidate of playerArmies()){
+  if(candidate===playerArmy||!candidate.roster?.length||candidate.foughtThisTurn)continue;
+  const candidateNode=candidate.nodeId||("city-"+candidate.region);
+  if(!adjacentIds.has(candidateNode))continue;
+  if(window.confirm("Commit "+(candidate.name||"a nearby friendly army")+" to this battle at "+(node?.label||region.name)+"?")){
+   attackerArmies.push(candidate);
+  }
+ }
+ const attackerFaction=playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId);
+ const defenderFaction=defenderArmies[0].rosterFaction||rosterFactionForPoliticalFaction(enemyId);
+ const combine=(armies)=>{const entries=[];for(const army of armies){const roster=(army.roster||[]).map(u=>({...u}));entries.push({army,start:entries.reduce((n,e)=>n+e.roster.length,0),roster});}return {entries,roster:entries.flatMap(e=>e.roster)};};
+ const attackers=combine(attackerArmies),defenders=combine(defenderArmies);
+ const started=window.startPoliticalCampaignBattle({army:attackers.roster,faction:attackerFaction,enemyArmy:defenders.roster,enemyFaction:defenderFaction,onComplete:result=>{
+  const originalPlayerRoster=attackers.roster.map(u=>({...u})),originalEnemyRoster=defenders.roster.map(u=>({...u}));
   const survivors=result.playerUnits||[],enemySurvivors=result.enemyUnits||[];
-  playerArmy.roster=playerArmy.roster.map((config,i)=>({...config,models:Math.max(0,survivors[i]?.models??0),currentDamage:survivors[i]?.damage||0,currentWounds:survivors[i]?.characterWounds})).filter(config=>config.models>0);
-  enemyArmy.roster=enemyArmy.roster.map((config,i)=>({...config,models:Math.max(0,enemySurvivors[i]?.models??0),currentDamage:enemySurvivors[i]?.damage||0,currentWounds:enemySurvivors[i]?.characterWounds})).filter(config=>config.models>0);
-  const playerCollapsed=collapseCasterlessUndeadArmy(playerArmy),enemyCollapsed=collapseCasterlessUndeadArmy(enemyArmy);
-  const winningArmy=result.won?playerArmy:enemyArmy,losingArmy=result.won?enemyArmy:playerArmy;
+  const distribute=(side,units,armies,faction)=>{
+   for(const entry of side.entries){
+    const end=entry.start+entry.roster.length;
+    entry.army.roster=entry.roster.map((config,i)=>{const survivor=units[entry.start+i];return {...config,models:Math.max(0,survivor?.models??0),currentDamage:survivor?.damage||0,currentWounds:survivor?.characterWounds};}).filter(config=>config.models>0);
+    entry.army.startingModels=entry.roster.reduce((sum,u)=>sum+Math.max(0,Number(u.models)||0),0);
+    entry.army.points=Math.max(0,Math.round(entry.army.roster.reduce((sum,u)=>sum+unitCost(u,entry.army.rosterFaction||faction),0)));
+    entry.army.foughtThisTurn=true;
+    if(result.won&&side===attackers){entry.army.nodeId=targetId;entry.army.region=node?.region??region.id;}
+   }
+  };
+  distribute(attackers,survivors,attackerArmies,attackerFaction);
+  distribute(defenders,enemySurvivors,defenderArmies,defenderFaction);
+  const playerCollapsed=attackerArmies.every(a=>collapseCasterlessUndeadArmy(a));
+  const enemyCollapsed=defenderArmies.every(a=>collapseCasterlessUndeadArmy(a));
+  const winningArmy=result.won?playerArmy:defenderArmies[0],losingArmy=result.won?defenderArmies[0]:playerArmy;
   let necromancyMessage="";
   if(result.won&&campaignArmyRace(playerArmy,activeCampaign)==="undead"&&!playerCollapsed){
    const necromancy=raiseBattleCasualties(playerArmy,originalEnemyRoster,enemySurvivors,activeCampaign);
    necromancyMessage=" Necromancy raised "+necromancy.raised+" model(s)"+(necromancy.reserve?"; "+necromancy.reserve+" remain in the reserve until they can form useful units":"")+".";
   }
-  playerArmy.points=Math.max(0,Math.round(playerArmy.roster.reduce((sum,u)=>sum+unitCost(u,playerFaction),0)));
-  enemyArmy.points=Math.max(0,Math.round(enemyArmy.roster.reduce((sum,u)=>sum+unitCost(u,enemyFaction),0)));
   awardGreenskinMomentum(activeCampaign,winningArmy,2);awardGreenskinMomentum(activeCampaign,losingArmy,-2);
   awardGreenskinPlunder(activeCampaign,winningArmy,Math.round(35+Math.max(0,losingArmy.points||0)*0.1));
   const playerState=activeCampaign.factionStates.find(f=>f.id===playerId),enemyState=activeCampaign.factionStates.find(f=>f.id===enemyId);
   if(result.won){
-   if(targetNodeId&&activeCampaign.graph.nodes[targetNodeId]?.type!=="city"){
-    playerArmy.nodeId=targetNodeId;playerArmy.region=activeCampaign.graph.nodes[targetNodeId]?.region??playerArmy.region;
-    if(selectedPlayerArmy()===playerArmy){activeCampaign.commander.nodeId=targetNodeId;activeCampaign.commander.region=playerArmy.region;}
-    activeCampaign.lastEvent="Victory at "+(activeCampaign.graph.nodes[targetNodeId]?.label||"the battlefield")+". The enemy army has been defeated.";
-    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
+   if(node&&node.type!=="city"){
+    if(selectedPlayerArmy()===playerArmy){activeCampaign.commander.nodeId=targetId;activeCampaign.commander.region=playerArmy.region;}
+    activeCampaign.lastEvent="Victory at "+(node.label||"the battlefield")+". "+attackerArmies.length+" friendly army/armies engaged; "+defenderArmies.length+" defending army/armies defeated.";
    }else{
-   const greenskinPlayer=campaignIsGreenskin(activeCampaign,playerId);
-   const sackCity=greenskinPlayer&&window.confirm("Sack "+region.name+" for a large haul of plunder? Its usable population will be destroyed and future city income lost. Choose Cancel to occupy it instead.");
-   const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:greenskinPlayer?(sackCity?"sack":"occupy"):"occupy",army:playerArmy});
-   playerArmy.region=region.id;playerArmy.nodeId="city-"+region.id;if(selectedPlayerArmy()===playerArmy){activeCampaign.commander.region=region.id;activeCampaign.commander.nodeId="city-"+region.id;}
-   activeCampaign.lastEvent=playerCollapsed?"Victory at "+region.name+", but your Undead army collapsed after losing its last Vampire or Necromancer.":!playerArmy.roster.length?"Victory at "+region.name+", but your army has been destroyed. Rebuild from your remaining miniatures and treasury.":"Victory at "+region.name+". "+outcome.summary+necromancyMessage;
-   if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
+    const greenskinPlayer=campaignIsGreenskin(activeCampaign,playerId);
+    const sackCity=greenskinPlayer&&window.confirm("Sack "+region.name+" for a large haul of plunder? Its usable population will be destroyed and future city income lost. Choose Cancel to occupy it instead.");
+    const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:greenskinPlayer?(sackCity?"sack":"occupy"):"occupy",army:playerArmy});
+    for(const army of attackerArmies){army.region=region.id;army.nodeId="city-"+region.id;}
+    if(selectedPlayerArmy()===playerArmy){activeCampaign.commander.region=region.id;activeCampaign.commander.nodeId="city-"+region.id;}
+    activeCampaign.lastEvent=(playerCollapsed?"Victory at "+region.name+", but your Undead force collapsed after losing its last Vampire or Necromancer.":"Victory at "+region.name+". "+outcome.summary)+necromancyMessage;
    }
+   if(enemyState&&defenderArmies.every(a=>a.points<=0))enemyState.alive=false;
   }else{
    const home=playerState?.homeRegion||activeCampaign.startingRegion,homeNode="city-"+home;
    activeCampaign.commander.region=home;activeCampaign.commander.nodeId=homeNode;playerArmy.region=home;playerArmy.nodeId=homeNode;
-   activeCampaign.lastEvent=playerCollapsed?"Defeat at "+region.name+". Your Undead army collapsed after losing its last Vampire or Necromancer.":!playerArmy.roster.length?"Defeat at "+region.name+". Your army has been destroyed; rebuild from your remaining miniatures and treasury.":"Defeat at "+region.name+". Your surviving forces retreat to "+(CITIES.find(c=>c.id===home)?.name||"your capital")+".";
-   if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
+   activeCampaign.lastEvent=playerCollapsed?"Defeat at "+region.name+". Your Undead force collapsed after losing its last Vampire or Necromancer.":!playerArmy.roster.length?"Defeat at "+region.name+". Your army has been destroyed; rebuild from your remaining miniatures and treasury.":"Defeat at "+region.name+". Your surviving forces retreat to "+(CITIES.find(c=>c.id===home)?.name||"your capital")+".";
+   if(enemyState&&defenderArmies.every(a=>a.points<=0))enemyState.alive=false;
   }
   if(playerState){playerState.armyPoints=playerArmies().reduce((sum,a)=>sum+campaignArmyCost(a),0);playerState.roster=(playerArmies().find(a=>a.id===idMainArmy())||playerArmy).roster;playerState.upkeep=playerArmies().reduce((sum,a)=>sum+campaignArmyUpkeep(a),0);}
-  if(enemyState){enemyState.armyPoints=enemyArmy.points;enemyState.roster=enemyArmy.roster;}
+  if(enemyState){enemyState.armyPoints=(activeCampaign.armies||[]).filter(a=>(a.owner||a.factionId)===enemyId).reduce((sum,a)=>sum+campaignArmyCost(a),0);enemyState.roster=defenderArmies[0]?.roster||[];}
   saveCampaign();byId("grand-campaign-screen").hidden=false;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();
  }});
  if(!started){activeCampaign.lastEvent="The tactical battle could not be started.";renderCampaignMap();}
