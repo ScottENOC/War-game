@@ -605,6 +605,7 @@ function resolveRefugeeEncounter(campaign,group,army){
  if(action==="attack"){
   group.count-=affected;
   setCampaignRelation(campaign,captor,targetOwner,campaignRelation(campaign,captor,targetOwner)-(campaignIsGreenskin(campaign,captor)?18:24));
+  setCampaignRelation(campaign,targetOwner,captor,campaignRelation(campaign,targetOwner,captor)-(campaignIsGreenskin(campaign,captor)?18:24));
   for(const f of campaign.factionStates||[])if(f.id!==captor&&f.id!==targetOwner&&!campaignIsGreenskin(campaign,f.id))setCampaignRelation(campaign,f.id,captor,campaignRelation(campaign,f.id,captor)-10);
  }else if(action==="kidnap"){
   group.count-=affected;
@@ -614,6 +615,7 @@ function resolveRefugeeEncounter(campaign,group,army){
    if(city){const pop=city.settlement.population,existing=pop.groups.find(g=>g.culture===race);if(existing)existing.count+=affected;else pop.groups.push({culture:race,count:affected});pop.total=(Number(pop.total)||0)+affected;}
   }
   setCampaignRelation(campaign,captor,targetOwner,campaignRelation(campaign,captor,targetOwner)-18);
+  setCampaignRelation(campaign,targetOwner,captor,campaignRelation(campaign,targetOwner,captor)-18);
   for(const f of campaign.factionStates||[])if(f.id!==captor&&f.id!==targetOwner&&!campaignIsGreenskin(campaign,f.id))setCampaignRelation(campaign,f.id,captor,campaignRelation(campaign,f.id,captor)-7);
  }
  if(group.count<=0)campaign.refugeeGroups=campaign.refugeeGroups.filter(g=>g.id!==group.id);
@@ -1439,9 +1441,9 @@ function moveCommander(id){
  ensureRefugeeState(activeCampaign);
  const selectedRefugee=activeCampaign.refugeeGroups.find(g=>g.id===activeCampaign.selectedRefugeeId&&g.owner===activeCampaign.playerPoliticalFaction);
  if(selectedRefugee){
-  const from=selectedRefugee.nodeId,n=activeCampaign.graph.nodes[id],path=campaignMovementPath(activeCampaign,from,id);
-  if(!n||!path||path.length<2){activeCampaign.lastEvent="Choose a connected road destination for the refugees.";renderCampaignMap();return;}
-  const cost=refugeePathCost(activeCampaign,path);
+  const from=selectedRefugee.nodeId,n=activeCampaign.graph.nodes[id],path=campaignMovementPath(activeCampaign,from,id),edge=(activeCampaign.graph.edges[from]||[]).find(e=>e.to===id);
+  if(!n||!path||path.length<2||!edge){activeCampaign.lastEvent="Refugees can only move to an adjacent campaign-map node.";renderCampaignMap();return;}
+  const cost=(edge.cost||1)+nodeCost(n)-1;
   if(cost>selectedRefugee.movement){activeCampaign.lastEvent="The refugees do not have enough movement to reach "+n.label+".";renderCampaignMap();return;}
   selectedRefugee.nodeId=id;selectedRefugee.region=n.region;selectedRefugee.movement-=cost;
   const city=activeCampaign.regions.find(r=>Number(r.id)===Number(n.region));
