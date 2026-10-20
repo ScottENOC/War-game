@@ -1036,7 +1036,7 @@ function selectedPlayerArmy(){
  return army;
 }
 function recruitCatalog(){
- const race=FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race||"human",basic=race==="greenskin"?"goblins":race==="dwarf"?"dwarfInfantry":"swordsmen";
+ const race=FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race||"human",basic=race==="undead"?"skeletons":race==="greenskin"?"goblins":race==="dwarf"?"dwarfInfantry":"swordsmen";
  const options=[
   {key:"melee",label:race==="dwarf"?"Dwarf melee infantry":race==="elf"?"High Elf spearmen":race==="greenskin"?"Goblin mobs":"Melee infantry",type:basic,weapon:race==="elf"?"spear":"handWeapon",min:5,max:30,modelType:basic,modelWeapon:race==="elf"?"spear":"handWeapon"},
   ...(race==="greenskin"?[
@@ -1053,6 +1053,10 @@ function recruitCatalog(){
   ...(race==="dwarf"?[
    {key:"crossbows",label:"Dwarf crossbowmen",type:"dwarfInfantry",weapon:"handWeapon",rangedWeapon:"crossbow",min:5,max:30,modelType:"dwarfInfantry",modelWeapon:"crossbow"},
    {key:"dwarfFirearms",label:"Dwarf firearm infantry",type:"dwarfInfantry",weapon:"handWeapon",rangedWeapon:"firearm",min:5,max:30,modelType:"dwarfInfantry",modelWeapon:"firearm"}
+  ]:race==="undead"?[
+   {key:"zombies",label:"Zombies",type:"zombies",weapon:"handWeapon",min:5,max:30,modelType:"zombies",modelWeapon:"handWeapon"},
+   {key:"skeletonBows",label:"Skeleton archers",type:"skeletons",weapon:"handWeapon",rangedWeapon:"bow",min:5,max:30,modelType:"skeletons",modelWeapon:"bow"},
+   {key:"skeletonHorses",label:"Skeleton cavalry",type:"skeletonHorses",weapon:"handWeapon",min:5,max:15,modelType:"skeletonHorses",modelWeapon:"handWeapon"}
   ]:[{key:"archers",label:"Archers",type:"archers",weapon:"handWeapon",rangedWeapon:"bow",min:5,max:30,modelType:"archers",modelWeapon:"bow"}]),
   ...(race==="human"?[
    {key:"crossbowmen",label:"Crossbow infantry",type:"swordsmen",weapon:"handWeapon",rangedWeapon:"crossbow",min:5,max:30,modelType:"swordsmen",modelWeapon:"crossbow"},
@@ -1067,6 +1071,11 @@ function recruitCatalog(){
    {key:"dwarfCaptain",label:"Dwarf thane",type:"dwarfCaptain",weapon:"handWeapon",min:1,max:1,modelType:"dwarfCaptain",character:true},
    {key:"dwarfLord",label:"Dwarf lord",type:"dwarfLord",weapon:"handWeapon",min:1,max:1,modelType:"dwarfLord",character:true},
    {key:"dwarfKingHaldric",label:"King Haldric Stoneward",type:"dwarfKingHaldric",weapon:"handWeapon",min:1,max:1,modelType:"dwarfKingHaldric",character:true}
+  ]:race==="undead"?[
+   {key:"necromancer",label:"Necromancer",type:"necromancer",weapon:"handWeapon",min:1,max:1,modelType:"necromancer",character:true},
+   {key:"masterNecromancer",label:"Master Necromancer",type:"masterNecromancer",weapon:"handWeapon",min:1,max:1,modelType:"masterNecromancer",character:true},
+   {key:"vampireHero",label:"Vampire Thrall",type:"vampireHero",weapon:"handWeapon",min:1,max:1,modelType:"vampireHero",character:true},
+   {key:"vampireLord",label:"Vampire Lord",type:"vampireLord",weapon:"handWeapon",min:1,max:1,modelType:"vampireLord",character:true}
   ]:[
    {key:"captain",label:race==="elf"?"High Elf hero":"Human captain",type:"captain",weapon:"handWeapon",min:1,max:1,modelType:"captain",character:true},
    {key:"lord",label:race==="elf"?"High Elf lord":"Human lord",type:"lord",weapon:"handWeapon",min:1,max:1,modelType:"lord",character:true},
