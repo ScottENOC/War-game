@@ -537,19 +537,21 @@ function refugeePathCost(campaign,path){
  }
  return cost;
 }
-function nearestRefugeeCity(campaign,group,fromNode,within=Infinity){
+function refugeeCitiesWithin(campaign,group,fromNode,within=Infinity){
  const choices=[];
  for(const region of campaign.regions||[]){
   if(Number(region.id)===Number(group.originRegion)||!refugeeCityAccepts(region,group.culture,campaign))continue;
-  const owner=politicalOwner(region);
-  if(owner!==group.owner)continue;
+  if(politicalOwner(region)!==group.owner)continue;
   const node=refugeeNodeForRegion(campaign,region.id);if(!node)continue;
   const path=campaignMovementPath(campaign,fromNode,node);if(!path)continue;
   const cost=refugeePathCost(campaign,path);
   if(cost<=within)choices.push({region,node,path,cost,load:Number(region.settlement?.population?.total)||0});
  }
- choices.sort((a,b)=>a.cost-b.cost||a.load-b.load);
- return choices[0]||null;
+ choices.sort((a,b)=>a.load-b.load||a.cost-b.cost);
+ return choices;
+}
+function nearestRefugeeCity(campaign,group,fromNode,within=Infinity){
+ return refugeeCitiesWithin(campaign,group,fromNode,within).sort((a,b)=>a.cost-b.cost||a.load-b.load)[0]||null;
 }
 function absorbRefugees(campaign,group,region){
  if(!group||!region?.settlement)return 0;
@@ -674,9 +676,15 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  for(const cohort of escapeCohorts){
   const refugee={owner:previousOwner,culture:cohort.culture,count:cohort.count,originRegion:region.id,nodeId:refugeeNodeForRegion(campaign,region.id)};
   if(!refugee.nodeId)continue;
-  const nearby=nearestRefugeeCity(campaign,{...refugee},refugee.nodeId,refugeeMovementForCulture(cohort.culture));
-  if(nearby){const pop=nearby.region.settlement.population,existing=pop.groups.find(g=>g.culture===cohort.culture);if(existing)existing.count+=cohort.count;else pop.groups.push({culture:cohort.culture,count:cohort.count});pop.total=(Number(pop.total)||0)+cohort.count;}
-  else createRefugeeColumn(campaign,refugee);
+  const nearby=refugeeCitiesWithin(campaign,refugee,refugee.nodeId,refugeeMovementForCulture(cohort.culture));
+  if(nearby.length){
+   let remaining=cohort.count;
+   for(let i=0;i<nearby.length&&remaining>0;i++){
+    const destinationsLeft=nearby.length-i,share=Math.ceil(remaining/destinationsLeft),target=nearby[i],pop=target.region.settlement.population,existing=pop.groups.find(g=>g.culture===cohort.culture);
+    if(existing)existing.count+=share;else pop.groups.push({culture:cohort.culture,count:share});
+    pop.total=(Number(pop.total)||0)+share;remaining-=share;
+   }
+  }else createRefugeeColumn(campaign,refugee);
  }
  const preserve=options.preserveCivilians??(outcome==="occupy"&&!isGreenskinDwarfConquest);
  settlement.prosperity=Math.max(0,settlement.prosperity-(outcome==="raze"?65:outcome==="sack"?35:preserve?5:18));
@@ -1440,8 +1448,9 @@ function moveCommander(id){
   if(city&&politicalOwner(city)===selectedRefugee.owner&&refugeeCityAccepts(city,selectedRefugee.culture,activeCampaign)){
    const count=absorbRefugees(activeCampaign,selectedRefugee,city);activeCampaign.lastEvent=count.toLocaleString()+" refugees safely resettle in "+city.name+".";
   }else{
+   const priorEvent=activeCampaign.lastEvent;
    resolveRefugeeArmyEncounters(activeCampaign);
-   if(activeCampaign.refugeeGroups.some(g=>g.id===selectedRefugee.id))activeCampaign.lastEvent="Refugees move to "+n.label+". "+selectedRefugee.movement+" movement remaining.";
+   if(activeCampaign.refugeeGroups.some(g=>g.id===selectedRefugee.id)&&activeCampaign.lastEvent===priorEvent)activeCampaign.lastEvent="Refugees move to "+n.label+". "+selectedRefugee.movement+" movement remaining.";
   }
   saveCampaign();renderCampaignMap();return;
  }
