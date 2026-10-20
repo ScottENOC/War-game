@@ -355,7 +355,7 @@ function recruitPlayerArmyFromCollection(army,faction,budget,commander=null){
   if(budget>=price){army.roster.push(character);spent+=price;}
  }
  const categories=[
-  {type:race==="dwarf"?"dwarfInfantry":"swordsmen",ranged:null,match:m=>m.type===(race==="dwarf"?"dwarfInfantry":"swordsmen")&&m.weapon==="handWeapon"},
+  {type:race==="dwarf"?"dwarfInfantry":"swordsmen",ranged:null,match:m=>m.type===(race==="dwarf"?"dwarfInfantry":"swordsmen")&&m.weapon==="handWeapon"&&(activeCampaign.playerPoliticalFaction!=="verdantCourt"||m.components?.includes("left_sword")||m.offhandWeapon)},
   {type:race==="dwarf"?"dwarfInfantry":"archers",ranged:race==="dwarf"?"crossbow":"bow",match:m=>m.type===(race==="dwarf"?"dwarfInfantry":"archers")&&m.weapon===(race==="dwarf"?"crossbow":"bow")}
  ];
  for(const cat of categories){
