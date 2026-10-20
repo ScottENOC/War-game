@@ -861,7 +861,8 @@ const byId=id=>document.getElementById(id);
    const a=e.touches[0],b=e.touches[1],rect=host.getBoundingClientRect(),ratio=distance(a,b)/state.startDistance;
    const oldScale=state.scale,midX=(a.clientX+b.clientX)/2-rect.left,midY=(a.clientY+b.clientY)/2-rect.top;
    sizeMap(state.startScale*ratio);
-   const factor=state.scale/oldScale;
+   // Use total scale change from touchstart, otherwise repeated touchmove events make the focal point drift.
+   const factor=state.scale/state.startScale;
    host.scrollLeft=Math.max(0,(state.anchorX*factor)-midX);
    host.scrollTop=Math.max(0,(state.anchorY*factor)-midY);
   },{passive:false});
