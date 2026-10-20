@@ -44,7 +44,7 @@ export function createRules({ roll, units = () => [], say = () => {} }) {
     const profiles=[];
     const add=(count,stats,label)=>{if(!count)return;const key=mode==="melee"?[stats.WS,stats.S,stats.A].join("/"):[stats.BS,stats.S].join("/");let pool=profiles.find(p=>p.key===key);if(!pool){pool={key,stats,count:0,labels:[]};profiles.push(pool);}pool.count+=count;if(!pool.labels.includes(label))pool.labels.push(label);};
     if(context.attackComponent!=="mount")add(normalCount,mode==="shooting"&&u.hasRangedWeapon?{...u.stats,S:u.rangedStrength||u.stats.S}:{...u.stats},"Rider");
-    if(u.mountStats&&mode==="melee"&&context.attackComponent!=="rider")add(attackModels,{...u.mountStats},"Mount");
+    if(u.mountStats&&mode==="melee"&&context.attackComponent!=="rider")add(attackModels,{...u.mountStats,S:(u.mountStats.S||3)+(context.charging&&u.mountType==="unicorn"?1:0)},"Mount");
     if(context.attackComponent!=="mount"&&hasChampion){const overrides=u.champion.stats||{},s={...u.stats,...overrides};if(mode==="melee"&&overrides.A==null)s.A=u.stats.A+((u.champion?.bonus||(u.kind==="archer"||u.hasRangedWeapon?"BS":"A"))==="A"?1:0);if(mode==="shooting"&&overrides.BS==null)s.BS=u.stats.BS+((u.champion?.bonus||(u.kind==="archer"||u.hasRangedWeapon?"BS":"A"))==="BS"?1:0);if(mode==="shooting"&&u.hasRangedWeapon)s.S=u.rangedStrength||u.stats.S;add(1,s,"Champion");}
     return profiles;
   }
