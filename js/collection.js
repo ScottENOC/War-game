@@ -440,7 +440,6 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  document.querySelectorAll("[data-mode]").forEach(btn=>btn.addEventListener("click",()=>{
   const mode=btn.dataset.mode;
   if(mode==="skirmish"){onSkirmish(null);return;}
-  if(["holdGround","captureFlag","relics"].includes(mode)){onSkirmish(mode);return;}
   if(mode==="narrative"){onNarrativeCampaign();return;}
    if(mode==="roguelike"){onRoguelike();return;}
   if(mode==="warband"||mode==="warbandSkirmish"){onWarband();return;}
