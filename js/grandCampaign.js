@@ -875,10 +875,10 @@ function createMovementGraph(){
  const isSeaLink=(a,b)=>seaLinks.has([a,b].sort((x,y)=>x-y).join("-"));
  for(const c of CITIES){const [x,y]=positions[c.id];add({id:"city-"+c.id,region:c.id,type:"city",label:c.name,x,y});}
  for(const c of CITIES){
-  // Silvershade is an island city: its only land connection is the short road
-  // to its harbour. Do not create a mainland-style crossroads beside it.
-  if(c.id===8)continue;
-  const [x,y]=positions[c.id],ns=(REGION_NEIGHBORS[c.id]||[]).filter(id=>!isSeaLink(c.id,id)&&id!==8);
+  // Moonspire and Silvershade are island ports: connect each city directly
+  // to its harbour, with no redundant inland crossroads.
+  if(c.id===7||c.id===8)continue;
+  const [x,y]=positions[c.id],ns=(REGION_NEIGHBORS[c.id]||[]).filter(id=>!isSeaLink(c.id,id)&&id!==7&&id!==8);
   const avg=ns.length?ns.reduce((p,id)=>({x:p.x+positions[id][0]/ns.length,y:p.y+positions[id][1]/ns.length}),{x:0,y:0}):{x:x+18,y:y+12};
   const jx=Math.max(30,Math.min(1270,x+(avg.x-x)*.12)),jy=Math.max(30,Math.min(720,y+(avg.y-y)*.12));
   add({id:"crossroads-"+c.id,region:c.id,type:"crossroads",label:c.name+" crossroads",x:jx,y:jy});
@@ -901,11 +901,17 @@ function createMovementGraph(){
    if(pA&&pB)route(pA.id,pB.id,"sea",c.id,other);
    continue;
   }
-  // Silvershade has no road links to mainland or neighbouring regions. Its
-  // only road is city-to-harbour; all onward travel must use the sea lanes.
-  if(c.id===8||other===8)continue;
+  // Island cities have no mainland road links; onward travel is by sea.
+  if(c.id===7||other===7||c.id===8||other===8)continue;
+  // Grinhold shares a short approach before the road branches toward Skullcrag
+  // and Ironjaw Pass, avoiding two almost parallel roads leaving the stronghold.
+  if(c.id===11||other===11)continue;
   route("crossroads-"+c.id,"crossroads-"+other,"land",c.id,other);
  }
+ add({id:"grinhold-road-fork",region:11,type:"crossroads",label:"Grinhold western road fork",x:1080,y:264});
+ route("crossroads-11","grinhold-road-fork","land",11,11);
+ route("grinhold-road-fork","crossroads-13","land",11,13);
+ route("grinhold-road-fork","crossroads-14","land",11,14);
  // Put a visible point of interest on routes through every named terrain feature.
  const featurePattern=[
   {re:/forest|woodland|grove|timber/i,type:"forest",label:"Forest trail"},
