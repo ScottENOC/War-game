@@ -1416,12 +1416,12 @@ function renderCampaignMap(){
   }
  byId("grand-campaign-event").textContent=activeCampaign.lastEvent||"Select a highlighted place connected by road.";renderArmyManagement();renderDiplomacy();if(firstRender){const scale=map.clientWidth/1300;host.scrollLeft=Math.max(0,current.x*scale-host.clientWidth/2);host.scrollTop=Math.max(0,current.y*scale-host.clientHeight/2);}
 }
-function launchCampaignBattle(region,attackingArmyOverride=null){
+function launchCampaignBattle(region,attackingArmyOverride=null,defendingArmyOverride=null,targetNodeId=null){
  if(!activeCampaign||!region||typeof window.startPoliticalCampaignBattle!=="function")return;
- const playerId=activeCampaign.playerPoliticalFaction,enemyId=politicalOwner(region);
+ const playerId=activeCampaign.playerPoliticalFaction,enemyId=defendingArmyOverride?.owner||defendingArmyOverride?.factionId||politicalOwner(region);
  if(!enemyId||enemyId===playerId)return;
  declareCampaignWar(activeCampaign,playerId,enemyId);
- const playerArmy=attackingArmyOverride||selectedPlayerArmy(),enemyArmy=factionArmy(activeCampaign,enemyId);
+ const playerArmy=attackingArmyOverride||selectedPlayerArmy(),enemyArmy=defendingArmyOverride||factionArmy(activeCampaign,enemyId);
  if(!playerArmy?.roster?.length||!enemyArmy?.roster?.length){activeCampaign.lastEvent="Cannot muster a valid army for this battle.";renderCampaignMap();return;}
  const playerFaction=playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId),enemyFaction=enemyArmy.rosterFaction||rosterFactionForPoliticalFaction(enemyId);
  const started=window.startPoliticalCampaignBattle({army:playerArmy.roster,faction:playerFaction,enemyArmy:enemyArmy.roster,enemyFaction,onComplete:result=>{
@@ -1445,12 +1445,19 @@ function launchCampaignBattle(region,attackingArmyOverride=null){
   awardGreenskinPlunder(activeCampaign,winningArmy,Math.round(35+Math.max(0,losingArmy.points||0)*0.1));
   const playerState=activeCampaign.factionStates.find(f=>f.id===playerId),enemyState=activeCampaign.factionStates.find(f=>f.id===enemyId);
   if(result.won){
+   if(targetNodeId&&activeCampaign.graph.nodes[targetNodeId]?.type!=="city"){
+    playerArmy.nodeId=targetNodeId;playerArmy.region=activeCampaign.graph.nodes[targetNodeId]?.region??playerArmy.region;
+    if(selectedPlayerArmy()===playerArmy){activeCampaign.commander.nodeId=targetNodeId;activeCampaign.commander.region=playerArmy.region;}
+    activeCampaign.lastEvent="Victory at "+(activeCampaign.graph.nodes[targetNodeId]?.label||"the battlefield")+". The enemy army has been defeated.";
+    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
+   }else{
    const greenskinPlayer=campaignIsGreenskin(activeCampaign,playerId);
    const sackCity=greenskinPlayer&&window.confirm("Sack "+region.name+" for a large haul of plunder? Its usable population will be destroyed and future city income lost. Choose Cancel to occupy it instead.");
    const outcome=resolveGrandCampaignConquest(activeCampaign,region.id,playerId,{outcome:greenskinPlayer?(sackCity?"sack":"occupy"):"occupy",army:playerArmy});
    playerArmy.region=region.id;playerArmy.nodeId="city-"+region.id;if(selectedPlayerArmy()===playerArmy){activeCampaign.commander.region=region.id;activeCampaign.commander.nodeId="city-"+region.id;}
    activeCampaign.lastEvent=playerCollapsed?"Victory at "+region.name+", but your Undead army collapsed after losing its last Vampire or Necromancer.":!playerArmy.roster.length?"Victory at "+region.name+", but your army has been destroyed. Rebuild from your remaining miniatures and treasury.":"Victory at "+region.name+". "+outcome.summary+necromancyMessage;
    if(enemyState&&enemyArmy.points<=0)enemyState.alive=false;
+   }
   }else{
    const home=playerState?.homeRegion||activeCampaign.startingRegion,homeNode="city-"+home;
    activeCampaign.commander.region=home;activeCampaign.commander.nodeId=homeNode;playerArmy.region=home;playerArmy.nodeId=homeNode;
@@ -1551,8 +1558,9 @@ function moveCommander(id){
  const enemyAtDestination=campaignArmyAtNode(activeCampaign,id,army).find(other=>(other.owner||other.factionId)!==ownId);
  const enemyOwner=enemyAtDestination?(enemyAtDestination.owner||enemyAtDestination.factionId):(targetRegion?politicalOwner(targetRegion):null);
  if(enemyOwner&&enemyOwner!==ownId&&activeCampaign.factionStates.some(f=>f.id===enemyOwner&&f.alive)){
-  if(targetRegion){launchCampaignBattle(targetRegion,army);return;}
-  activeCampaign.lastEvent="An enemy army occupies "+n.label+". Move onto an enemy-held settlement to initiate battle.";renderCampaignMap();return;
+  const battleRegion=targetRegion||activeCampaign.regions.find(r=>Number(r.id)===Number(enemyAtDestination?.region))||activeCampaign.regions.find(r=>politicalOwner(r)===enemyOwner);
+  if(battleRegion){launchCampaignBattle(battleRegion,army,enemyAtDestination||null,id);return;}
+  activeCampaign.lastEvent="Could not find a campaign region for the enemy force at "+n.label+".";renderCampaignMap();return;
  }
  activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement=movement-cost;
  if(army){army.nodeId=id;army.region=n.region;army.movement=movement-cost;}
