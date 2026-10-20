@@ -119,18 +119,18 @@
 <div class="collection-actions"><button id="open-dev" class="secondary-button">Developer Menu</button><button id="collection-skirmish" class="primary-button">Build a Skirmish Army →</button></div>
 <section id="dev-panel" class="dev-panel" hidden><h2>Developer Menu</h2><label class="dev-check"><input id="bypass-model-check" type="checkbox"> Bypass miniature ownership checks</label><p class="subtle">For testing only. This does not grant models or bits.</p><button id="dev-lootbox" class="secondary-button">Open Lootbox · 1 random model or bit</button><p id="lootbox-result" aria-live="polite"></p><button id="dev-reset-collection" class="danger-button">Reset collection to base 152 models</button><p class="subtle">Destructive: removes all added models, loose bits and unopened lootboxes from this device.</p></section>
 </div></section>
-<section id="mordheim-screen" class="screen builder-screen" hidden>
-<div class="builder-panel campaign-panel mordheim-panel">
-<header class="builder-header"><div><div class="eyebrow">One-off campaign skirmish</div><h1>Warband Skirmish</h1></div><button id="mordheim-back" class="secondary-button">Main Menu</button></header>
+<section id="warband-screen" class="screen builder-screen" hidden>
+<div class="builder-panel campaign-panel warband-panel">
+<header class="builder-header"><div><div class="eyebrow">One-off campaign skirmish</div><h1>Warband Skirmish</h1></div><button id="warband-back" class="secondary-button">Main Menu</button></header>
 <p class="builder-intro">Build a temporary warband from models you own. Every fighter acts independently. The warband disappears after the battle; your collection does not.</p>
-<label class="faction-choice">Warband faction <select id="mordheim-faction"><option value="empire">Empire</option><option value="highElves">High Elves</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label>
-<div id="mordheim-validation" class="roster-note">Choose fighters from your collection.</div><div id="mordheim-model-list" class="mordheim-model-list"></div>
-<div class="builder-footer"><div class="army-total"><span>Warband</span><strong id="mordheim-total">0 pts · 0 fighters</strong></div><button id="mordheim-start" class="primary-button" disabled>Fight AI Warband →</button></div>
-<p id="mordheim-result" class="subtle" aria-live="polite"></p><p class="subtle">No Lords, named characters, chariots or 50 × 50 mm base models. Every three wins earns one lootbox.</p>
+<label class="faction-choice">Warband faction <select id="warband-faction"><option value="empire">Empire</option><option value="highElves">High Elves</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label>
+<div id="warband-validation" class="roster-note">Choose fighters from your collection.</div><div id="warband-model-list" class="warband-model-list"></div>
+<div class="builder-footer"><div class="army-total"><span>Warband</span><strong id="warband-total">0 pts · 0 fighters</strong></div><button id="warband-start" class="primary-button" disabled>Fight AI Warband →</button></div>
+<p id="warband-result" class="subtle" aria-live="polite"></p><p class="subtle">No Lords, named characters, chariots or 50 × 50 mm base models. Every three wins earns one lootbox.</p>
 </div></section>
 
 <section id="warband-expedition-screen" class="screen builder-screen" hidden>
-  <div class="builder-panel campaign-panel mordheim-panel">
+  <div class="builder-panel campaign-panel warband-panel">
     <header class="builder-header"><div><div class="eyebrow">Persistent small-force campaign</div><h1 id="warband-expedition-title">Warband Expedition</h1></div><button id="warband-expedition-menu" class="secondary-button">Main Menu</button></header>
     <p id="warband-expedition-description" class="builder-intro">Choose five fighters from your collection. Survivors gain experience, while serious injuries can permanently change or end a fighter's career.</p>
     <div id="warband-expedition-content"></div>
@@ -146,7 +146,7 @@
 <div class="builder-footer"><button id="add-unit" class="secondary-button">＋ Add Unit</button><div class="army-total"><span>Total army</span><strong id="army-total">0 pts</strong></div><button id="begin-deployment" class="primary-button">Deploy Army →</button></div>
 <p class="subtle">Your opponent builds its own mixed-arms roster and aims to stay within 10% of its target budget. Human armies can field a cannon; cannons can breach walls and penetrate multiple targets.</p>
 </div></section>
-<div id="game" hidden><canvas id="field" aria-label="Full-screen battlefield"></canvas><button id="mordheim-revive" hidden>Revive adjacent fighter</button><button id="battle-return" class="primary-button" hidden>Return to Collection</button><div id="hud"><div class="cards" id="enemycards" aria-label="Opponent units"></div><div id="battle-points" aria-live="polite"></div><div id="actions" aria-label="Battle actions"></div><div class="cards" id="playercards" aria-label="Your units"></div></div><button id="logtoggle" aria-label="Battle log" title="Battle log">▤</button><section id="logpanel" aria-label="Battle log"><div id="loghead"><button id="logclose" aria-label="Close log">×</button></div><div id="log"></div></section><section id="rollview" aria-label="Melee combat dice log" aria-live="polite"><button id="rollclose" aria-label="Close dice log">×</button><div id="rollcontent"></div></section></div>
+<div id="game" hidden><canvas id="field" aria-label="Full-screen battlefield"></canvas><button id="warband-revive" hidden>Revive adjacent fighter</button><button id="battle-return" class="primary-button" hidden>Return to Collection</button><div id="hud"><div class="cards" id="enemycards" aria-label="Opponent units"></div><div id="battle-points" aria-live="polite"></div><div id="actions" aria-label="Battle actions"></div><div class="cards" id="playercards" aria-label="Your units"></div></div><button id="logtoggle" aria-label="Battle log" title="Battle log">▤</button><section id="logpanel" aria-label="Battle log"><div id="loghead"><button id="logclose" aria-label="Close log">×</button></div><div id="log"></div></section><section id="rollview" aria-label="Melee combat dice log" aria-live="polite"><button id="rollclose" aria-label="Close dice log">×</button><div id="rollcontent"></div></section></div>
 <script>
 (function(){
  var records=[];
