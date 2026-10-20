@@ -11,9 +11,11 @@ export function createVision({ S, units, alive, dist, terrain = () => [], W, H, 
     return 0;
   }
   function fieldOfView(u){return Math.max(90,220-armourPenalty(u));}
-  function engagedOrTouching(a,b){return !!(a?.engagedWithIds||[]).includes(b?.id)||a?.engagedWith===b?.id||!!(b?.engagedWithIds||[]).includes(a?.id)||b?.engagedWith===a?.id||dist(a,b)<=1.35;}
+  function engagedOrTouching(a,b){if(a?.engaged||b?.engaged)return true;const linked=!!(a?.engagedWithIds||[]).includes(b?.id)||a?.engagedWith===b?.id||!!(b?.engagedWithIds||[]).includes(a?.id)||b?.engagedWith===a?.id;if(linked)return true;const qa=shape(a),qb=shape(b),scale=W()/BATTLEFIELD_WIDTH_IN,reach=(Math.hypot(qa.front,qa.depth)+Math.hypot(qb.front,qb.depth))/(2*scale);return dist(a,b)<=reach+.08;}
+  function segmentsCross(a,b,c,d){const rx=b.x-a.x,ry=b.y-a.y,sx=d.x-c.x,sy=d.y-c.y,den=rx*sy-ry*sx;if(Math.abs(den)<.0001)return false;const t=((c.x-a.x)*sy-(c.y-a.y)*sx)/den,u=((c.x-a.x)*ry-(c.y-a.y)*rx)/den;return t>.025&&t<.975&&u>=0&&u<=1;}
+  function wallBlocks(ox,oy,tx,ty){if(!terrain().length)return false;const a={x:ox,y:oy},b={x:tx,y:ty};return terrain().some(t=>{if(!["wall","gate"].includes(t.type)||(t.wounds??2)<=0)return false;return segmentsCross(a,b,{x:t.x1*W(),y:t.y1*H()},{x:t.x2*W(),y:t.y2*H()});});}
   function lineOfSight(observer,target){
-    const ox=observer.x*W(),oy=observer.y*H(),tx=target.x*W(),ty=target.y*H(),dx=tx-ox,dy=ty-oy,len2=dx*dx+dy*dy||1,steps=Math.max(8,Math.ceil(Math.hypot(dx,dy)/(W()/BATTLEFIELD_WIDTH_IN*.45)));
+    const ox=observer.x*W(),oy=observer.y*H(),tx=target.x*W(),ty=target.y*H(),dx=tx-ox,dy=ty-oy,len2=dx*dx+dy*dy||1,steps=Math.max(8,Math.ceil(Math.hypot(dx,dy)/(W()/BATTLEFIELD_WIDTH_IN*.45)));if(wallBlocks(ox,oy,tx,ty))return false;
     const startGround=terrainElevationAt(terrain(),ox,oy,W(),H()),endGround=terrainElevationAt(terrain(),tx,ty,W(),H());
     const startZ=startGround+height(observer)*.75+(observer.flyingMount&&!observer.engaged?12:0),endZ=endGround+height(target)*.75+(target.flyingMount&&!target.engaged?12:0);
     for(let i=1;i<steps;i++){const t=i/steps,x=ox+dx*t,y=oy+dy*t,ground=terrainElevationAt(terrain(),x,y,W(),H()),ray=startZ+(endZ-startZ)*t;if(ground>ray+.08)return false;}
