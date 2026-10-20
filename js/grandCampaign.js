@@ -444,8 +444,8 @@ const CITIES = [
 {id:24,name:"Khaz Varrak",faction:"dwarfs",ruler:"Thaurgath the Rune-Eater",status:"Ancient dragon lair",terrain:"High mountains; carved dwarven halls and rune-forges",description:"A vast dwarven hold cut into the high peaks, its bridges, gates and rune-forges still intact beneath the rule of Thaurgath the Rune-Eater, an ancient spellcasting dragon. No dwarven army garrisons the city.",requiredCharacters:[],passiveOccupant:true} 
 ];
 const REGION_NEIGHBORS = {
- 1:[2,6],2:[1,6],3:[8,9,10,12,21],4:[5,20,23],5:[4,8,18,20],
- 6:[1,2,7,8,17],7:[6,17],8:[3,5,6],9:[3,10,13,14,24],10:[3,9,13,14,21,24],
+ 1:[2,6],2:[1,6],3:[8,9,12,21],4:[5,20,23],5:[4,8,18,20],
+ 6:[1,2,7,8,17],7:[6,17],8:[3,5,6],9:[3,10,13,14,24],10:[9,13,14,21,24],
  11:[13,14],12:[3,14,15,16],13:[9,10,11,14],14:[9,10,11,12,13,15,21],
  15:[12,14,16,18],16:[12,15,18,22],17:[6,7],18:[5,15,16,20,22,23],
  19:[21,22],20:[4,5,18,23],21:[3,10,14,19,22],22:[16,18,19,21,23],23:[4,18,20,22,24],24:[9,10,23]
