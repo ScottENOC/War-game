@@ -445,7 +445,7 @@ const CITIES = [
 ];
 const REGION_NEIGHBORS = {
  1:[2,6],2:[1,6],3:[8,9,10,12,21],4:[5,9,20,23],5:[4,8,18,20],
- 6:[1,2,7,8,17],7:[6,8,17],8:[3,5,6,7,10],9:[3,4,10,13,14,24],10:[3,8,9,13,14,21,24],
+ 6:[1,2,7,8,17],7:[6,17],8:[3,5,6,10],9:[3,10,13,14,24],10:[3,9,13,14,21,24],
  11:[13,14],12:[3,14,15,16],13:[9,10,11,14],14:[9,10,11,12,13,15,21],
  15:[12,14,16,18],16:[12,15,18,22],17:[6,7],18:[5,15,16,20,22,23],
  19:[21,22],20:[4,5,17,18,23],21:[3,10,14,19,22],22:[16,18,19,21,23],23:[4,18,20,22,24],24:[9,10,23]
@@ -907,7 +907,7 @@ function createMovementGraph(){
  const link=(a,b,cost=1,kind="land")=>{if(!edges[a]||!edges[b]||a===b)return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost,kind});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost,kind});};
  const route=(a,b,kind="land",regionA=null,regionB=null)=>routes.push({a,b,kind,regionA,regionB,marks:[],cuts:[0,1]});
  const positions=CITY_POSITIONS;
- const seaLinks=new Set(["3-8","3-9","5-8","6-7","6-8","6-17","7-8","7-17"]);
+ const seaLinks=new Set(["3-8","3-9","5-8","6-7","6-8","6-17","7-17"]);
  const isSeaLink=(a,b)=>seaLinks.has([a,b].sort((x,y)=>x-y).join("-"));
  for(const c of CITIES){const [x,y]=positions[c.id];add({id:"city-"+c.id,region:c.id,type:"city",label:c.name,x,y});}
  for(const c of CITIES){
