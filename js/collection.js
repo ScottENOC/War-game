@@ -54,7 +54,7 @@ const bodyKinds=[
 ];
 const bitDefs=[
  ...bodyKinds.map(x=>({id:x.id,label:x.label,kind:"body"})),
- {id:"horse",label:"Horse",kind:"mount"},{id:"skeletal_steed",label:"Skeletal Steed",kind:"mount",faction:"undead"},{id:"skeleton_chariot",label:"Skeleton Chariot",kind:"vehicle",faction:"undead"},{id:"eagle",label:"Pegasus",kind:"mount"},{id:"wolf",label:"Wolf",kind:"mount"},{id:"boar",label:"Boar",kind:"mount"},{id:"wyvern",label:"Wyvern",kind:"mount",faction:"greenskins"},
+ {id:"horse",label:"Horse",kind:"mount"},{id:"skeletal_steed",label:"Skeletal Steed",kind:"mount",faction:"undead"},{id:"skeleton_chariot",label:"Skeleton Chariot",kind:"vehicle",faction:"undead"},{id:"eagle",label:"Pegasus",kind:"mount"},{id:"unicorn",label:"Unicorn",kind:"mount",faction:"highElves"},{id:"wolf",label:"Wolf",kind:"mount"},{id:"boar",label:"Boar",kind:"mount"},{id:"wyvern",label:"Wyvern",kind:"mount",faction:"greenskins"},
  {id:"right_sword",label:"Right arm · sword",kind:"right",weapon:"handWeapon"},
  {id:"right_club",label:"Right arm · crude club",kind:"right",weapon:"handWeapon"},
  {id:"right_spear",label:"Right arm · spear",kind:"right",weapon:"spear"},
@@ -132,8 +132,8 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    if(m.faction==="dwarfs"&&b.weapon==="bow")return false;
    if(b.kind==="backWeapon")return m.weapon!==b.weapon&&!(m.backWeapons||[]).includes(b.weapon);
    if(b.kind==="shield")return !m.shield&&(!["greatWeapon","halberd","bow"].includes(m.weapon)||m.faction==="dwarfs");
-   if(b.kind==="mount")return (m.type==="captain"||m.type==="lord"||m.type==="dwarfCaptain"||m.type==="dwarfLord"||m.type==="goblinHero"||m.type==="goblinLord"||m.type==="orcHero"||m.type==="orcLord"||["cavalry","wolfRiders","boarBoyz"].includes(m.type))&&!m.mounted&&m.weapon!=="halberd"&&(id!=="eagle"||m.faction==="highElves")&&(id!=="greatEagle"||m.faction==="highElves")&&(id!=="wolf"||m.faction==="greenskins"&&["goblins","goblinHero","goblinLord","wolfRiders"].includes(m.type))&&(id!=="boar"||m.faction==="greenskins"&&["orcBoyz","orcHero","orcLord","boarBoyz"].includes(m.type))&&(id!=="wyvern"||m.faction==="greenskins"&&m.type==="orcLord")&&m.faction!=="dwarfs";
-   if(b.kind==="right")return m.weapon==="none"&&m.type!=="archers"&&m.type!=="swordsmen";
+   if(b.kind==="mount")return (m.type==="captain"||m.type==="lord"||m.type==="mageHero"||m.type==="mageLord"||m.type==="dwarfCaptain"||m.type==="dwarfLord"||m.type==="goblinHero"||m.type==="goblinLord"||m.type==="orcHero"||m.type==="orcLord"||["cavalry","wolfRiders","boarBoyz"].includes(m.type))&&!m.mounted&&m.weapon!=="halberd"&&(id!=="eagle"||m.faction==="highElves")&&(id!=="greatEagle"||m.faction==="highElves")&&(id!=="unicorn"||m.faction==="highElves")&&(id!=="wolf"||m.faction==="greenskins"&&["goblins","goblinHero","goblinLord","wolfRiders"].includes(m.type))&&(id!=="boar"||m.faction==="greenskins"&&["orcBoyz","orcHero","orcLord","boarBoyz"].includes(m.type))&&(id!=="wyvern"||m.faction==="greenskins"&&m.type==="orcLord")&&m.faction!=="dwarfs";
+   if(b.kind==="right")return m.weapon==="none"&&m.type!=="archers"&&(m.type!=="swordsmen"||m.faction==="highElves");
    if(b.kind==="leftSword")return !m.shield&&!["greatWeapon","halberd","bow","crossbow","firearm"].includes(m.weapon)&&!m.components?.includes("left_sword")&&(m.faction==="highElves"||m.faction==="greenskins"||((m.type==="captain"||m.type==="lord"||m.type==="goblinHero"||m.type==="goblinLord"||m.type==="orcHero"||m.type==="orcLord")&&m.faction==="empire"));
    if(b.kind==="twohand")return m.weapon==="none"&&(b.weapon!=="halberd"||!m.mounted);
    return false;
@@ -200,7 +200,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    add.addEventListener("click",()=>{const def=bitDefs.find(b=>b.id===bit.value);if(!def||!consumeBit(def.id))return;
     if(def.kind==="backWeapon"){model.backWeapons=[...(model.backWeapons||[]),def.weapon];model.components.push(def.id);}
     if(def.kind==="shield"){model.shield=true;model.components.push("left_shield");}
-    if(def.kind==="mount"){model.mounted=true;model.mountType=def.id;model.components.push(def.id==="eagle"?"eagle":def.id==="greatEagle"?"greatEagle":def.id==="wyvern"?"wyvern":def.id==="wolf"?"wolf":def.id==="boar"?"boar":"horse");}
+    if(def.kind==="mount"){model.mounted=true;model.mountType=def.id;model.components.push(def.id==="eagle"?"eagle":def.id==="greatEagle"?"greatEagle":def.id==="unicorn"?"unicorn":def.id==="wyvern"?"wyvern":def.id==="wolf"?"wolf":def.id==="boar"?"boar":"horse");}
     if(def.kind==="right"||def.kind==="twohand"){model.weapon=def.weapon;model.components.push(def.id);}
     if(def.kind==="leftSword"){model.components.push("left_sword");model.offhandWeapon=true;}
     model.name=modelLabel(model);save();renderAll();editingId=model.id;renderWorkbench();
@@ -212,10 +212,10 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
    const faction=field("Faction",[{value:"empire",label:"Human / Empire"},{value:"highElves",label:"High Elf"},{value:"dwarfs",label:"Dwarf"},{value:"greenskins",label:"Greenskins"},{value:"undead",label:"Undead"}],"empire");
    const kind=field("Main body",bodyKinds.map(b=>({value:b.id,label:b.label})),bodyKinds[0].id);
    const weapon=field("Arms / weapon",[], "right_sword");
-   const horseWrap=field("Mount",[{value:"no",label:"No mount"},{value:"yes",label:"Add horse"},{value:"eagle",label:"Pegasus (High Elves)"},{value:"wolf",label:"Wolf (Greenskins)"},{value:"boar",label:"Boar (Greenskins)"}],"no");
+   const horseWrap=field("Mount",[{value:"no",label:"No mount"},{value:"yes",label:"Add horse"},{value:"eagle",label:"Pegasus (High Elves)"},{value:"unicorn",label:"Unicorn (High Elves)"},{value:"wolf",label:"Wolf (Greenskins)"},{value:"boar",label:"Boar (Greenskins)"}],"no");
    const refresh=()=>{
     const body=bodyKinds.find(b=>b.id===kind.value);const cavalry=["cavalry","wolfRiders","boarBoyz"].includes(body.kind);const named=!!body.namedCharacter;const monsterBody=["skeletonDragon","skeletonGiant","skeletonTroll"].includes(body.kind);const hero=["captain","lord","mageHero","mageLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","dwarfCaptain","dwarfLord","goblinHero","goblinLord","orcHero","orcLord"].includes(body.kind)||named;
-    horseWrap.querySelectorAll("option").forEach(o=>{if(o.value==="eagle"||o.value==="greatEagle")o.disabled=body.faction!=="highElves"||!(cavalry||hero);if(o.value==="yes")o.disabled=body.faction==="dwarfs"||!(cavalry||hero);if(o.value==="wolf")o.disabled=body.faction!=="greenskins"||!["wolfRiders","goblinHero","goblinLord","goblinShaman","goblinGreatShaman"].includes(body.kind);if(o.value==="boar")o.disabled=body.faction!=="greenskins"||!["boarBoyz","orcHero","orcLord","orcShaman","orcGreatShaman"].includes(body.kind);});
+    horseWrap.querySelectorAll("option").forEach(o=>{if(o.value==="eagle"||o.value==="greatEagle"||o.value==="unicorn")o.disabled=body.faction!=="highElves"||!(cavalry||hero);if(o.value==="yes")o.disabled=body.faction==="dwarfs"||!(cavalry||hero);if(o.value==="wolf")o.disabled=body.faction!=="greenskins"||!["wolfRiders","goblinHero","goblinLord","goblinShaman","goblinGreatShaman"].includes(body.kind);if(o.value==="boar")o.disabled=body.faction!=="greenskins"||!["boarBoyz","orcHero","orcLord","orcShaman","orcGreatShaman"].includes(body.kind);});
     if(horseWrap.selectedOptions[0]?.disabled)horseWrap.value="no";if(body.kind==="pegasusChampion"){horseWrap.value="eagle";horseWrap.querySelectorAll("option").forEach(o=>{o.disabled=o.value!=="eagle";});}if(body.kind==="starwardenLord"){horseWrap.value="no";horseWrap.querySelectorAll("option").forEach(o=>{o.disabled=o.value!=="no";});}if(body.kind==="wolfRiders"){horseWrap.value="wolf";horseWrap.querySelectorAll("option").forEach(o=>{o.disabled=o.value!=="wolf";});}if(body.kind==="boarBoyz"){horseWrap.value="boar";horseWrap.querySelectorAll("option").forEach(o=>{o.disabled=o.value!=="boar";});}
     offhandLabel.hidden=body.kind==="elfChariot"||!(body.faction==="highElves"||body.faction==="greenskins"||((body.kind==="captain"||body.kind==="lord")&&body.faction==="empire"));if(offhandLabel.hidden)offhandCheck.checked=false;
     [...weapon.options].forEach(o=>o.remove());
@@ -226,7 +226,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
     else if(body.kind==="humanChariot") arms=["right_sword","right_spear","both_bow","both_halberd"];
     else if(body.kind==="goblinChariot") arms=["right_club","right_spear","both_bow"];
     else if(body.kind==="orcChariot") arms=["right_club","right_spear"];
-    else if(body.kind==="infantry"&&body.faction==="highElves") arms=["right_spear","both_bow","both_greatWeapon","both_halberd"];
+    else if(body.kind==="infantry"&&body.faction==="highElves") arms=["right_sword","right_spear","both_bow","both_greatWeapon","both_halberd"];
     else if(cavalry) arms=body.faction==="empire"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms];
     else if(hero) arms=horseWrap.value!=="no"?["right_sword","right_spear","right_lance","both_greatWeapon",...rangedArms]:["right_sword","right_spear","both_greatWeapon","both_halberd",...rangedArms];
     else if(body.faction==="empire") arms=["right_sword","right_spear","both_bow","both_crossbow","both_firearm","both_greatWeapon","both_halberd"];
