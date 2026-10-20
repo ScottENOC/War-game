@@ -126,7 +126,7 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  const bitCount=id=>data.bits[id]||0;
  const addBit=(id,n=1)=>{data.bits[id]=(data.bits[id]||0)+n;};
  const consumeBit=id=>{if(bitCount(id)<1)return false;data.bits[id]--;if(!data.bits[id])delete data.bits[id];return true;};
- const modelLabel=m=>(m.name==="Aelthir, the Dawnwing"?"Aelthir, the Dawnwing":(m.faction==="empire"?"Empire ":m.faction==="dwarfs"?"Dwarf ":m.faction==="greenskins"?"Greenskin ":"High Elf ")+title(m.type))+" · "+title(m.weapon)+(m.offhandWeapon?" + Off-hand sword":"")+(m.shield?" + Shield":"")+((m.backWeapons||[]).length?" · Back: "+m.backWeapons.map(title).join(", "):"")+(m.mountType==="eagle"||m.mountType==="greatEagle"?" · Pegasus":m.mountType==="wyvern"?" · Wyvern":m.mounted?" · Mounted":"");
+ const modelLabel=m=>(m.name==="Aelthir, the Dawnwing"?"Aelthir, the Dawnwing":(m.faction==="empire"?"Empire ":m.faction==="dwarfs"?"Dwarf ":m.faction==="greenskins"?"Greenskin ":m.faction==="undead"?"Undead ":"High Elf ")+title(m.type))+" · "+title(m.weapon)+(m.offhandWeapon?" + Off-hand sword":"")+(m.shield?" + Shield":"")+((m.backWeapons||[]).length?" · Back: "+m.backWeapons.map(title).join(", "):"")+(m.mountType==="eagle"||m.mountType==="greatEagle"?" · Pegasus":m.mountType==="wyvern"?" · Wyvern":m.mounted?" · Mounted":"");
  const canUseBit=(m,id)=>{
    const b=bitDefs.find(x=>x.id===id);if(!b||b.kind==="siegeMachine"||b.kind==="chariotMachine"||m.siegeMachine)return false;
    if(m.faction==="dwarfs"&&b.weapon==="bow")return false;
