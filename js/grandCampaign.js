@@ -1005,7 +1005,7 @@ function createMovementGraph(){
    const pB=ports.find(p=>p.city===other&&p!==pA)||ports.find(p=>p.city===c.id&&p!==pA);
    if(pA&&pB){
     if(key==="6-7"){
-     const join={id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55};add(join);route(pA.id,join.id,"sea",c.id,other);route(join.id,pB.id,"sea",c.id,other);
+     const join={id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55};add(join);/* The northern route from Aelthir already reaches this junction via the Silvershade–Aelthir sea lane. Keep only the final harbour spur here; the direct southern duplicate is intentionally omitted. */route(join.id,pB.id,"sea",c.id,other);
     }else if(key==="6-8"){
      const waypoints=[{id:"aelthir-north-sea-waypoint",region:6,type:"seaRoute",label:"Northern sea passage",x:190,y:42},{id:"greyward-north-sea-waypoint",region:7,type:"seaRoute",label:"Greyward northern passage",x:315,y:32},{id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55},{id:"eastern-north-sea-waypoint",region:8,type:"seaRoute",label:"Eastern northern sea passage",x:600,y:48},{id:"silvershade-north-sea-waypoint",region:8,type:"seaRoute",label:"Silvershade northern passage",x:720,y:80},{id:"silvershade-coastal-sea-waypoint",region:8,type:"seaRoute",label:"Silvershade coastal approach",x:770,y:150}];
      for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
