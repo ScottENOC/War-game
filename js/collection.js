@@ -439,7 +439,8 @@ export function createCollectionManager({$,onSkirmish,onMainMenu,onNarrativeCamp
  $("mode-back").addEventListener("click",onMainMenu);
  document.querySelectorAll("[data-mode]").forEach(btn=>btn.addEventListener("click",()=>{
   const mode=btn.dataset.mode;
-  if(mode==="skirmish"){onSkirmish();return;}
+  if(mode==="skirmish"){onSkirmish(null);return;}
+  if(["holdGround","captureFlag","relics"].includes(mode)){onSkirmish(mode);return;}
   if(mode==="narrative"){onNarrativeCampaign();return;}
    if(mode==="roguelike"){onRoguelike();return;}
   if(mode==="mordheim"){onMordheim();return;}
