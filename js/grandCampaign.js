@@ -540,7 +540,7 @@ function refugeePathCost(campaign,path){
 function nearestRefugeeCity(campaign,group,fromNode,within=Infinity){
  const choices=[];
  for(const region of campaign.regions||[]){
-  if(!refugeeCityAccepts(region,group.culture,campaign))continue;
+  if(Number(region.id)===Number(group.originRegion)||!refugeeCityAccepts(region,group.culture,campaign))continue;
   const owner=politicalOwner(region);
   if(owner!==group.owner)continue;
   const node=refugeeNodeForRegion(campaign,region.id);if(!node)continue;
@@ -1463,6 +1463,7 @@ function moveCommander(id){
  activeCampaign.commander.nodeId=id;activeCampaign.commander.region=n.region;activeCampaign.commander.movement=movement-cost;
  if(army){army.nodeId=id;army.region=n.region;army.movement=movement-cost;}
  activeCampaign.lastEvent=(army?.name||activeCampaign.commander.name)+(flying&&path.length>2?" leaps over an intervening army and moves along the road network to ":" moves to ")+n.label+". "+activeCampaign.commander.movement+" movement remaining.";
+ resolveRefugeeArmyEncounters(activeCampaign);
  saveCampaign();renderCampaignMap();
 }
 function politicalOwner(region){return region?.ownerFaction||region?.politicalFactionId||FACTION_PROFILES[region?.id]?.id;}
