@@ -1169,6 +1169,40 @@ function createMovementGraph(){
   }
   for(let i=1;i<ids.length;i++)link(ids[i-1],ids[i],1,r.kind);
  }
+ // Explicitly merge selected map points into single shared junctions.
+ // Average their positions so short adjoining routes remain visually natural.
+ const mergeMapPoints=(ids,label)=>{
+  const existing=ids.filter(id=>nodes[id]);
+  if(existing.length<2)return;
+  const keep=existing[0],members=new Set(existing);
+  const mergedNodes=existing.map(id=>nodes[id]);
+  nodes[keep].x=mergedNodes.reduce((sum,n)=>sum+n.x,0)/mergedNodes.length;
+  nodes[keep].y=mergedNodes.reduce((sum,n)=>sum+n.y,0)/mergedNodes.length;
+  if(label)nodes[keep].label=label;
+  for(const id of existing.slice(1)){
+   for(const edge of edges[id]||[])if(edge.to!==keep&&!members.has(edge.to))edges[keep].push({...edge});
+  }
+  for(const [from,list] of Object.entries(edges)){
+   const rewritten=[];
+   for(const edge of list){
+    const to=members.has(edge.to)?keep:edge.to;
+    if(from===to)continue;
+    if(!rewritten.some(e=>e.to===to&&e.kind===edge.kind))rewritten.push({...edge,to});
+   }
+   edges[from]=rewritten;
+  }
+  for(const id of existing.slice(1)){delete nodes[id];delete edges[id];}
+  edges[keep]=edges[keep].filter((edge,index,list)=>edge.to!==keep&&list.findIndex(e=>e.to===edge.to&&e.kind===edge.kind)===index);
+ };
+ mergeMapPoints(["sea-crossing-386-361","goldhaven-blackflag-coast-1"],"Goldhaven–Blackflag sea junction");
+ mergeMapPoints(["waypoint-ironhold-coastal-sea-waypoint-goldhaven-ironhold-sea-junction-2","goldhaven-south-sea-waypoint"],"Goldhaven southern sea junction");
+ mergeMapPoints(["feature-1-6-land-3","feature-1-6-land-2","feature-1-6-land-1"],"Oldreach–Aelthir road junction");
+ mergeMapPoints(["feature-1-2-land-5","feature-1-2-land-4"],"Oldreach western road junction");
+ // Give the Goldhaven river bend a direct road connection to the northern mountain chain.
+ const riverRoadPoint={id:"river-north-mountain-road-waypoint",region:3,type:"road",label:"Northern river–mountain road",x:292,y:151};
+ if(!nodes[riverRoadPoint.id])add(riverRoadPoint);
+ link("river-poi-north",riverRoadPoint.id,1,"land");
+ link(riverRoadPoint.id,"mountain-poi-north",1,"land");
  // Coastal travel can only enter or leave the sea at a named harbour.
  // Existing save files are migrated to this graph while city IDs remain stable.
  // Give every map point a unique human-readable label while preserving its stable ID.
