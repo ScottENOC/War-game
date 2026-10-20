@@ -1203,6 +1203,17 @@ function createMovementGraph(){
  if(!nodes[riverRoadPoint.id])add(riverRoadPoint);
  link("river-poi-north",riverRoadPoint.id,1,"land");
  link(riverRoadPoint.id,"mountain-poi-north",1,"land");
+ // Move the western river POI southwest along the existing road alignment so
+ // the road meets the drawn river course at the point of interest.
+ if(nodes["river-poi-west"]){nodes["river-poi-west"].x=175;nodes["river-poi-west"].y=190;}
+ // Keep this generated waypoint exactly halfway between its two route neighbours.
+ const midpointId="waypoint-crossroads-2-crossroads-6-2";
+ const midpointNode=nodes[midpointId];
+ const midpointNeighbours=(edges[midpointId]||[]).map(edge=>nodes[edge.to]).filter(Boolean);
+ if(midpointNode&&midpointNeighbours.length===2){
+  midpointNode.x=(midpointNeighbours[0].x+midpointNeighbours[1].x)/2;
+  midpointNode.y=(midpointNeighbours[0].y+midpointNeighbours[1].y)/2;
+ }
  // Coastal travel can only enter or leave the sea at a named harbour.
  // Existing save files are migrated to this graph while city IDs remain stable.
  // Give every map point a unique human-readable label while preserving its stable ID.
