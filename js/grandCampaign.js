@@ -1169,6 +1169,15 @@ function createMovementGraph(){
  }
  // Coastal travel can only enter or leave the sea at a named harbour.
  // Existing save files are migrated to this graph while city IDs remain stable.
+ // Give every map point a unique human-readable label while preserving its stable ID.
+ // Repeated generic labels receive a numbered suffix.
+ const usedLabels=new Set();
+ for(const node of Object.values(nodes)){
+  const base=String(node.label||node.id||"Map point").trim()||String(node.id);
+  let label=base,index=2;
+  while(usedLabels.has(label.toLocaleLowerCase()))label=base+" ("+(index++)+")";
+  node.label=label;usedLabels.add(label.toLocaleLowerCase());
+ }
  return {nodes,edges};
 }
 function svgEl(name,attrs={}){const el=document.createElementNS("http://www.w3.org/2000/svg",name);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el;}
@@ -1526,7 +1535,7 @@ function renderCampaignMap(){
  paintFactionBanners(map,activeCampaign);
  for(const marker of map.querySelectorAll(".grand-city")){const cityId=Number(marker.dataset.city),region=activeCampaign.regions.find(r=>Number(r.id)===cityId||Number(r.cityId)===cityId),owner=region?politicalOwner(region):(FACTION_PROFILES[cityId]?.id||null);const circle=marker.querySelector("circle");if(!circle)continue;let border="#c7c7b5";if(owner===activeCampaign.playerPoliticalFaction)border="#79c987";else if(owner){const relation=campaignRelation(activeCampaign,activeCampaign.playerPoliticalFaction,owner),war=(activeCampaign.activeWars||[]).includes(campaignWarKey(activeCampaign.playerPoliticalFaction,owner));border=war||relation<=-50?"#df5b50":relation>=35?"#69c981":relation<=-20?"#e4a14e":"#d9c66e";}circle.setAttribute("stroke",border);circle.setAttribute("stroke-width","4");}
  map.querySelector("#grand-city-markers").before(road);
- for(const n of Object.values(nodes)){const isCurrent=n.id===movementNode,reach=(edges[movementNode]||[]).some(e=>e.to===n.id&&e.cost+nodeCost(n)-1<=movementLeft),g=svgEl("g",{class:"campaign-node "+n.type+(isCurrent?" current":"")+(n.id===selectedNodeId?" selected":"")+(reach?" reachable":""),tabindex:reach?"0":"-1",role:"button","aria-label":n.label,transform:"translate("+n.x+" "+n.y+")","data-node":n.id});g.append(svgEl("circle",{r:16,class:"campaign-node-hit"}));g.append(svgEl("circle",{r:n.type==="city"?5:n.type==="crossroads"?3.5:5.5,class:"campaign-node-visible"}));if(n.type==="port")g.append(svgEl("path",{d:"M-3 0 L3 0 M0 -4 L0 2 M-4 2 L4 2"}));if(n.type==="village"||n.type==="farm"){const symbol=svgEl("text",{x:0,y:4,"text-anchor":"middle",class:"campaign-node-symbol"});symbol.textContent=n.type==="farm"?"♧":"⌂";g.append(symbol);}layer.append(g);}
+ for(const n of Object.values(nodes)){const isCurrent=n.id===movementNode,reach=(edges[movementNode]||[]).some(e=>e.to===n.id&&e.cost+nodeCost(n)-1<=movementLeft),g=svgEl("g",{class:"campaign-node "+n.type+(isCurrent?" current":"")+(n.id===selectedNodeId?" selected":"")+(reach?" reachable":""),tabindex:reach?"0":"-1",role:"button","aria-label":n.label+" (map point ID: "+n.id+")",transform:"translate("+n.x+" "+n.y+")","data-node":n.id});const pointTitle=svgEl("title");pointTitle.textContent=n.label+" · "+n.id;g.append(pointTitle);g.append(svgEl("circle",{r:16,class:"campaign-node-hit"}));g.append(svgEl("circle",{r:n.type==="city"?5:n.type==="crossroads"?3.5:5.5,class:"campaign-node-visible"}));if(n.type==="port")g.append(svgEl("path",{d:"M-3 0 L3 0 M0 -4 L0 2 M-4 2 L4 2"}));if(n.type==="village"||n.type==="farm"){const symbol=svgEl("text",{x:0,y:4,"text-anchor":"middle",class:"campaign-node-symbol"});symbol.textContent=n.type==="farm"?"♧":"⌂";g.append(symbol);}layer.append(g);}
  map.querySelector("#grand-city-markers").after(layer);
  for(const army of activeCampaign.armies||[]){if(!army?.roster?.length)continue;const p=nodes[army.nodeId];if(!p)continue;const owner=army.owner||army.factionId,isPlayer=owner===activeCampaign.playerPoliticalFaction;const g=svgEl("g",{class:"campaign-army-token"+(isPlayer?" player-army-token":" enemy-army-token"),transform:"translate("+p.x+" "+(p.y-18)+")",role:"button",tabindex:"0","aria-label":(army.name||"Army")+" at "+(p.label||"unknown location")});g.append(svgEl("circle",{r:11,class:"campaign-army-token-circle"}));const t=svgEl("text",{x:0,y:4,"text-anchor":"middle",class:"campaign-army-token-label"});t.textContent=isPlayer?"♟":"⚔";g.append(t);const chooseArmy=()=>{lastCampaignNodeTap=null;if(isPlayer){activeCampaign.selectedArmyId=army.id;activeCampaign.commander.nodeId=army.nodeId;activeCampaign.commander.region=army.region;activeCampaign.commander.movement=army.movement||0;}activeCampaign.selectedArmyPanelId=army.id;activeCampaign.selectedCampaignPanel="army";activeCampaign.selectedRefugeeId=null;activeCampaign.selectedMapNodeId=army.nodeId;activeCampaign.lastEvent="Selected "+(army.name||"army")+". Double-tap a destination to move it.";saveCampaign();renderCampaignMap();};g.addEventListener("click",chooseArmy);g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();chooseArmy();}});armyLayer.append(g);}
  map.append(armyLayer);
@@ -1558,7 +1567,7 @@ function renderCampaignMap(){
    }
    if(armyManagement)armyManagement.hidden=owner!==activeCampaign.playerPoliticalFaction;
   }else{
-   const title=document.createElement("strong");title.textContent=(n.type==="city"?"⌂ ":"◆ ")+n.label;detailHost.append(title);
+   const title=document.createElement("strong");title.textContent=(n.type==="city"?"⌂ ":"◆ ")+n.label;detailHost.append(title);const pointRef=document.createElement("span");pointRef.className="grand-map-point-reference";pointRef.textContent="Map point ID: "+n.id;detailHost.append(pointRef);
    if(n.type==="city"&&settlementRegion?.settlement){
     const s=settlementRegion.settlement,owner=politicalOwner(settlementRegion),line=document.createElement("span");
     line.textContent=(FACTION_BY_ID[owner]?.name||FACTIONS[owner]?.name||owner||"Unclaimed")+" · "+Math.round(s.population?.total||0).toLocaleString()+" people · Food "+(s.foodStores??8)+"/"+(s.maxFoodStores||8)+(s.besiegedBy?" · BESIEGED":"");detailHost.append(line);
