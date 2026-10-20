@@ -487,9 +487,9 @@ function createInitialCampaignState(faction,city,commander){
   return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,treasury:isPlayer?500:300,income:campaignCityIncome(regions.find(r=>r.id===home.id)),upkeep:Math.ceil(army.points*.04),armyPoints:army.points,turnsTaken:0,relations:{},};
  });
  const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;diplomacy[a.id][b.id]=baseFactionRelation(a.id,b.id);}}
- const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints,boredom:-4,foughtThisTurn:false,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0}));
+ const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints,boredom:-4,momentum:0,foughtThisTurn:false,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0}));
  const playerState=factionStates.find(f=>f.id===playerPoliticalFaction);
- return {schemaVersion:7,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3),maxMovement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3)},armies,lastEvent:commander.name+" begins the campaign at "+city.name+"."};
+ return {schemaVersion:8,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,activeAlliances:[],armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph:createMovementGraph(),commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3),maxMovement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3)},armies,lastEvent:commander.name+" begins the campaign at "+city.name+"."};
 }
 let selectedFaction="empire",selectedPoliticalFaction="valedorn",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
@@ -1219,6 +1219,8 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  const attackPower=Math.max(1,attacking?.points||100)*(.8+Math.random()*.4);
  const defencePower=Math.max(1,defending?.points||250)*(.8+Math.random()*.4)*(1+defenceBonus);
  const winner=attackPower>=defencePower?attacker:defender,loser=winner===attacker?defender:attacker;
+ awardGreenskinMomentum(campaign,factionArmy(campaign,winner.id),2);
+ awardGreenskinMomentum(campaign,factionArmy(campaign,loser.id),-2);
  const winArmy=factionArmy(campaign,winner.id),loseArmy=factionArmy(campaign,loser.id);
  applyStrategicArmyLosses(winArmy,winner===attacker?.72:.82);
  applyStrategicArmyLosses(loseArmy,winner===attacker?.42:.55);
@@ -1257,6 +1259,7 @@ function campaignGreenskinTargets(campaign,army){
   if(!nodeId||!campaign.graph?.nodes?.[nodeId]||seen.has(key))return;
   const path=campaignMovementPath(campaign,army.nodeId||("city-"+army.region),nodeId);if(!path)return;
   const state=campaign.factionStates.find(f=>f.id===owner),race=state?.race||FACTION_BY_ID[owner]?.race||"human";
+  if(campaignAreAllied(campaign,own,owner))return;
   const priority=owner===own?2:race!=="greenskin"?0:1;
   targets.push({owner,nodeId,region,targetArmy,path,cost:campaignPathCost(campaign,path),priority});
   seen.add(key);
@@ -1353,6 +1356,8 @@ function launchCampaignFieldBattle(attackingArmy,defendingArmy){
   const update=(army,units,faction)=>{army.roster=army.roster.map((config,i)=>({...config,models:Math.max(0,units[i]?.models??0),currentDamage:units[i]?.damage||0,currentWounds:units[i]?.characterWounds})).filter(config=>config.models>0);army.points=Math.max(0,Math.round(army.roster.reduce((sum,u)=>sum+unitCost(u,faction),0)));};
   update(attackingArmy,result.playerUnits||[],attackerFaction);update(defendingArmy,result.enemyUnits||[],defenderFaction);
   const winner=result.won?attackingArmy:defendingArmy,loser=result.won?defendingArmy:attackingArmy;
+  awardGreenskinMomentum(activeCampaign,winner,result.won?2:1);
+  if(result.won)awardGreenskinMomentum(activeCampaign,loser,-2);
   if(result.won){winner.nodeId=targetNode;winner.region=activeCampaign.graph.nodes[targetNode]?.region??defendingArmy.region;}
   const loserState=activeCampaign.factionStates.find(f=>f.id===(loser.owner||loser.factionId)),home=loserState?.homeRegion||loser.region;
   loser.nodeId="city-"+home;loser.region=home;
@@ -1451,7 +1456,7 @@ function runAIFactionTurn(campaign,faction){
  const region=campaign.regions.find(r=>r.id===army.region)||campaign.regions.find(r=>r.id===faction.homeRegion);
  if(!region)return faction.name+" could not locate its army.";
  const candidates=(region.neighbors||[]).map(id=>campaign.regions.find(r=>r.id===id)).filter(Boolean);
- const hostile=candidates.filter(r=>politicalOwner(r)!==faction.id).map(r=>({region:r,owner:campaign.factionStates.find(x=>x.id===politicalOwner(r))})).filter(x=>x.owner?.alive);
+ const hostile=candidates.filter(r=>politicalOwner(r)!==faction.id&&!campaignAreAllied(campaign,faction.id,politicalOwner(r))).map(r=>({region:r,owner:campaign.factionStates.find(x=>x.id===politicalOwner(r))})).filter(x=>x.owner?.alive);
  if(!hostile.length)return faction.name+" earns "+faction.income+", pays "+faction.upkeep+" upkeep and recruits "+recruitment.added+" models.";
  hostile.sort((a,b)=>{
   const av=campaignRelation(campaign,faction.id,a.owner.id),bv=campaignRelation(campaign,faction.id,b.owner.id);
@@ -1485,6 +1490,7 @@ function endCampaignTurn(){
  activeCampaign.diplomacy=activeCampaign.diplomacy||{};
  for(const a of states)for(const b of states)if(a.id!==b.id&&!Number.isFinite(activeCampaign.diplomacy[a.id]?.[b.id]))setCampaignRelation(activeCampaign,a.id,b.id,baseFactionRelation(a.id,b.id));
  updatePeaceAndWarRelations(activeCampaign);
+ updateGreenskinDiplomacy(activeCampaign);
  const playerIndex=order.indexOf(playerId),processed=[];
  for(let step=1;step<order.length;step++){
   const id=order[(Math.max(0,playerIndex)+step)%order.length],f=states.find(x=>x.id===id);
@@ -1504,8 +1510,15 @@ function endCampaignTurn(){
   player.turnsTaken=(player.turnsTaken||0)+1;
  }
  for(const region of activeCampaign.regions||[])if(politicalOwner(region)===player.id)growSettlementRecruitment(region);
- // Boredom changes at the end of the campaign turn; the next turn's animosity test reads this stored value.
- for(const army of activeCampaign.armies||[])updateGreenskinBoredom(activeCampaign,army);
+ // Momentum decays by one after a turn without a victory or conquest; boredom is tracked separately.
+ for(const army of activeCampaign.armies||[]){
+  if(campaignArmyRace(army,activeCampaign)==="greenskin"&&army.lastMomentumDecayTurn!==activeCampaign.turn){
+   if(army.lastMomentumActivityTurn!==activeCampaign.turn)army.momentum=Math.max(0,campaignArmyMomentum(army)-1);
+   army.lastMomentumDecayTurn=activeCampaign.turn;
+   const state=activeCampaign.factionStates.find(f=>f.id===(army.owner||army.factionId));if(state)state.momentum=campaignArmyMomentum(army);
+  }
+  updateGreenskinBoredom(activeCampaign,army);
+ }
  activeCampaign.turn++;activeCampaign.activeFaction=playerId;
  activeCampaign.commander.maxMovement=campaignArmyMovementProfile(selectedPlayerArmy(),activeCampaign).points;activeCampaign.commander.movement=activeCampaign.commander.maxMovement;for(const army of playerArmies())army.movement=campaignArmyMovementProfile(army,activeCampaign).points;
  const activeArmy=selectedPlayerArmy();if(activeArmy){activeCampaign.commander.nodeId=activeArmy.nodeId;activeCampaign.commander.region=activeArmy.region;activeCampaign.commander.movement=activeArmy.movement;}
