@@ -85,7 +85,7 @@ function buildUnit(template,config,faction,opposing=false) {
     characterWounds:isCharacter?template.stats.W:null,delayedDeath:false,delayedDeathSnapshot:null,championAlive:!!config.champion,championWounds:config.champion?template.stats.W:0};
 }
 export function createUnitsFromArmy(army,faction="empire") {
-  const units={},playerFaction=["highElves","dwarfs","greenskins"].includes(faction)?faction:"empire";
+  const units={},playerFaction=["highElves","dwarfs","greenskins","undead"].includes(faction)?faction:"empire";
   army.forEach((entry,index)=>{
     const n=index+1,y=n/(army.length+1),playerEntry={...entry},aiEntry={...entry};
     if(playerFaction==="highElves"&&entry.type==="cavalry"){
