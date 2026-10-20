@@ -883,7 +883,7 @@ function createMovementGraph(){
   {id:"port-5",region:5,type:"port",label:"Southwatch harbour",x:625,y:515,city:5},
   {id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:135,y:126,city:6},
   {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:561,y:163,city:7},
-  {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:817,y:190,city:8}
+  {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:773,y:226,city:8}
  ];
  for(const p of ports){add(p);route("city-"+p.city,p.id,"land",p.city,p.city);}
  const seen=new Set(),seaLinks=new Set(["5-8","6-7","7-8"]);
