@@ -1036,7 +1036,8 @@ function createMovementGraph(){
    // A road and a sea lane may visually cross, but they are not connected.
    // Transfers between land and sea are permitted only at the named harbour
    // POIs (the shared endpoints of the city-road and harbour-sea routes).
-   if(a.kind!==b.kind)continue;\n    if(a.kind==="land"&&![a.regionA,a.regionB].some(id=>id===b.regionA||id===b.regionB))continue;
+   if(a.kind!==b.kind)continue;
+    if(a.kind==="land"&&![a.regionA,a.regionB].some(id=>id===b.regionA||id===b.regionB))continue;
    const q=nodes[b.a],q2=nodes[b.b],hit=intersection(p,p2,q,q2);if(!hit)continue;
    const sharedId=(a.kind==="sea"?"sea-crossing-":"crossing-")+Math.round(hit.x)+"-"+Math.round(hit.y);
    if(!nodes[sharedId])add({id:sharedId,region:a.regionA||b.regionA,type:a.kind==="sea"?"seaRoute":"crossroads",label:a.kind==="sea"?"Sea-lane junction":"Road crossroads",x:hit.x,y:hit.y});
