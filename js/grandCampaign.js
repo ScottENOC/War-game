@@ -51,7 +51,7 @@ const FACTION_ROSTER_OVERRIDES={
  kest:{roster:"empire",units:["swordsmen","cavalry","archers","captain"]},
  vane:{roster:"empire",units:["swordsmen","archers","cannon","captain"]},
  caedmon:{roster:"empire",units:["swordsmen","cavalry","cannon","archers"]},
- verdantCourt:{roster:"highElves",units:["swordsmen","archers","cavalry","boltThrower"]},
+ verdantCourt:{roster:"highElves",units:["archers","archers","cavalry","swordsmen","captain"]},
  moonlitPrinces:{roster:"highElves",units:["swordsmen","archers","cavalry","captain"]},
  silverAdmiralty:{roster:"highElves",units:["archers","cavalry","swordsmen","boltThrower"]},
  barakdur:{roster:"dwarfs",units:["dwarfInfantry","dwarfInfantry","dwarfCaptain","cannon"]},
@@ -163,9 +163,11 @@ function campaignCharacterConfig(id,commander=null){
  if(type==="shadowElf"){config.heavyArmour=true;config.weapon="handWeapon";config.meleeWeapons=["handWeapon","offhandWeapon"];config.rangedWeapon="magicBow";config.skills={skirmish:true};}
  if(type==="dwarfKingHaldric"){config.shield=true;config.magicArmour=true;}
  if(model?.weapon&&type!=="pegasusChampion"&&type!=="shadowElf"&&type!=="dwarfKingHaldric")config.weapon=model.weapon;
+ if(id==="verdantCourt"){config.woodElfStyle=true;config.shield=false;config.dualWield=true;config.weapon="handWeapon";config.meleeWeapons=["handWeapon","offhandWeapon"];config.skills={...(config.skills||{}),skirmish:true};}
  return config;
 }
 function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=null}={}){
+ const woodElfStyle=id==="verdantCourt";
  if(id==="deepflame"){const roster=[{type:"deepflameDragon",models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],casterLevel:4,spells:["fireBolt","nullificationDome"],champion:false,upgrades:{},skills:{}}];return {faction:"highElves",roster,points:unitCost(roster[0],"highElves"),politicalFactionId:id};}
  const faction=rosterFactionForPoliticalFaction(id),profile=FACTION_BY_ID[id],race=profile?.race||"human";
  const basicType=race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":race==="undead"?"skeletons":"swordsmen",rangedType=race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":race==="undead"?"zombies":"archers";
@@ -173,10 +175,10 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
  let roster=[];
  if(player){
   const models=collectionModels(),count=(type,weaponFilter=null)=>models.filter(m=>m.faction===faction&&m.type===type&&(!weaponFilter||weaponFilter(m))).length;
-  const meleeAvailable=count(basicType,m=>m.weapon==="handWeapon");
+  const meleeAvailable=count(basicType,m=>m.weapon==="handWeapon"&&(!woodElfStyle||m.components?.includes("left_sword")||m.offhandWeapon));
   const rangedAvailable=race==="dwarf"?count("dwarfInfantry",m=>m.weapon==="crossbow"):race==="undead"?count("zombies",m=>m.weapon==="handWeapon"):count("archers",m=>m.weapon==="bow");
   const pushStartingUnit=(type,models,rangedWeapon=null)=>{
-   roster.push({type,models,weapon:"handWeapon",meleeWeapons:["handWeapon"],...(rangedWeapon?{rangedWeapon}:{}),champion:false,upgrades:{},skills:{}});
+   roster.push({type,models,weapon:"handWeapon",meleeWeapons:woodElfStyle&&type===basicType?["handWeapon","offhandWeapon"]:["handWeapon"],...(woodElfStyle?{woodElfStyle:true}:{}),...(woodElfStyle&&type===basicType?{dualWield:true,shield:false,skills:{skirmish:true}}:{}),...(woodElfStyle&&rangedWeapon?{skills:{skirmish:true}}:{}),...(rangedWeapon?{rangedWeapon}:{}),champion:false,upgrades:{},skills:{}});
   };
   // The player's starter army has at most two melee units, balanced to within
   // one model. Infantry units may contain 5-30 models each.
@@ -195,7 +197,13 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
   if(rangedDeployed>=5)pushStartingUnit(rangedType,rangedDeployed,race==="undead"?null:race==="dwarf"?"crossbow":"bow");
   if(commander)roster.push(character);
  }else{
-  roster=[
+  roster=woodElfStyle?[
+   {type:"archers",models:12,weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:"bow",woodElfStyle:true,skills:{skirmish:true},champion:false,upgrades:{}},
+   {type:"archers",models:12,weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:"bow",woodElfStyle:true,skills:{skirmish:true},champion:false,upgrades:{}},
+   {type:"cavalry",models:8,weapon:"handWeapon",meleeWeapons:["handWeapon"],mounted:true,mountType:"horse",woodElfStyle:true,skills:{skirmish:true},champion:false,upgrades:{}},
+   {type:"swordsmen",models:12,weapon:"handWeapon",meleeWeapons:["handWeapon","offhandWeapon"],dualWield:true,woodElfStyle:true,skills:{skirmish:true},champion:false,upgrades:{}},
+   character
+  ]:[
    {type:basicType,models:15,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
    {type:basicType,models:15,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
    {type:rangedType,models:10,weapon:"handWeapon",meleeWeapons:["handWeapon"],...(race==="undead"?{}:{rangedWeapon:race==="dwarf"?"crossbow":"bow"}),champion:false,upgrades:{},skills:{}},
@@ -1186,7 +1194,7 @@ function selectedPlayerArmy(){
 function recruitCatalog(){
  const race=FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race||"human",basic=race==="undead"?"skeletons":race==="greenskin"?"goblins":race==="dwarf"?"dwarfInfantry":"swordsmen";
  const options=[
-  {key:"melee",label:race==="dwarf"?"Dwarf melee infantry":race==="elf"?"High Elf spearmen":race==="greenskin"?"Goblin mobs":"Melee infantry",type:basic,weapon:race==="elf"?"spear":"handWeapon",min:5,max:30,modelType:basic,modelWeapon:race==="elf"?"spear":"handWeapon"},
+  {key:"melee",label:activeCampaign.playerPoliticalFaction==="verdantCourt"?"Wood Elf dual-wielders":race==="dwarf"?"Dwarf melee infantry":race==="elf"?"High Elf spearmen":race==="greenskin"?"Goblin mobs":"Melee infantry",type:basic,weapon:race==="elf"&&activeCampaign.playerPoliticalFaction!=="verdantCourt"?"spear":"handWeapon",min:5,max:30,modelType:basic,modelWeapon:race==="elf"&&activeCampaign.playerPoliticalFaction!=="verdantCourt"?"spear":"handWeapon"},
   ...(race==="greenskin"?[
    {key:"orcBoyz",label:"Orc Boyz",type:"orcBoyz",weapon:"handWeapon",min:5,max:30,modelType:"orcBoyz",modelWeapon:"handWeapon"},
    {key:"goblinBows",label:"Goblin short bows",type:"goblins",weapon:"handWeapon",rangedWeapon:"bow",min:5,max:30,modelType:"goblins",modelWeapon:"bow"},
@@ -1244,7 +1252,7 @@ function recruitCatalog(){
  return options;
 }
 function assignedSiegeModelIds(){return new Set(playerArmies().flatMap(a=>(a.roster||[]).flatMap(u=>[u.machineModelId,...(u.crewModelIds||[])].filter(Boolean))));}
-function optionMatchesModel(o,m){return m?.faction===rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction)&&m.type===o.modelType&&(!o.modelWeapon||m.weapon===o.modelWeapon);}
+function optionMatchesModel(o,m){const woodElfStyle=activeCampaign.playerPoliticalFaction==="verdantCourt",needsDualWield=woodElfStyle&&(o.key==="melee"||String(o.key||"").startsWith("crew-"));return m?.faction===rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction)&&m.type===o.modelType&&(!o.modelWeapon||m.weapon===o.modelWeapon)&&(!needsDualWield||m.components?.includes("left_sword")||m.offhandWeapon); }
 function deployedForOption(o){
  let total=0;
  for(const a of playerArmies())for(const u of a.roster||[]){
@@ -1269,7 +1277,7 @@ function optionConfig(o,models){
  }
  if(sample&&o.type==="cavalry"&&["spear","lance","greatWeapon","halberd"].includes(sample.weapon)){weapon=sample.weapon;meleeWeapons=["handWeapon",sample.weapon];}
  if(sample&&o.type==="cavalry"&&["bow","crossbow","firearm"].includes(sample.weapon))rangedWeapon=sample.weapon;
- const config={type:o.type,models,weapon,meleeWeapons,champion:false,upgrades:{},skills:{}};
+ const woodElfStyle=activeCampaign.playerPoliticalFaction==="verdantCourt";const config={type:o.type,models,weapon,meleeWeapons,champion:false,upgrades:{},skills:{}};if(woodElfStyle){config.woodElfStyle=true;if(o.key==="melee"||o.character){config.dualWield=true;config.weapon="handWeapon";config.meleeWeapons=["handWeapon","offhandWeapon"];config.shield=false;}if(o.key==="melee"||o.rangedWeapon)config.skills={skirmish:true};}
  if(rangedWeapon)config.rangedWeapon=rangedWeapon;
  if(o.type==="cavalry"){config.mounted=true;config.mountType="horse";}if(o.type==="wolfRiders"){config.mounted=true;config.mountType="wolf";}if(o.type==="boarBoyz"){config.mounted=true;config.mountType="boar";}
  if(o.type==="dwarfKingHaldric"){config.shield=true;config.magicArmour=true;}
