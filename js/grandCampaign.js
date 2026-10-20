@@ -101,7 +101,8 @@ function undeadModelAvailable(profile,army){
  const models=collectionModels();
  const assigned=new Set(playerArmies().flatMap(a=>(a.roster||[]).flatMap(u=>[u.machineModelId,...(u.crewModelIds||[])].filter(Boolean))));
  const type=profile.type,weapon=profile.rangedWeapon==="bow"?"bow":profile.weapon;
- const deployed=playerArmies().reduce((n,a)=>n+(a.roster||[]).filter(u=>u.type===type&&(profile.rangedWeapon?u.rangedWeapon===profile.rangedWeapon:!u.rangedWeapon&&u.weapon===(profile.weapon||"handWeapon"))).reduce((s,u)=>s+Math.max(0,Number(u.models)||0),0),0);
+ const matches=u=>u.type===type&&(profile.rangedWeapon?u.rangedWeapon===profile.rangedWeapon:!u.rangedWeapon&&u.weapon===(profile.weapon||"handWeapon"));
+ const deployed=playerArmies().reduce((n,a)=>n+(a.roster||[]).filter(matches).reduce((s,u)=>s+Math.max(0,Number(u.models)||0),0)+Object.values(a.necromancyReserve||{}).filter(matches).reduce((s,u)=>s+Math.max(0,Number(u.models)||0),0),0);
  return models.filter(m=>m.faction==="undead"&&m.type===type&&m.weapon===weapon&&!assigned.has(m.id)).length>deployed;
 }
 function undeadReserveKey(profile){return [profile.type,profile.weapon||"handWeapon",profile.rangedWeapon||""].join("|");}
@@ -1578,9 +1579,21 @@ function launchCampaignFieldBattle(attackingArmy,defendingArmy){
  const targetNode=defendingArmy.nodeId||"city-"+defendingArmy.region;
  const started=window.startPoliticalCampaignBattle({army:attackingArmy.roster,faction:attackerFaction,enemyArmy:defendingArmy.roster,enemyFaction:defenderFaction,onComplete:result=>{
   attackingArmy.foughtThisTurn=true;defendingArmy.foughtThisTurn=true;
-  const update=(army,units,faction)=>{army.roster=army.roster.map((config,i)=>({...config,models:Math.max(0,units[i]?.models??0),currentDamage:units[i]?.damage||0,currentWounds:units[i]?.characterWounds})).filter(config=>config.models>0);army.points=Math.max(0,Math.round(army.roster.reduce((sum,u)=>sum+unitCost(u,faction),0)));};
+  const originalAttackingRoster=attackingArmy.roster.map(u=>({...u})),originalDefendingRoster=defendingArmy.roster.map(u=>({...u}));
+  const update=(army,units,faction)=>{army.roster=army.roster.map((config,i)=>({...config,models:Math.max(0,units[i]?.models??0),currentDamage:units[i]?.damage||0,currentWounds:units[i]?.characterWounds})).filter(config=>config.models>0);};
   update(attackingArmy,result.playerUnits||[],attackerFaction);update(defendingArmy,result.enemyUnits||[],defenderFaction);
+  const attackingCollapsed=collapseCasterlessUndeadArmy(attackingArmy),defendingCollapsed=collapseCasterlessUndeadArmy(defendingArmy);
   const winner=result.won?attackingArmy:defendingArmy,loser=result.won?defendingArmy:attackingArmy;
+  let necromancyMessage="";
+  const playerId=activeCampaign.playerPoliticalFaction;
+  if((winner.owner||winner.factionId)===playerId&&campaignArmyRace(winner,activeCampaign)==="undead"&&!(winner===attackingArmy?attackingCollapsed:defendingCollapsed)){
+   const defeatedRoster=winner===attackingArmy?originalDefendingRoster:originalAttackingRoster;
+   const defeatedUnits=winner===attackingArmy?(result.enemyUnits||[]):(result.playerUnits||[]);
+   const necromancy=raiseBattleCasualties(winner,defeatedRoster,defeatedUnits,activeCampaign);
+   necromancyMessage=" Necromancy raised "+necromancy.raised+" model(s)"+(necromancy.reserve?"; "+necromancy.reserve+" remain in reserve":"")+".";
+  }
+  attackingArmy.points=Math.max(0,Math.round(attackingArmy.roster.reduce((sum,u)=>sum+unitCost(u,attackerFaction),0)));
+  defendingArmy.points=Math.max(0,Math.round(defendingArmy.roster.reduce((sum,u)=>sum+unitCost(u,defenderFaction),0)));
   awardGreenskinMomentum(activeCampaign,winner,2);
   awardGreenskinMomentum(activeCampaign,loser,-2);
   awardGreenskinPlunder(activeCampaign,winner,Math.round(35+Math.max(0,loser.points||0)*0.1));
@@ -1588,7 +1601,7 @@ function launchCampaignFieldBattle(attackingArmy,defendingArmy){
   const loserState=activeCampaign.factionStates.find(f=>f.id===(loser.owner||loser.factionId)),home=loserState?.homeRegion||loser.region;
   loser.nodeId="city-"+home;loser.region=home;
   for(const army of [attackingArmy,defendingArmy]){const state=activeCampaign.factionStates.find(f=>f.id===(army.owner||army.factionId));if(state){state.roster=army.roster;state.armyPoints=army.points;if(!army.roster.length)state.alive=false;}}
-  activeCampaign.lastEvent=result.won?"Greenskin animosity attack wins a field battle. The defeated army retreats.":"Greenskin animosity attack is repelled. The attacking army retreats.";
+  activeCampaign.lastEvent=(result.won?"Greenskin animosity attack wins a field battle. The defeated army retreats.":"Greenskin animosity attack is repelled. The attacking army retreats.")+necromancyMessage+(attackingCollapsed||defendingCollapsed?" An Undead force without a surviving Vampire or Necromancer collapsed after the battle.":"");
   saveCampaign();byId("grand-campaign-screen").hidden=false;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();
  }});
  if(!started){activeCampaign.lastEvent="The tactical field battle could not be started.";renderCampaignMap();return false;}
