@@ -458,3 +458,6 @@ button,[role="button"]{
 
 /* Objective battle modes */
 .objective-marker{pointer-events:none}
+
+/* Persistent individual-fighter expedition */
+.warband-fighter-row{display:flex;flex-direction:column;gap:8px;padding:12px;margin:8px 0;border:1px solid var(--line);border-radius:12px;background:#111a1bcc}.warband-fighter-row>div:first-child{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}.warband-fighter-row span{opacity:.78;font-size:14px}.warband-gear{display:flex;gap:6px;flex-wrap:wrap}.warband-gear button{font-size:13px;min-height:34px;padding:5px 8px}.warband-gear button:disabled{opacity:.35}#warband-expedition-shop{margin-top:18px}#warband-expedition-shop h2{margin-bottom:6px}#warband-expedition-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
