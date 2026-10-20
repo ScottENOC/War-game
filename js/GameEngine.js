@@ -114,7 +114,7 @@ function dropObjectiveCarrier(u){
  for(const item of S.objectives||[])if(item.kind==="relic"&&item.carrierId===u.id){item.carrierId=null;item.x=u.x;item.y=u.y;say(u.name+" drops "+item.id+".");}
  u.carryingRelicId=null;
 }
-function objectiveActive(u){return !!u&&alive(u)&&!u.fled&&!u.mordheimStatus&&u.deployed!==false;}
+function objectiveActive(u){return !!u&&alive(u)&&!u.fled&&!u.attachedTo&&!u.mordheimStatus&&u.deployed!==false;}
 function updateObjectiveInteractions(){
  if(!S.objectiveMode||S.finished)return;
  const roster=units().filter(objectiveActive);
@@ -124,6 +124,7 @@ function updateObjectiveInteractions(){
     if(flag.carrierId===u.id||flag.carrierId!==null)continue;
     if(dist(u,{x:flag.x,y:flag.y})>1.4)continue;
     if(flag.side===u.side){
+     if(flag.atHome)continue;
      flag.x=flag.homeX;flag.y=flag.homeY;flag.atHome=true;flag.carrierId=null;
      say(u.name+" returns their own flag to base.");
     }else{flag.carrierId=u.id;flag.atHome=false;u.carryingFlagSide=flag.side;say(u.name+" picks up the enemy flag!");}
@@ -301,6 +302,7 @@ function startPoliticalCampaignBattle({army, faction="empire", enemyArmy, enemyF
 }
 window.startPoliticalCampaignBattle=startPoliticalCampaignBattle;
 function startMordheimBattle(army,faction,budget){
+  S.objectiveMode=null;S.objectives=[];S.flags=null;S.objectiveScore={player:0,ai:0};
   campaignBattle=false;grandCampaignBattle=false;roguelikeBattle=false;mordheimBattle=true;S.mordheimSkirmish=true;S.battleType="skirmish";S.siegeRole="attacker";S.autoTerrain=true;S.terrainSeed=Date.now();
   const playerForce=createUnitsFromArmy(army,faction),aiRoster=army.map(entry=>({...entry,meleeWeapons:[...(entry.meleeWeapons||[])],mordheimCollectionId:undefined})).sort(()=>Math.random()-.5),aiForce=createUnitsFromArmy(aiRoster,faction);
   S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(aiForce).filter(([id])=>id.startsWith("a")))};
@@ -309,6 +311,7 @@ function startMordheimBattle(army,faction,budget){
   $("mainmenu").hidden=true;$("mode-screen").hidden=true;$("mordheim-screen").hidden=true;$("campaign-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("game").hidden=false;reset();say("Mordheim Skirmish · "+units().filter(u=>u.side==="player").length+" individual fighters · "+playerPoints+" pts; AI "+aiPoints+" pts. Injury rolls are active; the warband is temporary.");setupCanvas();
 }
 function startCampaignBattle(army,enemyConfig){
+ S.objectiveMode=null;S.objectives=[];S.flags=null;S.objectiveScore={player:0,ai:0};
  S.autoTerrain=true;S.terrainSeed=Date.now();const playerUnits=createUnitsFromArmy(army,"empire");
  const enemyPair=createUnitsFromArmy([{type:"swordsmen",models:20,weapon:"handWeapon",champion:false}], "empire");
  const enemy=enemyPair.a1;enemy.id="a1";enemy.side="ai";enemy.name="Enemy Human Swordsmen";enemy.x=.78;enemy.y=.5;enemy.facing=Math.PI;enemy.deployed=true;
