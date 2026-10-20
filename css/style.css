@@ -450,11 +450,11 @@ button,[role="button"]{
 .campaign-refugee-token.selected .refugee-token-circle{fill:#e5b84d;stroke:#fff3c4;stroke-width:4}
 .campaign-refugee-token:focus .refugee-token-circle{stroke:#fff;stroke-width:4}
 
-/* Mordheim one-off warband builder */
-.mordheim-panel{max-width:1000px}.mordheim-model-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px;max-height:45vh;overflow:auto;padding:4px 2px}.mordheim-model-row{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:rgba(12,17,18,.45);min-width:0}.mordheim-model-row input{width:20px;height:20px;flex-shrink:0}.mordheim-model-row span{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px}.mordheim-model-row strong{font-size:13px;white-space:nowrap;color:var(--gold)}#mordheim-revive{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 126px);transform:translateX(-50%);z-index:15;pointer-events:auto;font-size:15px;white-space:nowrap;background:#57462b;border-color:#e0c276}
-@media(max-width:650px){.mordheim-model-list{grid-template-columns:1fr;max-height:42vh}.mordheim-model-row{padding:8px}.mordheim-panel .builder-footer{gap:8px;flex-wrap:wrap}}
+/* Warband one-off warband builder */
+.warband-panel{max-width:1000px}.warband-model-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:6px;max-height:45vh;overflow:auto;padding:4px 2px}.warband-model-row{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:rgba(12,17,18,.45);min-width:0}.warband-model-row input{width:20px;height:20px;flex-shrink:0}.warband-model-row span{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px}.warband-model-row strong{font-size:13px;white-space:nowrap;color:var(--gold)}#warband-revive{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 126px);transform:translateX(-50%);z-index:15;pointer-events:auto;font-size:15px;white-space:nowrap;background:#57462b;border-color:#e0c276}
+@media(max-width:650px){.warband-model-list{grid-template-columns:1fr;max-height:42vh}.warband-model-row{padding:8px}.warband-panel .builder-footer{gap:8px;flex-wrap:wrap}}
 
-.mordheim-status-mark{position:absolute;left:2px;bottom:5px;padding:1px 3px;border-radius:4px;background:#5a3929;color:#fff1cf;font-size:8px;font-weight:900;letter-spacing:.2px;z-index:2}.mordheim-unconscious,.mordheim-stunned{outline:1px dashed #e0c276}.mordheim-outOfAction{opacity:.45;filter:grayscale(1)}
+.warband-status-mark{position:absolute;left:2px;bottom:5px;padding:1px 3px;border-radius:4px;background:#5a3929;color:#fff1cf;font-size:8px;font-weight:900;letter-spacing:.2px;z-index:2}.warband-unconscious,.warband-stunned{outline:1px dashed #e0c276}.warband-outOfAction{opacity:.45;filter:grayscale(1)}
 
 /* Objective battle modes */
 .objective-marker{pointer-events:none}
