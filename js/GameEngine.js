@@ -7,7 +7,7 @@ import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js?v=greenskin-roster-v3";
 import { createRules } from "./rules.js?v=20261020-chariots-v2";
 import { createShooting } from "./shooting.js?v=20261020-nullification-dome-v1";
-import { createCombat } from "./combat.js?v=20261020-undead-rules-v4";
+import { createCombat } from "./combat.js?v=20261020-mordheim-v1";
 import { createRendering } from "./rendering.js?v=20261020-nullification-dome-v1";
 import { createInput } from "./input.js?v=20261020-nullification-dome-v1";
 import { createUI } from "./ui.js?v=20261020-mordheim-v1";
