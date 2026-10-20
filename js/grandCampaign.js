@@ -43,8 +43,7 @@ const FACTION_PROFILES = {
  22:{id:"varkesh",name:"The Principality of Varkesh",race:"human",colours:{main:"#7C342D",accent:"#D6B77B"},emblem:"sun"},
  23:{id:"ashenCouncil",name:"The Ashen Council",race:"human",colours:{main:"#68645B",accent:"#B66A35"},emblem:"gate"},
  24:{id:"deepflame",name:"Thaurgath the Rune-Eater",race:"dragon",passive:true,colours:{main:"#493A59",accent:"#D7A94D"},emblem:"dragon"},
- 25:{id:"eastwatch",name:"Eastwatch Harbour Council",race:"human",colours:{main:"#456B79",accent:"#D9C48A"},emblem:"tower"},
- 26:{id:"deadmanCourt",name:"The Deadman Court",race:"undead",colours:{main:"#41384A",accent:"#B3A4C4"},emblem:"skull"}
+ 25:{id:"eastwatch",name:"Eastwatch Harbour Council",race:"human",colours:{main:"#456B79",accent:"#D9C48A"},emblem:"tower"}
 };
 const FACTION_BY_ID = Object.fromEntries(Object.values(FACTION_PROFILES).map(f=>[f.id,f]));
 
@@ -469,15 +468,14 @@ const CITIES = [
 {id:23,name:"Ashenford",faction:"evilHumans",ruler:"The Ashen Council",status:"Independent principality",terrain:"Southern river crossing",description:"A fortified crossing ruled by a council of rival nobles who cooperate only when threatened.",requiredCharacters:[]},
 {id:24,name:"Khaz Varrak",faction:"dwarfs",ruler:"Thaurgath the Rune-Eater",status:"Ancient dragon lair",terrain:"High mountains; carved dwarven halls and rune-forges",description:"A vast dwarven hold cut into the high peaks, its bridges, gates and rune-forges still intact beneath the rule of Thaurgath the Rune-Eater, an ancient spellcasting dragon. No dwarven army garrisons the city.",requiredCharacters:[],passiveOccupant:true},
 {id:25,name:"Eastwatch",faction:"empire",ruler:"Harbour Council of Eastwatch",status:"Independent human city",terrain:"Eastern coast of the central continent",description:"A coastal city guarding the eastern approaches, trading with the island courts and the mountain holds.",requiredCharacters:[]},
-{id:26,name:"Deadman",faction:"undead",ruler:"The Deadman Court",status:"Undead port-city",terrain:"Eastern continent; haunted coast",description:"A grim port on the eastern continent, linked by sea to Eastwatch and Silvershade rather than by roads across the ocean.",requiredCharacters:[]}
 ];
 const REGION_NEIGHBORS = {
  1:[2,6],2:[1,6],3:[8,9],4:[5,20,23],5:[4,18,20],
- 6:[1,2,7,8,17],7:[6,17],8:[3,6,25,26],9:[3,10,24],10:[9,24,25],
+ 6:[1,2,7,8,17],7:[6,17],8:[3,6,21,25],9:[3,10,24],10:[9,24,25],
  11:[13,14],12:[14,15,16],13:[11,14],14:[11,12,13,15,21],
  15:[12,14,16],16:[12,15],17:[6,7],18:[5,20,22,23],
- 19:[21],20:[4,5,18,23],21:[14,19,22],22:[18,21,23],23:[4,18,20,22],24:[9,10],
- 25:[8,10,26],26:[8,25]
+ 19:[21],20:[4,5,18,23],21:[8,14,19,22,25],22:[18,21,23],23:[4,18,20,22],24:[9,10],
+ 25:[8,10,21]
 };
 
 const CITY_PROFILES = {
@@ -506,7 +504,7 @@ const CITY_PROFILES = {
  23:{tier:2,population:16000,prosperity:52,fortification:{style:"human-layered",material:"stone",circuits:1,gates:2,wounds:50},buildings:["river-crossing","tollhouse","market"]},
  24:{tier:4,population:24000,prosperity:58,fortification:{style:"dwarven-heavy",material:"rune-carved-deep-stone",circuits:2,gates:1,wounds:175,cannonPlatforms:8},buildings:["ancient-deep-mines","rune-forges","sealed-vaults","deep-roads"]},
  25:{tier:3,population:36000,prosperity:70,fortification:{style:"human-layered",material:"stone",circuits:1,gates:2,wounds:60},buildings:["harbour","market","watchtower"]},
- 26:{tier:3,population:19000,prosperity:26,fortification:{style:"human-layered",material:"weathered-stone",circuits:1,gates:1,wounds:48},buildings:["crypt-harbour","old-walls"]}
+ 21:{tier:3,population:28000,prosperity:43,fortification:{style:"human-layered",material:"weathered-stone",circuits:2,gates:1,wounds:72},buildings:["harbour","barracks","watchtower"]},
 };
 const CULTURE_BY_FACTION = {empire:"Human",highElves:"High Elf",dwarfs:"Dwarf",greenskins:"Greenskin",undead:"Undead",evilHumans:"Human"};
 const FACTION_SPECIES = {empire:"human",highElves:"elf",dwarfs:"dwarf",greenskins:"greenskin",undead:"undead",evilHumans:"human"};
@@ -542,7 +540,9 @@ function ensureSettlementState(campaign){
   if(!region.settlement.fortification)region.settlement.fortification=initialSettlement(city).fortification;
   ensureSettlementRecruitment(region);
  }
- for(const id of [24,25,26])if(!(campaign.regions||[]).some(r=>r.id===id)){const city=CITIES.find(c=>c.id===id),profile=FACTION_PROFILES[id],settlement=initialSettlement(city);campaign.regions.push({id:city.id,name:city.name,faction:city.faction,politicalFactionId:profile.id,ownerFaction:profile.id,owner:profile.id,nativeFaction:city.faction,nativeCulture:CULTURE_BY_FACTION[city.faction]||"Local",terrain:city.terrain,neighbors:[...(REGION_NEIGHBORS[id]||[])],ruler:city.ruler,status:city.status,settlement});}
+ campaign.regions=(campaign.regions||[]).filter(region=>region.id!==26);
+ for(const army of campaign.armies||[])if(army.region===26||army.homeRegion===26||army.nodeId==="city-26"){army.region=21;army.homeRegion=army.homeRegion===26?21:army.homeRegion;army.nodeId="city-21";}
+ for(const id of [24,25])if(!(campaign.regions||[]).some(r=>r.id===id)){const city=CITIES.find(c=>c.id===id),profile=FACTION_PROFILES[id],settlement=initialSettlement(city);campaign.regions.push({id:city.id,name:city.name,faction:city.faction,politicalFactionId:profile.id,ownerFaction:profile.id,owner:profile.id,nativeFaction:city.faction,nativeCulture:CULTURE_BY_FACTION[city.faction]||"Local",terrain:city.terrain,neighbors:[...(REGION_NEIGHBORS[id]||[])],ruler:city.ruler,status:city.status,settlement});}
  for(const region of campaign.regions||[])region.neighbors=[...(REGION_NEIGHBORS[region.id]||[])];
  if(campaign.mapId!==MAP_ID||!campaign.graph?.nodes||!campaign.graph?.edges){
   campaign.graph=createMovementGraph();campaign.mapId=MAP_ID;
@@ -795,7 +795,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v9";
+const MAP_ID="shattered-realms-v10";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -846,7 +846,7 @@ const byId=id=>document.getElementById(id);
   },{passive:false});
   campaignMapNav.set(host,state);
  }
-const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[515,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1207,515],20:[548,602],21:[944,462],22:[846,680],23:[629,642],24:[584,260],25:[851,370],26:[978,330]};
+const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[515,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1207,515],20:[548,602],21:[1167,420],22:[846,680],23:[629,642],24:[584,260],25:[851,370]};
 const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
 function collectionBypassEnabled(){try{return getCollectionSnapshot()?.bypass===true;}catch{return false;}}
 function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
@@ -939,7 +939,7 @@ function createMovementGraph(){
  const link=(a,b,cost=1,kind="land")=>{if(!edges[a]||!edges[b]||a===b)return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost,kind});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost,kind});};
  const route=(a,b,kind="land",regionA=null,regionB=null)=>routes.push({a,b,kind,regionA,regionB,marks:[],cuts:[0,1]});
  const positions=CITY_POSITIONS;
- const seaLinks=new Set(["3-8","3-9","6-7","6-8","6-17","7-17","8-25","8-26","25-26"]);
+ const seaLinks=new Set(["3-8","3-9","6-7","6-8","6-17","7-17","8-21","8-25","21-25"]);
  const isSeaLink=(a,b)=>seaLinks.has([a,b].sort((x,y)=>x-y).join("-"));
  for(const c of CITIES){const [x,y]=positions[c.id];add({id:"city-"+c.id,region:c.id,type:"city",label:c.name,x,y});}
  for(const c of CITIES){
@@ -960,7 +960,7 @@ function createMovementGraph(){
   {id:"port-17",region:17,type:"port",label:"Barrowmere harbour",x:150,y:397,city:17},
   {id:"port-9",region:9,type:"port",label:"Ironhold harbour",x:488,y:333,city:9},
   {id:"port-25",region:25,type:"port",label:"Eastwatch harbour",x:882,y:365,city:25},
-  {id:"port-26",region:26,type:"port",label:"Deadman harbour",x:921,y:331,city:26}
+  {id:"port-21",region:21,type:"port",label:"Dreadmarch harbour",x:1192,y:418,city:21}
  ];
  for(const p of ports){add(p);route("city-"+p.city,p.id,"land",p.city,p.city);}
  const seen=new Set();
@@ -984,10 +984,10 @@ function createMovementGraph(){
      const waypoints=[{id:"barrowmere-moonspire-strait-east",region:7,type:"seaRoute",label:"Barrowmere–Moonspire Strait",x:410,y:240},{id:"barrowmere-moonspire-strait-middle",region:7,type:"seaRoute",label:"Barrowmere–Moonspire Strait",x:315,y:310},{id:"barrowmere-moonspire-strait-west",region:17,type:"seaRoute",label:"Barrowmere–Moonspire Strait",x:225,y:370}];for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="8-25"){
      const waypoints=[{id:"eastwatch-silvershade-coast-1",region:25,type:"seaRoute",label:"Eastern coast passage",x:861,y:322},{id:"eastwatch-silvershade-coast-2",region:8,type:"seaRoute",label:"Island approach",x:830,y:270}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===25).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===8).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
-    }else if(key==="8-26"){
-     const waypoints=[{id:"deadman-north-coast-1",region:26,type:"seaRoute",label:"Deadman northern passage",x:908,y:300},{id:"deadman-north-coast-2",region:8,type:"seaRoute",label:"Silvershade eastern approach",x:855,y:260},{id:"deadman-north-coast-3",region:8,type:"seaRoute",label:"Silvershade island approach",x:825,y:250}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===26).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===8).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
-    }else if(key==="25-26"){
-     const waypoints=[{id:"eastwatch-deadman-channel",region:25,type:"seaRoute",label:"Eastern channel",x:902,y:350}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===25).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===26).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+    }else if(key==="8-21"){
+     const waypoints=[{id:"dreadmarch-silvershade-coast-1",region:21,type:"seaRoute",label:"Dreadmarch northern passage",x:1125,y:300},{id:"dreadmarch-silvershade-coast-2",region:8,type:"seaRoute",label:"Eastern island approach",x:950,y:260},{id:"dreadmarch-silvershade-coast-3",region:8,type:"seaRoute",label:"Silvershade island approach",x:825,y:250}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===8).id,...waypoints.slice().reverse().map(n=>n.id),ports.find(p=>p.city===21).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+    }else if(key==="21-25"){
+     const waypoints=[{id:"eastwatch-dreadmarch-channel",region:21,type:"seaRoute",label:"Eastern channel",x:1120,y:370}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===21).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===25).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="6-17"){
      const waypoints=[{id:"barrowmere-west-sea-1",region:17,type:"seaRoute",label:"Western coastal passage",x:62,y:155},{id:"barrowmere-west-sea-2",region:17,type:"seaRoute",label:"Western island passage",x:48,y:260},{id:"barrowmere-west-sea-3",region:17,type:"seaRoute",label:"Barrowmere outer passage",x:64,y:365}];
      for(const n of waypoints)add(n);
