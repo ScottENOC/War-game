@@ -444,11 +444,11 @@ const CITIES = [
 {id:24,name:"Khaz Varrak",faction:"dwarfs",ruler:"Thaurgath the Rune-Eater",status:"Ancient dragon lair",terrain:"High mountains; carved dwarven halls and rune-forges",description:"A vast dwarven hold cut into the high peaks, its bridges, gates and rune-forges still intact beneath the rule of Thaurgath the Rune-Eater, an ancient spellcasting dragon. No dwarven army garrisons the city.",requiredCharacters:[],passiveOccupant:true} 
 ];
 const REGION_NEIGHBORS = {
- 1:[2,6],2:[1,6],3:[8,9,12,21],4:[5,20,23],5:[4,8,18,20],
- 6:[1,2,7,8,17],7:[6,17],8:[3,5,6],9:[3,10,13,14,24],10:[9,13,14,21,24],
- 11:[13,14],12:[3,14,15,16],13:[9,10,11,14],14:[9,10,11,12,13,15,21],
- 15:[12,14,16,18],16:[12,15,18,22],17:[6,7],18:[5,15,16,20,22,23],
- 19:[21,22],20:[4,5,18,23],21:[3,10,14,19,22],22:[16,18,19,21,23],23:[4,18,20,22,24],24:[9,10,23]
+ 1:[2,6],2:[1,6],3:[4,8,9],4:[3,5,20,23],5:[4,8,18,20],
+ 6:[1,2,7,8,17],7:[6,17],8:[3,5,6],9:[3,10,24],10:[9,21,24],
+ 11:[13,14],12:[14,15,16],13:[11,14],14:[11,12,13,15,21],
+ 15:[12,14,16],16:[12,15],17:[6,7],18:[5,15,16,20,22,23],
+ 19:[21],20:[4,5,18,23],21:[10,14,19,22],22:[18,21,23],23:[4,18,20,22],24:[9,10]
 };
 
 const CITY_PROFILES = {
@@ -1036,7 +1036,7 @@ function createMovementGraph(){
    // A road and a sea lane may visually cross, but they are not connected.
    // Transfers between land and sea are permitted only at the named harbour
    // POIs (the shared endpoints of the city-road and harbour-sea routes).
-   if(a.kind!==b.kind)continue;
+   if(a.kind!==b.kind)continue;\n    if(a.kind==="land"&&![a.regionA,a.regionB].some(id=>id===b.regionA||id===b.regionB))continue;
    const q=nodes[b.a],q2=nodes[b.b],hit=intersection(p,p2,q,q2);if(!hit)continue;
    const sharedId=(a.kind==="sea"?"sea-crossing-":"crossing-")+Math.round(hit.x)+"-"+Math.round(hit.y);
    if(!nodes[sharedId])add({id:sharedId,region:a.regionA||b.regionA,type:a.kind==="sea"?"seaRoute":"crossroads",label:a.kind==="sea"?"Sea-lane junction":"Road crossroads",x:hit.x,y:hit.y});
