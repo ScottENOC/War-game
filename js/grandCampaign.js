@@ -871,10 +871,15 @@ function createMovementGraph(){
  const link=(a,b,cost=1)=>{if(!edges[a]||!edges[b]||a===b)return;if(!edges[a].some(e=>e.to===b))edges[a].push({to:b,cost});if(!edges[b].some(e=>e.to===a))edges[b].push({to:a,cost});};
  const route=(a,b,kind="land",regionA=null,regionB=null)=>routes.push({a,b,kind,regionA,regionB,marks:[],cuts:[0,1]});
  const positions=CITY_POSITIONS;
+ const seaLinks=new Set(["5-8","6-7","7-8"]);
+ const isSeaLink=(a,b)=>seaLinks.has([a,b].sort((x,y)=>x-y).join("-"));
  for(const c of CITIES){const [x,y]=positions[c.id];add({id:"city-"+c.id,region:c.id,type:"city",label:c.name,x,y});}
  for(const c of CITIES){
-  const [x,y]=positions[c.id],ns=REGION_NEIGHBORS[c.id]||[];
-  const avg=ns.reduce((p,id)=>({x:p.x+positions[id][0]/ns.length,y:p.y+positions[id][1]/ns.length}),{x:0,y:0});
+  const [x,y]=positions[c.id],ns=(REGION_NEIGHBORS[c.id]||[]).filter(id=>!isSeaLink(c.id,id));
+  // Only land neighbours may influence a road junction. Island cities with no
+  // land neighbours keep their junction beside the city instead of averaging
+  // the positions of distant islands across the sea.
+  const avg=ns.length?ns.reduce((p,id)=>({x:p.x+positions[id][0]/ns.length,y:p.y+positions[id][1]/ns.length}),{x:0,y:0}):{x:x+18,y:y+12};
   const jx=Math.max(30,Math.min(1270,x+(avg.x-x)*.12)),jy=Math.max(30,Math.min(720,y+(avg.y-y)*.12));
   add({id:"crossroads-"+c.id,region:c.id,type:"crossroads",label:c.name+" crossroads",x:jx,y:jy});
   route("city-"+c.id,"crossroads-"+c.id,"land",c.id,c.id);
@@ -886,7 +891,7 @@ function createMovementGraph(){
   {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:773,y:226,city:8}
  ];
  for(const p of ports){add(p);route("city-"+p.city,p.id,"land",p.city,p.city);}
- const seen=new Set(),seaLinks=new Set(["5-8","6-7","7-8"]);
+ const seen=new Set();
  for(const c of CITIES)for(const other of REGION_NEIGHBORS[c.id]||[]){
   const key=[c.id,other].sort((a,b)=>a-b).join("-");
   if(seen.has(key))continue;seen.add(key);
@@ -940,7 +945,9 @@ function createMovementGraph(){
  ];
  for(const p of mapFeatures){
   add(p);
-  const junctions=Object.values(nodes).filter(n=>n.type==="crossroads"||n.type==="port");
+  // Geographic features join the land road network only; a nearby harbour
+  // must not pull an inland trail into a sea lane.
+  const junctions=Object.values(nodes).filter(n=>n.type==="crossroads");
   const nearest=junctions.reduce((best,n)=>!best||Math.hypot(n.x-p.x,n.y-p.y)<Math.hypot(best.x-p.x,best.y-p.y)?n:best,null);
   if(nearest)route(p.id,nearest.id,"land",p.region,nearest.region);
  }
@@ -959,9 +966,13 @@ function createMovementGraph(){
   const p=nodes[a.a],p2=nodes[a.b];
   for(let j=i+1;j<routes.length;j++){
    const b=routes[j];
+   // A road and a sea lane may visually cross, but they are not connected.
+   // Transfers between land and sea are permitted only at the named harbour
+   // POIs (the shared endpoints of the city-road and harbour-sea routes).
+   if(a.kind!==b.kind)continue;
    const q=nodes[b.a],q2=nodes[b.b],hit=intersection(p,p2,q,q2);if(!hit)continue;
-   const sharedId="crossing-"+Math.round(hit.x)+"-"+Math.round(hit.y);
-   if(!nodes[sharedId])add({id:sharedId,region:a.regionA||b.regionA,type:"crossroads",label:"Road crossroads",x:hit.x,y:hit.y});
+   const sharedId=(a.kind==="sea"?"sea-crossing-":"crossing-")+Math.round(hit.x)+"-"+Math.round(hit.y);
+   if(!nodes[sharedId])add({id:sharedId,region:a.regionA||b.regionA,type:a.kind==="sea"?"seaRoute":"crossroads",label:a.kind==="sea"?"Sea-lane junction":"Road crossroads",x:hit.x,y:hit.y});
    a.cuts.push(hit.t);b.cuts.push(hit.u);
    a.marks.push({t:hit.t,nodeId:sharedId});b.marks.push({t:hit.u,nodeId:sharedId});
   }
