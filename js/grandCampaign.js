@@ -1278,7 +1278,7 @@ function optionConfig(o,models){
  if(sample&&o.type==="cavalry"&&["spear","lance","greatWeapon","halberd"].includes(sample.weapon)){weapon=sample.weapon;meleeWeapons=["handWeapon",sample.weapon];}
  if(sample&&o.type==="cavalry"&&["bow","crossbow","firearm"].includes(sample.weapon))rangedWeapon=sample.weapon;
  const woodElfStyle=activeCampaign.playerPoliticalFaction==="verdantCourt";const config={type:o.type,models,weapon,meleeWeapons,champion:false,upgrades:{},skills:{}};if(woodElfStyle){config.woodElfStyle=true;if(o.key==="melee"||o.character){config.dualWield=true;config.weapon="handWeapon";config.meleeWeapons=["handWeapon","offhandWeapon"];config.shield=false;}if(o.key==="melee"||o.rangedWeapon)config.skills={skirmish:true};}
- if(rangedWeapon)config.rangedWeapon=rangedWeapon;
+ if(rangedWeapon)config.rangedWeapon=rangedWeapon;if(sample&&o.character&&sample.mounted&&sample.mountType){config.mounted=true;config.mountType=sample.mountType;config.barding=!!sample.barding;}
  if(o.type==="cavalry"){config.mounted=true;config.mountType="horse";}if(o.type==="wolfRiders"){config.mounted=true;config.mountType="wolf";}if(o.type==="boarBoyz"){config.mounted=true;config.mountType="boar";}
  if(o.type==="dwarfKingHaldric"){config.shield=true;config.magicArmour=true;}
  return config;
