@@ -1016,7 +1016,7 @@ function createMovementGraph(){
  // on the map background; their access paths join the nearest road junction.
  const mapFeatures=[
    {id:"farm-poi-goldfields",region:3,type:"farm",label:"Goldhaven grain farms",x:405,y:260,population:1800,prosperity:62},
-   {id:"village-poi-westmere",region:2,type:"village",label:"Pinewatch village",x:190,y:325,population:950,prosperity:48},
+   {id:"village-poi-westmere",region:2,type:"village",label:"Pinewatch village",x:210,y:360,population:950,prosperity:48},
    {id:"farm-poi-southlands",region:4,type:"farm",label:"Southlands farmsteads",x:430,y:505,population:1450,prosperity:54},
    {id:"village-poi-ironhold",region:9,type:"village",label:"Stonepick village",x:455,y:300,population:720,prosperity:50},
   {id:"forest-poi-west-1",region:2,type:"forest",label:"Oldreach western forest",x:130,y:215},
