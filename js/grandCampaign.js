@@ -1081,7 +1081,7 @@ function createMovementGraph(){
  // on the map background; their access paths join the nearest road junction.
  const mapFeatures=[
    {id:"farm-poi-goldfields",region:3,type:"farm",label:"Goldhaven grain farms",x:405,y:260,population:1800,prosperity:62},
-   {id:"village-poi-westmere",region:2,type:"village",label:"Pinewatch village",x:210,y:360,population:950,prosperity:48},
+   {id:"village-poi-westmere",region:2,type:"village",label:"Pinewatch village",x:210,y:330,population:950,prosperity:48},
    {id:"farm-poi-southlands",region:4,type:"farm",label:"Southlands farmsteads",x:430,y:505,population:1450,prosperity:54},
    {id:"village-poi-ironhold",region:9,type:"village",label:"Stonepick village",x:455,y:300,population:720,prosperity:50},
   {id:"forest-poi-west-1",region:2,type:"forest",label:"Oldreach western forest",x:130,y:215},
@@ -1136,9 +1136,17 @@ function createMovementGraph(){
  }
  for(const r of routes){
   const a=nodes[r.a],b=nodes[r.b],distance=Math.hypot(b.x-a.x,b.y-a.y);
-  const cuts=[...r.cuts];
-  for(let d=48;d<distance;d+=48)cuts.push(d/distance);
-  for(const mark of r.marks)cuts.push(mark.t);
+  // Treat route endpoints, intersections and named POIs as fixed anchors.
+  // Fill each span evenly so generated waypoints do not bunch up beside anchors,
+  // while long spans still receive intermediate points.
+  const anchors=[...new Set([...r.cuts,...r.marks.map(mark=>mark.t)].map(t=>Math.max(0,Math.min(1,Number(t.toFixed(5))))))].sort((x,y)=>x-y);
+  const cuts=[...anchors];
+  const targetSpacing=62;
+  for(let i=1;i<anchors.length;i++){
+   const span=(anchors[i]-anchors[i-1])*distance;
+   const segments=Math.max(1,Math.ceil(span/targetSpacing));
+   for(let j=1;j<segments;j++)cuts.push(anchors[i-1]+(anchors[i]-anchors[i-1])*j/segments);
+  }
   const sorted=[...new Set(cuts.map(t=>Math.max(0,Math.min(1,Number(t.toFixed(5))))))].sort((x,y)=>x-y);
   const ids=[];
   for(let i=0;i<sorted.length;i++){
