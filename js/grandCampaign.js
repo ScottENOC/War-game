@@ -163,7 +163,7 @@ function campaignCharacterConfig(id,commander=null){
  if(type==="shadowElf"){config.heavyArmour=true;config.weapon="handWeapon";config.meleeWeapons=["handWeapon","offhandWeapon"];config.rangedWeapon="magicBow";config.skills={skirmish:true};}
  if(type==="dwarfKingHaldric"){config.shield=true;config.magicArmour=true;}
  if(model?.weapon&&type!=="pegasusChampion"&&type!=="shadowElf"&&type!=="dwarfKingHaldric")config.weapon=model.weapon;
- if(id==="verdantCourt"){config.woodElfStyle=true;config.shield=false;config.dualWield=true;config.weapon="handWeapon";config.meleeWeapons=["handWeapon","offhandWeapon"];config.skills={...(config.skills||{}),skirmish:true};}
+ if(id==="verdantCourt"){config.woodElfStyle=true;config.shield=false;config.dualWield=true;config.weapon="handWeapon";config.meleeWeapons=["handWeapon","offhandWeapon"];config.skills={...(config.skills||{}),skirmish:true};if(model?.mounted&&model.mountType){config.mounted=true;config.mountType=model.mountType;config.barding=!!model.barding;}}
  return config;
 }
 function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=null}={}){
@@ -178,7 +178,7 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
   const meleeAvailable=count(basicType,m=>m.weapon==="handWeapon"&&(!woodElfStyle||m.components?.includes("left_sword")||m.offhandWeapon));
   const rangedAvailable=race==="dwarf"?count("dwarfInfantry",m=>m.weapon==="crossbow"):race==="undead"?count("zombies",m=>m.weapon==="handWeapon"):count("archers",m=>m.weapon==="bow");
   const pushStartingUnit=(type,models,rangedWeapon=null)=>{
-   roster.push({type,models,weapon:"handWeapon",meleeWeapons:woodElfStyle&&type===basicType?["handWeapon","offhandWeapon"]:["handWeapon"],...(woodElfStyle?{woodElfStyle:true}:{}),...(woodElfStyle&&type===basicType?{dualWield:true,shield:false,skills:{skirmish:true}}:{}),...(woodElfStyle&&rangedWeapon?{skills:{skirmish:true}}:{}),...(rangedWeapon?{rangedWeapon}:{}),champion:false,upgrades:{},skills:{}});
+   roster.push({type,models,weapon:"handWeapon",meleeWeapons:woodElfStyle&&type===basicType?["handWeapon","offhandWeapon"]:["handWeapon"],...(woodElfStyle?{woodElfStyle:true}:{}),...(woodElfStyle&&type===basicType?{dualWield:true,shield:false,skills:{skirmish:true}}:{}),...(woodElfStyle&&rangedWeapon?{skills:{skirmish:true}}:{}),...(rangedWeapon?{rangedWeapon}:{}),champion:false,upgrades:{}});
   };
   // The player's starter army has at most two melee units, balanced to within
   // one model. Infantry units may contain 5-30 models each.
@@ -1268,7 +1268,7 @@ function availableCrewForOption(o){const assigned=assignedSiegeModelIds(),crewOp
 function availableForOption(o){const machines=availableModelsForOption(o).length;if(!o.fixed)return machines;return Math.min(machines,Math.floor(availableCrewForOption(o).length/o.min));}
 function optionConfig(o,models){
  const sample=availableModelsForOption(o)[0];
- if(o.fixed){const crew=availableCrewForOption(o).slice(0,o.min);return {type:o.type,models:o.min,weapon:"handWeapon",meleeWeapons:["handWeapon"],machineModelId:sample?.id||null,crewModelIds:crew.map(m=>m.id),siegeMachine:true};}
+ if(o.fixed){const crew=availableCrewForOption(o).slice(0,o.min),woodElfStyle=activeCampaign.playerPoliticalFaction==="verdantCourt";return {type:o.type,models:o.min,weapon:"handWeapon",meleeWeapons:woodElfStyle?["handWeapon","offhandWeapon"]:["handWeapon"],dualWield:woodElfStyle,woodElfStyle,machineModelId:sample?.id||null,crewModelIds:crew.map(m=>m.id),siegeMachine:true};}
  if(o.type==="legendaryLord"||o.type==="shadowElf"||o.type==="pegasusChampion")return campaignCharacterConfig(activeCampaign.playerPoliticalFaction,{id:o.type==="legendaryLord"?"edric_voss":o.type==="shadowElf"?"lethariel_starweaver":"aelthir_dawnwing"});
  let weapon=o.weapon||"handWeapon",meleeWeapons=weapon==="handWeapon"?["handWeapon"]:["handWeapon",weapon],rangedWeapon=o.rangedWeapon||null;
  if(sample&&o.character&&!o.rangedWeapon){
