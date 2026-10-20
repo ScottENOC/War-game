@@ -15,8 +15,8 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     engaged.forEach(start=>{if(seen.has(start.id))return;const group=[],stack=[start];seen.add(start.id);while(stack.length){const u=stack.pop();group.push(u);linked(u).forEach(v=>{if(!seen.has(v.id)){seen.add(v.id);stack.push(v);}});}if(group.some(u=>linked(u).length))groups.push(group);});
     return groups;
   }
-  function combatantAlive(u) { return !!u && (u.models > 0 || (u.isChariot && u.chariotWounds > 0)) && !u.fled; }
-  function combatUnitStrength(u){if(!u)return 0;if(u.isChariot&&u.chariotWounds<=0)return Math.max(0,u.models||0);if(Number.isFinite(u.unitStrength))return u.unitStrength;if(u.isDragon||u.isDragonRider)return 6;if(u.isCavalry)return Math.max(0,u.models)*2;return Math.max(0,u.models||0);}
+  function combatantAlive(u) { return !!u && (u.models > 0 || (u.isChariot && u.chariotWounds > 0)) && !u.fled && !(S.mordheimSkirmish && ["stunned","unconscious","outOfAction"].includes(u.mordheimStatus)); }
+  function combatUnitStrength(u){if(!u)return 0;if(S.mordheimSkirmish&&["stunned","unconscious","outOfAction"].includes(u.mordheimStatus))return 0;if(u.isChariot&&u.chariotWounds<=0)return Math.max(0,u.models||0);if(Number.isFinite(u.unitStrength))return u.unitStrength;if(u.isDragon||u.isDragonRider)return 6;if(u.isCavalry)return Math.max(0,u.models)*2;return Math.max(0,u.models||0);}
   function captureFighter(u, host=u, component="rider") {
     const champion = !!(u.champion?.enabled && u.championAlive !== false && u.models > 0);
     const rankWidth=Math.max(1,Math.floor(u.formationWidth||5));
@@ -78,7 +78,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
         const pending=new Map(attackers.map(c=>[keyOf(c),{snapshot:snapshots.get(keyOf(c)),attacked:attackedPackets.has(keyOf(c))}]));
         attackers.forEach(({u,host,component})=>{
           const key=u.id+":"+component,entitlement=pending.get(key);
-          if(!entitlement||entitlement.attacked||u.fled||(!alive(host)&&!u.delayedDeath)||(!combatantAlive(u)&&!u.delayedDeath))return;
+          if(!entitlement||entitlement.attacked||u.fled||(!alive(host)&&!u.delayedDeath)||(S.mordheimSkirmish&&["stunned","unconscious","outOfAction"].includes(u.mordheimStatus))||(!combatantAlive(u)&&!u.delayedDeath))return;
           const strikeState=u.delayedDeath?(u.delayedDeathSnapshot||entitlement.snapshot):entitlement.snapshot;
           if(!combatantAlive(u)&&!u.delayedDeath)return;
           const targets=linked(host).filter(v=>alive(v)&&!v.fled&&!v.delayedDeath);
@@ -141,7 +141,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
           entitlement.attacked=true;attackedPackets.add(key);
           before.forEach(({u:potential,component:potentialComponent,wasAlive,snapshot})=>{
             const potentialKey=potential.id+":"+potentialComponent;
-            if(wasAlive&&!combatantAlive(potential)&&!potential.delayedDeath&&!attackedPackets.has(potentialKey)){
+            if(wasAlive&&!combatantAlive(potential)&&!potential.delayedDeath&&!attackedPackets.has(potentialKey)&&!(S.mordheimSkirmish&&["stunned","unconscious"].includes(potential.mordheimStatus))){
               potential.delayedDeath=true;
               potential.delayedDeathSnapshot=snapshot;
               say(potential.name+' suffers a fatal wound; '+(potential.isCharacter?'they':'up to '+snapshot.eligibleModels+' front-rank fighters')+' will strike before dying at Initiative '+shownInitiative+'.');
