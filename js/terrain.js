@@ -67,7 +67,7 @@ export function generateRiverCrossingCastleTerrain(seed=Date.now(),city="crownfa
   terrain.splice(terrain.findIndex(t=>t.type==="wall"&&t.side==="north"),1,wall(left,top,.5-gateHalf,top,"north-west"),gate(.5-gateHalf,top,.5+gateHalf,top,"north-gate"),wall(.5+gateHalf,top,right,top,"north-east"));
  }
  // The bridge is drawn last so its planks visibly span the river.
- terrain.push({type:"bridge",x1:.685,y1:.5,x2:.835,y2:.5,widthIn:1.6,bridgeY:.5,bridgeHalfHeight:.07,label:"Stone bridge"});
+ terrain.push({type:"bridge",x1:.685,y1:.5,x2:.835,y2:.5,widthIn:5.0,bridgeY:.5,bridgeHalfHeight:.07,label:"Stone bridge"});
  terrain.push({type:"stairs",x:.30,y:.28,inside:true,label:"North-west stairway"},{type:"stairs",x:.59,y:.70,inside:true,label:"South-east stairway"});
  terrain.push({type:"siegeCastle",left,right,top,bottom,custom:true,city,approach});
  return terrain;
