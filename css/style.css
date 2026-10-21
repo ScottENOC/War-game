@@ -582,3 +582,12 @@ button,[role="button"]{
 @media(orientation:landscape) and (max-height:500px){
  #grand-campaign-world .grand-world-sidebar{max-height:48dvh;bottom:calc(env(safe-area-inset-bottom) + 6px)}
 }
+
+
+/* Campaign maps should be scrollable on desktop as well as touch devices.
+   Keep the setup map at its natural SVG size so the viewport can pan instead
+   of scaling the entire world to fit and leaving no scrollable area. */
+#grand-campaign-setup .grand-map-wrap{overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y;scrollbar-width:auto;-webkit-overflow-scrolling:touch}
+#grand-campaign-setup .grand-world-map{width:1300px;height:760px;max-width:none;max-height:none;object-fit:initial}
+#grand-campaign-world .grand-map-live-wrap{overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y;scrollbar-width:auto;-webkit-overflow-scrolling:touch}
+#grand-campaign-world .grand-map-live-wrap .grand-world-map{max-width:none;max-height:none}
