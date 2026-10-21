@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v23-sepulchre-harbour-spur";
+const MAP_ID="shattered-realms-v24-greenskin-roads-sea-waypoint";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -877,7 +877,7 @@ const byId=id=>document.getElementById(id);
   },{passive:false});
   campaignMapNav.set(host,state);
  }
-const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[425,375],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[850,670],23:[629,675],24:[575,435],25:[851,370],26:[952,280],27:[365,435]};
+const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[425,375],10:[653,329],11:[1000,240],12:[1095,326],13:[1157,190],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[850,670],23:[629,675],24:[575,435],25:[851,370],26:[952,280],27:[365,435]};
 const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
 function collectionBypassEnabled(){try{return getCollectionSnapshot()?.bypass===true;}catch{return false;}}
 function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
@@ -984,7 +984,7 @@ function createMovementGraph(){
   const [x,y]=positions[c.id],ns=(REGION_NEIGHBORS[c.id]||[]).filter(id=>!isSeaLink(c.id,id)&&id!==7&&id!==8&&id!==17);
   const avg=ns.length?ns.reduce((p,id)=>({x:p.x+positions[id][0]/ns.length,y:p.y+positions[id][1]/ns.length}),{x:0,y:0}):{x:x+18,y:y+12};
   const jx=Math.max(30,Math.min(1270,x+(avg.x-x)*.12)),jy=Math.max(30,Math.min(720,y+(avg.y-y)*.12));
-  const junction=c.id===6?{x:205,y:150}:{x:jx,y:jy}; add({id:"crossroads-"+c.id,region:c.id,type:"crossroads",label:c.id===9?"River crossing":c.name+" crossroads",x:junction.x,y:junction.y});
+  const junction=c.id===6?{x:205,y:150}:c.id===13?{x:1150.4,y:221.1}:{x:jx,y:jy}; add({id:"crossroads-"+c.id,region:c.id,type:"crossroads",label:c.id===9?"River crossing":c.name+" crossroads",x:junction.x,y:junction.y});
   route("city-"+c.id,"crossroads-"+c.id,"land",c.id,c.id);
  }
  const ports=[
@@ -1077,6 +1077,7 @@ function createMovementGraph(){
  route("crossroads-11","grinhold-road-fork","land",11,11);
  route("grinhold-road-fork","crossroads-13","land",11,13);
  route("grinhold-road-fork","crossroads-14","land",11,14);
+ route("crossroads-11","crossroads-15","land",11,15); // New road from Grinhold toward Mudgut.
  // A direct overland road links Ironhold to Stonebridge through a visible junction.
  add({id:"ironhold-stonebridge-road-junction",region:9,type:"crossroads",label:"Ironhold–Stonebridge road junction",x:472,y:391});
  route("crossroads-9","ironhold-stonebridge-road-junction","land",9,4);
@@ -1260,6 +1261,8 @@ function createMovementGraph(){
  unlink("port-6","waypoint-port-6-aelthir-north-sea-waypoint-1");
  link("port-6",aelthirSeaDogleg.id,1,"sea");
  link(aelthirSeaDogleg.id,"waypoint-port-6-barrowmere-west-sea-1-1",1,"sea");
+ // Place this generated sea waypoint at the midpoint of its two connected nodes.
+ if(nodes["waypoint-port-6-barrowmere-west-sea-1-1"]){nodes["waypoint-port-6-barrowmere-west-sea-1-1"].x=79;nodes["waypoint-port-6-barrowmere-west-sea-1-1"].y=106;}
  link(aelthirSeaDogleg.id,"waypoint-port-6-aelthir-north-sea-waypoint-1",1,"sea");
  // Barrowmere gets a single northern sea-lane junction; all existing sea approaches
  // now meet the junction rather than terminating directly at the harbour.
