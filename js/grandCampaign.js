@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v19-deepdelve-river-approach";
+const MAP_ID="shattered-realms-v20-southern-sea-route";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -1006,7 +1006,7 @@ function createMovementGraph(){
   if(seen.has(key))continue;seen.add(key);
   // Remove the redundant southern sea lane into Moonspire. The northern passage remains.
   if(key==="3-7")continue;
-  if(key==="19-21"||key==="21-22")continue; // The southern sea lane replaces the Dreadmarch/Varkesh overland connection to Sepulchre.
+  if(key==="21-22")continue; // Varkesh no longer reaches Sepulchre by the Dreadmarch land road; the southern sea lane replaces that connection.
   if(seaLinks.has(key)){
    const pA=ports.find(p=>p.city===c.id)||ports.find(p=>p.city===other);
    const pB=ports.find(p=>p.city===other&&p!==pA)||ports.find(p=>p.city===c.id&&p!==pA);
