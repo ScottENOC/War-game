@@ -877,7 +877,7 @@ const byId=id=>document.getElementById(id);
   },{passive:false});
   campaignMapNav.set(host,state);
  }
-const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[470,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[846,680],23:[629,642],24:[584,260],25:[851,370],26:[925,275],27:[365,435]};
+const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[425,375],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[846,680],23:[629,642],24:[575,435],25:[851,370],26:[925,275],27:[365,435]};
 const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
 function collectionBypassEnabled(){try{return getCollectionSnapshot()?.bypass===true;}catch{return false;}}
 function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
@@ -984,16 +984,16 @@ function createMovementGraph(){
   const [x,y]=positions[c.id],ns=(REGION_NEIGHBORS[c.id]||[]).filter(id=>!isSeaLink(c.id,id)&&id!==7&&id!==8&&id!==17);
   const avg=ns.length?ns.reduce((p,id)=>({x:p.x+positions[id][0]/ns.length,y:p.y+positions[id][1]/ns.length}),{x:0,y:0}):{x:x+18,y:y+12};
   const jx=Math.max(30,Math.min(1270,x+(avg.x-x)*.12)),jy=Math.max(30,Math.min(720,y+(avg.y-y)*.12));
-  const junction=c.id===6?{x:205,y:150}:{x:jx,y:jy}; add({id:"crossroads-"+c.id,region:c.id,type:"crossroads",label:c.name+" crossroads",x:junction.x,y:junction.y});
+  const junction=c.id===6?{x:205,y:150}:{x:jx,y:jy}; add({id:"crossroads-"+c.id,region:c.id,type:"crossroads",label:c.id===9?"River crossing":c.name+" crossroads",x:junction.x,y:junction.y});
   route("city-"+c.id,"crossroads-"+c.id,"land",c.id,c.id);
  }
  const ports=[
   {id:"port-3",region:3,type:"port",label:"Goldhaven harbour",x:369,y:311,city:3},
   {id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:119,y:76,city:6},
-  {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:541,y:174,city:7},
+  {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:520,y:155,city:7},
   {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:793,y:207,city:8},
   {id:"port-17",region:17,type:"port",label:"Barrowmere harbour",x:150,y:397,city:17},
-  {id:"port-9",region:9,type:"port",label:"Ironhold harbour",x:455,y:345,city:9},
+  {id:"port-9",region:9,type:"port",label:"Ironhold harbour",x:402,y:355,city:9},
   {id:"port-25",region:25,type:"port",label:"Eastwatch harbour",x:882,y:365,city:25},
   {id:"port-21",region:21,type:"port",label:"Dreadmarch harbour",x:1192,y:418,city:21},
   {id:"port-26",region:26,type:"port",label:"Freebooter's Haven harbour",x:952,y:280,city:26},
@@ -1055,7 +1055,7 @@ function createMovementGraph(){
   // Grinhold shares a short approach before the road branches toward Skullcrag
   // and Ironjaw Pass, avoiding two almost parallel roads leaving the stronghold.
   if(c.id===11||other===11)continue;
-  route("crossroads-"+c.id,"crossroads-"+other,"land",c.id,other);
+  if(key==="9-24"){route("crossroads-9","mountain-poi-central","land",9,24);route("mountain-poi-central","crossroads-24","land",9,24);}else route("crossroads-"+c.id,"crossroads-"+other,"land",c.id,other);
  }
  add({id:"grinhold-road-fork",region:11,type:"crossroads",label:"Grinhold western road fork",x:1080,y:264});
  route("crossroads-11","grinhold-road-fork","land",11,11);
@@ -1103,10 +1103,10 @@ function createMovementGraph(){
   {id:"forest-poi-south",region:20,type:"forest",label:"Southlands forest",x:555,y:480},
   {id:"mountain-poi-north",region:13,type:"mountain",label:"Northern mountain chain",x:275,y:115},
   {id:"mountain-poi-west",region:9,type:"mountain",label:"Western high peaks",x:375,y:155},
-  {id:"mountain-poi-central",region:9,type:"mountain",label:"Central mountain pass",x:510,y:375},
+  {id:"mountain-poi-central",region:9,type:"mountain",label:"Central mountain pass",x:530,y:390},
   {id:"mountain-poi-east",region:10,type:"mountain",label:"Eastern crags",x:645,y:300},
   {id:"river-poi-north",region:3,type:"river",label:"Goldhaven river bend",x:315,y:190},
-  {id:"river-poi-south",region:4,type:"river",label:"Southlands river ford",x:530,y:390},
+  {id:"river-poi-south",region:4,type:"river",label:"Southlands river ford",x:535,y:407},
   {id:"river-poi-east",region:10,type:"river",label:"Eastern river crossing",x:690,y:365}
  ];
  for(const p of mapFeatures){
@@ -1115,7 +1115,7 @@ function createMovementGraph(){
   // must not pull an inland trail into a sea lane.
   const junctions=Object.values(nodes).filter(n=>n.type==="crossroads");
   const nearest=junctions.reduce((best,n)=>!best||Math.hypot(n.x-p.x,n.y-p.y)<Math.hypot(best.x-p.x,best.y-p.y)?n:best,null);
-  if(nearest)route(p.id,nearest.id,"land",p.region,nearest.region);
+  if(p.id==="river-poi-south")route(p.id,"mountain-poi-central","land",p.region,9);else if(p.id!=="mountain-poi-central"&&nearest)route(p.id,nearest.id,"land",p.region,nearest.region);
  }
  // Find every crossing between routes. Both routes receive the same crossroads,
 
