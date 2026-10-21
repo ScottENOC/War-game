@@ -286,7 +286,14 @@ function campaignEquipmentGoldCost(config,faction="empire"){
  if(config.siegeMachine||equipmentTypes.includes(type))return Math.max(0,Math.round(unitCost(config,faction)));
  const base={type,models,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}};
  if(config.woodElfStyle)base.woodElfStyle=true;
- return Math.max(0,Math.round(unitCost(config,faction)-unitCost(base,faction)));
+ // Rare campaign equipment is priced in gold, not merely at its army-points value.
+ const rareGold=config=>(config.weapon==="magicSword"?40:0)+(config.magicArmour?40:0)
+  +(config.mounted&&config.mountType==="eagle"?32:0)
+  +(config.mounted&&config.mountType==="unicorn"?46:0)
+  +(config.mounted&&config.mountType==="youngDragon"?10:0)
+  +(config.mounted&&config.mountType==="dragon"?30:0)
+  +(config.mounted&&config.mountType==="ancientDragon"?80:0);
+ return Math.max(0,Math.round(unitCost(config,faction)-unitCost(base,faction)+rareGold(config)));
 }
 function campaignRecruitmentGoldCost(config,faction="empire"){
  if(!config)return 0;
@@ -2219,12 +2226,13 @@ function applyCampaignUnitEquipment(index){
  const meleeAllowed=new Set(choices.weapons.map(x=>x[0])),rangedAllowed=new Set(choices.ranged.map(x=>x[0])),armourAllowed=new Set(choices.armour.map(x=>x[0]));
  if(choices.canEdit&&(!meleeAllowed.has(weapon)||!rangedAllowed.has(ranged)||!armourAllowed.has(armour))){campaignMessage("That equipment combination is not permitted for this faction.");return;}
  if(mountControl&&!choices.mounts.some(x=>x[0]===mount)){campaignMessage("That mount is not permitted for this character and faction.");return;}
+ if(mountControl&&mount==="eagle"&&armour==="magic"){campaignMessage("A Pegasus-mounted character cannot wear enchanted heavy armour. Choose the armour separately after selecting a compatible mount.");return;}
  const candidate={...unit};
  if(choices.canEdit)Object.assign(candidate,{weapon,meleeWeapons:unit.dualWield?["handWeapon","offhandWeapon"]:weapon==="handWeapon"?["handWeapon"]:["handWeapon",weapon],lightArmour:armour==="light",heavyArmour:armour==="heavy",magicArmour:armour==="magic",shield,rangedWeapon:ranged==="none"?null:ranged});
  if(mountControl){
   candidate.mountType=mount;candidate.mounted=mount!=="none";candidate.barding=false;
   if(["youngDragon","dragon","ancientDragon"].includes(mount)){candidate.weapon="handWeapon";candidate.meleeWeapons=["handWeapon"];candidate.rangedWeapon=null;candidate.lightArmour=false;candidate.heavyArmour=false;candidate.shield=false;}
-  if(mount==="eagle"){candidate.heavyArmour=false;candidate.magicArmour=false;if(!["mageHero","mageLord","necromancer","masterNecromancer","vampireHero","vampireLord"].includes(unit.type)){candidate.weapon="spear";candidate.meleeWeapons=["handWeapon","spear"];candidate.rangedWeapon=FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race==="elf"?"bow":null;}}
+  if(mount==="eagle"){candidate.heavyArmour=false;candidate.magicArmour=false;if(FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race==="elf")candidate.rangedWeapon="bow";}
   if(mount==="none"&&["spear","lance"].includes(candidate.weapon)){candidate.weapon="handWeapon";candidate.meleeWeapons=["handWeapon"];}
   if(candidate.weapon==="halberd"&&candidate.mounted){candidate.weapon="handWeapon";candidate.meleeWeapons=["handWeapon"];}
  }
