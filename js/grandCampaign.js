@@ -2163,7 +2163,7 @@ function campaignEquipmentChoices(unit){
  if(!namedFixed&&!monsters&&race!=="greenskin"&&race!=="undead"&&!noArmourTypes.includes(type)){armour.push(["light","Light armour"]);if(race!=="dwarf")armour.push(["heavy","Heavy armour"]);}
  let mounts=[];
  if((!namedFixed||["legendaryLord","rifleman","captainWeiss"].includes(type))&&character){
-  if(race==="human"||race==="elf"){mounts=[["none","On foot"],["horse",race==="elf"?"Elven steed":"Warhorse"],["eagle","Pegasus"],["unicorn","Unicorn"]];if(type==="lord"&&race==="elf")mounts.push(["youngDragon","Young dragon"],["dragon","Dragon"],["ancientDragon","Ancient dragon"]);}
+  if(race==="human")mounts=[["none","On foot"],["horse","Warhorse"]];else if(race==="elf"){mounts=[["none","On foot"],["horse","Elven steed"],["eagle","Pegasus"],["unicorn","Unicorn"]];if(type==="lord")mounts.push(["youngDragon","Young dragon"],["dragon","Dragon"],["ancientDragon","Ancient dragon"]);}
   else if(race==="undead")mounts=[["none","On foot"],["skeletal_steed","Skeletal steed"],["skeletonChariot","Skeleton chariot"]];
   else if(race==="greenskin"&&["goblinHero","goblinLord","goblinShaman","goblinGreatShaman","orcHero","orcLord","orcShaman","orcGreatShaman"].includes(type)){mounts=type.startsWith("goblin")?[["none","On foot"],["wolf","Wolf"]]:[["none","On foot"],["boar","Boar"]];if(type==="orcLord")mounts.push(["wyvern","Wyvern"]);}
  }
