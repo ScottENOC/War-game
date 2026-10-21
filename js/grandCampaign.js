@@ -2073,6 +2073,11 @@ function recruitCatalog(){
     {key:"shadowElf",label:"Lethariel Starweaver",type:"shadowElf",weapon:"handWeapon",rangedWeapon:"magicBow",min:1,max:1,modelType:"shadowElf",character:true},
     {key:"pegasusChampion",label:"Aelthir, the Dawnwing",type:"pegasusChampion",weapon:"lance",min:1,max:1,modelType:"pegasusChampion",character:true},
     ...["youngDragon","dragon","ancientDragon"].map(type=>({key:type,label:type==="youngDragon"?"Young dragon":type==="dragon"?"Dragon":"Ancient dragon",type,weapon:"handWeapon",min:1,max:1,modelType:type,character:true}))
+   ]:race==="greenskin"?[
+    {key:"goblinShaman",label:"Goblin shaman",type:"goblinShaman",weapon:"handWeapon",min:1,max:1,modelType:"goblinShaman",character:true},
+    {key:"goblinGreatShaman",label:"Goblin great shaman",type:"goblinGreatShaman",weapon:"handWeapon",min:1,max:1,modelType:"goblinGreatShaman",character:true},
+    {key:"orcShaman",label:"Orc shaman",type:"orcShaman",weapon:"handWeapon",min:1,max:1,modelType:"orcShaman",character:true},
+    {key:"orcGreatShaman",label:"Orc great shaman",type:"orcGreatShaman",weapon:"handWeapon",min:1,max:1,modelType:"orcGreatShaman",character:true}
    ]:[
     {key:"mageHero",label:"Human mage",type:"mageHero",weapon:"handWeapon",min:1,max:1,modelType:"mageHero",character:true},
     {key:"mageLord",label:"Human archmage",type:"mageLord",weapon:"handWeapon",min:1,max:1,modelType:"mageLord",character:true},
@@ -2083,6 +2088,11 @@ function recruitCatalog(){
   ])
  ];
  if(race==="elf")options.push({key:"elfChariot",label:activeCampaign.playerPoliticalFaction==="verdantCourt"?"Wood Elf chariot":"High Elf chariot",type:"elfChariot",weapon:"handWeapon",min:3,max:3,modelType:"elfChariot",fixed:true,crewType:"swordsmen",crewWeapon:activeCampaign.playerPoliticalFaction==="verdantCourt"?"handWeapon":"spear"});
+ if(race==="human")options.push({key:"humanChariot",label:"Human war chariot",type:"humanChariot",weapon:"handWeapon",min:3,max:3,modelType:"humanChariot",fixed:true,crewType:"swordsmen",crewWeapon:"handWeapon"});
+ if(race==="greenskin"){
+  options.push({key:"goblinChariot",label:"Goblin chariot",type:"goblinChariot",weapon:"handWeapon",min:3,max:3,modelType:"goblinChariot",fixed:true,crewType:"goblins",crewWeapon:"handWeapon"});
+  options.push({key:"orcChariot",label:"Orc chariot",type:"orcChariot",weapon:"handWeapon",min:3,max:3,modelType:"orcChariot",fixed:true,crewType:"orcBoyz",crewWeapon:"handWeapon"});
+ }
  const equipmentVariants=["archers","crossbowmen","firearmInfantry","crossbows","dwarfFirearms","spearmen","halberdiers","greatWeapons","goblinBows","skeletonBows"];
  const visible=options.filter(o=>!equipmentVariants.includes(o.key));
  const infantry=visible.find(o=>o.key==="melee");
