@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v17-goldhaven-village-colours";
+const MAP_ID="shattered-realms-v18-deepdelve-southern-sea";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -1363,8 +1363,8 @@ function createMovementGraph(){
   if(nodes["feature-9-24-land-2"])link("feature-9-24-land-2",ironholdRiverCrossing.id,1,"land");
  }
  // Deepdelve is the river crossing itself; the city replaces its generated road junction.
- mergeInto("crossroads-10","city-10","Deepdelve river crossing");
- if(nodes["city-10"]){nodes["city-10"].type="city";nodes["city-10"].riverCrossing=true;nodes["city-10"].label="Deepdelve river crossing";}
+ mergeInto("crossroads-10","city-10","Deepdelve");
+ if(nodes["city-10"]){nodes["city-10"].type="city";nodes["city-10"].riverCrossing=true;nodes["city-10"].label="Deepdelve";}
  mergeInto("crossroads-18","city-18","Nightfen");
  if(nodes["city-18"]){nodes["city-18"].type="city";nodes["city-18"].label="Nightfen";}
  // Merge overlapping generated road points into the map features/cities they sit on.
