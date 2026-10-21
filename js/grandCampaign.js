@@ -1696,10 +1696,7 @@ function createMovementGraph(){
   if(nodes["port-26"])nodes["port-26"].x-=8;
 
   // Place the southern road features at the midpoints of their two connected locations.
-  if(nodes["feature-5-18-land-3"]){
-   moveToNeighbourMidpoint("feature-5-18-land-3");
-   nodes["feature-5-18-land-3"].y-=18;
-  }
+  if(nodes["feature-5-18-land-3"])moveToNeighbourMidpoint("feature-5-18-land-3");
   link("waypoint-crossroads-5-crossroads-18-2","waypoint-crossroads-18-crossroads-20-1",1,"land");
   if(nodes["waypoint-crossroads-22-crossroads-23-3"])nodes["waypoint-crossroads-22-crossroads-23-3"].y+=8;
   if(nodes["feature-18-22-land-2"])nodes["feature-18-22-land-2"].y-=24;
@@ -1729,15 +1726,12 @@ function createMovementGraph(){
    nodes["forest-poi-north-east"].controllerFaction="empire";
   }
   moveToNeighbourMidpoint("waypoint-forest-poi-north-east-crossroads-25-1");
+  // Keep the forest point itself, and add the Eastwatch-controlled village just west of it.
   if(nodes["forest-poi-east"]){
-   nodes["forest-poi-east"].type="village";
-   nodes["forest-poi-east"].label="Eastwatch Western Village";
-   nodes["forest-poi-east"].region=25;
-   nodes["forest-poi-east"].controllerFaction="empire";
-  }
-  if(nodes["forest-poi-east"]&&nodes["forest-poi-north-east"]){
-   nodes["forest-poi-east"].x=nodes["forest-poi-north-east"].x-38;
-   nodes["forest-poi-east"].y=nodes["forest-poi-north-east"].y+8;
+   const forest=nodes["forest-poi-east"];
+   const eastwatchVillage={id:"village-poi-eastwatch-west-forest",region:25,type:"village",label:"Eastwatch Western Village",x:forest.x-38,y:forest.y+8,population:510,prosperity:48,controllerFaction:"empire"};
+   add(eastwatchVillage);
+   link(forest.id,eastwatchVillage.id,1,"land");
   }
   if(nodes["waypoint-crossroads-10-crossroads-24-1"]){
    nodes["waypoint-crossroads-10-crossroads-24-1"].type="village";
