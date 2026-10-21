@@ -2055,7 +2055,7 @@ function deployedForOption(o){
 }
 function availableModelsForOption(o){const assigned=assignedSiegeModelIds();return collectionModels().filter(m=>!assigned.has(m.id)&&optionMatchesModel(o,m)).slice(o.fixed?0:deployedForOption(o));}
 function availableCrewForOption(o){const assigned=assignedSiegeModelIds(),crewOption={type:o.crewType,modelType:o.crewType,modelWeapon:o.crewWeapon,weapon:o.crewWeapon,key:"crew-"+o.key};return collectionModels().filter(m=>!assigned.has(m.id)&&optionMatchesModel(crewOption,m)&&!m.mounted).slice(deployedForOption(crewOption));}
-function availableForOption(o){const machines=availableModelsForOption(o).length;if(!o.fixed)return machines;return Math.min(machines,Math.floor(availableCrewForOption(o).length/o.min));}
+function availableForOption(o){if(collectionBypassEnabled())return o.fixed?1:Math.max(0,Number(o.max)||0);const machines=availableModelsForOption(o).length;if(!o.fixed)return machines;return Math.min(machines,Math.floor(availableCrewForOption(o).length/o.min));}
 function optionConfig(o,models){
  const sample=availableModelsForOption(o)[0];
  if(o.fixed){const crew=availableCrewForOption(o).slice(0,o.min),woodElfStyle=activeCampaign.playerPoliticalFaction==="verdantCourt";return {type:o.type,models:o.min,weapon:"handWeapon",meleeWeapons:woodElfStyle?["handWeapon","offhandWeapon"]:["handWeapon"],dualWield:woodElfStyle,woodElfStyle,machineModelId:sample?.id||null,crewModelIds:crew.map(m=>m.id),siegeMachine:true};}
