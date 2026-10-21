@@ -2179,15 +2179,22 @@ function applyCampaignUnitEquipment(index){
  const army=selectedPlayerArmy(),unit=army?.roster?.[index],treasury=selectedFactionTreasury();
  if(!unit||!army||!treasury)return;
  if(!campaignArmyAtFriendlyCity(army)){campaignMessage("Equipment can only be changed while this army is in a friendly city.");return;}
- const host=byId("grand-army-management");
- const read=(selector,fallback)=>host.querySelector(selector)?.value??fallback;
- const weapon=read('[data-equip-melee-weapon="'+index+'"]',unit.weapon||"handWeapon");
- const ranged=read('[data-equip-ranged-weapon="'+index+'"]',unit.rangedWeapon||"none");
- const armour=read('[data-equip-armour="'+index+'"]',unit.heavyArmour?"heavy":unit.lightArmour?"light":"none");
- const shield=!!host.querySelector('[data-equip-shield="'+index+'"]')?.checked;
- const candidate={...unit,weapon,meleeWeapons:unit.dualWield?["handWeapon","offhandWeapon"]:weapon==="handWeapon"?["handWeapon"]:["handWeapon",weapon],lightArmour:armour==="light",heavyArmour:armour==="heavy",shield,rangedWeapon:ranged==="none"?null:ranged};
- const faction=army.rosterFaction||rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction);
- const price=Math.max(0,campaignEquipmentGoldCost(candidate,faction)-campaignEquipmentGoldCost(unit,faction));
+ const host=byId("grand-army-management"),read=(selector,fallback)=>host.querySelector(selector)?.value??fallback;
+ const choices=campaignEquipmentChoices(unit),weapon=read('[data-equip-melee-weapon="'+index+'"]',unit.weapon||"handWeapon"),ranged=read('[data-equip-ranged-weapon="'+index+'"]',unit.rangedWeapon||"none"),armour=read('[data-equip-armour="'+index+'"]',unit.heavyArmour?"heavy":unit.lightArmour?"light":"none");
+ const shieldControl=host.querySelector('[data-equip-shield="'+index+'"]'),shield=shieldControl?!!shieldControl.checked:!!unit.shield,mountControl=host.querySelector('[data-equip-mount="'+index+'"]'),mount=mountControl?.value;
+ const meleeAllowed=new Set(choices.weapons.map(x=>x[0])),rangedAllowed=new Set(choices.ranged.map(x=>x[0])),armourAllowed=new Set(choices.armour.map(x=>x[0]));
+ if(choices.canEdit&&(!meleeAllowed.has(weapon)||!rangedAllowed.has(ranged)||!armourAllowed.has(armour))){campaignMessage("That equipment combination is not permitted for this faction.");return;}
+ if(mountControl&&!choices.mounts.some(x=>x[0]===mount)){campaignMessage("That mount is not permitted for this character and faction.");return;}
+ const candidate={...unit};
+ if(choices.canEdit)Object.assign(candidate,{weapon,meleeWeapons:unit.dualWield?["handWeapon","offhandWeapon"]:weapon==="handWeapon"?["handWeapon"]:["handWeapon",weapon],lightArmour:armour==="light",heavyArmour:armour==="heavy",shield,rangedWeapon:ranged==="none"?null:ranged});
+ if(mountControl){
+  candidate.mountType=mount;candidate.mounted=mount!=="none";candidate.barding=false;
+  if(["youngDragon","dragon","ancientDragon"].includes(mount)){candidate.weapon="handWeapon";candidate.meleeWeapons=["handWeapon"];candidate.rangedWeapon=null;candidate.lightArmour=false;candidate.heavyArmour=false;candidate.shield=false;}
+  if(mount==="eagle"){candidate.heavyArmour=false;candidate.magicArmour=false;if(!["mageHero","mageLord","necromancer","masterNecromancer","vampireHero","vampireLord"].includes(unit.type)){candidate.weapon="spear";candidate.meleeWeapons=["handWeapon","spear"];candidate.rangedWeapon=FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race==="elf"?"bow":null;}}
+  if(mount==="none"&&["spear","lance"].includes(candidate.weapon)){candidate.weapon="handWeapon";candidate.meleeWeapons=["handWeapon"];}
+  if(candidate.weapon==="halberd"&&candidate.mounted){candidate.weapon="handWeapon";candidate.meleeWeapons=["handWeapon"];}
+ }
+ const faction=army.rosterFaction||rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction),price=Math.max(0,campaignEquipmentGoldCost(candidate,faction)-campaignEquipmentGoldCost(unit,faction));
  if((treasury.treasury||0)<price){campaignMessage("Not enough gold. This equipment change costs "+price+" gold.");return;}
  Object.assign(unit,candidate);treasury.treasury-=price;army.points=campaignArmyCost(army);syncPlayerArmyState();
  campaignMessage("Equipment updated for "+(unit.name||unit.type)+". "+(price?"Paid "+price+" gold.":"No additional gold was required."));
