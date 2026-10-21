@@ -877,7 +877,7 @@ const byId=id=>document.getElementById(id);
   },{passive:false});
   campaignMapNav.set(host,state);
  }
-const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[515,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[846,680],23:[629,642],24:[584,260],25:[851,370],26:[925,275],27:[365,435]};
+const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[470,352],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[846,680],23:[629,642],24:[584,260],25:[851,370],26:[925,275],27:[365,435]};
 const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
 function collectionBypassEnabled(){try{return getCollectionSnapshot()?.bypass===true;}catch{return false;}}
 function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
@@ -990,10 +990,10 @@ function createMovementGraph(){
  const ports=[
   {id:"port-3",region:3,type:"port",label:"Goldhaven harbour",x:369,y:311,city:3},
   {id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:119,y:76,city:6},
-  {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:561,y:163,city:7},
-  {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:773,y:226,city:8},
+  {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:541,y:174,city:7},
+  {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:793,y:207,city:8},
   {id:"port-17",region:17,type:"port",label:"Barrowmere harbour",x:150,y:397,city:17},
-  {id:"port-9",region:9,type:"port",label:"Ironhold harbour",x:488,y:333,city:9},
+  {id:"port-9",region:9,type:"port",label:"Ironhold harbour",x:455,y:345,city:9},
   {id:"port-25",region:25,type:"port",label:"Eastwatch harbour",x:882,y:365,city:25},
   {id:"port-21",region:21,type:"port",label:"Dreadmarch harbour",x:1192,y:418,city:21},
   {id:"port-26",region:26,type:"port",label:"Freebooter's Haven harbour",x:952,y:280,city:26},
@@ -1011,12 +1011,12 @@ function createMovementGraph(){
    const pB=ports.find(p=>p.city===other&&p!==pA)||ports.find(p=>p.city===c.id&&p!==pA);
    if(pA&&pB){
     if(key==="6-7"){
-     const join={id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55};add(join);/* The northern route from Aelthir already reaches this junction via the Silvershade–Aelthir sea lane. Keep only the final harbour spur here; the direct southern duplicate is intentionally omitted. */route(join.id,pB.id,"sea",c.id,other);
+     const join={id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55};add(join);/* The northern route from Aelthir already reaches this junction via the Silvershade–Aelthir sea lane. Keep only the final harbour spur here; the direct southern duplicate is intentionally omitted. */route(join.id,pB.id,"sea",c.id,other);route(join.id,"goldhaven-north-sea-5","sea",7,8);
     }else if(key==="6-8"){
-     const waypoints=[{id:"aelthir-north-sea-waypoint",region:6,type:"seaRoute",label:"Northern sea passage",x:190,y:42},{id:"greyward-north-sea-waypoint",region:7,type:"seaRoute",label:"Greyward northern passage",x:315,y:32},{id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55},{id:"eastern-north-sea-waypoint",region:8,type:"seaRoute",label:"Eastern northern sea passage",x:600,y:48},{id:"silvershade-north-sea-waypoint",region:8,type:"seaRoute",label:"Silvershade northern passage",x:720,y:80},{id:"silvershade-coastal-sea-waypoint",region:8,type:"seaRoute",label:"Silvershade coastal approach",x:770,y:150}];
-     for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+     const waypoints=[{id:"aelthir-north-sea-waypoint",region:6,type:"seaRoute",label:"Northern sea passage",x:190,y:42},{id:"greyward-north-sea-waypoint",region:7,type:"seaRoute",label:"Greyward northern passage",x:315,y:32},{id:"moonspire-north-sea-waypoint",region:7,type:"seaRoute",label:"Moonspire northern passage",x:440,y:55},{id:"eastern-north-sea-waypoint",region:8,type:"seaRoute",label:"Eastern northern sea passage",x:600,y:48},{id:"silvershade-north-sea-waypoint",region:8,type:"seaRoute",label:"Silvershade northern passage",x:720,y:80},{id:"silvershade-coastal-sea-waypoint",region:8,type:"seaRoute",label:"Silvershade coastal approach",x:755,y:155}];
+     for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id)];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="3-8"){
-     const waypoints=[{id:"goldhaven-north-sea-1",region:3,type:"seaRoute",label:"Goldhaven northern passage",x:400,y:300},{id:"goldhaven-north-sea-2",region:8,type:"seaRoute",label:"Central coast passage",x:450,y:275},{id:"goldhaven-north-sea-3",region:8,type:"seaRoute",label:"Northern island approach",x:540,y:250},{id:"goldhaven-north-sea-4",region:8,type:"seaRoute",label:"Silvershade approach",x:650,y:245},{id:"goldhaven-north-sea-5",region:8,type:"seaRoute",label:"Silvershade coastal passage",x:730,y:215}];for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),pB.id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+     const waypoints=[{id:"goldhaven-north-sea-1",region:3,type:"seaRoute",label:"Goldhaven northern passage",x:400,y:300},{id:"goldhaven-north-sea-2",region:8,type:"seaRoute",label:"Central coast passage",x:450,y:275},{id:"goldhaven-north-sea-3",region:8,type:"seaRoute",label:"Northern island approach",x:540,y:250},{id:"goldhaven-north-sea-4",region:8,type:"seaRoute",label:"Silvershade approach",x:650,y:245},{id:"goldhaven-north-sea-5",region:8,type:"seaRoute",label:"Silvershade coastal passage",x:730,y:215}];for(const n of waypoints)add(n);const chain=[pA.id,...waypoints.map(n=>n.id),"eastwatch-silvershade-coast-2"];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="3-7"){
      const waypoints=[{id:"goldhaven-moonspire-south-1",region:3,type:"seaRoute",label:"Goldhaven–Moonspire southern passage",x:405,y:330},{id:"goldhaven-moonspire-south-2",region:7,type:"seaRoute",label:"Greyward Isles approach",x:480,y:275},{id:"goldhaven-moonspire-south-3",region:7,type:"seaRoute",label:"Moonspire harbour approach",x:535,y:210}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===3).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===7).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="3-9"){
@@ -1029,13 +1029,13 @@ function createMovementGraph(){
      route(pB.id,iron.id,"sea",3,9);route(iron.id,junction.id,"sea",3,9);
      route(junction.id,barrow.id,"sea",3,17);route(barrow.id,ports.find(p=>p.city===17).id,"sea",3,17);
     }else if(key==="8-25"){
-     const waypoints=[{id:"eastwatch-silvershade-coast-1",region:25,type:"seaRoute",label:"Eastern coast passage",x:861,y:322},{id:"eastwatch-silvershade-coast-2",region:8,type:"seaRoute",label:"Island approach",x:830,y:270}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===25).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===8).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+     const waypoints=[{id:"eastwatch-silvershade-coast-1",region:25,type:"seaRoute",label:"Eastern coast passage",x:861,y:322},{id:"eastwatch-silvershade-coast-2",region:8,type:"seaRoute",label:"Island approach",x:785,y:255}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===25).id,waypoints[0].id,waypoints[1].id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);route(waypoints[1].id,ports.find(p=>p.city===8).id,"sea",c.id,other);
     }else if(key==="8-21"){
-     const waypoints=[{id:"dreadmarch-silvershade-coast-1",region:21,type:"seaRoute",label:"Dreadmarch northern passage",x:1125,y:300},{id:"dreadmarch-silvershade-coast-2",region:8,type:"seaRoute",label:"Eastern island approach",x:950,y:260},{id:"dreadmarch-silvershade-coast-3",region:8,type:"seaRoute",label:"Silvershade island approach",x:825,y:250}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===8).id,...waypoints.slice().reverse().map(n=>n.id),ports.find(p=>p.city===21).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+     const waypoints=[{id:"dreadmarch-silvershade-coast-1",region:21,type:"seaRoute",label:"Dreadmarch northern passage",x:1125,y:300},{id:"dreadmarch-silvershade-coast-2",region:8,type:"seaRoute",label:"Eastern island approach",x:950,y:260},{id:"dreadmarch-silvershade-coast-3",region:8,type:"seaRoute",label:"Silvershade island approach",x:825,y:250}];for(const n of waypoints)add(n);const chain=["eastwatch-silvershade-coast-2",...waypoints.slice().reverse().map(n=>n.id),ports.find(p=>p.city===21).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="21-25"){
      const waypoints=[{id:"eastwatch-dreadmarch-channel",region:21,type:"seaRoute",label:"Eastern channel",x:1120,y:370}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===21).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===25).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="8-26"){
-      const waypoints=[{id:"freebooter-north-channel",region:26,type:"seaRoute",label:"Freebooter northern channel",x:865,y:205},{id:"freebooter-west-approach",region:26,type:"seaRoute",label:"Far Shoals approach",x:915,y:230}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===8).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===26).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+      const waypoints=[{id:"freebooter-north-channel",region:26,type:"seaRoute",label:"Freebooter northern channel",x:865,y:205},{id:"silvershade-freebooter-midpoint",region:8,type:"seaRoute",label:"Outer northern channel",x:825,y:165},{id:"freebooter-west-approach",region:26,type:"seaRoute",label:"Far Shoals approach",x:915,y:230}];for(const n of waypoints)add(n);const chain=["silvershade-coastal-sea-waypoint","silvershade-freebooter-midpoint","freebooter-north-channel","freebooter-west-approach",ports.find(p=>p.city===26).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
      }else if(key==="25-26"){
       const waypoints=[{id:"eastwatch-far-shoals-channel",region:25,type:"seaRoute",label:"Far Shoals channel",x:900,y:330},{id:"far-shoals-south-approach",region:26,type:"seaRoute",label:"Southern island approach",x:940,y:310}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===25).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===26).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
      }else if(key==="3-27"){
@@ -1061,6 +1061,11 @@ function createMovementGraph(){
  route("crossroads-11","grinhold-road-fork","land",11,11);
  route("grinhold-road-fork","crossroads-13","land",11,13);
  route("grinhold-road-fork","crossroads-14","land",11,14);
+ // A direct overland road links Ironhold to Stonebridge through a visible junction.
+ add({id:"ironhold-stonebridge-road-junction",region:9,type:"crossroads",label:"Ironhold–Stonebridge road junction",x:472,y:391});
+ route("crossroads-9","ironhold-stonebridge-road-junction","land",9,4);
+ route("ironhold-stonebridge-road-junction","crossroads-4","land",9,4);
+ route("goldhaven-north-sea-5","silvershade-coastal-sea-waypoint","sea",3,8);
  // Put a visible point of interest on routes through every named terrain feature.
  const featurePattern=[
   {re:/forest|woodland|grove|timber/i,type:"forest",label:"Forest trail"},
