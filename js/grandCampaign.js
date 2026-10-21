@@ -2160,7 +2160,7 @@ function campaignEquipmentChoices(unit){
  if(!namedFixed&&!monsters){if(race==="human")ranged.push(["bow","Bow"],["crossbow","Crossbow"],["firearm","Firearm"],["longRifle","Long rifle"]);else if(race==="dwarf")ranged.push(["crossbow","Crossbow"],["firearm","Dwarf handgun"],["longRifle","Long rifle"]);else if(race==="elf")ranged.push(["bow","Longbow"]);else if(race==="greenskin"&&["goblins","goblinHero","goblinLord"].includes(type))ranged.push(["bow","Short bow"]);else if(race==="undead"&&type==="skeletons")ranged.push(["bow","Bow"]);}
  const armour=[[unit.magicArmour?"magic":"none",unit.magicArmour?"Enchanted heavy armour":"No armour"]];
  const noArmourTypes=["mageHero","mageLord","necromancer","masterNecromancer","vampireHero","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"];
- if(!namedFixed&&!monsters&&race!=="greenskin"&&race!=="undead"&&!noArmourTypes.includes(type)){armour.push(["light","Light armour"]);if(race!=="dwarf")armour.push(["heavy","Heavy armour"]);if(race!=="dwarf"&&unit.mountType!=="eagle")armour.push(["magic","Enchanted heavy armour"]);}
+ if(!namedFixed&&!monsters&&race!=="greenskin"&&race!=="undead"&&!noArmourTypes.includes(type)){armour.push(["light","Light armour"],["heavy","Heavy armour"]);if(race!=="dwarf"&&unit.mountType!=="eagle")armour.push(["magic","Enchanted heavy armour"]);}
  let mounts=[];
  if((!namedFixed||["legendaryLord","rifleman","captainWeiss"].includes(type))&&character){
   if(race==="human")mounts=[["none","On foot"],["horse","Warhorse"]];else if(race==="elf"){mounts=[["none","On foot"],["horse","Elven steed"],["eagle","Pegasus"],["unicorn","Unicorn"]];if(type==="lord")mounts.push(["youngDragon","Young dragon"],["dragon","Dragon"],["ancientDragon","Ancient dragon"]);}
