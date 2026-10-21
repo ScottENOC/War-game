@@ -1065,7 +1065,12 @@ function createMovementGraph(){
        {id:"eastern-continent-north-coast-3",region:26,type:"seaRoute",label:"Far Shoals northern approach",x:1110,y:180}
      ];for(const n of waypoints)add(n);
      const dreadJunction={id:"dreadmarch-harbour-junction",region:21,type:"seaRoute",label:"Dreadmarch Harbour T-junction",x:1240,y:365};if(!nodes[dreadJunction.id])add(dreadJunction);
-     const chain=["sepulchre-south-sea-9","sepulchre-south-sea-8",dreadJunction.id,...waypoints.map(n=>n.id),"freebooter-north-channel"];
+     const dreadmarchOffshore=[
+       {id:"dreadmarch-offshore-south",region:21,type:"seaRoute",label:"Dreadmarch southern offshore passage",x:1150,y:620},
+       {id:"dreadmarch-offshore-east",region:21,type:"seaRoute",label:"Dreadmarch eastern offshore passage",x:1265,y:575},
+       {id:"dreadmarch-offshore-north-east",region:21,type:"seaRoute",label:"Dreadmarch outer eastern passage",x:1285,y:470}
+      ];for(const n of dreadmarchOffshore)if(!nodes[n.id])add(n);
+      const chain=["sepulchre-south-sea-9","sepulchre-south-sea-8",...dreadmarchOffshore.map(n=>n.id),dreadJunction.id,...waypoints.map(n=>n.id),"freebooter-north-channel"];
      for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
      route(dreadJunction.id,ports.find(p=>p.city===21).id,"sea",c.id,other);
     }else if(key==="21-25"){
