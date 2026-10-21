@@ -469,7 +469,7 @@ const CITIES = [
 {id:7,name:"Moonspire",faction:"highElves",ruler:"The Moonlit Princes",status:"Rival elven court",terrain:"Wooded Greyward Isles",description:"A secluded island court guarding wooded isles and a valuable sea lane.",requiredCharacters:["lethariel_starweaver"]},
 {id:8,name:"Silvershade",faction:"highElves",ruler:"The Silver Admiralty",status:"Autonomous elven court",terrain:"Eastern island forest and deep harbour",description:"A wealthy harbour-city whose admirals command the eastern island passages.",requiredCharacters:[]},
 {id:9,name:"Ironhold",faction:"dwarfs",ruler:"Clan Barakdur",status:"Player clan",terrain:"High mountains; iron and silver mines",description:"A deep mountain hold behind a narrow pass. Its mines and forges make it strategically valuable.",requiredCharacters:["haldric_stoneward"]},
-{id:10,name:"Deepdelve",faction:"dwarfs",ruler:"Clan Kazrinn",status:"Rival thane",terrain:"Eastern mountain range; deep ore",description:"A fortified hold on the eastern range. Its thane recognises the high council but keeps his own army and treasury.",requiredCharacters:[]},
+{id:10,name:"Deepdelve",faction:"dwarfs",ruler:"Clan Kazrinn",status:"Rival thane",terrain:"Eastern mountain range; western-bank river crossing and deep ore",description:"A fortified hold on the west bank of the river, controlling the crossing into the eastern range. Its thane recognises the high council but keeps his own army and treasury.",requiredCharacters:[]},
 {id:11,name:"Grinhold",faction:"greenskins",ruler:"The Grinhold warboss council",status:"Greenskin stronghold",terrain:"Eastern highlands; mountain caves",description:"A sprawling orc-and-goblin stronghold built into a broken mountain ridge.",requiredCharacters:[]},
 {id:12,name:"Redfang Plain",faction:"greenskins",ruler:"Redfang warband",status:"Tribal territory",terrain:"Open eastern grassland",description:"A vast grazing plain used by roaming greenskin warbands and ogre bands.",requiredCharacters:[]},
 {id:13,name:"Skullcrag",faction:"greenskins",ruler:"The Crag Bosses",status:"Contested hold",terrain:"Northern mountain chain",description:"A chain of crags and tunnels that shelters goblin tribes and hard-bitten orc clans.",requiredCharacters:[]},
@@ -1006,7 +1006,7 @@ function createMovementGraph(){
   if(seen.has(key))continue;seen.add(key);
   // Remove the redundant southern sea lane into Moonspire. The northern passage remains.
   if(key==="3-7")continue;
-  if(key==="19-22")continue; // Varkesh–Sepulchre is replaced by the southern sea route below.
+  if(key==="19-21"||key==="21-22")continue; // The southern sea lane replaces the Dreadmarch/Varkesh overland connection to Sepulchre.
   if(seaLinks.has(key)){
    const pA=ports.find(p=>p.city===c.id)||ports.find(p=>p.city===other);
    const pB=ports.find(p=>p.city===other&&p!==pA)||ports.find(p=>p.city===c.id&&p!==pA);
@@ -1368,7 +1368,7 @@ function createMovementGraph(){
  mergeInto("crossroads-18","city-18","Nightfen");
  if(nodes["city-18"]){nodes["city-18"].type="city";nodes["city-18"].label="Nightfen";}
  // Merge overlapping generated road points into the map features/cities they sit on.
- mergeInto("waypoint-forest-poi-north-east-crossroads-10-1","city-10","Deepdelve river crossing");
+ mergeInto("waypoint-forest-poi-north-east-crossroads-10-1","waypoint-crossroads-10-crossroads-25-1","Deepdelve forest-road junction");
  mergeInto("waypoint-crossroads-10-crossroads-25-2","forest-poi-north-east","Deepdelve forest-road junction");
  mergeMapPoints(["waypoint-crossroads-5-crossroads-20-1","waypoint-crossroads-4-crossroads-23-2"],"Southern road junction");
  removeWithoutSplice("river-poi-east");
@@ -1384,9 +1384,9 @@ function createMovementGraph(){
  for(let i=1;i<ironholdVillageSeaChain.length;i++)link(ironholdVillageSeaChain[i-1],ironholdVillageSeaChain[i],1,"sea");
  // The southern coast is served by Ashenford and Varkesh harbours and a new Sepulchre harbour.
  const southernPorts=[
-  {id:"port-23",region:23,type:"port",label:"Ashenford Harbour",x:630,y:700,city:23},
+  {id:"port-23",region:23,type:"port",label:"Ashenford Harbour",x:630,y:715,city:23},
   {id:"port-22",region:22,type:"port",label:"Varkesh Harbour",x:850,y:700,city:22},
-  {id:"port-19",region:19,type:"port",label:"Sepulchre Harbour",x:1080,y:645,city:19}
+  {id:"port-19",region:19,type:"port",label:"Sepulchre Harbour",x:1090,y:490,city:19}
  ];
  for(const p of southernPorts){if(!nodes[p.id])add(p);link("city-"+p.city,p.id,1,"land");}
  const southSea=[
@@ -1398,10 +1398,12 @@ function createMovementGraph(){
   {id:"sepulchre-south-sea-5",region:22,type:"seaRoute",label:"Southern coast sea lane",x:740,y:730},
   {id:"varkesh-harbour-junction",region:22,type:"seaRoute",label:"Varkesh Harbour T-junction",x:850,y:730},
   {id:"sepulchre-south-sea-6",region:19,type:"seaRoute",label:"Sepulchre coastal approach",x:980,y:715},
-  {id:"sepulchre-south-sea-7",region:19,type:"seaRoute",label:"Sepulchre southern approach",x:1040,y:685}
+  {id:"sepulchre-south-sea-7",region:19,type:"seaRoute",label:"Sepulchre southern approach",x:1040,y:685},
+  {id:"sepulchre-south-sea-8",region:19,type:"seaRoute",label:"Sepulchre coastal approach",x:1060,y:600},
+  {id:"sepulchre-south-sea-9",region:19,type:"seaRoute",label:"Sepulchre harbour approach",x:1080,y:535}
  ];
  for(const n of southSea)if(!nodes[n.id])add(n);
- const trunk=["barrowmere-blackflag-east","sepulchre-south-sea-1","sepulchre-south-sea-2","sepulchre-south-sea-3","sepulchre-south-sea-4","ashenford-harbour-junction","sepulchre-south-sea-5","varkesh-harbour-junction","sepulchre-south-sea-6","sepulchre-south-sea-7","port-19"];
+ const trunk=["barrowmere-blackflag-east","sepulchre-south-sea-1","sepulchre-south-sea-2","sepulchre-south-sea-3","sepulchre-south-sea-4","ashenford-harbour-junction","sepulchre-south-sea-5","varkesh-harbour-junction","sepulchre-south-sea-6","sepulchre-south-sea-7","sepulchre-south-sea-8","sepulchre-south-sea-9","port-19"];
  for(let i=1;i<trunk.length;i++)link(trunk[i-1],trunk[i],1,"sea");
  link("ashenford-harbour-junction","port-23",1,"sea");
  link("varkesh-harbour-junction","port-22",1,"sea");
