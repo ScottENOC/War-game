@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v24-greenskin-roads-sea-waypoint";
+const MAP_ID="shattered-realms-v25-eastern-sea-routes-camera-pan";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -868,7 +868,34 @@ const byId=id=>document.getElementById(id);
   },{passive:false});
   const reset=()=>{state.startDistance=0;};
   host.addEventListener("touchend",reset,{passive:true});host.addEventListener("touchcancel",reset,{passive:true});
-  host.addEventListener("wheel",e=>{
+     // Desktop camera pan: drag the map background with the left mouse button.
+   // Interactive cities, armies and controls keep their normal click behaviour.
+   const panState={pointerId:null,startX:0,startY:0,scrollX:0,scrollY:0,moved:false};
+   const interactiveSelector="button,input,select,textarea,a,.grand-city,.campaign-node,.campaign-army-token,[role='button']";
+   host.addEventListener("pointerdown",e=>{
+    if(e.pointerType==="touch"||e.button!==0||e.target.closest(interactiveSelector))return;
+    panState.pointerId=e.pointerId;panState.startX=e.clientX;panState.startY=e.clientY;
+    panState.scrollX=host.scrollLeft;panState.scrollY=host.scrollTop;panState.moved=false;
+   });
+   host.addEventListener("pointermove",e=>{
+    if(panState.pointerId!==e.pointerId)return;
+    const dx=e.clientX-panState.startX,dy=e.clientY-panState.startY;
+    if(!panState.moved&&Math.hypot(dx,dy)<4)return;
+    panState.moved=true;host.classList.add("campaign-map-panning");e.preventDefault();
+    host.scrollLeft=panState.scrollX-dx;host.scrollTop=panState.scrollY-dy;
+   },{passive:false});
+   const finishPan=e=>{
+    if(panState.pointerId!==e.pointerId)return;
+    if(panState.moved)host.dataset.suppressMapClick="true";
+    panState.pointerId=null;host.classList.remove("campaign-map-panning");
+   };
+   host.addEventListener("pointerup",finishPan);host.addEventListener("pointercancel",finishPan);
+   host.addEventListener("click",e=>{
+    if(host.dataset.suppressMapClick==="true"){
+     delete host.dataset.suppressMapClick;e.preventDefault();e.stopPropagation();
+    }
+   },true);
+   host.addEventListener("wheel",e=>{
    if(!e.ctrlKey&&!e.metaKey)return;
    e.preventDefault();
    const rect=host.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top,old=state.scale;
@@ -877,7 +904,7 @@ const byId=id=>document.getElementById(id);
   },{passive:false});
   campaignMapNav.set(host,state);
  }
-const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[425,375],10:[653,329],11:[1000,240],12:[1095,326],13:[1157,190],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[850,670],23:[629,675],24:[575,435],25:[851,370],26:[952,280],27:[365,435]};
+const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[425,375],10:[653,329],11:[1000,240],12:[1030,326],13:[1157,190],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[850,670],23:[629,675],24:[575,435],25:[820,385],26:[952,280],27:[365,435]};
 const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
 function collectionBypassEnabled(){try{return getCollectionSnapshot()?.bypass===true;}catch{return false;}}
 function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
@@ -991,10 +1018,10 @@ function createMovementGraph(){
   {id:"port-3",region:3,type:"port",label:"Goldhaven harbour",x:369,y:311,city:3},
   {id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:119,y:76,city:6},
   {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:520,y:155,city:7},
-  {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:790,y:260,city:8},
+  {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:780,y:240,city:8},
   {id:"port-17",region:17,type:"port",label:"Barrowmere harbour",x:150,y:397,city:17},
   {id:"port-9",region:9,type:"port",label:"Ironhold harbour",x:402,y:355,city:9},
-  {id:"port-25",region:25,type:"port",label:"Eastwatch harbour",x:820,y:385,city:25},
+  {id:"port-25",region:25,type:"port",label:"Eastwatch harbour",x:851,y:370,city:25},
   {id:"port-21",region:21,type:"port",label:"Dreadmarch harbour",x:1192,y:418,city:21},
   {id:"port-26",region:26,type:"port",label:"Freebooter's Haven harbour",x:925,y:275,city:26},
   {id:"port-27",region:27,type:"port",label:"Blackflag Cay harbour",x:365,y:400,city:27}
@@ -1033,11 +1060,11 @@ function createMovementGraph(){
      const waypoints=[{id:"eastwatch-silvershade-coast-1",region:25,type:"seaRoute",label:"Eastern coast passage",x:845,y:340},{id:"eastwatch-silvershade-coast-2",region:8,type:"seaRoute",label:"Island approach",x:785,y:255}];for(const n of waypoints)add(n);const chain=[waypoints[0].id,waypoints[1].id,ports.find(p=>p.city===8).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="8-21"){
      const waypoints=[
-      {id:"eastern-continent-north-coast-1",region:21,type:"seaRoute",label:"Eastern continent northern coast",x:1090,y:285},
-      {id:"eastern-continent-north-coast-2",region:21,type:"seaRoute",label:"Northern coast passage",x:1130,y:245},
-      {id:"eastern-continent-north-coast-3",region:26,type:"seaRoute",label:"Far Shoals northern approach",x:1050,y:205}
+      {id:"eastern-continent-north-coast-1",region:21,type:"seaRoute",label:"Eastern continent northern coast",x:1200,y:300},
+       {id:"eastern-continent-north-coast-2",region:21,type:"seaRoute",label:"Northern coast passage",x:1225,y:245},
+       {id:"eastern-continent-north-coast-3",region:26,type:"seaRoute",label:"Far Shoals northern approach",x:1110,y:180}
      ];for(const n of waypoints)add(n);
-     const dreadJunction={id:"dreadmarch-harbour-junction",region:21,type:"seaRoute",label:"Dreadmarch Harbour T-junction",x:1160,y:385};if(!nodes[dreadJunction.id])add(dreadJunction);
+     const dreadJunction={id:"dreadmarch-harbour-junction",region:21,type:"seaRoute",label:"Dreadmarch Harbour T-junction",x:1240,y:365};if(!nodes[dreadJunction.id])add(dreadJunction);
      const chain=["sepulchre-south-sea-9","sepulchre-south-sea-8",dreadJunction.id,...waypoints.map(n=>n.id),"freebooter-north-channel"];
      for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
      route(dreadJunction.id,ports.find(p=>p.city===21).id,"sea",c.id,other);
@@ -1048,7 +1075,7 @@ function createMovementGraph(){
     }else if(key==="8-26"){
       const waypoints=[{id:"freebooter-north-channel",region:26,type:"seaRoute",label:"Freebooter northern channel",x:865,y:205},{id:"silvershade-freebooter-midpoint",region:8,type:"seaRoute",label:"Outer northern channel",x:825,y:165},{id:"freebooter-west-approach",region:26,type:"seaRoute",label:"Far Shoals approach",x:915,y:230}];for(const n of waypoints)add(n);const chain=["silvershade-coastal-sea-waypoint","silvershade-freebooter-midpoint","freebooter-north-channel","freebooter-west-approach",ports.find(p=>p.city===26).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
      }else if(key==="25-26"){
-      const waypoints=[{id:"eastwatch-far-shoals-channel",region:25,type:"seaRoute",label:"Far Shoals channel",x:875,y:355},{id:"far-shoals-south-approach",region:26,type:"seaRoute",label:"Southern island approach",x:925,y:325}];for(const n of waypoints)add(n);
+      const waypoints=[{id:"eastwatch-far-shoals-channel",region:25,type:"seaRoute",label:"Far Shoals channel",x:875,y:355},{id:"far-shoals-south-approach",region:26,type:"seaRoute",label:"Southern island approach",x:920,y:350}];for(const n of waypoints)add(n);
       const coast={id:"eastwatch-silvershade-coast-1",region:25,type:"seaRoute",label:"Eastern coast passage",x:845,y:340};if(!nodes[coast.id])add(coast);
       // Keep Eastwatch Harbour off the main lane; the coast passage joins the Far Shoals route.
       route(coast.id,waypoints[0].id,"sea",25,26);
@@ -1439,7 +1466,29 @@ function createMovementGraph(){
  link("sepulchre-south-sea-9","port-19",1,"sea");
  link("ashenford-harbour-junction","port-23",1,"sea");
  link("varkesh-harbour-junction","port-22",1,"sea");
- // Give every map point a unique human-readable label while preserving its stable ID.
+   // Connect the Eastwatch/Far Shoals channel to Sepulchre's southern coastal lane.
+  // Named intermediate points route the connection around the coast rather than straight across land.
+  const eastwatchSepulchreSea=[
+   {id:"eastwatch-sepulchre-sea-1",region:25,type:"seaRoute",label:"Southern Far Shoals passage",x:900,y:405},
+   {id:"eastwatch-sepulchre-sea-2",region:26,type:"seaRoute",label:"Outer southern sea passage",x:945,y:455},
+   {id:"eastwatch-sepulchre-sea-3",region:19,type:"seaRoute",label:"Sepulchre offshore approach",x:1000,y:515},
+   {id:"eastwatch-sepulchre-sea-4",region:19,type:"seaRoute",label:"Sepulchre western sea approach",x:1035,y:560}
+  ];
+  for(const n of eastwatchSepulchreSea)if(!nodes[n.id])add(n);
+  const eastwatchSepulchreChain=["eastwatch-far-shoals-channel",...eastwatchSepulchreSea.map(n=>n.id),"sepulchre-south-sea-8"];
+  for(let i=1;i<eastwatchSepulchreChain.length;i++)link(eastwatchSepulchreChain[i-1],eastwatchSepulchreChain[i],1,"sea");
+  // Redfang Plain branches west to both intermediate points on the Grinhold–Mudgut road.
+  for(const id of ["waypoint-crossroads-11-crossroads-15-2","waypoint-crossroads-11-crossroads-15-1"]){
+   if(nodes["city-12"]&&nodes[id])link("city-12",id,1,"land");
+  }
+  // Nudge generated waypoints on the northern eastern-continent sea lane out into open water.
+  for(const [id,x,y] of [
+   ["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-1",1061,184],
+   ["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-2",1012,188],
+   ["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-3",963,193],
+   ["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-4",914,197]
+  ])if(nodes[id]){nodes[id].x=x;nodes[id].y=y;}
+  // Give every map point a unique human-readable label while preserving its stable ID.
  // Repeated generic labels receive a numbered suffix.
  const usedLabels=new Set();
  for(const node of Object.values(nodes)){
