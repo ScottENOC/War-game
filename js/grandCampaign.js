@@ -1493,6 +1493,30 @@ function createMovementGraph(){
    ["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-3",963,193],
    ["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-4",914,197]
   ])if(nodes[id]){nodes[id].x=x;nodes[id].y=y;}
+  // Ironhold and southern-road map revisions (development branch).
+  // Merge the generated sea-lane crossing into the existing Ironhold coastal waypoint.
+  mergeInto("sea-crossing-386-361","ironhold-village-coastal-sea-2","Ironhold western coastal passage");
+  // Promote this exact generated point to a village and give it a sea-lane connection.
+  if(nodes["waypoint-village-poi-ironhold-crossroads-9-1"]){
+   nodes["waypoint-village-poi-ironhold-crossroads-9-1"].type="village";
+   nodes["waypoint-village-poi-ironhold-crossroads-9-1"].label="Ironhold Crossroads Village";
+  }
+  link("waypoint-village-poi-ironhold-crossroads-9-1","ironhold-village-coastal-sea-3",1,"sea");
+  // Move Ironhold Harbour to the city's original position, then merge the city into its crossroads.
+  if(nodes["port-9"]&&nodes["city-9"]){
+   nodes["port-9"].x=nodes["city-9"].x;
+   nodes["port-9"].y=nodes["city-9"].y;
+  }
+  mergeInto("city-9","crossroads-9","Ironhold crossroads");
+  if(nodes["crossroads-9"]){nodes["crossroads-9"].type="crossroads";nodes["crossroads-9"].label="Ironhold crossroads";}
+  // Move Stonebridge west and provide a direct road to Stonepick village.
+  if(nodes["city-4"]){nodes["city-4"].x-=55;}
+  link("city-4","village-poi-ironhold",1,"land");
+  // Nudge city-20 south-west.
+  if(nodes["city-20"]){nodes["city-20"].x-=28;nodes["city-20"].y+=28;}
+  // Remove the redundant feature waypoint while preserving its two road connections at the named junction.
+  mergeInto("feature-4-23-land-4","waypoint-crossroads-18-crossroads-20-2","Southern road junction");
+
   // Give every map point a unique human-readable label while preserving its stable ID.
  // Repeated generic labels receive a numbered suffix.
  const usedLabels=new Set();
