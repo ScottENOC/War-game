@@ -1637,6 +1637,121 @@ function createMovementGraph(){
    nodes["feature-4-5-land-1"].label="Southlands land route";
   }
 
+  // Apply this round of campaign-map graph and coordinate revisions.
+  const moveToNeighbourMidpoint=(id)=>{
+   const n=nodes[id];if(!n)return;
+   const neighbours=(edges[id]||[]).map(e=>nodes[e.to]).filter(Boolean);
+   if(neighbours.length<2)return;
+   n.x=(neighbours[0].x+neighbours[1].x)/2;
+   n.y=(neighbours[0].y+neighbours[1].y)/2;
+  };
+  const removeAndReconnect=(id,preferredTarget=null)=>{
+   if(!nodes[id])return;
+   const adjacent=[...(edges[id]||[])];
+   for(const e of adjacent){
+    const target=preferredTarget&&nodes[preferredTarget]?preferredTarget:e.to;
+    if(target!==id&&nodes[target])link(target,e.to===id?id:e.to,e.cost,e.kind);
+   }
+   removeWithoutSplice(id);
+  };
+  // Reposition the northern channel point exactly halfway between its current neighbours.
+  moveToNeighbourMidpoint("waypoint-eastern-continent-north-coast-3-freebooter-north-channel-2");
+
+  // Remove redundant crossroads, preserving their existing connections to the corresponding city.
+  for(const [id,city] of [["crossroads-21","city-21"],["crossroads-19","city-19"],["crossroads-16","city-16"]]){
+   if(!nodes[id])continue;
+   for(const e of [...(edges[id]||[])])if(nodes[e.to]&&e.to!==city)link(city,e.to,e.cost,e.kind);
+   removeWithoutSplice(id);
+  }
+  // Replace the Dreadmarch–Sepulchre road with a Sepulchre-controlled village in between.
+  unlink("city-21","city-19");
+  for(const e of [...(edges["city-21"]||[])])if(e.to==="city-19")unlink("city-21","city-19");
+  const sepulchreVillage={id:"village-poi-dreadmarch-sepulchre",region:19,type:"village",label:"Sepulchre Border Village",x:1125,y:430,population:620,prosperity:44,controllerFaction:"undead"};
+  add(sepulchreVillage);
+  link("city-21",sepulchreVillage.id,1,"land");
+  link(sepulchreVillage.id,"city-19",1,"land");
+  link("city-21","waypoint-crossroads-15-crossroads-16-1",1,"land");
+  link("city-21","feature-12-16-land-2",1,"land");
+  link("feature-12-16-land-2","waypoint-crossroads-14-crossroads-15-1",1,"land");
+
+  // Remove the obsolete Mudgut–Bonefield feature and Mudgut crossroads.
+  removeWithoutSplice("feature-12-15-land-2");
+  if(nodes["crossroads-15"]){
+   for(const e of [...(edges["crossroads-15"]||[])])if(nodes[e.to]&&e.to!=="city-15")link("city-15",e.to,e.cost,e.kind);
+   removeWithoutSplice("crossroads-15");
+  }
+  link("city-15","feature-12-15-land-1",1,"land");
+  link("city-15","waypoint-crossroads-14-crossroads-15-2",1,"land");
+  link("city-15","waypoint-crossroads-15-crossroads-16-1",1,"land");
+
+  // Replace crossroads-12 with Redfang Plain itself, retaining every incoming route.
+  if(nodes["crossroads-12"]){
+   for(const e of [...(edges["crossroads-12"]||[])])if(nodes[e.to]&&e.to!=="city-12")link("city-12",e.to,e.cost,e.kind);
+   removeWithoutSplice("crossroads-12");
+  }
+  if(nodes["waypoint-crossroads-11-crossroads-15-1"])nodes["waypoint-crossroads-11-crossroads-15-1"].y-=24;
+
+  // Tiny westward adjustments to Freebooter's Haven and its harbour.
+  if(nodes["city-26"])nodes["city-26"].x-=8;
+  if(nodes["port-26"])nodes["port-26"].x-=8;
+
+  // Place the southern road features at the midpoints of their two connected locations.
+  if(nodes["feature-5-18-land-3"]){
+   moveToNeighbourMidpoint("feature-5-18-land-3");
+   nodes["feature-5-18-land-3"].y-=18;
+  }
+  link("waypoint-crossroads-5-crossroads-18-2","waypoint-crossroads-18-crossroads-20-1",1,"land");
+  if(nodes["waypoint-crossroads-22-crossroads-23-3"])nodes["waypoint-crossroads-22-crossroads-23-3"].y+=8;
+  if(nodes["feature-18-22-land-2"])nodes["feature-18-22-land-2"].y-=24;
+  moveToNeighbourMidpoint("waypoint-crossroads-18-crossroads-22-1");
+
+  // Place the two Southwatch–Khaz Varrak villages due east/north-east of their cities.
+  if(nodes["city-24"]&&nodes["village-poi-southwatch-khaz-dwarf"]){
+   nodes["village-poi-southwatch-khaz-dwarf"].x=nodes["city-24"].x+42;
+   nodes["village-poi-southwatch-khaz-dwarf"].y=nodes["city-24"].y;
+  }
+  if(nodes["city-5"]&&nodes["village-poi-southwatch-khaz-human"]){
+   nodes["village-poi-southwatch-khaz-human"].x=nodes["city-5"].x+36;
+   nodes["village-poi-southwatch-khaz-human"].y=nodes["city-5"].y-36;
+  }
+
+  // These two points are ordinary road points, not river crossings.
+  for(const id of ["feature-9-10-land-3","waypoint-crossroads-10-crossroads-25-1"]){
+   if(nodes[id]){nodes[id].type="road";nodes[id].label=id==="feature-9-10-land-3"?"Highland road point":"Eastwatch road junction";}
+  }
+
+  // Eastwatch villages and the Deepdelve village use their owning city's region.
+  if(nodes["forest-poi-north-east"]){
+   nodes["forest-poi-north-east"].y-=45;
+   nodes["forest-poi-north-east"].type="village";
+   nodes["forest-poi-north-east"].label="Eastwatch Northern Village";
+   nodes["forest-poi-north-east"].region=25;
+   nodes["forest-poi-north-east"].controllerFaction="empire";
+  }
+  moveToNeighbourMidpoint("waypoint-forest-poi-north-east-crossroads-25-1");
+  if(nodes["forest-poi-east"]){
+   nodes["forest-poi-east"].type="village";
+   nodes["forest-poi-east"].label="Eastwatch Western Village";
+   nodes["forest-poi-east"].region=25;
+   nodes["forest-poi-east"].controllerFaction="empire";
+  }
+  if(nodes["forest-poi-east"]&&nodes["forest-poi-north-east"]){
+   nodes["forest-poi-east"].x=nodes["forest-poi-north-east"].x-38;
+   nodes["forest-poi-east"].y=nodes["forest-poi-north-east"].y+8;
+  }
+  if(nodes["waypoint-crossroads-10-crossroads-24-1"]){
+   nodes["waypoint-crossroads-10-crossroads-24-1"].type="village";
+   nodes["waypoint-crossroads-10-crossroads-24-1"].label="Deepdelve Road Village";
+   nodes["waypoint-crossroads-10-crossroads-24-1"].region=10;
+   nodes["waypoint-crossroads-10-crossroads-24-1"].controllerFaction="dwarfs";
+  }
+  link("port-25","eastwatch-far-shoals-channel",1,"sea");
+
+  // Straighten the Far Shoals approach and Silvershade harbour by placing them at neighbour midpoints.
+  moveToNeighbourMidpoint("far-shoals-south-approach");
+  moveToNeighbourMidpoint("waypoint-far-shoals-south-approach-freebooter-north-channel-1");
+  moveToNeighbourMidpoint("port-8");
+
   // Give every map point a unique human-readable label while preserving its stable ID.
  // Repeated generic labels receive a numbered suffix.
  const usedLabels=new Set();
