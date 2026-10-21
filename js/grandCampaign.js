@@ -194,27 +194,47 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
  }
  if(player){
   const models=collectionModels(),count=(type,weaponFilter=null)=>models.filter(m=>m.faction===faction&&m.type===type&&(!weaponFilter||weaponFilter(m))).length;
-  const meleeAvailable=count(basicType,m=>m.weapon==="handWeapon"&&(!woodElfStyle||m.components?.includes("left_sword")||m.offhandWeapon));
-  const rangedAvailable=race==="dwarf"?count("dwarfInfantry",m=>m.weapon==="crossbow"):race==="undead"?count("zombies",m=>m.weapon==="handWeapon"):count("archers",m=>m.weapon==="bow");
-  const pushStartingUnit=(type,models,rangedWeapon=null)=>{
-   roster.push({type,models,weapon:"handWeapon",meleeWeapons:woodElfStyle&&type===basicType?["handWeapon","offhandWeapon"]:["handWeapon"],...(woodElfStyle?{woodElfStyle:true}:{}),...(woodElfStyle&&type===basicType?{dualWield:true,shield:false,skills:{skirmish:true}}:{}),...(woodElfStyle&&rangedWeapon?{skills:{skirmish:true}}:{}),...(rangedWeapon?{rangedWeapon}:{}),champion:false,upgrades:{}});
-  };
-  // The player's starter army has at most two melee units, balanced to within
-  // one model. Infantry units may contain 5-30 models each.
-  const meleeDeployed=Math.min(60,meleeAvailable);
-  if(meleeDeployed>=5){
-   if(meleeDeployed<10)pushStartingUnit(basicType,meleeDeployed);
-   else{
-    const first=Math.floor(meleeDeployed/2),second=Math.ceil(meleeDeployed/2);
-    pushStartingUnit(basicType,first);
-    pushStartingUnit(basicType,second);
+  const factionStarterIds=FACTION_ROSTER_OVERRIDES[id]?.units||[];
+  if(factionStarterIds.length){
+   const remaining=new Map();
+   for(const model of models.filter(m=>m.faction===faction))remaining.set(model.type,(remaining.get(model.type)||0)+1);
+   let commanderAdded=false;
+   for(const unitId of factionStarterIds){
+    if(unitId==="captain"||unitId==="lord"){
+     if(commander&&!commanderAdded){roster.push(character);commanderAdded=true;}
+     continue;
+    }
+    const type=unitId,available=remaining.get(type)||0;
+    const machine=["cannon","catapult","boltThrower","skeletonChariot","humanChariot","elfChariot","goblinChariot","orcChariot"].includes(type);
+    const characterType=["dwarfCaptain","dwarfLord","dwarfKingHaldric","orcHero","orcLord","goblinHero","goblinLord","necromancer","masterNecromancer","vampireHero","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","mageHero","mageLord","legendaryLord","rifleman","captainWeiss","shadowElf","pegasusChampion"].includes(type);
+    const minimum=machine||characterType?1:5;
+    if(available<minimum)continue;
+    const desired=machine||characterType?1:["cavalry","wolfRiders","boarBoyz","skeletonHorses"].includes(type)?15:30;
+    const deployed=Math.min(available,desired);
+    const unit={type,models:deployed,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}};
+    if(type==="archers")unit.rangedWeapon="bow";
+    if(type==="crossbowmen")unit.rangedWeapon="crossbow";
+    if(type==="firearmInfantry")unit.rangedWeapon="firearm";
+    if(type==="rifleman")unit.rangedWeapon="longRifle";
+    if(["cavalry","wolfRiders","boarBoyz","skeletonHorses"].includes(type)){unit.mounted=true;unit.mountType=type==="wolfRiders"?"wolf":type==="boarBoyz"?"boar":type==="skeletonHorses"?"skeletal_steed":"horse";}
+    if(machine){unit.crewType=race==="undead"?"skeletons":race==="greenskin"?"goblins":race==="dwarf"?"dwarfInfantry":"swordsmen";unit.crewModels=3;}
+    if(woodElfStyle){unit.woodElfStyle=true;unit.skills={skirmish:true};if(type==="swordsmen"){unit.meleeWeapons=["handWeapon","offhandWeapon"];unit.dualWield=true;unit.shield=false;}}
+    roster.push(unit);
+    remaining.set(type,available-deployed);
    }
+   if(commander&&!commanderAdded)roster.push(character);
+  }else{
+   const meleeAvailable=count(basicType,m=>m.weapon==="handWeapon"&&(!woodElfStyle||m.components?.includes("left_sword")||m.offhandWeapon));
+   const rangedAvailable=race==="dwarf"?count("dwarfInfantry",m=>m.weapon==="crossbow"):race==="undead"?count("zombies",m=>m.weapon==="handWeapon"):count("archers",m=>m.weapon==="bow");
+   const pushStartingUnit=(type,models,rangedWeapon=null)=>{
+    roster.push({type,models,weapon:"handWeapon",meleeWeapons:woodElfStyle&&type===basicType?["handWeapon","offhandWeapon"]:["handWeapon"],...(woodElfStyle?{woodElfStyle:true}:{}),...(woodElfStyle&&type===basicType?{dualWield:true,shield:false,skills:{skirmish:true}}:{}),...(woodElfStyle&&rangedWeapon?{skills:{skirmish:true}}:{}),...(rangedWeapon?{rangedWeapon}:{}),champion:false,upgrades:{}});
+   };
+   const meleeDeployed=Math.min(60,meleeAvailable);
+   if(meleeDeployed>=5){if(meleeDeployed<10)pushStartingUnit(basicType,meleeDeployed);else{const first=Math.floor(meleeDeployed/2),second=Math.ceil(meleeDeployed/2);pushStartingUnit(basicType,first);pushStartingUnit(basicType,second);}}
+   const rangedDeployed=Math.min(30,rangedAvailable);
+   if(rangedDeployed>=5)pushStartingUnit(rangedType,rangedDeployed,race==="undead"?null:race==="dwarf"?"crossbow":"bow");
+   if(commander)roster.push(character);
   }
-  // Ranged models form one separate unit, which appears as soon as five
-  // compatible archers (or dwarf crossbowmen) are owned.
-  const rangedDeployed=Math.min(30,rangedAvailable);
-  if(rangedDeployed>=5)pushStartingUnit(rangedType,rangedDeployed,race==="undead"?null:race==="dwarf"?"crossbow":"bow");
-  if(commander)roster.push(character);
  }else{
   const starterIds=FACTION_ROSTER_OVERRIDES[id]?.units||[];
   const makeStarterUnit=(unitId)=>{
