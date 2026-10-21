@@ -1133,6 +1133,17 @@ function createMovementGraph(){
   const nearest=junctions.reduce((best,n)=>!best||Math.hypot(n.x-p.x,n.y-p.y)<Math.hypot(best.x-p.x,best.y-p.y)?n:best,null);
   if(p.id!=="mountain-poi-central"&&nearest)route(p.id,nearest.id,"land",p.region,nearest.region);
  }
+ // Discard malformed routes before intersection processing. A custom sea-lane can
+ // be declared before its waypoint is added; all valid routes are resolved by here.
+ // Keep a diagnostic so any future missing endpoint is identifiable without crashing
+ // the entire campaign map.
+ for(let i=routes.length-1;i>=0;i--){
+  const r=routes[i];
+  if(!nodes[r.a]||!nodes[r.b]){
+   console.warn("[Grand Campaign] Skipping route with missing endpoint",r.a,"->",r.b);
+   routes.splice(i,1);
+  }
+ }
  // Find every crossing between routes. Both routes receive the same crossroads,
 
  // so no road is visually allowed to pass through another road without a POI.
@@ -1145,7 +1156,7 @@ function createMovementGraph(){
  };
  for(let i=0;i<routes.length;i++){
   const a=routes[i];
-  const p=nodes[a.a],p2=nodes[a.b];
+  const p=nodes[a.a],p2=nodes[a.b];if(!p||!p2)continue;
   for(let j=i+1;j<routes.length;j++){
    const b=routes[j];
    // A road and a sea lane may visually cross, but they are not connected.
@@ -1153,7 +1164,7 @@ function createMovementGraph(){
    // POIs (the shared endpoints of the city-road and harbour-sea routes).
    if(a.kind!==b.kind)continue;
     if(a.kind==="land"&&![a.regionA,a.regionB].some(id=>id===b.regionA||id===b.regionB))continue;
-   const q=nodes[b.a],q2=nodes[b.b],hit=intersection(p,p2,q,q2);if(!hit)continue;
+   const q=nodes[b.a],q2=nodes[b.b];if(!q||!q2)continue;const hit=intersection(p,p2,q,q2);if(!hit)continue;
    const sharedId=(a.kind==="sea"?"sea-crossing-":"crossing-")+Math.round(hit.x)+"-"+Math.round(hit.y);
    if(!nodes[sharedId])add({id:sharedId,region:a.regionA||b.regionA,type:a.kind==="sea"?"seaRoute":"crossroads",label:a.kind==="sea"?"Sea-lane junction":"Road crossroads",x:hit.x,y:hit.y});
    a.cuts.push(hit.t);b.cuts.push(hit.u);
