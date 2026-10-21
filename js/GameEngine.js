@@ -240,6 +240,62 @@ const BATTLE_BACKUP_KEY = "warGameActiveBattleBackupV1";
 function clearBattleSave() {
  try { localStorage.removeItem(BATTLE_SAVE_KEY); localStorage.removeItem(BATTLE_BACKUP_KEY); } catch {}
 }
+
+function installBattleMenu() {
+ const menu = $("battle-menu-panel");
+ const open = $("battle-menu-open");
+ const toggle = show => {
+  if (!menu) return;
+  menu.hidden = !show;
+  if (open) open.setAttribute("aria-expanded", show ? "true" : "false");
+ };
+ open?.addEventListener("click", () => toggle(menu.hidden));
+ $("battle-menu-resume")?.addEventListener("click", () => toggle(false));
+ $("battle-save-main-menu")?.addEventListener("click", () => {
+  saveBattleSnapshot();
+  toggle(false);
+  $("game").hidden = true;
+  $("mainmenu").hidden = false;
+  $("resume-saved-battle").hidden = false;
+ });
+ $("resume-saved-battle")?.addEventListener("click", () => {
+  let saved = false;
+  try {
+   const raw = localStorage.getItem(BATTLE_SAVE_KEY) || localStorage.getItem(BATTLE_BACKUP_KEY);
+   const snap = raw && JSON.parse(raw);
+   if (snap?.schemaVersion === 1 && snap.state?.units && Object.keys(snap.state.units).length && snap.state.phase !== "over") {
+    Object.assign(S, snap.state);
+    if (snap.view && Number.isFinite(snap.view.zoom)) Object.assign(view, snap.view);
+    campaignBattle = !!snap.campaignBattle;
+    grandCampaignBattle = !!snap.grandCampaignBattle;
+    roguelikeBattle = !!snap.roguelikeBattle;
+    $("mainmenu").hidden = true;
+    $("game").hidden = false;
+    $("resume-saved-battle").hidden = true;
+    $("battle-return").hidden = true;
+    $("log").innerHTML = (S.log || []).map(x => '<div class="logentry">' + x + '</div>').join("");
+    $("rollcontent").replaceChildren();
+    setupCanvas();
+    render();
+    saved = true;
+   }
+  } catch (error) { console.warn("Could not resume saved battle", error); }
+  if (!saved) $("resume-saved-battle").hidden = true;
+ });
+ $("battle-concede")?.addEventListener("click", () => {
+  if (S.finished) return;
+  if (!window.confirm("Concede this battle? All of your troops will be killed and the battle will count as a defeat.")) return;
+  units().filter(u => u.side === "player").forEach(u => {
+   u.models = 0; u.damage = 0; u.characterWounds = 0; u.chariotWounds = 0; u.artilleryWounds = 0;
+   (u.attachedCharacters || []).forEach(id => {
+    const character = S.units[id];
+    if (character) { character.models = 0; character.characterWounds = 0; }
+   });
+  });
+  toggle(false);
+  finishBattle("Opponent wins — you conceded the battle. All of your troops have been lost.");
+ });
+}
 function saveBattleSnapshot() {
  if (!persistenceReady) return;
  if (S.finished || !S.units || !Object.keys(S.units).length || !S.phase || S.phase === "menu") {
@@ -253,6 +309,7 @@ function saveBattleSnapshot() {
    state: S,
    view,
    campaignBattle,
+   grandCampaignBattle,
    roguelikeBattle
   };
   const json = JSON.stringify(snapshot);
@@ -431,6 +488,7 @@ function restoreBattleSnapshot() {
   Object.assign(S, snapshot.state);
   if (snapshot.view && Number.isFinite(snapshot.view.zoom)) Object.assign(view, snapshot.view);
   campaignBattle = !!snapshot.campaignBattle;
+  grandCampaignBattle = !!snapshot.grandCampaignBattle;
   roguelikeBattle = !!snapshot.roguelikeBattle;
   $("mainmenu").hidden = true;
   $("mode-screen").hidden = true;
@@ -448,6 +506,7 @@ function restoreBattleSnapshot() {
   console.warn("Could not restore autosaved battle", error);
  }
 }
+installBattleMenu();
 window.addEventListener("pagehide", saveBattleSnapshot);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") saveBattleSnapshot(); });
 restoreBattleSnapshot();
