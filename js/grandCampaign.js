@@ -2068,17 +2068,21 @@ function recruitCatalog(){
    {key:"captain",label:race==="elf"?"High Elf hero":"Human captain",type:"captain",weapon:"handWeapon",min:1,max:1,modelType:"captain",character:true},
    {key:"lord",label:race==="elf"?"High Elf lord":"Human lord",type:"lord",weapon:"handWeapon",min:1,max:1,modelType:"lord",character:true},
    ...(race==="elf"?[
+    {key:"mageHero",label:"High Elf mage",type:"mageHero",weapon:"handWeapon",min:1,max:1,modelType:"mageHero",character:true},
+    {key:"mageLord",label:"High Elf archmage",type:"mageLord",weapon:"handWeapon",min:1,max:1,modelType:"mageLord",character:true},
     {key:"shadowElf",label:"Lethariel Starweaver",type:"shadowElf",weapon:"handWeapon",rangedWeapon:"magicBow",min:1,max:1,modelType:"shadowElf",character:true},
     {key:"pegasusChampion",label:"Aelthir, the Dawnwing",type:"pegasusChampion",weapon:"lance",min:1,max:1,modelType:"pegasusChampion",character:true},
     ...["youngDragon","dragon","ancientDragon"].map(type=>({key:type,label:type==="youngDragon"?"Young dragon":type==="dragon"?"Dragon":"Ancient dragon",type,weapon:"handWeapon",min:1,max:1,modelType:type,character:true}))
    ]:[
+    {key:"mageHero",label:"Human mage",type:"mageHero",weapon:"handWeapon",min:1,max:1,modelType:"mageHero",character:true},
+    {key:"mageLord",label:"Human archmage",type:"mageLord",weapon:"handWeapon",min:1,max:1,modelType:"mageLord",character:true},
     {key:"legendaryLord",label:"Lord-Marshal Edric Voss",type:"legendaryLord",weapon:"handWeapon",min:1,max:1,modelType:"legendaryLord",character:true},
     {key:"rifleman",label:"Imperial marksman",type:"rifleman",weapon:"handWeapon",rangedWeapon:"longRifle",min:1,max:1,modelType:"rifleman",character:true},
     {key:"captainWeiss",label:"Captain Marta Weiss",type:"captainWeiss",weapon:"handWeapon",min:1,max:1,modelType:"captainWeiss",character:true}
    ])
   ])
  ];
- if(activeCampaign.playerPoliticalFaction==="verdantCourt")options.push({key:"woodElfChariot",label:"Wood Elf chariot",type:"elfChariot",weapon:"handWeapon",min:3,max:3,modelType:"elfChariot",fixed:true,crewType:"swordsmen",crewWeapon:"handWeapon"});
+ if(race==="elf")options.push({key:"elfChariot",label:activeCampaign.playerPoliticalFaction==="verdantCourt"?"Wood Elf chariot":"High Elf chariot",type:"elfChariot",weapon:"handWeapon",min:3,max:3,modelType:"elfChariot",fixed:true,crewType:"swordsmen",crewWeapon:activeCampaign.playerPoliticalFaction==="verdantCourt"?"handWeapon":"spear"});
  const equipmentVariants=["archers","crossbowmen","firearmInfantry","crossbows","dwarfFirearms","spearmen","halberdiers","greatWeapons","goblinBows","skeletonBows"];
  const visible=options.filter(o=>!equipmentVariants.includes(o.key));
  const infantry=visible.find(o=>o.key==="melee");
