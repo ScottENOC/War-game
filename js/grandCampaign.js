@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v21-eastern-north-sea-trunk";
+const MAP_ID="shattered-realms-v22-harbour-trunk-rework";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -877,7 +877,7 @@ const byId=id=>document.getElementById(id);
   },{passive:false});
   campaignMapNav.set(host,state);
  }
-const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[425,375],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[850,670],23:[629,675],24:[575,435],25:[851,370],26:[925,275],27:[365,435]};
+const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[425,375],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[850,670],23:[629,675],24:[575,435],25:[851,370],26:[952,280],27:[365,435]};
 const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
 function collectionBypassEnabled(){try{return getCollectionSnapshot()?.bypass===true;}catch{return false;}}
 function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
@@ -1030,7 +1030,7 @@ function createMovementGraph(){
      route(pB.id,iron.id,"sea",3,9);route(iron.id,junction.id,"sea",3,9);
      route(junction.id,barrow.id,"sea",3,17);route(barrow.id,ports.find(p=>p.city===17).id,"sea",3,17);
     }else if(key==="8-25"){
-     const waypoints=[{id:"eastwatch-silvershade-coast-1",region:25,type:"seaRoute",label:"Eastern coast passage",x:861,y:322},{id:"eastwatch-silvershade-coast-2",region:8,type:"seaRoute",label:"Island approach",x:785,y:255}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===25).id,waypoints[0].id,waypoints[1].id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);route(waypoints[1].id,ports.find(p=>p.city===8).id,"sea",c.id,other);
+     const waypoints=[{id:"eastwatch-silvershade-coast-1",region:25,type:"seaRoute",label:"Eastern coast passage",x:845,y:340},{id:"eastwatch-silvershade-coast-2",region:8,type:"seaRoute",label:"Island approach",x:785,y:255}];for(const n of waypoints)add(n);const chain=[waypoints[0].id,waypoints[1].id,ports.find(p=>p.city===8).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="8-21"){
      const waypoints=[
       {id:"eastern-continent-north-coast-1",region:21,type:"seaRoute",label:"Eastern continent northern coast",x:1090,y:285},
@@ -1042,7 +1042,9 @@ function createMovementGraph(){
      for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
      route(dreadJunction.id,ports.find(p=>p.city===21).id,"sea",c.id,other);
     }else if(key==="21-25"){
-     const waypoints=[{id:"eastwatch-dreadmarch-channel",region:21,type:"seaRoute",label:"Eastern channel",x:1120,y:370}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===21).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===25).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+     // The eastern/northern through-route now bypasses both harbour nodes.
+     // Dreadmarch Harbour is a spur from the main coastal sea lane above.
+     continue;
     }else if(key==="8-26"){
       const waypoints=[{id:"freebooter-north-channel",region:26,type:"seaRoute",label:"Freebooter northern channel",x:865,y:205},{id:"silvershade-freebooter-midpoint",region:8,type:"seaRoute",label:"Outer northern channel",x:825,y:165},{id:"freebooter-west-approach",region:26,type:"seaRoute",label:"Far Shoals approach",x:915,y:230}];for(const n of waypoints)add(n);const chain=["silvershade-coastal-sea-waypoint","silvershade-freebooter-midpoint","freebooter-north-channel","freebooter-west-approach",ports.find(p=>p.city===26).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
      }else if(key==="25-26"){
