@@ -464,7 +464,7 @@ const CITIES = [
 {id:2,name:"Westmere",faction:"empire",ruler:"House Merrow",status:"Player court",terrain:"Western forest edge and river crossing",description:"A prosperous river town guarding the western approach and timber trade.",requiredCharacters:[]},
 {id:3,name:"Goldhaven",faction:"empire",ruler:"Prince Odran of House Kest",status:"Rival human lord",terrain:"Eastern grain belt and coast",description:"A rich coastal market city whose prince commands much of the eastern farmland and dislikes Crownfall's taxes.",requiredCharacters:[]},
 {id:4,name:"Stonebridge",faction:"empire",ruler:"Duchess Elira Vane",status:"Rival human lord",terrain:"Southern river crossing",description:"A fortified bridge-city controlling the safest crossing into the southern continent. Its duchess bargains as an equal.",requiredCharacters:[]},
-{id:5,name:"Southwatch",faction:"empire",ruler:"Lord-Marshal Caedmon",status:"Rival human lord",terrain:"Southern marches and trade road",description:"A fortified southern watch-city controlling an important overland trade road and wary of central authority.",requiredCharacters:[]},
+{id:5,name:"Southwatch",faction:"empire",ruler:"Lord-Marshal Caedmon",status:"Rival human lord",terrain:"Southern marches; eastern-bank river crossing and trade road",description:"A fortified southern watch-city on the eastern bank of a major river, controlling the crossing and an important overland trade road.",requiredCharacters:[]},
 {id:6,name:"Aelthir",faction:"highElves",ruler:"The Verdant Court",status:"Player court",terrain:"Ancient forest, north-west coast",description:"An old elven city among giant trees beside a sheltered harbour. Its influence reaches the western woodland.",requiredCharacters:["aelthir_dawnwing"]},
 {id:7,name:"Moonspire",faction:"highElves",ruler:"The Moonlit Princes",status:"Rival elven court",terrain:"Wooded Greyward Isles",description:"A secluded island court guarding wooded isles and a valuable sea lane.",requiredCharacters:["lethariel_starweaver"]},
 {id:8,name:"Silvershade",faction:"highElves",ruler:"The Silver Admiralty",status:"Autonomous elven court",terrain:"Eastern island forest and deep harbour",description:"A wealthy harbour-city whose admirals command the eastern island passages.",requiredCharacters:[]},
@@ -1106,7 +1106,6 @@ function createMovementGraph(){
   {id:"mountain-poi-central",region:9,type:"mountain",label:"Central mountain pass",x:530,y:390},
   {id:"mountain-poi-east",region:10,type:"mountain",label:"Eastern crags",x:645,y:300},
   {id:"river-poi-north",region:3,type:"river",label:"Goldhaven river bend",x:315,y:190},
-  {id:"river-poi-south",region:4,type:"river",label:"Southlands river ford",x:535,y:407},
   {id:"river-poi-east",region:10,type:"river",label:"Eastern river crossing",x:690,y:365}
  ];
  for(const p of mapFeatures){
@@ -1115,7 +1114,7 @@ function createMovementGraph(){
   // must not pull an inland trail into a sea lane.
   const junctions=Object.values(nodes).filter(n=>n.type==="crossroads");
   const nearest=junctions.reduce((best,n)=>!best||Math.hypot(n.x-p.x,n.y-p.y)<Math.hypot(best.x-p.x,best.y-p.y)?n:best,null);
-  if(p.id==="river-poi-south")route(p.id,"mountain-poi-central","land",p.region,9);else if(p.id!=="mountain-poi-central"&&nearest)route(p.id,nearest.id,"land",p.region,nearest.region);
+  if(p.id!=="mountain-poi-central"&&nearest)route(p.id,nearest.id,"land",p.region,nearest.region);
  }
  // Find every crossing between routes. Both routes receive the same crossroads,
 
