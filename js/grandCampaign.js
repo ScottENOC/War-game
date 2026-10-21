@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v22-harbour-trunk-rework";
+const MAP_ID="shattered-realms-v23-sepulchre-harbour-spur";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -1416,11 +1416,13 @@ function createMovementGraph(){
   {id:"sepulchre-south-sea-6",region:19,type:"seaRoute",label:"Sepulchre coastal approach",x:980,y:715},
   {id:"sepulchre-south-sea-7",region:19,type:"seaRoute",label:"Sepulchre southern approach",x:1040,y:685},
   {id:"sepulchre-south-sea-8",region:19,type:"seaRoute",label:"Sepulchre coastal approach",x:1060,y:600},
-  {id:"sepulchre-south-sea-9",region:19,type:"seaRoute",label:"Sepulchre harbour approach",x:1080,y:535}
+  {id:"sepulchre-south-sea-9",region:19,type:"seaRoute",label:"Sepulchre coastal sea-lane junction",x:1080,y:535}
  ];
  for(const n of southSea)if(!nodes[n.id])add(n);
- const trunk=["barrowmere-blackflag-east","sepulchre-south-sea-1","sepulchre-south-sea-2","sepulchre-south-sea-3","sepulchre-south-sea-4","ashenford-harbour-junction","sepulchre-south-sea-5","varkesh-harbour-junction","sepulchre-south-sea-6","sepulchre-south-sea-7","sepulchre-south-sea-8","sepulchre-south-sea-9","port-19"];
+ const trunk=["barrowmere-blackflag-east","sepulchre-south-sea-1","sepulchre-south-sea-2","sepulchre-south-sea-3","sepulchre-south-sea-4","ashenford-harbour-junction","sepulchre-south-sea-5","varkesh-harbour-junction","sepulchre-south-sea-6","sepulchre-south-sea-7","sepulchre-south-sea-8","sepulchre-south-sea-9"];
  for(let i=1;i<trunk.length;i++)link(trunk[i-1],trunk[i],1,"sea");
+ // Sepulchre Harbour branches off the coastal trunk rather than occupying it.
+ link("sepulchre-south-sea-9","port-19",1,"sea");
  link("ashenford-harbour-junction","port-23",1,"sea");
  link("varkesh-harbour-junction","port-22",1,"sea");
  // Give every map point a unique human-readable label while preserving its stable ID.
