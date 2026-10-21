@@ -844,7 +844,7 @@ const byId=id=>document.getElementById(id);
  const campaignMapNav=new WeakMap();
  function installCampaignMapNavigation(host,map){
   if(!host||!map||campaignMapNav.has(host))return;
-  const state={scale:Math.max(host.clientWidth,900)/1300,min:Math.max(host.clientWidth,900)/1300,max:Math.max(host.clientWidth,900)/1300*3,startDistance:0,startScale:1,startX:0,startY:0,anchorX:0,anchorY:0};
+  const state={scale:1,min:0.65,max:3,startDistance:0,startScale:1,startX:0,startY:0,anchorX:0,anchorY:0};
   const sizeMap=scale=>{state.scale=Math.max(state.min,Math.min(state.max,scale));map.style.width=(1300*state.scale)+"px";map.style.height=(760*state.scale)+"px";};
   sizeMap(state.scale);
   const distance=(a,b)=>Math.hypot(b.clientX-a.clientX,b.clientY-a.clientY);
@@ -877,7 +877,7 @@ const byId=id=>document.getElementById(id);
   },{passive:false});
   campaignMapNav.set(host,state);
  }
-const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[425,375],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[846,680],23:[629,642],24:[575,435],25:[851,370],26:[925,275],27:[365,435]};
+const CITY_POSITIONS={1:[205,214],2:[142,286],3:[335,294],4:[473,428],5:[596,491],6:[145,94],7:[541,182],8:[793,207],9:[425,375],10:[653,329],11:[1000,240],12:[1118,326],13:[1157,210],14:[1204,365],15:[1044,405],16:[1170,430],17:[159,430],18:[737,642],19:[1090,466],20:[548,602],21:[1167,420],22:[850,670],23:[629,675],24:[575,435],25:[851,370],26:[925,275],27:[365,435]};
 const LEGENDARY={empire:[{id:"edric_voss",type:"legendaryLord",name:"Lord-Marshal Edric Voss"}],highElves:[{id:"aelthir_dawnwing",type:"pegasusChampion",name:"Aelthir, the Dawnwing"},{id:"lethariel_starweaver",type:"shadowElf",name:"Lethariel Starweaver"}],dwarfs:[{id:"haldric_stoneward",type:"dwarfKingHaldric",name:"King Haldric Stoneward"}]};
 function collectionBypassEnabled(){try{return getCollectionSnapshot()?.bypass===true;}catch{return false;}}
 function ownedModels(){try{return (getCollectionSnapshot()?.models||[]).filter(m=>m&&typeof m==="object");}catch{return [];}}
@@ -1006,6 +1006,7 @@ function createMovementGraph(){
   if(seen.has(key))continue;seen.add(key);
   // Remove the redundant southern sea lane into Moonspire. The northern passage remains.
   if(key==="3-7")continue;
+  if(key==="19-22")continue; // Varkesh–Sepulchre is replaced by the southern sea route below.
   if(seaLinks.has(key)){
    const pA=ports.find(p=>p.city===c.id)||ports.find(p=>p.city===other);
    const pB=ports.find(p=>p.city===other&&p!==pA)||ports.find(p=>p.city===c.id&&p!==pA);
@@ -1106,7 +1107,7 @@ function createMovementGraph(){
   {id:"mountain-poi-central",region:9,type:"mountain",label:"Central mountain pass",x:530,y:390},
   {id:"mountain-poi-east",region:10,type:"mountain",label:"Eastern crags",x:645,y:300},
   {id:"river-poi-north",region:3,type:"river",label:"Goldhaven river bend",x:315,y:190},
-  {id:"river-poi-east",region:10,type:"river",label:"Eastern river crossing",x:690,y:365}
+
  ];
  for(const p of mapFeatures){
   add(p);
@@ -1361,6 +1362,43 @@ function createMovementGraph(){
   removeGraphNode(redundantMountainWaypoint,ironholdRiverCrossing.id);
   if(nodes["feature-9-24-land-2"])link("feature-9-24-land-2",ironholdRiverCrossing.id,1,"land");
  }
+ // Deepdelve is the river crossing itself; the city replaces its generated road junction.
+ mergeInto("crossroads-10","city-10","Deepdelve river crossing");
+ if(nodes["city-10"]){nodes["city-10"].type="city";nodes["city-10"].riverCrossing=true;nodes["city-10"].label="Deepdelve river crossing";}
+ mergeInto("crossroads-18","city-18","Nightfen");
+ if(nodes["city-18"]){nodes["city-18"].type="city";nodes["city-18"].label="Nightfen";}
+ // Merge overlapping generated road points into the map features/cities they sit on.
+ mergeInto("waypoint-forest-poi-north-east-crossroads-10-1","city-10","Deepdelve river crossing");
+ mergeInto("waypoint-crossroads-10-crossroads-25-2","forest-poi-north-east","Deepdelve forest-road junction");
+ mergeMapPoints(["waypoint-crossroads-5-crossroads-20-1","waypoint-crossroads-4-crossroads-23-2"],"Southern road junction");
+ removeWithoutSplice("river-poi-east");
+ // Village of Stonepick sits just south on the Ironhold coast and reaches the northern sea lane.
+ if(nodes["village-poi-ironhold"]){nodes["village-poi-ironhold"].x=460;nodes["village-poi-ironhold"].y=320;}
+ if(nodes["village-poi-ironhold"]&&!nodes["village-poi-ironhold"].riverCrossing)nodes["village-poi-ironhold"].coastal=true;
+ link("village-poi-ironhold","goldhaven-north-sea-2",1,"sea");
+ // The southern coast is served by Ashenford and Varkesh harbours and a new Sepulchre harbour.
+ const southernPorts=[
+  {id:"port-23",region:23,type:"port",label:"Ashenford Harbour",x:630,y:700,city:23},
+  {id:"port-22",region:22,type:"port",label:"Varkesh Harbour",x:850,y:700,city:22},
+  {id:"port-19",region:19,type:"port",label:"Sepulchre Harbour",x:1080,y:645,city:19}
+ ];
+ for(const p of southernPorts){if(!nodes[p.id])add(p);link("city-"+p.city,p.id,1,"land");}
+ const southSea=[
+  {id:"sepulchre-south-sea-1",region:17,type:"seaRoute",label:"Southern coast sea lane",x:355,y:470},
+  {id:"sepulchre-south-sea-2",region:20,type:"seaRoute",label:"Southern coast sea lane",x:385,y:555},
+  {id:"sepulchre-south-sea-3",region:20,type:"seaRoute",label:"Southern coast sea lane",x:420,y:720},
+  {id:"sepulchre-south-sea-4",region:23,type:"seaRoute",label:"Ashenford sea-lane approach",x:520,y:730},
+  {id:"ashenford-harbour-junction",region:23,type:"seaRoute",label:"Ashenford Harbour T-junction",x:630,y:730},
+  {id:"sepulchre-south-sea-5",region:22,type:"seaRoute",label:"Southern coast sea lane",x:740,y:730},
+  {id:"varkesh-harbour-junction",region:22,type:"seaRoute",label:"Varkesh Harbour T-junction",x:850,y:730},
+  {id:"sepulchre-south-sea-6",region:19,type:"seaRoute",label:"Sepulchre coastal approach",x:980,y:715},
+  {id:"sepulchre-south-sea-7",region:19,type:"seaRoute",label:"Sepulchre southern approach",x:1040,y:685}
+ ];
+ for(const n of southSea)if(!nodes[n.id])add(n);
+ const trunk=["barrowmere-blackflag-east","sepulchre-south-sea-1","sepulchre-south-sea-2","sepulchre-south-sea-3","sepulchre-south-sea-4","ashenford-harbour-junction","sepulchre-south-sea-5","varkesh-harbour-junction","sepulchre-south-sea-6","sepulchre-south-sea-7","port-19"];
+ for(let i=1;i<trunk.length;i++)link(trunk[i-1],trunk[i],1,"sea");
+ link("ashenford-harbour-junction","port-23",1,"sea");
+ link("varkesh-harbour-junction","port-22",1,"sea");
  // Give every map point a unique human-readable label while preserving its stable ID.
  // Repeated generic labels receive a numbered suffix.
  const usedLabels=new Set();
