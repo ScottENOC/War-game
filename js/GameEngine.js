@@ -308,7 +308,7 @@ function startPoliticalCampaignBattle({army, faction="empire", enemyArmy, enemyF
  const playerForce=createUnitsFromArmy(army,faction),enemySource=createUnitsFromArmy(enemyArmy,enemyFaction),enemyForce={};
  for(const [oldId,unit] of Object.entries(enemySource).filter(([id])=>id.startsWith("p"))){const id=oldId.replace(/^p/,"a");const copy={...unit,id,side:"ai",attachedCharacters:(unit.attachedCharacters||[]).map(characterId=>characterId.replace(/^p/,"a")),attachedTo:unit.attachedTo?unit.attachedTo.replace(/^p/,"a"):null};enemyForce[id]=copy;}
  S.units={...Object.fromEntries(Object.entries(playerForce).filter(([id])=>id.startsWith("p"))),...enemyForce};
- campaignBattle=false;roguelikeBattle=false;grandCampaignBattle=true;grandCampaignBattleComplete=onComplete;
+ campaignBattle=false;roguelikeBattle=false;grandCampaignBattle=true;grandCampaignReturn=true;grandCampaignBattleComplete=onComplete;
  $("mainmenu").hidden=true;$("mode-screen").hidden=true;$("campaign-screen").hidden=true;$("roguelike-screen").hidden=true;$("collection-screen").hidden=true;$("armybuilder").hidden=true;$("grand-campaign-screen").hidden=true;$("game").hidden=false;$("battle-return").hidden=true;
  reset();say("Grand campaign battle · "+faction+" against "+enemyFaction+". Victory or defeat will change the campaign.");setupCanvas();return true;
 }
@@ -349,7 +349,7 @@ let narrativeCampaign=null;
 let roguelike=null;
 let warband=null,warbandBattle=false;
 let warbandExpedition=null,warbandExpeditionBattle=false;
-let campaignBattle=false,grandCampaignBattle=false,grandCampaignBattleComplete=null,roguelikeBattle=false,roguelikeBuilderMode=false;
+let campaignBattle=false,grandCampaignBattle=false,grandCampaignReturn=false,grandCampaignBattleComplete=null,roguelikeBattle=false,roguelikeBuilderMode=false;
 function validateArmy(army,faction){
  if(collectionManager?.getBypass())return "";
  const owned=(collectionManager?.getInventory()||[]).slice(),used=new Set(),shortages=[];
@@ -407,7 +407,7 @@ roguelike=createRoguelike({
  resetProgress:()=>{}
 });
 warbandExpedition=createWarbandExpedition({$,getInventory:()=>collectionManager?.getInventory()||[],getBypass:()=>collectionManager?.getBypass(),startBattle:startWarbandExpeditionBattle});
-$("battle-return").addEventListener("click",()=>{ $("battle-return").hidden=true;showCollection();collectionManager?.open();});
+$("battle-return").addEventListener("click",()=>{ $("battle-return").hidden=true;if(grandCampaignReturn){const game=$("game"),campaignScreen=$("grand-campaign-screen");if(game)game.hidden=true;if(campaignScreen)campaignScreen.hidden=false;return;}showCollection();collectionManager?.open();});
 $("warband-revive").addEventListener("click",()=>{if(!S.warbandSkirmish||S.phase!=="movement")return;const rescuer=S.units[S.selected];if(!rescuer||rescuer.side!=="player"||!alive(rescuer)||rescuer.warbandStatus||rescuer.fled||rescuer.engaged||rescuer.activated)return;const target=units().filter(v=>v.side==="player"&&v.warbandStatus==="unconscious"&&alive(v)&&dist(rescuer,v)<=1.5).sort((a,b)=>dist(a,rescuer)-dist(b,rescuer))[0];if(!target)return;target.warbandStatus=null;target.warbandWounds=1;target.characterWounds=1;target.shot=true;rescuer.activated=true;S.mode=null;say(rescuer.name+" revives "+target.name+". The rescued fighter cannot shoot this turn.");render();});
 function restoreBattleSnapshot() {
  let snapshot = null;
