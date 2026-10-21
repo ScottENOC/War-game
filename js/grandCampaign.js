@@ -1517,6 +1517,23 @@ function createMovementGraph(){
   // Remove the redundant feature waypoint while preserving its two road connections at the named junction.
   mergeInto("feature-4-23-land-4","waypoint-crossroads-18-crossroads-20-2","Southern road junction");
 
+  // Eastern-coast sea-lane revisions.
+  // Add the requested southern offshore links as sea-only edges.
+  link("dreadmarch-offshore-south","sepulchre-south-sea-8",1,"sea");
+  link("dreadmarch-offshore-south","sepulchre-south-sea-9",1,"sea");
+  link("sepulchre-south-sea-9","eastwatch-sepulchre-sea-4",1,"sea");
+  // Push the northern channel waypoints out beyond the eastern coastline.
+  for(const [id,x,y] of [
+   ["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-1",1235,150],
+   ["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-2",1245,125],
+   ["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-3",1255,105],
+   ["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-4",1265,90],
+   ["waypoint-dreadmarch-harbour-junction-port-21-1",1260,445]
+  ])if(nodes[id]){nodes[id].x=x;nodes[id].y=y;}
+  // Move city 14 north and Dreadmarch Harbour south-east to the coast.
+  if(nodes["city-14"]){nodes["city-14"].y-=45;}
+  if(nodes["port-21"]){nodes["port-21"].x=1235;nodes["port-21"].y=475;}
+
   // Give every map point a unique human-readable label while preserving its stable ID.
  // Repeated generic labels receive a numbered suffix.
  const usedLabels=new Set();
