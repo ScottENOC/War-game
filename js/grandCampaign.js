@@ -1373,9 +1373,15 @@ function createMovementGraph(){
  mergeMapPoints(["waypoint-crossroads-5-crossroads-20-1","waypoint-crossroads-4-crossroads-23-2"],"Southern road junction");
  removeWithoutSplice("river-poi-east");
  // Village of Stonepick sits just south on the Ironhold coast and reaches the northern sea lane.
- if(nodes["village-poi-ironhold"]){nodes["village-poi-ironhold"].x=460;nodes["village-poi-ironhold"].y=320;}
- if(nodes["village-poi-ironhold"]&&!nodes["village-poi-ironhold"].riverCrossing)nodes["village-poi-ironhold"].coastal=true;
- link("village-poi-ironhold","goldhaven-north-sea-2",1,"sea");
+ if(nodes["village-poi-ironhold"]){nodes["village-poi-ironhold"].x=405;nodes["village-poi-ironhold"].y=405;nodes["village-poi-ironhold"].coastal=true;}
+ const ironholdVillageSea=[
+  {id:"ironhold-village-coastal-sea-1",region:9,type:"seaRoute",label:"Ironhold village coastal passage",x:390,y:410},
+  {id:"ironhold-village-coastal-sea-2",region:9,type:"seaRoute",label:"Ironhold western coastal passage",x:390,y:350},
+  {id:"ironhold-village-coastal-sea-3",region:9,type:"seaRoute",label:"Ironhold northern coastal passage",x:420,y:300}
+ ];
+ for(const n of ironholdVillageSea)if(!nodes[n.id])add(n);
+ const ironholdVillageSeaChain=["village-poi-ironhold",...ironholdVillageSea.map(n=>n.id),"goldhaven-north-sea-2"];
+ for(let i=1;i<ironholdVillageSeaChain.length;i++)link(ironholdVillageSeaChain[i-1],ironholdVillageSeaChain[i],1,"sea");
  // The southern coast is served by Ashenford and Varkesh harbours and a new Sepulchre harbour.
  const southernPorts=[
   {id:"port-23",region:23,type:"port",label:"Ashenford Harbour",x:630,y:700,city:23},
