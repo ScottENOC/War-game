@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v20-southern-sea-route";
+const MAP_ID="shattered-realms-v21-eastern-north-sea-trunk";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -991,12 +991,12 @@ function createMovementGraph(){
   {id:"port-3",region:3,type:"port",label:"Goldhaven harbour",x:369,y:311,city:3},
   {id:"port-6",region:6,type:"port",label:"Aelthir harbour",x:119,y:76,city:6},
   {id:"port-7",region:7,type:"port",label:"Moonspire harbour",x:520,y:155,city:7},
-  {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:793,y:207,city:8},
+  {id:"port-8",region:8,type:"port",label:"Silvershade harbour",x:790,y:260,city:8},
   {id:"port-17",region:17,type:"port",label:"Barrowmere harbour",x:150,y:397,city:17},
   {id:"port-9",region:9,type:"port",label:"Ironhold harbour",x:402,y:355,city:9},
-  {id:"port-25",region:25,type:"port",label:"Eastwatch harbour",x:882,y:365,city:25},
+  {id:"port-25",region:25,type:"port",label:"Eastwatch harbour",x:820,y:385,city:25},
   {id:"port-21",region:21,type:"port",label:"Dreadmarch harbour",x:1192,y:418,city:21},
-  {id:"port-26",region:26,type:"port",label:"Freebooter's Haven harbour",x:952,y:280,city:26},
+  {id:"port-26",region:26,type:"port",label:"Freebooter's Haven harbour",x:925,y:275,city:26},
   {id:"port-27",region:27,type:"port",label:"Blackflag Cay harbour",x:365,y:400,city:27}
  ];
  for(const p of ports){add(p);route("city-"+p.city,p.id,"land",p.city,p.city);}
@@ -1032,13 +1032,26 @@ function createMovementGraph(){
     }else if(key==="8-25"){
      const waypoints=[{id:"eastwatch-silvershade-coast-1",region:25,type:"seaRoute",label:"Eastern coast passage",x:861,y:322},{id:"eastwatch-silvershade-coast-2",region:8,type:"seaRoute",label:"Island approach",x:785,y:255}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===25).id,waypoints[0].id,waypoints[1].id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);route(waypoints[1].id,ports.find(p=>p.city===8).id,"sea",c.id,other);
     }else if(key==="8-21"){
-     const waypoints=[{id:"dreadmarch-silvershade-coast-1",region:21,type:"seaRoute",label:"Dreadmarch northern passage",x:1125,y:300},{id:"dreadmarch-silvershade-coast-2",region:8,type:"seaRoute",label:"Eastern island approach",x:950,y:260},{id:"dreadmarch-silvershade-coast-3",region:8,type:"seaRoute",label:"Silvershade island approach",x:825,y:250}];for(const n of waypoints)add(n);const chain=["eastwatch-silvershade-coast-2",...waypoints.slice().reverse().map(n=>n.id),ports.find(p=>p.city===21).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+     const waypoints=[
+      {id:"eastern-continent-north-coast-1",region:21,type:"seaRoute",label:"Eastern continent northern coast",x:1090,y:285},
+      {id:"eastern-continent-north-coast-2",region:21,type:"seaRoute",label:"Northern coast passage",x:1130,y:245},
+      {id:"eastern-continent-north-coast-3",region:26,type:"seaRoute",label:"Far Shoals northern approach",x:1050,y:205}
+     ];for(const n of waypoints)add(n);
+     const dreadJunction={id:"dreadmarch-harbour-junction",region:21,type:"seaRoute",label:"Dreadmarch Harbour T-junction",x:1160,y:385};if(!nodes[dreadJunction.id])add(dreadJunction);
+     const chain=["sepulchre-south-sea-9","sepulchre-south-sea-8",dreadJunction.id,...waypoints.map(n=>n.id),"freebooter-north-channel"];
+     for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+     route(dreadJunction.id,ports.find(p=>p.city===21).id,"sea",c.id,other);
     }else if(key==="21-25"){
      const waypoints=[{id:"eastwatch-dreadmarch-channel",region:21,type:"seaRoute",label:"Eastern channel",x:1120,y:370}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===21).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===25).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
     }else if(key==="8-26"){
       const waypoints=[{id:"freebooter-north-channel",region:26,type:"seaRoute",label:"Freebooter northern channel",x:865,y:205},{id:"silvershade-freebooter-midpoint",region:8,type:"seaRoute",label:"Outer northern channel",x:825,y:165},{id:"freebooter-west-approach",region:26,type:"seaRoute",label:"Far Shoals approach",x:915,y:230}];for(const n of waypoints)add(n);const chain=["silvershade-coastal-sea-waypoint","silvershade-freebooter-midpoint","freebooter-north-channel","freebooter-west-approach",ports.find(p=>p.city===26).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
      }else if(key==="25-26"){
-      const waypoints=[{id:"eastwatch-far-shoals-channel",region:25,type:"seaRoute",label:"Far Shoals channel",x:900,y:330},{id:"far-shoals-south-approach",region:26,type:"seaRoute",label:"Southern island approach",x:940,y:310}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===25).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===26).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
+      const waypoints=[{id:"eastwatch-far-shoals-channel",region:25,type:"seaRoute",label:"Far Shoals channel",x:875,y:355},{id:"far-shoals-south-approach",region:26,type:"seaRoute",label:"Southern island approach",x:925,y:325}];for(const n of waypoints)add(n);
+      const coast={id:"eastwatch-silvershade-coast-1",region:25,type:"seaRoute",label:"Eastern coast passage",x:845,y:340};if(!nodes[coast.id])add(coast);
+      // Keep Eastwatch Harbour off the main lane; the coast passage joins the Far Shoals route.
+      route(coast.id,waypoints[0].id,"sea",25,26);
+      route(waypoints[0].id,waypoints[1].id,"sea",25,26);
+      route(waypoints[1].id,"freebooter-north-channel","sea",25,26);
      }else if(key==="3-27"){
       const waypoints=[{id:"goldhaven-blackflag-coast-1",region:3,type:"seaRoute",label:"Southern Goldhaven passage",x:385,y:355},{id:"goldhaven-blackflag-coast-2",region:27,type:"seaRoute",label:"Blackflag Cay approach",x:390,y:400}];for(const n of waypoints)add(n);const chain=[ports.find(p=>p.city===3).id,...waypoints.map(n=>n.id),ports.find(p=>p.city===27).id];for(let i=1;i<chain.length;i++)route(chain[i-1],chain[i],"sea",c.id,other);
      }else if(key==="17-27"){
