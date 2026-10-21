@@ -2481,14 +2481,16 @@ function campaignArmyRace(army,campaign=activeCampaign){
  return FACTION_BY_ID[owner]?.race||campaign?.factionStates?.find(f=>f.id===owner)?.race||"human";
 }
 function campaignUnitMovementClass(unit){
- const type=String(unit?.type||"").toLowerCase();
- if(["dragon","youngdragon","ancientdragon","pegasuschampion"].includes(type)||unit?.flying||["eagle","pegasus"].includes(unit?.mountType))return "flyer";
- if(["cavalry","wolfriders","boarboyz","wolfrider","horsecavalry"].includes(type)||unit?.mounted||["horse","wolf","boar"].includes(unit?.mountType))return "cavalry";
+ const type=String(unit?.type||"").toLowerCase(),mount=String(unit?.mountType||"").toLowerCase();
+ const flyingTypes=["dragon","youngdragon","ancientdragon","deepflamedragon","pegasuschampion","wyvern","skeletonDragon".toLowerCase()];
+ const flyingMounts=["eagle","pegasus","youngdragon","dragon","ancientdragon","deepflamedragon","wyvern","skeleton_dragon","skeletonDragon".toLowerCase()];
+ if(flyingTypes.includes(type)||unit?.flying||flyingMounts.includes(mount))return "flyer";
+ if(["cavalry","wolfriders","boarboyz","wolfrider","horsecavalry"].includes(type)||unit?.mounted||["horse","wolf","boar","skeletal_steed"].includes(mount))return "cavalry";
  return "foot";
 }
 function campaignArmyMovementProfile(army,campaign=activeCampaign){
  const race=campaignArmyRace(army,campaign),roster=(army?.roster||[]).filter(u=>(u.models||1)>0);
- const characterTypes=new Set(["captain","lord","legendarylord","shadowelf","pegasuschampion","dwarfcaptain","dwarflord","dwarfkinghaldric","goblinhero","goblinlord","orchero","orclord"]);
+ const characterTypes=new Set(["captain","lord","legendarylord","shadowelf","pegasuschampion","magehero","magelord","starwardenlord","necromancer","masternecromancer","vampirehero","vampirelord","goblinshaman","goblingreatshaman","orcshaman","orcgreatshaman","dwarfcaptain","dwarflord","dwarfkinghaldric","goblinhero","goblinlord","orchero","orclord","rifleman","captainweiss"]);
  const units=roster.filter(u=>!characterTypes.has(String(u?.type||"").toLowerCase()));
  const main=units.length?units:roster;
  const classes=main.map(campaignUnitMovementClass);
@@ -2499,6 +2501,7 @@ function campaignArmyMovementProfile(army,campaign=activeCampaign){
  const hasHeavyArmouredInfantry=infantry.some(u=>!!(u.heavyArmour||u.upgrades?.heavyArmour||u.upgrades?.heavy_armour));
  let points=4;
  if(race==="dwarf")points=3;
+ else if(allFlying)points=9;
  else if(race==="elf")points=allCavalry?9:5;
  else if(allCavalry){
   const barded=cavalry.some(u=>!!(u.barding||u.upgrades?.barding));
