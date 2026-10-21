@@ -2103,15 +2103,68 @@ function mergeSelectedArmyWith(armyId){
   activeCampaign.selectedArmyId=target.id;activeCampaign.selectedArmyPanelId=target.id;activeCampaign.selectedCampaignPanel="army";syncPlayerArmyState();
   campaignMessage(target.name+" absorbed "+source.name+". All units have joined the selected army.");
 }
+function campaignArmyAtFriendlyCity(army){
+ const node=activeCampaign?.graph?.nodes?.[army?.nodeId];
+ if(!node||node.type!=="city")return false;
+ const region=activeCampaign.regions?.find(r=>r.id===node.region);
+ return !!region&&politicalOwner(region)===activeCampaign.playerPoliticalFaction;
+}
+function campaignUnitKind(unit){
+ const type=String(unit?.type||"");
+ if(["swordsmen","dwarfInfantry","archers","goblins","orcBoyz","zombies","skeletons","rifleman"].includes(type))return "Infantry";
+ if(["cavalry","wolfRiders","boarBoyz","skeletonHorses"].includes(type))return "Cavalry";
+ if(["cannon","boltThrower","catapult"].includes(type)||unit?.siegeMachine)return "Artillery";
+ if(["dragon","youngDragon","ancientDragon","deepflameDragon","skeletonDragon","giant","trolls","skeletonGiant","skeletonTroll"].includes(type))return "Monster";
+ return "Character";
+}
+function campaignEquipmentLabel(value){
+ return ({handWeapon:"Hand weapon",offhandWeapon:"Off-hand weapon",spear:"Spear",halberd:"Halberd",greatWeapon:"Great weapon",lance:"Lance",bow:"Bow",crossbow:"Crossbow",firearm:"Firearm",longRifle:"Long rifle",magicBow:"Magic bow",none:"None"})[value]||String(value||"").replace(/([a-z])([A-Z])/g,"$1 $2").replace(/^./,c=>c.toUpperCase());
+}
+function campaignUnitEquipmentSummary(unit){
+ const parts=[],melee=Array.isArray(unit.meleeWeapons)?unit.meleeWeapons:[unit.weapon||"handWeapon"];
+ parts.push("Melee: "+[...new Set(melee)].map(campaignEquipmentLabel).join(" + "));
+ if(unit.rangedWeapon)parts.push("Ranged: "+campaignEquipmentLabel(unit.rangedWeapon));
+ if(unit.heavyArmour)parts.push("Heavy armour");else if(unit.lightArmour)parts.push("Light armour");
+ if(unit.magicArmour)parts.push("Magical armour");
+ if(unit.shield)parts.push("Shield");
+ if(unit.mounted)parts.push("Mount: "+campaignEquipmentLabel(unit.mountType||"horse")+(unit.barding?" with barding":""));
+ return parts.join(" · ");
+}
+function campaignEquipmentEditor(unit,index,atFriendlyCity){
+ const armour=unit.heavyArmour?"heavy":unit.lightArmour?"light":"none",ranged=unit.rangedWeapon||"none";
+ const weapons=[["handWeapon","Hand weapon"],["spear","Spear"],["halberd","Halberd"],["greatWeapon","Great weapon"]];
+ const rangedOptions=[["none","No ranged weapon"],["bow","Bow"],["crossbow","Crossbow"],["firearm","Firearm"],["longRifle","Long rifle"],["magicBow","Magic bow"]];
+ const select=(kind,value,items)=>'<label>'+kind+'<select data-equip-'+kind.toLowerCase().replace(/\\s/g,"-")+'="'+index+'" '+(!atFriendlyCity?"disabled":"")+'>'+items.map(([v,l])=>'<option value="'+v+'" '+(v===value?"selected":"")+'>'+l+'</option>').join("")+'</select></label>';
+ return '<details class="grand-unit-equipment"><summary>'+(atFriendlyCity?"Change equipment":"Equipment (visit a friendly city to change)")+'</summary><div class="grand-equipment-editor">'+select("Melee weapon",unit.weapon||"handWeapon",weapons)+select("Ranged weapon",ranged,rangedOptions)+select("Armour",armour,[["none","No armour"],["light","Light armour"],["heavy","Heavy armour"]])+'<label><input type="checkbox" data-equip-shield="'+index+'" '+(unit.shield?"checked":"")+' '+(!atFriendlyCity?"disabled":"")+'> Shield</label><button type="button" class="secondary-button" data-apply-equipment="'+index+'" '+(!atFriendlyCity?"disabled":"")+'>Apply equipment</button></div><small>Equipment changes cost gold. Downgrades do not refund gold.</small></details>';
+}
+function applyCampaignUnitEquipment(index){
+ const army=selectedPlayerArmy(),unit=army?.roster?.[index],treasury=selectedFactionTreasury();
+ if(!unit||!army||!treasury)return;
+ if(!campaignArmyAtFriendlyCity(army)){campaignMessage("Equipment can only be changed while this army is in a friendly city.");return;}
+ const host=byId("grand-army-management");
+ const read=(selector,fallback)=>host.querySelector(selector)?.value??fallback;
+ const weapon=read('[data-equip-melee-weapon="'+index+'"]',unit.weapon||"handWeapon");
+ const ranged=read('[data-equip-ranged-weapon="'+index+'"]',unit.rangedWeapon||"none");
+ const armour=read('[data-equip-armour="'+index+'"]',unit.heavyArmour?"heavy":unit.lightArmour?"light":"none");
+ const shield=!!host.querySelector('[data-equip-shield="'+index+'"]')?.checked;
+ const candidate={...unit,weapon,meleeWeapons:unit.dualWield?["handWeapon","offhandWeapon"]:weapon==="handWeapon"?["handWeapon"]:["handWeapon",weapon],lightArmour:armour==="light",heavyArmour:armour==="heavy",shield,rangedWeapon:ranged==="none"?null:ranged};
+ const faction=army.rosterFaction||rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction);
+ const price=Math.max(0,campaignEquipmentGoldCost(candidate,faction)-campaignEquipmentGoldCost(unit,faction));
+ if((treasury.treasury||0)<price){campaignMessage("Not enough gold. This equipment change costs "+price+" gold.");return;}
+ Object.assign(unit,candidate);treasury.treasury-=price;army.points=campaignArmyCost(army);syncPlayerArmyState();
+ campaignMessage("Equipment updated for "+(unit.name||unit.type)+". "+(price?"Paid "+price+" gold.":"No additional gold was required."));
+}
 function renderArmyManagement(){
  const host=byId("grand-army-management");if(!host||!activeCampaign)return;ensureLogisticsState(activeCampaign);
  const armies=playerArmies(),army=selectedPlayerArmy();if(!army){host.textContent="No field army.";return;}
  const faction=army.rosterFaction||rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction),treasury=selectedFactionTreasury(),catalog=recruitCatalog();
  const labels={goblins:"Goblin mobs",orcBoyz:"Orc Boyz",wolfRiders:"Goblin wolf riders",boarBoyz:"Orc boar riders",goblinHero:"Goblin Big Boss",goblinLord:"Goblin Warboss",orcHero:"Orc Big Boss",orcLord:"Orc Warboss",catapult:"Goblin Rock Lobber",swordsmen:"Melee infantry",archers:"Archers",dwarfInfantry:"Dwarf infantry",cavalry:"Cavalry",cannon:"Cannon",boltThrower:"Bolt thrower",captain:"Captain",lord:"Lord",dwarfCaptain:"Dwarf thane",dwarfLord:"Dwarf lord",dwarfKingHaldric:"King Haldric",legendaryLord:"Edric Voss",shadowElf:"Lethariel Starweaver",pegasusChampion:"Aelthir, the Dawnwing",rifleman:"Marksman",captainWeiss:"Marta Weiss",youngDragon:"Young dragon",dragon:"Dragon",ancientDragon:"Ancient dragon",deepflameDragon:"Thaurgath the Rune-Eater"};
+ const atFriendlyCity=campaignArmyAtFriendlyCity(army);
  const options=catalog.map(o=>{const available=availableForRecruitment(o,army),config=optionConfig(o,o.min),price=campaignRecruitmentGoldCost(config,faction);return '<option value="'+o.key+'" '+(available<o.min?'disabled':'')+'>'+o.label+' · '+available+' available · '+price+' gold minimum</option>';}).join("");
- const roster=(army.roster||[]).map((u,i)=>{const label=labels[u.type]||u.type,o=optionForUnit(u,catalog),can=!!o&&!o.character&&!o.fixed&&u.models<o.max&&availableForRecruitment(o,army)>0;return '<div class="grand-army-unit"><span><b>'+label+'</b><small>'+u.models+' models · '+unitCost(u,faction)+' pts · '+campaignArmyUpkeep({roster:[u],rosterFaction:faction})+' gold wages/turn</small></span><div class="grand-army-unit-actions"><button type="button" class="secondary-button" data-replenish="'+i+'" '+(!can?'disabled':'')+'>Replenish +1</button><button type="button" class="secondary-button grand-disband-button" data-disband="'+i+'">Disband</button></div></div>';}).join("");
+ const roster=(army.roster||[]).map((u,i)=>{const label=labels[u.type]||campaignUnitKind(u),o=optionForUnit(u,catalog),can=!!o&&!o.character&&!o.fixed&&u.models<o.max&&availableForRecruitment(o,army)>0;return '<div class="grand-army-unit"><span><b>'+label+'</b><small>Type: '+campaignUnitKind(u)+' · '+(u.models||1)+' models · Equipment: '+campaignUnitEquipmentSummary(u)+' · '+unitCost(u,faction)+' pts · '+campaignArmyUpkeep({roster:[u],rosterFaction:faction})+' gold wages/turn</small></span><div class="grand-army-unit-actions"><button type="button" class="secondary-button" data-replenish="'+i+'" '+(!can?'disabled':'')+'>Replenish +1</button><button type="button" class="secondary-button grand-disband-button" data-disband="'+i+'">Disband</button></div>'+campaignEquipmentEditor(u,i,atFriendlyCity)+'</div>';}).join("");
   host.innerHTML='<div class="grand-army-management-head"><span class="grand-army-summary">'+(army.roster||[]).length+' / 6 units</span></div><div class="grand-army-summary">'+(FACTION_BY_ID[treasury?.id]?.race==="greenskin"?"unlimited greenskin recruitment":recruitmentPoolAvailable(treasury,activeCampaign.regions.find(r=>r.id===army.region))+" local trained recruits")+' · '+civilianPopulation(activeCampaign.regions.find(r=>r.id===army.region)).toLocaleString()+' civilians at this location · '+(army.supplies??3)+'/'+(army.maxSupplies||3)+' supply turns · '+({supplied:"supplied",low:"low supplies",starving:"starving",raided:"supply line raided"}[army.supplyStatus]||"supply status unknown")+'</div>'+(roster||'<p class="subtle">This army has no troops yet. Recruit a unit below.</p>')+'<button type="button" class="secondary-button" id="grand-raid-supply">Raid enemy supply line</button><small class="grand-supply-note">Supplies refill while connected to friendly settlements. Cut off armies consume reserves; at zero, starvation causes losses.</small><div class="grand-recruit-box"><label class="grand-army-field">Train reinforcements<select id="grand-recruit-type">'+options+'</select></label><label class="grand-army-field">Models<input id="grand-recruit-count" type="number" min="1" max="30" value="5"></label><button type="button" class="primary-button" id="grand-recruit-unit" '+((army.roster||[]).length>=6?'disabled':'')+'>Train reinforcements</button><small>Uses compatible miniatures you own, local recruits and gold. Models already deployed in any of your armies cannot be recruited again.</small></div>';
  byId("grand-raid-supply").addEventListener("click",raidEnemySupplyLine);
+ host.querySelectorAll("[data-apply-equipment]").forEach(button=>button.addEventListener("click",()=>applyCampaignUnitEquipment(Number(button.dataset.applyEquipment))));
  
  
  host.querySelectorAll("[data-disband]").forEach(button=>button.addEventListener("click",()=>{const index=Number(button.dataset.disband),unit=army.roster[index];if(!unit)return;const label=labels[unit.type]||unit.type;if(!window.confirm("Disband "+label+" ("+unit.models+" models)? The models return to your available collection. Recruitment gold is not refunded."))return;army.roster.splice(index,1);army.points=campaignArmyCost(army);syncPlayerArmyState();campaignMessage("Disbanded "+label+"; "+unit.models+" models are available for recruitment again. No gold was refunded.");}));
