@@ -696,14 +696,48 @@ function createRefugeeColumn(campaign,{owner,culture,count,originRegion,nodeId})
  if(target)moveRefugeeColumn(campaign,group,target.node,movement);
  return group;
 }
-function resolveRefugeeEncounter(campaign,group,army){
+function showRefugeeEncounterDialog(campaign,group,army){
+ if(document.getElementById("campaign-refugee-encounter"))return;
+ const overlay=document.createElement("div");overlay.id="campaign-refugee-encounter";overlay.className="campaign-encounter-backdrop";
+ const dialog=document.createElement("section");dialog.className="campaign-encounter-dialog";dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-labelledby","campaign-refugee-title");
+ const faction=FACTION_BY_ID[group.owner]?.name||campaign.factionStates?.find(f=>f.id===group.owner)?.name||"a neighbouring realm";
+ const title=document.createElement("div");title.className="campaign-encounter-eyebrow";title.textContent="FIELD ENCOUNTER";
+ const heading=document.createElement("h2");heading.id="campaign-refugee-title";heading.textContent="Civilians on the road";
+ const description=document.createElement("p");description.className="campaign-encounter-description";description.textContent="Your force has encountered "+group.count.toLocaleString()+" refugees fleeing "+faction+". What are your orders?";
+ const choices=document.createElement("div");choices.className="campaign-encounter-choices";
+ const options=[
+  {action:"release",name:"Let them pass",detail:"Leave the column unharmed. No casualties or diplomatic penalty.",symbol:"↗",kind:"peaceful"},
+  {action:"kidnap",name:"Seize civilians",detail:"Take a portion of the refugees into your territory. Other factions will condemn the action.",symbol:"⚑",kind:"coercive"},
+  {action:"attack",name:"Attack the column",detail:"Kill some of the refugees. Expect severe diplomatic consequences.",symbol:"⚔",kind:"violent"}
+ ];
+ for(const option of options){
+  const button=document.createElement("button");button.type="button";button.className="campaign-encounter-choice "+option.kind;
+  const symbol=document.createElement("span");symbol.className="campaign-encounter-choice-symbol";symbol.setAttribute("aria-hidden","true");symbol.textContent=option.symbol;
+  const copy=document.createElement("span");copy.className="campaign-encounter-choice-copy";
+  const name=document.createElement("strong");name.textContent=option.name;
+  const detail=document.createElement("span");detail.textContent=option.detail;
+  const arrow=document.createElement("span");arrow.className="campaign-encounter-choice-arrow";arrow.textContent="›";
+  copy.append(name,detail);button.append(symbol,copy,arrow);
+  button.addEventListener("click",()=>{
+   overlay.remove();
+   resolveRefugeeEncounter(campaign,group,army,option.action);
+   saveCampaign();renderCampaignMap();
+  });
+  choices.append(button);
+ }
+ dialog.append(title,heading,description,choices);overlay.append(dialog);
+ overlay.addEventListener("click",event=>{if(event.target===overlay){/* A consequential encounter requires an explicit choice. */}});
+ document.body.append(overlay);
+ const first=choices.querySelector("button");if(first)first.focus();
+}
+function resolveRefugeeEncounter(campaign,group,army,chosenAction=null){
  if(!group||!army||!campaign.refugeeGroups.some(g=>g.id===group.id))return;
  const captor=army.owner||army.factionId;if(!captor||captor===group.owner)return;
  let action="release";
  if(campaignIsGreenskin(campaign,captor))action="attack";
  else if(captor===campaign.playerPoliticalFaction){
-  const choice=window.prompt("You encounter "+group.count.toLocaleString()+" civilian refugees. Choose: 1 = attack, 2 = kidnap, 3 = let them go.","2");
-  action=choice==="1"?"attack":choice==="2"?"kidnap":"release";
+  if(!chosenAction){showRefugeeEncounterDialog(campaign,group,army);return;}
+  action=["attack","kidnap","release"].includes(chosenAction)?chosenAction:"release";
  }else action="kidnap";
  const power=Math.max(0,Number(army.points)||campaignArmyCost(army)||0);
  const fraction=action==="attack"?Math.min(.65,.18+power/5000):action==="kidnap"?Math.min(.25,.04+power/10000):0;
