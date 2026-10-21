@@ -2146,14 +2146,14 @@ function campaignNamedCharacterExistsWorldwide(type){
  for(const army of activeCampaign.armies||[])rosters.push(army?.roster||[]);
  for(const state of activeCampaign.factionStates||[])rosters.push(state?.roster||[]);
  for(const region of activeCampaign.regions||[]){rosters.push(region?.roster||[],region?.garrison||[]);for(const army of region?.armies||[])rosters.push(army?.roster||[]);}
- for(const node of Object.values(activeCampaign.graph?.nodes||{})){rosters.push(node?.roster||[],node?.garrison||[]);for(const army of node?.armies||[])rosters.push(army?.roster||[]);}
+ for(const node of Object.values(activeCampaign.graph?.nodes||{})){rosters.push(node?.roster||[],node?.garrison||[]);for(const army of node?.armies||[])rosters.push(army?.roster||[]);if(matches(node?.occupant)||matches(node?.character)||matches(node?.guardian))return true;}
  return rosters.some(roster=>Array.isArray(roster)&&roster.some(matches));
 }
 function campaignEquipmentChoices(unit){
  const id=activeCampaign?.playerPoliticalFaction,race=FACTION_BY_ID[id]?.race||"human",type=String(unit?.type||"");
  const monsters=["dragon","youngDragon","ancientDragon","deepflameDragon","skeletonDragon","skeletonGiant","giant","trolls","skeletonTroll"].includes(type);
  const namedFixed=["legendaryLord","shadowElf","pegasusChampion","dwarfKingHaldric","rifleman","captainWeiss","starwardenLord","deepflameDragon"].includes(type);
- const character=!monsters&&["captain","lord","mageHero","mageLord","necromancer","masterNecromancer","vampireHero","vampireLord","dwarfCaptain","dwarfLord","goblinHero","goblinLord","orcHero","orcLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"].includes(type);
+ const character=!monsters&&["captain","lord","mageHero","mageLord","necromancer","masterNecromancer","vampireHero","vampireLord","dwarfCaptain","dwarfLord","goblinHero","goblinLord","orcHero","orcLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","legendaryLord","rifleman","captainWeiss"].includes(type);
  const weapons=[["handWeapon","Hand weapon"]];
  if(!namedFixed&&!monsters){if(race!=="dwarf")weapons.push(["magicSword","Magic sword"]);if(!unit?.mounted)weapons.push(["halberd","Halberd"]);weapons.push(["greatWeapon","Great weapon"]);if(unit?.mounted)weapons.push(["spear","Spear"],["lance","Lance"]);else if(race==="elf")weapons.push(["spear","Spear"]);}
  const ranged=[["none","No ranged weapon"]];
@@ -2162,7 +2162,7 @@ function campaignEquipmentChoices(unit){
  const noArmourTypes=["mageHero","mageLord","necromancer","masterNecromancer","vampireHero","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"];
  if(!namedFixed&&!monsters&&race!=="greenskin"&&race!=="undead"&&!noArmourTypes.includes(type)){armour.push(["light","Light armour"]);if(race!=="dwarf")armour.push(["heavy","Heavy armour"]);}
  let mounts=[];
- if(!namedFixed&&character){
+ if((!namedFixed||["legendaryLord","rifleman","captainWeiss"].includes(type))&&character){
   if(race==="human"||race==="elf"){mounts=[["none","On foot"],["horse",race==="elf"?"Elven steed":"Warhorse"],["eagle","Pegasus"],["unicorn","Unicorn"]];if(type==="lord"&&race==="elf")mounts.push(["youngDragon","Young dragon"],["dragon","Dragon"],["ancientDragon","Ancient dragon"]);}
   else if(race==="undead")mounts=[["none","On foot"],["skeletal_steed","Skeletal steed"],["skeletonChariot","Skeleton chariot"]];
   else if(race==="greenskin"&&["goblinHero","goblinLord","goblinShaman","goblinGreatShaman","orcHero","orcLord","orcShaman","orcGreatShaman"].includes(type)){mounts=type.startsWith("goblin")?[["none","On foot"],["wolf","Wolf"]]:[["none","On foot"],["boar","Boar"]];if(type==="orcLord")mounts.push(["wyvern","Wyvern"]);}
