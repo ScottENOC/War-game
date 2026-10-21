@@ -321,6 +321,8 @@ function saveBattleSnapshot() {
  }
 }
 render = () => {
+ const battleMenuBar = $("battle-menu-bar");
+ if (battleMenuBar) battleMenuBar.hidden = !(campaignBattle || grandCampaignBattle);
  updateAiMemory();
  Object.values(S.units||{}).forEach(u=>{u.magicSuppressed=isInsideNullificationDome(u);});
  updateObjectiveInteractions();
