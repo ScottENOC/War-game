@@ -1534,6 +1534,109 @@ function createMovementGraph(){
   if(nodes["city-14"]){nodes["city-14"].y-=45;}
   if(nodes["port-21"]){nodes["port-21"].x=1235;nodes["port-21"].y=475;}
 
+  // Northern eastern-continent sea lane: keep channel point 3 at its height,
+  // but place it directly north of Grinhold; align point 2 with Skullcrag and
+  // move it north by the same amount it moves west.
+  if(nodes["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-3"]){
+   const n=nodes["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-3"];
+   n.x=nodes["city-11"]?.x??1000;
+  }
+  if(nodes["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-2"]){
+   const n=nodes["waypoint-eastern-continent-north-coast-3-freebooter-north-channel-2"];
+   const oldX=n.x, targetX=nodes["city-13"]?.x??1157, westward=oldX-targetX;
+   n.x=targetX;n.y-=westward;
+  }
+  // Bring Dreadmarch Harbour 70% of the way from its current position toward Dreadmarch.
+  if(nodes["port-21"]&&nodes["city-21"]){
+   const p=nodes["port-21"],c=nodes["city-21"];
+   p.x+=0.7*(c.x-p.x);p.y+=0.7*(c.y-p.y);
+  }
+  // Consolidate the three overlapping offshore/harbour points into one junction.
+  mergeMapPoints([
+   "dreadmarch-offshore-north-east",
+   "waypoint-dreadmarch-harbour-junction-port-21-1",
+   "waypoint-dreadmarch-offshore-north-east-dreadmarch-harbour-junction-1"
+  ],"Dreadmarch outer harbour junction");
+  link("dreadmarch-offshore-north-east","port-21",1,"sea");
+  link("dreadmarch-offshore-north-east","waypoint-dreadmarch-offshore-east-dreadmarch-offshore-north-east-1",1,"sea");
+  renameNode("dreadmarch-harbour-junction","dreadmarch-north-coast-junction",{label:"Dreadmarch northern coast junction"});
+  link("dreadmarch-offshore-north-east","dreadmarch-north-coast-junction",1,"sea");
+  // Keep the coastward route's existing vertical profile, but align every point
+  // from the renamed junction through eastern-continent-north-coast-3 to the same x.
+  {
+   const start="dreadmarch-north-coast-junction",goal="eastern-continent-north-coast-3";
+   const queue=[[start]],seen=new Set([start]);let path=null;
+   while(queue.length){
+    const current=queue.shift(),id=current[current.length-1];
+    if(id===goal){path=current;break;}
+    for(const edge of edges[id]||[])if(nodes[edge.to]&&!seen.has(edge.to)){
+     seen.add(edge.to);queue.push([...current,edge.to]);
+    }
+   }
+   if(path){
+    const coastX=nodes["dreadmarch-offshore-north-east"]?.x??1285;
+    for(const id of path)if(nodes[id])nodes[id].x=coastX;
+   }
+  }
+
+  // Turn the specified crossroads waypoint into a Mudgut-controlled village
+  // and reroute both adjoining roads through it.
+  unlink("feature-12-16-land-2","waypoint-crossroads-12-crossroads-16-1");
+  if(nodes["waypoint-crossroads-14-crossroads-15-2"]){
+   const village=nodes["waypoint-crossroads-14-crossroads-15-2"];
+   village.type="village";village.label="Mudgut Roadside Village";
+   village.region=15;village.controllerFaction="greenskins";
+   link("feature-12-16-land-2",village.id,1,"land");
+   link("waypoint-crossroads-12-crossroads-16-1",village.id,1,"land");
+  }
+
+  // Bonefield was overlapping Dreadmarch. Disconnect its old roads and relocate
+  // it west-north-west of Mudgut, with one named point of interest on that road.
+  for(const id of ["city-16","crossroads-16"]){
+   for(const edge of [...(edges[id]||[])])if(edge.kind==="land")unlink(id,edge.to);
+  }
+  if(nodes["city-16"]){nodes["city-16"].x=970;nodes["city-16"].y=350;}
+  const bonefieldMudgut={id:"bonefield-mudgut-roadside-poi",region:16,type:"plain",label:"Bonefield–Mudgut roadside landmark",x:1007,y:378};
+  add(bonefieldMudgut);
+  link("city-16",bonefieldMudgut.id,1,"land");
+  link(bonefieldMudgut.id,"city-15",1,"land");
+  link("city-16","city-26",1,"land");
+  link("city-16","city-11",1,"land");
+  // Freebooter's Haven has the requested direct road links and a single stop
+  // on its road to Redfang Plain.
+  link("city-26","city-11",1,"land");
+  const freebooterRedfang={id:"freebooter-redfang-road-stop",region:26,type:"road",label:"Freebooter–Redfang road stop",x:991,y:303};
+  add(freebooterRedfang);
+  link("city-26",freebooterRedfang.id,1,"land");
+  link(freebooterRedfang.id,"city-12",1,"land");
+  // Remove the old sea approach and give Freebooter's Haven Harbour the requested route.
+  removeWithoutSplice("freebooter-west-approach");
+  link("port-26","waypoint-far-shoals-south-approach-freebooter-north-channel-2",1,"sea");
+
+  // Move Nightfen north. City markers and their faction pennants are synchronised
+  // to graph coordinates during rendering below.
+  if(nodes["city-18"])nodes["city-18"].y-=100;
+
+  // Southwatch to Khaz Varrak: a linear road passing through one village for each city.
+  const southwatchVillage={id:"village-poi-southwatch-khaz-human",region:5,type:"village",label:"Southwatch Road Village",x:598,y:484,population:680,prosperity:47,controllerFaction:"empire"};
+  const khazVillage={id:"village-poi-southwatch-khaz-dwarf",region:24,type:"village",label:"Khaz Varrak Road Village",x:582,y:451,population:540,prosperity:53,controllerFaction:"dwarfs"};
+  add(southwatchVillage);add(khazVillage);
+  link("city-5",southwatchVillage.id,1,"land");
+  link(southwatchVillage.id,khazVillage.id,1,"land");
+  link(khazVillage.id,"city-24",1,"land");
+
+  // Adjust the southern road feature points.
+  if(nodes["waypoint-crossroads-4-crossroads-20-1"])nodes["waypoint-crossroads-4-crossroads-20-1"].x-=22;
+  if(nodes["feature-4-20-land-2"]&&nodes["crossroads-4"]&&nodes["crossroads-20"]){
+   nodes["feature-4-20-land-2"].x=(nodes["crossroads-4"].x+nodes["crossroads-20"].x)/2;
+   nodes["feature-4-20-land-2"].y=(nodes["crossroads-4"].y+nodes["crossroads-20"].y)/2;
+  }
+  removeWithoutSplice("feature-4-5-land-3");
+  if(nodes["feature-4-5-land-1"]){
+   nodes["feature-4-5-land-1"].type="road";
+   nodes["feature-4-5-land-1"].label="Southlands land route";
+  }
+
   // Give every map point a unique human-readable label while preserving its stable ID.
  // Repeated generic labels receive a numbered suffix.
  const usedLabels=new Set();
@@ -1900,7 +2003,7 @@ function renderCampaignMap(){
  const road=svgEl("g",{id:"campaign-road-layer","pointer-events":"none"}),layer=svgEl("g",{id:"campaign-node-layer"}),token=svgEl("g",{id:"campaign-commander-layer","pointer-events":"none"}),armyLayer=svgEl("g",{id:"campaign-army-layer"}),refugeeLayer=svgEl("g",{id:"campaign-refugee-layer"});
  for(const [id,list] of Object.entries(edges))for(const e of list){if(id.localeCompare(e.to)>=0)continue;const a=nodes[id],b=nodes[e.to],isSea=a.type==="seaRoute"||b.type==="seaRoute";road.append(svgEl("path",{d:"M "+a.x+" "+a.y+" L "+b.x+" "+b.y,class:"campaign-road"+(isSea?" sea-road":"")+(a.type==="river"||b.type==="river"?" river-road":"")}));}
  paintFactionBanners(map,activeCampaign);
- for(const marker of map.querySelectorAll(".grand-city")){const cityId=Number(marker.dataset.city),region=activeCampaign.regions.find(r=>Number(r.id)===cityId||Number(r.cityId)===cityId),owner=region?politicalOwner(region):(FACTION_PROFILES[cityId]?.id||null);const circle=marker.querySelector("circle");if(!circle)continue;let border="#c7c7b5";if(owner===activeCampaign.playerPoliticalFaction)border="#79c987";else if(owner){const relation=campaignRelation(activeCampaign,activeCampaign.playerPoliticalFaction,owner),war=(activeCampaign.activeWars||[]).includes(campaignWarKey(activeCampaign.playerPoliticalFaction,owner));border=war||relation<=-50?"#df5b50":relation>=35?"#69c981":relation<=-20?"#e4a14e":"#d9c66e";}circle.setAttribute("stroke",border);circle.setAttribute("stroke-width","4");}
+ for(const marker of map.querySelectorAll(".grand-city")){const cityId=Number(marker.dataset.city),mapCityNode=nodes["city-"+cityId]||nodes["crossroads-"+cityId];if(mapCityNode)marker.setAttribute("transform","translate("+mapCityNode.x+" "+mapCityNode.y+")");const region=activeCampaign.regions.find(r=>Number(r.id)===cityId||Number(r.cityId)===cityId),owner=region?politicalOwner(region):(FACTION_PROFILES[cityId]?.id||null);const circle=marker.querySelector("circle");if(!circle)continue;let border="#c7c7b5";if(owner===activeCampaign.playerPoliticalFaction)border="#79c987";else if(owner){const relation=campaignRelation(activeCampaign,activeCampaign.playerPoliticalFaction,owner),war=(activeCampaign.activeWars||[]).includes(campaignWarKey(activeCampaign.playerPoliticalFaction,owner));border=war||relation<=-50?"#df5b50":relation>=35?"#69c981":relation<=-20?"#e4a14e":"#d9c66e";}circle.setAttribute("stroke",border);circle.setAttribute("stroke-width","4");}
  map.querySelector("#grand-city-markers").before(road);
  for(const n of Object.values(nodes)){const isCurrent=n.id===movementNode,reach=(edges[movementNode]||[]).some(e=>e.to===n.id&&e.cost+nodeCost(n)-1<=movementLeft),g=svgEl("g",{class:"campaign-node "+n.type+(isCurrent?" current":"")+(n.id===selectedNodeId?" selected":"")+(reach?" reachable":""),tabindex:reach?"0":"-1",role:"button","aria-label":n.label+" (map point ID: "+n.id+")",transform:"translate("+n.x+" "+n.y+")","data-node":n.id});const pointTitle=svgEl("title");pointTitle.textContent=n.label+" · "+n.id;g.append(pointTitle);g.append(svgEl("circle",{r:16,class:"campaign-node-hit"}));const visiblePoint=svgEl("circle",{r:n.type==="city"?5:n.type==="crossroads"?3.5:5.5,class:"campaign-node-visible"});
   if(n.type==="village"){
