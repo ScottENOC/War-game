@@ -2128,17 +2128,13 @@ function recruitCatalog(){
  }
  const equipmentVariants=["archers","crossbowmen","firearmInfantry","crossbows","dwarfFirearms","spearmen","halberdiers","greatWeapons","goblinBows","skeletonBows"];
  const visible=options.filter(o=>!equipmentVariants.includes(o.key));
- const factionRoster=FACTION_ROSTER_OVERRIDES[activeCampaign.playerPoliticalFaction]?.units;
- const rosterAliases=new Set((factionRoster||[]).flatMap(id=>{
-  if(["swordsmen","archers","dwarfInfantry","goblins","orcBoyz","skeletons","zombies"].includes(id))return [id,"melee"];
-  if(["cannon","catapult","boltThrower"].includes(id))return [id,"artillery","rockLobber","skeletonCatapult"];
-  return [id];
- }));
- const factionVisible=factionRoster?.length?visible.filter(o=>rosterAliases.has(o.key)||rosterAliases.has(o.type)||rosterAliases.has(o.modelType)):visible;
- const infantry=factionVisible.find(o=>o.key==="melee");
+ // Campaign recruitment should expose the full faction-appropriate unit catalogue from skirmish.
+ // FACTION_ROSTER_OVERRIDES controls starting/AI army composition, not the player's recruitable unit list.
+ const infantry=visible.find(o=>o.key==="melee");
  if(infantry){infantry.label="Infantry";infantry.flexibleEquipment=true;infantry.modelWeapon=null;}
- if(pirate)return factionVisible.filter(o=>!["cavalry"].includes(o.key)).map(o=>o.key==="artillery"?{...o,label:"Shipboard cannon"}:o);
- return factionVisible;
+ // The only broad roster exception is the pirate factions: no cavalry.
+ if(pirate)return visible.filter(o=>o.key!=="cavalry").map(o=>o.key==="artillery"?{...o,label:"Shipboard cannon"}:o);
+ return visible;
 }
 function assignedSiegeModelIds(){return new Set(playerArmies().flatMap(a=>(a.roster||[]).flatMap(u=>[u.machineModelId,...(u.crewModelIds||[])].filter(Boolean))));}
 function optionMatchesModel(o,m){const woodElfStyle=activeCampaign.playerPoliticalFaction==="verdantCourt",needsDualWield=woodElfStyle&&(o.key==="melee"||String(o.key||"").startsWith("crew-"));return m?.faction===rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction)&&m.type===o.modelType&&(o.flexibleEquipment||!o.modelWeapon||m.weapon===o.modelWeapon)&&(!needsDualWield||m.components?.includes("left_sword")||m.offhandWeapon); }
