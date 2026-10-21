@@ -1,7 +1,7 @@
 import "./tooltips.js";
 import { installSaveBackupControls } from "./saveBackup.js?v=20261016-save-backup-v1";
 import { startGame } from "./GameEngine.js?v=20261021-river-crossing-castle-test-v7";
-import { startGrandCampaign } from "./grandCampaign.js?v=20261021-roster-gaps-v1";
+import { startGrandCampaign } from "./grandCampaign.js?v=20261021-subfaction-rosters-v1";
 
 startGrandCampaign();
 startGame();
