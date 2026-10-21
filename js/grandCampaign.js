@@ -1359,6 +1359,7 @@ function createMovementGraph(){
   ironholdRiverCrossing.type="river";
   ironholdRiverCrossing.label="Ironhold river crossing";
   removeGraphNode(redundantMountainWaypoint,ironholdRiverCrossing.id);
+  if(nodes["feature-9-24-land-2"])link("feature-9-24-land-2",ironholdRiverCrossing.id,1,"land");
  }
  // Give every map point a unique human-readable label while preserving its stable ID.
  // Repeated generic labels receive a numbered suffix.
