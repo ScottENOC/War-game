@@ -591,3 +591,9 @@ button,[role="button"]{
 #grand-campaign-setup .grand-world-map{width:1300px;height:760px;max-width:none;max-height:none;object-fit:initial}
 #grand-campaign-world .grand-map-live-wrap{overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y;scrollbar-width:auto;-webkit-overflow-scrolling:touch}
 #grand-campaign-world .grand-map-live-wrap .grand-world-map{max-width:none;max-height:none}
+
+/* Desktop grand-campaign map dragging */
+#grand-campaign-setup .grand-map-wrap,
+#grand-campaign-world .grand-map-live-wrap{cursor:grab;}
+#grand-campaign-setup .grand-map-wrap.campaign-map-panning,
+#grand-campaign-world .grand-map-live-wrap.campaign-map-panning{cursor:grabbing;user-select:none;-webkit-user-select:none;}
