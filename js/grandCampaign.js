@@ -825,7 +825,7 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
  return {region,summary,fled,killed,previousOwner,conquerorFaction,plunder,outcome};
 }
 
-const MAP_ID="shattered-realms-v18-deepdelve-southern-sea";
+const MAP_ID="shattered-realms-v19-deepdelve-river-approach";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
@@ -1368,7 +1368,8 @@ function createMovementGraph(){
  mergeInto("crossroads-18","city-18","Nightfen");
  if(nodes["city-18"]){nodes["city-18"].type="city";nodes["city-18"].label="Nightfen";}
  // Merge overlapping generated road points into the map features/cities they sit on.
- mergeInto("waypoint-forest-poi-north-east-crossroads-10-1","waypoint-crossroads-10-crossroads-25-1","Deepdelve forest-road junction");
+ mergeInto("waypoint-forest-poi-north-east-crossroads-10-1","waypoint-crossroads-10-crossroads-25-1","Deepdelve river crossing");
+ if(nodes["waypoint-crossroads-10-crossroads-25-1"]){nodes["waypoint-crossroads-10-crossroads-25-1"].type="river";nodes["waypoint-crossroads-10-crossroads-25-1"].label="Deepdelve river crossing";nodes["waypoint-crossroads-10-crossroads-25-1"].region=10;}
  mergeInto("waypoint-crossroads-10-crossroads-25-2","forest-poi-north-east","Deepdelve forest-road junction");
  mergeMapPoints(["waypoint-crossroads-5-crossroads-20-1","waypoint-crossroads-4-crossroads-23-2"],"Southern road junction");
  removeWithoutSplice("river-poi-east");
