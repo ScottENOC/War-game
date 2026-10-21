@@ -2,8 +2,8 @@ import { getCollectionSnapshot } from "./collection.js?v=20261020-wood-elf-v1";
 import { unitCost, createUnitsFromArmy } from "./units.js?v=20261020-grinhold-battle-fix-v1";
 let lastCampaignNodeTap = null;
 const FACTIONS = {
- empire:{name:"Human Realms",summary:"The largest and most populous realm, but not a unified kingdom.",strengths:"Broad territory, fertile river valleys, trade roads and the largest pool of settlements.",politics:"Crownfall and Westmere recognise your court. Goldhaven, Stonebridge and Southwatch answer to rival human lords.",playerCities:["Crownfall","Westmere"],armyFaction:"empire"},
- highElves:{name:"High Elves",summary:"An old maritime people whose courts cluster around ancient forests and island harbours.",strengths:"Defensible islands, forest resources, sea access and compact but valuable settlements.",politics:"Aelthir recognises your court. Moonspire and Silvershade retain their own power and may resist your claims.",playerCities:["Aelthir"],armyFaction:"highElves"},
+ empire:{name:"Kingdom of Valedorn",summary:"The largest and most populous realm, but not a unified kingdom.",strengths:"Broad territory, fertile river valleys, trade roads and the largest pool of settlements.",politics:"Crownfall and Westmere recognise your court. Goldhaven, Stonebridge and Southwatch answer to rival human lords.",playerCities:["Crownfall","Westmere"],armyFaction:"empire"},
+ highElves:{name:"Elves",summary:"An old maritime people whose courts cluster around ancient forests and island harbours.",strengths:"Defensible islands, forest resources, sea access and compact but valuable settlements.",politics:"Aelthir recognises your court. Moonspire and Silvershade retain their own power and may resist your claims.",playerCities:["Aelthir"],armyFaction:"highElves"},
  dwarfs:{name:"Dwarfs",summary:"An old civilisation of mountain holds linked by passes and deep roads. No lowland settlements.",strengths:"Mountain strongholds, mineral wealth and defensible approaches; every hold is strategically important.",politics:"Ironhold follows your clan. Deepdelve is held by a rival thane with his own army and treasury.",playerCities:["Ironhold"],armyFaction:"dwarfs"},
  greenskins:{name:"Greenskin Hordes",summary:"A sprawling, fractured belt of goblin tribes, orc warbands and ogre strongholds occupying the eastern plains and mountain chains.",strengths:"Extensive territory, rough mountain approaches, broad grazing plains and several rival warbosses.",politics:"No single warboss commands every tribe. The starting settlement determines which local power begins the campaign.",playerCities:["Grinhold","Redfang Plain","Skullcrag","Ironjaw Pass","Mudgut","Bonefield"],armyFaction:"empire"},
  undead:{name:"The Undying Courts",summary:"Scattered barrow kingdoms, haunted marshes and ancient necropolises separated by long stretches of hostile country.",strengths:"Widely separated strongholds and defensible ruins; influence is dispersed rather than continuous.",politics:"Each necropolis is a power centre in its own right. No single ruler controls every undead settlement.",playerCities:["Barrowmere","Nightfen","Sepulchre"],armyFaction:"undead"},
@@ -13,7 +13,7 @@ const FACTIONS = {
 // Individual factions may override their race's roster, diplomacy and economic traits.
 const RACES = {
  human:{name:"Human",defaultRoster:"empire",attitudes:{greenskin:-55,undead:-45,elf:0,dwarf:0,human:0}},
- elf:{name:"High Elf",defaultRoster:"highElves",attitudes:{greenskin:-65,undead:-60,human:0,dwarf:-20,elf:15}},
+ elf:{name:"Elf",defaultRoster:"highElves",attitudes:{greenskin:-65,undead:-60,human:0,dwarf:-20,elf:15}},
  dwarf:{name:"Dwarf",defaultRoster:"dwarfs",attitudes:{greenskin:-75,undead:-50,elf:-35,human:5,dwarf:15}},
  greenskin:{name:"Greenskin",defaultRoster:"greenskins",attitudes:{human:-65,elf:-70,dwarf:-75,undead:-10,greenskin:10}},
  undead:{name:"Undead",defaultRoster:"undead",attitudes:{human:-45,elf:-55,dwarf:-45,greenskin:-10,undead:15}}
@@ -561,7 +561,7 @@ const CITY_PROFILES = {
  26:{tier:2,population:12500,prosperity:46,fortification:{style:"human-layered",material:"weathered-stone-and-timber",circuits:1,gates:1,wounds:42},buildings:["pirate-harbour","powder-magazine","black-market"]},
  27:{tier:2,population:9800,prosperity:40,fortification:{style:"human-layered",material:"salt-worn-stone",circuits:1,gates:1,wounds:35},buildings:["corsair-harbour","powder-magazine","shipwrights"]},
 };
-const CULTURE_BY_FACTION = {empire:"Human",highElves:"High Elf",dwarfs:"Dwarf",greenskins:"Greenskin",undead:"Undead",evilHumans:"Human"};
+const CULTURE_BY_FACTION = {empire:"Human",highElves:"Elf",dwarfs:"Dwarf",greenskins:"Greenskin",undead:"Undead",evilHumans:"Human"};
 const FACTION_SPECIES = {empire:"human",highElves:"elf",dwarfs:"dwarf",greenskins:"greenskin",undead:"undead",evilHumans:"human"};
 function cityArchitectureType(city){
  const race=city?.faction==="undead"?"human":FACTION_SPECIES[city?.faction]||"human";
@@ -1003,7 +1003,7 @@ function gateTextForPoliticalFaction(id){
  const city=politicalFactionHome(id),required=(city?.requiredCharacters||[]).map(namedCharacterById).filter(Boolean);
  if(required.length)return required.map(x=>x.name).join(" or ");
  const spec=genericCommanderTypes(id);
- return spec.faction==="dwarfs"?"a generic Dwarf thane or lord in your collection":spec.faction==="highElves"?"a generic High Elf hero or lord in your collection":"a generic human hero or lord in your collection";
+ return spec.faction==="dwarfs"?"a generic Dwarf thane or lord in your collection":spec.faction==="highElves"?"a generic Elf hero or lord in your collection":"a generic human hero or lord in your collection";
 }
 function ensureValidCity(){const home=politicalFactionHome(selectedPoliticalFaction);if(home){selectedCity=home.id;selectedFaction=home.faction;}}
 function paintFactionBanners(map,campaign=null){
@@ -2051,7 +2051,7 @@ function recruitCatalog(){
  const pirate=isPirateFaction(activeCampaign.playerPoliticalFaction);
  const race=FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race||"human",basic=race==="undead"?"skeletons":race==="greenskin"?"goblins":race==="dwarf"?"dwarfInfantry":"swordsmen";
  const options=[
-  {key:"melee",label:pirate?"Deckhands":activeCampaign.playerPoliticalFaction==="verdantCourt"?"Wood Elf dual-wielders":race==="dwarf"?"Dwarf melee infantry":race==="elf"?"High Elf spearmen":race==="greenskin"?"Goblin mobs":"Melee infantry",type:basic,weapon:race==="elf"&&activeCampaign.playerPoliticalFaction!=="verdantCourt"?"spear":"handWeapon",min:5,max:30,modelType:basic,modelWeapon:race==="elf"&&activeCampaign.playerPoliticalFaction!=="verdantCourt"?"spear":"handWeapon"},
+  {key:"melee",label:pirate?"Deckhands":activeCampaign.playerPoliticalFaction==="verdantCourt"?"Wood Elf dual-wielders":race==="dwarf"?"Dwarf melee infantry":race==="elf"?"Elf spearmen":race==="greenskin"?"Goblin mobs":"Melee infantry",type:basic,weapon:race==="elf"&&activeCampaign.playerPoliticalFaction!=="verdantCourt"?"spear":"handWeapon",min:5,max:30,modelType:basic,modelWeapon:race==="elf"&&activeCampaign.playerPoliticalFaction!=="verdantCourt"?"spear":"handWeapon"},
   ...(race==="greenskin"?[
    {key:"orcBoyz",label:"Orc Boyz",type:"orcBoyz",weapon:"handWeapon",min:5,max:30,modelType:"orcBoyz",modelWeapon:"handWeapon"},
    {key:"goblinBows",label:"Goblin short bows",type:"goblins",weapon:"handWeapon",rangedWeapon:"bow",min:5,max:30,modelType:"goblins",modelWeapon:"bow"},
@@ -2083,7 +2083,7 @@ function recruitCatalog(){
   ...(race==="elf"||race==="greenskin"?[]:[{key:"spearmen",label:"Spearmen",type:basic,weapon:"spear",min:5,max:30,modelType:basic,modelWeapon:"spear"}]),
   ...(race==="greenskin"?[]:[{key:"halberdiers",label:"Halberdiers",type:basic,weapon:"halberd",min:5,max:30,modelType:basic,modelWeapon:"halberd"}]),
   {key:"greatWeapons",label:"Great-weapon infantry",type:basic,weapon:"greatWeapon",min:5,max:30,modelType:basic,modelWeapon:"greatWeapon"},
-  ...(race!=="dwarf"&&race!=="greenskin"&&race!=="undead"?[{key:"cavalry",label:race==="elf"?"High Elf cavalry":"Cavalry",type:"cavalry",weapon:"handWeapon",min:5,max:15,modelType:"cavalry"}]:[]),
+  ...(race!=="dwarf"&&race!=="greenskin"&&race!=="undead"?[{key:"cavalry",label:race==="elf"?"Elf cavalry":"Cavalry",type:"cavalry",weapon:"handWeapon",min:5,max:15,modelType:"cavalry"}]:[]),
   ...(race==="greenskin"||race==="undead"?[]:[{key:"artillery",label:race==="elf"?"Bolt thrower":race==="dwarf"?"Dwarf cannon":"Cannon",type:race==="elf"?"boltThrower":"cannon",weapon:"handWeapon",min:race==="elf"?2:3,max:race==="elf"?2:3,modelType:race==="elf"?"boltThrower":"cannon",modelWeapon:"none",fixed:true,crewType:race==="dwarf"?"dwarfInfantry":"swordsmen",crewWeapon:race==="elf"?(activeCampaign.playerPoliticalFaction==="verdantCourt"?"handWeapon":"spear"):"handWeapon"}]),
   ...(race==="greenskin"?[]:race==="dwarf"?[
    {key:"dwarfCaptain",label:"Dwarf thane",type:"dwarfCaptain",weapon:"handWeapon",min:1,max:1,modelType:"dwarfCaptain",character:true},
@@ -2095,11 +2095,11 @@ function recruitCatalog(){
    {key:"vampireHero",label:"Vampire Thrall",type:"vampireHero",weapon:"handWeapon",min:1,max:1,modelType:"vampireHero",character:true},
    {key:"vampireLord",label:"Vampire Lord",type:"vampireLord",weapon:"handWeapon",min:1,max:1,modelType:"vampireLord",character:true}
   ]:[
-   {key:"captain",label:race==="elf"?"High Elf hero":"Human captain",type:"captain",weapon:"handWeapon",min:1,max:1,modelType:"captain",character:true},
-   {key:"lord",label:race==="elf"?"High Elf lord":"Human lord",type:"lord",weapon:"handWeapon",min:1,max:1,modelType:"lord",character:true},
+   {key:"captain",label:race==="elf"?"Elf hero":"Human captain",type:"captain",weapon:"handWeapon",min:1,max:1,modelType:"captain",character:true},
+   {key:"lord",label:race==="elf"?"Elf lord":"Human lord",type:"lord",weapon:"handWeapon",min:1,max:1,modelType:"lord",character:true},
    ...(race==="elf"?[
-    {key:"mageHero",label:"High Elf mage",type:"mageHero",weapon:"handWeapon",min:1,max:1,modelType:"mageHero",character:true},
-    {key:"mageLord",label:"High Elf archmage",type:"mageLord",weapon:"handWeapon",min:1,max:1,modelType:"mageLord",character:true},
+    {key:"mageHero",label:"Elf mage",type:"mageHero",weapon:"handWeapon",min:1,max:1,modelType:"mageHero",character:true},
+    {key:"mageLord",label:"Elf archmage",type:"mageLord",weapon:"handWeapon",min:1,max:1,modelType:"mageLord",character:true},
     {key:"shadowElf",label:"Lethariel Starweaver",type:"shadowElf",weapon:"handWeapon",rangedWeapon:"magicBow",min:1,max:1,modelType:"shadowElf",character:true},
     {key:"pegasusChampion",label:"Aelthir, the Dawnwing",type:"pegasusChampion",weapon:"lance",min:1,max:1,modelType:"pegasusChampion",character:true},
     ...["youngDragon","dragon","ancientDragon"].map(type=>({key:type,label:type==="youngDragon"?"Young dragon":type==="dragon"?"Dragon":"Ancient dragon",type,weapon:"handWeapon",min:1,max:1,modelType:type,character:true}))
@@ -2117,7 +2117,7 @@ function recruitCatalog(){
    ])
   ])
  ];
- if(race==="elf")options.push({key:"elfChariot",label:activeCampaign.playerPoliticalFaction==="verdantCourt"?"Wood Elf chariot":"High Elf chariot",type:"elfChariot",weapon:"handWeapon",min:3,max:3,modelType:"elfChariot",fixed:true,crewType:"swordsmen",crewWeapon:activeCampaign.playerPoliticalFaction==="verdantCourt"?"handWeapon":"spear"});
+ if(race==="elf")options.push({key:"elfChariot",label:activeCampaign.playerPoliticalFaction==="verdantCourt"?"Wood Elf chariot":"Elf chariot",type:"elfChariot",weapon:"handWeapon",min:3,max:3,modelType:"elfChariot",fixed:true,crewType:"swordsmen",crewWeapon:activeCampaign.playerPoliticalFaction==="verdantCourt"?"handWeapon":"spear"});
  if(race==="human")options.push({key:"humanChariot",label:"Human war chariot",type:"humanChariot",weapon:"handWeapon",min:3,max:3,modelType:"humanChariot",fixed:true,crewType:"swordsmen",crewWeapon:"handWeapon"});
  if(race==="greenskin"){
   options.push({key:"goblinChariot",label:"Goblin chariot",type:"goblinChariot",weapon:"handWeapon",min:3,max:3,modelType:"goblinChariot",fixed:true,crewType:"goblins",crewWeapon:"handWeapon"});
