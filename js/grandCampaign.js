@@ -2044,7 +2044,9 @@ function recruitCatalog(){
    {key:"skeletonHorses",label:"Skeleton cavalry",type:"skeletonHorses",weapon:"handWeapon",min:5,max:15,modelType:"skeletonHorses",modelWeapon:"handWeapon"},
    {key:"skeletonDragon",label:"Skeleton dragon",type:"skeletonDragon",weapon:"handWeapon",min:1,max:1,modelType:"skeletonDragon",modelWeapon:"handWeapon"},
    {key:"skeletonGiant",label:"Skeleton giant",type:"skeletonGiant",weapon:"handWeapon",min:1,max:1,modelType:"skeletonGiant",modelWeapon:"handWeapon"},
-   {key:"skeletonTroll",label:"Skeleton trolls",type:"skeletonTroll",weapon:"handWeapon",min:3,max:6,modelType:"skeletonTroll",modelWeapon:"handWeapon"}
+   {key:"skeletonTroll",label:"Skeleton trolls",type:"skeletonTroll",weapon:"handWeapon",min:3,max:6,modelType:"skeletonTroll",modelWeapon:"handWeapon"},
+   {key:"skeletonChariot",label:"Skeleton chariot",type:"skeletonChariot",weapon:"handWeapon",min:3,max:3,modelType:"skeletonChariot",modelWeapon:"handWeapon",fixed:true,crewType:"skeletons",crewWeapon:"handWeapon"},
+   {key:"skeletonCatapult",label:"Skeleton catapult",type:"catapult",weapon:"handWeapon",min:3,max:3,modelType:"catapult",modelWeapon:"handWeapon",fixed:true,crewType:"skeletons",crewWeapon:"handWeapon"}
   ]:[{key:"archers",label:"Archers",type:"archers",weapon:"handWeapon",rangedWeapon:"bow",min:5,max:30,modelType:"archers",modelWeapon:"bow"}]),
   ...(race==="human"?[
    {key:"crossbowmen",label:"Crossbow infantry",type:"swordsmen",weapon:"handWeapon",rangedWeapon:"crossbow",min:5,max:30,modelType:"swordsmen",modelWeapon:"crossbow"},
@@ -2092,6 +2094,9 @@ function recruitCatalog(){
  if(race==="greenskin"){
   options.push({key:"goblinChariot",label:"Goblin chariot",type:"goblinChariot",weapon:"handWeapon",min:3,max:3,modelType:"goblinChariot",fixed:true,crewType:"goblins",crewWeapon:"handWeapon"});
   options.push({key:"orcChariot",label:"Orc chariot",type:"orcChariot",weapon:"handWeapon",min:3,max:3,modelType:"orcChariot",fixed:true,crewType:"orcBoyz",crewWeapon:"handWeapon"});
+  options.push({key:"wyvern",label:"Wyvern",type:"wyvern",weapon:"handWeapon",min:1,max:1,modelType:"wyvern",modelWeapon:"handWeapon"});
+  options.push({key:"trolls",label:"Trolls",type:"trolls",weapon:"handWeapon",min:3,max:6,modelType:"trolls",modelWeapon:"handWeapon"});
+  options.push({key:"giant",label:"Giant",type:"giant",weapon:"handWeapon",min:1,max:1,modelType:"giant",modelWeapon:"handWeapon"});
  }
  const equipmentVariants=["archers","crossbowmen","firearmInfantry","crossbows","dwarfFirearms","spearmen","halberdiers","greatWeapons","goblinBows","skeletonBows"];
  const visible=options.filter(o=>!equipmentVariants.includes(o.key));
