@@ -617,3 +617,7 @@ button,[role="button"]{
 .campaign-encounter-choice.coercive .campaign-encounter-choice-symbol{background:#4b4029;color:#f0d39a}
 .campaign-encounter-choice.violent .campaign-encounter-choice-symbol{background:#512d30;color:#ffc0bc}
 @media(max-width:420px){.campaign-encounter-backdrop{padding:12px}.campaign-encounter-dialog{padding:20px 16px;border-radius:15px}.campaign-encounter-choice{grid-template-columns:38px minmax(0,1fr) 12px;gap:10px;padding:12px}.campaign-encounter-choice-symbol{width:36px;height:36px}}
+
+/* Clear, touch-friendly cancellation while aiming a dragon's breath weapon */
+.dragon-breath-cancel{position:fixed;z-index:10020;left:50%;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(-50%);min-height:48px;padding:12px 22px;border:1px solid #e6b6a8;border-radius:999px;background:#33201f;color:#fff4f0;font:700 15px/1.2 system-ui,-apple-system,sans-serif;box-shadow:0 8px 30px #0008;cursor:pointer;touch-action:manipulation}
+.dragon-breath-cancel:hover,.dragon-breath-cancel:focus-visible{background:#58302c;outline:2px solid #f0c4b6;outline-offset:3px}
