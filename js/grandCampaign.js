@@ -2137,12 +2137,43 @@ function campaignUnitEquipmentSummary(unit){
  if(unit.mounted)parts.push("Mount: "+campaignEquipmentLabel(unit.mountType||"horse")+(unit.barding?" with barding":""));
  return parts.join(" · ");
 }
+function campaignIsNamedUniqueType(type){return ["legendaryLord","shadowElf","pegasusChampion","dwarfKingHaldric","rifleman","captainWeiss","starwardenLord","deepflameDragon"].includes(String(type||""));}
+function campaignNamedCharacterExistsWorldwide(type){
+ if(!activeCampaign||!campaignIsNamedUniqueType(type))return false;
+ const names={legendaryLord:/edric voss/i,shadowElf:/lethariel starweaver/i,pegasusChampion:/aelthir/i,dwarfKingHaldric:/haldric stoneward/i,rifleman:/matthias keller/i,captainWeiss:/marta weiss/i,starwardenLord:/eldrin starwarden/i,deepflameDragon:/thaurgath the rune-eater/i};
+ const matches=u=>u&&(u.type===type||names[type]?.test(String(u.name||"")));
+ const rosters=[];
+ for(const army of activeCampaign.armies||[])rosters.push(army?.roster||[]);
+ for(const state of activeCampaign.factionStates||[])rosters.push(state?.roster||[]);
+ for(const region of activeCampaign.regions||[]){rosters.push(region?.roster||[],region?.garrison||[]);for(const army of region?.armies||[])rosters.push(army?.roster||[]);}
+ for(const node of Object.values(activeCampaign.graph?.nodes||{})){rosters.push(node?.roster||[],node?.garrison||[]);for(const army of node?.armies||[])rosters.push(army?.roster||[]);}
+ return rosters.some(roster=>Array.isArray(roster)&&roster.some(matches));
+}
+function campaignEquipmentChoices(unit){
+ const id=activeCampaign?.playerPoliticalFaction,race=FACTION_BY_ID[id]?.race||"human",type=String(unit?.type||"");
+ const monsters=["dragon","youngDragon","ancientDragon","deepflameDragon","skeletonDragon","skeletonGiant","giant","trolls","skeletonTroll"].includes(type);
+ const namedFixed=["legendaryLord","shadowElf","pegasusChampion","dwarfKingHaldric","rifleman","captainWeiss","starwardenLord","deepflameDragon"].includes(type);
+ const character=!monsters&&["captain","lord","mageHero","mageLord","necromancer","masterNecromancer","vampireHero","vampireLord","dwarfCaptain","dwarfLord","goblinHero","goblinLord","orcHero","orcLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"].includes(type);
+ const weapons=[["handWeapon","Hand weapon"]];
+ if(!namedFixed&&!monsters){if(race!=="dwarf")weapons.push(["magicSword","Magic sword"]);if(!unit?.mounted)weapons.push(["halberd","Halberd"]);weapons.push(["greatWeapon","Great weapon"]);if(unit?.mounted)weapons.push(["spear","Spear"],["lance","Lance"]);else if(race==="elf")weapons.push(["spear","Spear"]);}
+ const ranged=[["none","No ranged weapon"]];
+ if(!namedFixed&&!monsters){if(race==="human")ranged.push(["bow","Bow"],["crossbow","Crossbow"],["firearm","Firearm"],["longRifle","Long rifle"]);else if(race==="dwarf")ranged.push(["crossbow","Crossbow"],["firearm","Dwarf handgun"],["longRifle","Long rifle"]);else if(race==="elf")ranged.push(["bow","Longbow"]);else if(race==="greenskin"&&["goblins","goblinHero","goblinLord"].includes(type))ranged.push(["bow","Short bow"]);else if(race==="undead"&&type==="skeletons")ranged.push(["bow","Bow"]);}
+ const armour=[["none","No armour"]];
+ const noArmourTypes=["mageHero","mageLord","necromancer","masterNecromancer","vampireHero","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"];
+ if(!namedFixed&&!monsters&&race!=="greenskin"&&race!=="undead"&&!noArmourTypes.includes(type)){armour.push(["light","Light armour"]);if(race!=="dwarf")armour.push(["heavy","Heavy armour"]);}
+ let mounts=[];
+ if(!namedFixed&&character){
+  if(race==="human"||race==="elf"){mounts=[["none","On foot"],["horse",race==="elf"?"Elven steed":"Warhorse"],["eagle","Pegasus"],["unicorn","Unicorn"]];if(type==="lord"&&race==="elf")mounts.push(["youngDragon","Young dragon"],["dragon","Dragon"],["ancientDragon","Ancient dragon"]);}
+  else if(race==="undead")mounts=[["none","On foot"],["skeletal_steed","Skeletal steed"],["skeletonChariot","Skeleton chariot"]];
+  else if(race==="greenskin"&&["goblinHero","goblinLord","goblinShaman","goblinGreatShaman","orcHero","orcLord","orcShaman","orcGreatShaman"].includes(type)){mounts=type.startsWith("goblin")?[["none","On foot"],["wolf","Wolf"]]:[["none","On foot"],["boar","Boar"]];if(type==="orcLord")mounts.push(["wyvern","Wyvern"]);}
+ }
+ return {weapons,ranged,armour,mounts,canEdit:!monsters&&!namedFixed&&!noArmourTypes.includes(type),character,monsters};
+}
 function campaignEquipmentEditor(unit,index,atFriendlyCity){
- const armour=unit.heavyArmour?"heavy":unit.lightArmour?"light":"none",ranged=unit.rangedWeapon||"none";
- const weapons=[["handWeapon","Hand weapon"],["spear","Spear"],["halberd","Halberd"],["greatWeapon","Great weapon"]];
- const rangedOptions=[["none","No ranged weapon"],["bow","Bow"],["crossbow","Crossbow"],["firearm","Firearm"],["longRifle","Long rifle"],["magicBow","Magic bow"]];
- const select=(kind,value,items)=>'<label>'+kind+'<select data-equip-'+kind.toLowerCase().replace(/\s/g,"-")+'="'+index+'" '+(!atFriendlyCity?"disabled":"")+'>'+items.map(([v,l])=>'<option value="'+v+'" '+(v===value?"selected":"")+'>'+l+'</option>').join("")+'</select></label>';
- return '<details class="grand-unit-equipment"><summary>'+(atFriendlyCity?"Change equipment":"Equipment (visit a friendly city to change)")+'</summary><div class="grand-equipment-editor">'+select("Melee weapon",unit.weapon||"handWeapon",weapons)+select("Ranged weapon",ranged,rangedOptions)+select("Armour",armour,[["none","No armour"],["light","Light armour"],["heavy","Heavy armour"]])+'<label><input type="checkbox" data-equip-shield="'+index+'" '+(unit.shield?"checked":"")+' '+(!atFriendlyCity?"disabled":"")+'> Shield</label><button type="button" class="secondary-button" data-apply-equipment="'+index+'" '+(!atFriendlyCity?"disabled":"")+'>Apply equipment</button></div><small>Equipment changes cost gold. Downgrades do not refund gold.</small></details>';
+ const choices=campaignEquipmentChoices(unit),armour=unit.heavyArmour?"heavy":unit.lightArmour?"light":"none",ranged=unit.rangedWeapon||"none";
+ if(!choices.canEdit&&!choices.mounts.length)return '<details class="grand-unit-equipment"><summary>Equipment</summary><small>Equipment is fixed by this unit\'s faction rules or character profile.</small></details>';
+ const select=(kind,value,items)=>'<label>'+kind+'<select data-equip-'+kind.toLowerCase().replaceAll(" ","-")+'="'+index+'" '+(!atFriendlyCity?"disabled":"")+'>'+items.map(([v,l])=>'<option value="'+v+'" '+(v===value?"selected":"")+'>'+l+'</option>').join("")+'</select></label>';
+ return '<details class="grand-unit-equipment"><summary>'+(atFriendlyCity?"Change equipment":"Equipment (visit a friendly city to change)")+'</summary><div class="grand-equipment-editor">'+(choices.canEdit?select("Melee weapon",unit.weapon||"handWeapon",choices.weapons)+select("Ranged weapon",ranged,choices.ranged)+select("Armour",armour,choices.armour)+'<label><input type="checkbox" data-equip-shield="'+index+'" '+(unit.shield?"checked":"")+' '+(!atFriendlyCity||["greenskin","undead"].includes(FACTION_BY_ID[activeCampaign.playerPoliticalFaction]?.race)?"disabled":"")+'> Shield</label>':'')+(choices.mounts.length?select("Mount",unit.mounted?(unit.mountType||"horse"):"none",choices.mounts):'')+'<button type="button" class="secondary-button" data-apply-equipment="'+index+'" '+(!atFriendlyCity?"disabled":"")+'>Apply changes</button></div><small>Changes cost gold; downgrades do not refund gold.</small></details>';
 }
 function applyCampaignUnitEquipment(index){
  const army=selectedPlayerArmy(),unit=army?.roster?.[index],treasury=selectedFactionTreasury();
