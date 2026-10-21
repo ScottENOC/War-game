@@ -1321,6 +1321,38 @@ function createMovementGraph(){
 
  // Coastal travel can only enter or leave the sea at a named harbour.
  // Existing save files are migrated to this graph while city IDs remain stable.
+ // Remove the redundant Ironhold coastal waypoint. Keep its sea connections by
+ // joining its neighbours directly, so the ocean contains no unnecessary stop.
+ const removeGraphNode=(id,mergeInto=null)=>{
+  if(!nodes[id])return;
+  const neighbours=[...(edges[id]||[])];
+  for(const edge of neighbours){
+   const other=edge.to;
+   unlink(id,other);
+   if(mergeInto&&other!==mergeInto&&nodes[other])link(mergeInto,other,edge.cost,edge.kind);
+  }
+  delete edges[id];delete nodes[id];
+ };
+ removeGraphNode("ironhold-coastal-sea-waypoint");
+ // Crossroads 5 is the Southwatch river crossing, on the south-west approach.
+ if(nodes["crossroads-5"]){
+  nodes["crossroads-5"].x=570;nodes["crossroads-5"].y=520;
+  nodes["crossroads-5"].type="river";
+  nodes["crossroads-5"].label="Southwatch river crossing";
+ }
+ // Southwatch itself sits on the eastern bank; keep its city identity and
+ // move both the live graph and the setup-map marker to the same position.
+ if(nodes["city-5"]){nodes["city-5"].x=610;nodes["city-5"].y=500;}
+ // Turn the 9–10 road feature into the named river crossing. Merge the
+ // redundant generated waypoint into it so the 9–24 road reaches the crossing
+ // directly instead of stopping at a separate waypoint.
+ const ironholdRiverCrossing=nodes["feature-9-10-land-1"];
+ const redundantMountainWaypoint="waypoint-crossroads-9-mountain-poi-central-1";
+ if(ironholdRiverCrossing){
+  ironholdRiverCrossing.type="river";
+  ironholdRiverCrossing.label="Ironhold river crossing";
+  removeGraphNode(redundantMountainWaypoint,ironholdRiverCrossing.id);
+ }
  // Give every map point a unique human-readable label while preserving its stable ID.
  // Repeated generic labels receive a numbered suffix.
  const usedLabels=new Set();
