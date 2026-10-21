@@ -621,3 +621,15 @@ button,[role="button"]{
 /* Clear, touch-friendly cancellation while aiming a dragon's breath weapon */
 .dragon-breath-cancel{position:fixed;z-index:10020;left:50%;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(-50%);min-height:48px;padding:12px 22px;border:1px solid #e6b6a8;border-radius:999px;background:#33201f;color:#fff4f0;font:700 15px/1.2 system-ui,-apple-system,sans-serif;box-shadow:0 8px 30px #0008;cursor:pointer;touch-action:manipulation}
 .dragon-breath-cancel:hover,.dragon-breath-cancel:focus-visible{background:#58302c;outline:2px solid #f0c4b6;outline-offset:3px}
+
+/* In-battle menu for campaign saves, concession and returning to the title screen */
+#battle-menu-bar{position:fixed;z-index:10010;top:max(8px,env(safe-area-inset-top));right:12px;display:flex;align-items:center;gap:10px;padding:6px 8px 6px 12px;border:1px solid #59666c;border-radius:12px;background:#172127ef;color:#edf2f3;box-shadow:0 5px 22px #0006;font:600 13px/1.2 system-ui,sans-serif}
+#battle-menu-caption{max-width:36vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c4d2d8}
+#battle-menu-bar button{min-height:38px;padding:8px 13px;border:1px solid #66767d;border-radius:8px;background:#34434b;color:#fff;font:700 14px system-ui,sans-serif;touch-action:manipulation}
+#battle-menu-panel{position:fixed;z-index:10011;top:calc(max(8px,env(safe-area-inset-top)) + 54px);right:12px;width:min(340px,calc(100vw - 24px));box-sizing:border-box;padding:20px;border:1px solid #59666c;border-radius:14px;background:linear-gradient(145deg,#202a31,#11181e);color:#edf2f3;box-shadow:0 16px 60px #000a;font-family:system-ui,sans-serif}
+#battle-menu-panel[hidden]{display:none}
+#battle-menu-panel h2{margin:0 0 8px;font-size:1.3rem}
+#battle-menu-panel p{margin:0 0 16px;color:#c0cbd0;font-size:.92rem;line-height:1.5}
+#battle-menu-panel button{display:block;width:100%;min-height:44px;margin-top:10px}
+#battle-concede{background:#682f32;color:#fff;border:1px solid #a65a5d}
+#resume-saved-battle{margin-top:12px}
