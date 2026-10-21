@@ -216,13 +216,21 @@ function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=nu
   if(rangedDeployed>=5)pushStartingUnit(rangedType,rangedDeployed,race==="undead"?null:race==="dwarf"?"crossbow":"bow");
   if(commander)roster.push(character);
  }else{
-  roster=woodElfStyle?[
-   {type:"archers",models:12,weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:"bow",woodElfStyle:true,skills:{skirmish:true},champion:false,upgrades:{}},
-   {type:"archers",models:12,weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:"bow",woodElfStyle:true,skills:{skirmish:true},champion:false,upgrades:{}},
-   {type:"cavalry",models:8,weapon:"handWeapon",meleeWeapons:["handWeapon"],mounted:true,mountType:"horse",woodElfStyle:true,skills:{skirmish:true},champion:false,upgrades:{}},
-   {type:"swordsmen",models:12,weapon:"handWeapon",meleeWeapons:["handWeapon","offhandWeapon"],dualWield:true,woodElfStyle:true,skills:{skirmish:true},champion:false,upgrades:{}},
-   character
-  ]:[
+  const starterIds=FACTION_ROSTER_OVERRIDES[id]?.units||[];
+  const makeStarterUnit=(unitId)=>{
+   if(unitId==="captain"||unitId==="lord")return {...character};
+   const ranged=unitId==="archers"?"bow":unitId==="crossbowmen"?"crossbow":unitId==="firearmInfantry"?"firearm":unitId==="rifleman"?"longRifle":null;
+   const type=unitId;
+   const fixed=["cannon","catapult","boltThrower","skeletonChariot","humanChariot","elfChariot","goblinChariot","orcChariot"].includes(type);
+   const models=fixed?3:["cavalry","wolfRiders","boarBoyz","skeletonHorses"].includes(type)?8:["wyvern","giant","dragon","youngDragon","ancientDragon","skeletonDragon","skeletonGiant","deepflameDragon"].includes(type)?1:["trolls","skeletonTroll"].includes(type)?4:["dwarfCaptain","dwarfLord","orcHero","orcLord","goblinHero","goblinLord","necromancer","masterNecromancer","vampireHero","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"].includes(type)?1:["archers","zombies","goblins","skeletons"].includes(type)?12:15;
+   const unit={type,models,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}};
+   if(ranged)unit.rangedWeapon=ranged;
+   if(["cavalry","wolfRiders","boarBoyz","skeletonHorses"].includes(type)){unit.mounted=true;unit.mountType=type==="wolfRiders"?"wolf":type==="boarBoyz"?"boar":type==="skeletonHorses"?"skeletal_steed":"horse";}
+   if(["cannon","catapult","boltThrower"].includes(type)){unit.crewType=race==="undead"?"skeletons":race==="greenskin"?"goblins":race==="dwarf"?"dwarfInfantry":"swordsmen";unit.crewModels=models;}
+   if(woodElfStyle){unit.woodElfStyle=true;unit.skills={skirmish:true};if(type==="swordsmen"){unit.meleeWeapons=["handWeapon","offhandWeapon"];unit.dualWield=true;unit.shield=false;}}
+   return unit;
+  };
+  roster=starterIds.length?starterIds.map(makeStarterUnit):[
    {type:basicType,models:15,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
    {type:basicType,models:15,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
    {type:rangedType,models:10,weapon:"handWeapon",meleeWeapons:["handWeapon"],...(race==="undead"?{}:{rangedWeapon:race==="dwarf"?"crossbow":"bow"}),champion:false,upgrades:{},skills:{}},
@@ -2100,10 +2108,17 @@ function recruitCatalog(){
  }
  const equipmentVariants=["archers","crossbowmen","firearmInfantry","crossbows","dwarfFirearms","spearmen","halberdiers","greatWeapons","goblinBows","skeletonBows"];
  const visible=options.filter(o=>!equipmentVariants.includes(o.key));
- const infantry=visible.find(o=>o.key==="melee");
+ const factionRoster=FACTION_ROSTER_OVERRIDES[activeCampaign.playerPoliticalFaction]?.units;
+ const rosterAliases=new Set((factionRoster||[]).flatMap(id=>{
+  if(["swordsmen","archers","dwarfInfantry","goblins","orcBoyz","skeletons","zombies"].includes(id))return [id,"melee"];
+  if(["cannon","catapult","boltThrower"].includes(id))return [id,"artillery","rockLobber","skeletonCatapult"];
+  return [id];
+ }));
+ const factionVisible=factionRoster?.length?visible.filter(o=>rosterAliases.has(o.key)||rosterAliases.has(o.type)||rosterAliases.has(o.modelType)):visible;
+ const infantry=factionVisible.find(o=>o.key==="melee");
  if(infantry){infantry.label="Infantry";infantry.flexibleEquipment=true;infantry.modelWeapon=null;}
- if(pirate)return visible.filter(o=>!["cavalry"].includes(o.key)).map(o=>o.key==="artillery"?{...o,label:"Shipboard cannon"}:o);
- return visible;
+ if(pirate)return factionVisible.filter(o=>!["cavalry"].includes(o.key)).map(o=>o.key==="artillery"?{...o,label:"Shipboard cannon"}:o);
+ return factionVisible;
 }
 function assignedSiegeModelIds(){return new Set(playerArmies().flatMap(a=>(a.roster||[]).flatMap(u=>[u.machineModelId,...(u.crewModelIds||[])].filter(Boolean))));}
 function optionMatchesModel(o,m){const woodElfStyle=activeCampaign.playerPoliticalFaction==="verdantCourt",needsDualWield=woodElfStyle&&(o.key==="melee"||String(o.key||"").startsWith("crew-"));return m?.faction===rosterFactionForPoliticalFaction(activeCampaign.playerPoliticalFaction)&&m.type===o.modelType&&(o.flexibleEquipment||!o.modelWeapon||m.weapon===o.modelWeapon)&&(!needsDualWield||m.components?.includes("left_sword")||m.offhandWeapon); }
