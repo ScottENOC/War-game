@@ -1637,6 +1637,23 @@ function createMovementGraph(){
    nodes["feature-4-5-land-1"].label="Southlands land route";
   }
 
+  // Bonefield and Grinhold should reach the shared Freebooter–Redfang road stop,
+  // not connect directly to one another.
+  unlink("city-16","city-11");
+  link("city-16","freebooter-redfang-road-stop",1,"land");
+  link("city-11","freebooter-redfang-road-stop",1,"land");
+
+  // Move Sepulchre's southern sea waypoint halfway toward the midpoint of its neighbours.
+  if(nodes["sepulchre-south-sea-3"]){
+   const n=nodes["sepulchre-south-sea-3"];
+   const neighbours=(edges[n.id]||[]).map(e=>nodes[e.to]).filter(Boolean);
+   if(neighbours.length>=2){
+    const cx=(neighbours[0].x+neighbours[1].x)/2;
+    const cy=(neighbours[0].y+neighbours[1].y)/2;
+    n.x=(n.x+cx)/2;n.y=(n.y+cy)/2;
+   }
+  }
+
   // Apply this round of campaign-map graph and coordinate revisions.
   const moveToNeighbourMidpoint=(id)=>{
    const n=nodes[id];if(!n)return;
