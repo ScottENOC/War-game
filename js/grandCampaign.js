@@ -1654,6 +1654,10 @@ function createMovementGraph(){
    }
   }
 
+  // Add the requested northern sea-lane connections.
+  link("port-7","waypoint-moonspire-north-sea-waypoint-goldhaven-north-sea-5-2",1,"sea");
+  link("waypoint-moonspire-north-sea-waypoint-goldhaven-north-sea-5-1","waypoint-moonspire-north-sea-waypoint-eastern-north-sea-waypoint-1",1,"sea");
+
   // Apply this round of campaign-map graph and coordinate revisions.
   const moveToNeighbourMidpoint=(id)=>{
    const n=nodes[id];if(!n)return;
