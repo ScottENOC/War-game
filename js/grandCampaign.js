@@ -1331,18 +1331,26 @@ function createMovementGraph(){
    unlink(id,other);
    if(mergeInto&&other!==mergeInto&&nodes[other])link(mergeInto,other,edge.cost,edge.kind);
   }
+  if(!mergeInto){
+   for(let i=0;i<neighbours.length;i++)for(let j=i+1;j<neighbours.length;j++){
+    const a=neighbours[i],b=neighbours[j];
+    if(a.to!==b.to&&nodes[a.to]&&nodes[b.to])link(a.to,b.to,Math.max(a.cost,b.cost),a.kind===b.kind?a.kind:"sea");
+   }
+  }
   delete edges[id];delete nodes[id];
  };
  removeGraphNode("ironhold-coastal-sea-waypoint");
- // Crossroads 5 is the Southwatch river crossing, on the south-west approach.
+ // Move the local road junction south-west without mislabelling it as the crossing.
  if(nodes["crossroads-5"]){
   nodes["crossroads-5"].x=570;nodes["crossroads-5"].y=520;
-  nodes["crossroads-5"].type="river";
-  nodes["crossroads-5"].label="Southwatch river crossing";
+  nodes["crossroads-5"].type="crossroads";
+  nodes["crossroads-5"].label="Southwatch crossroads";
  }
- // Southwatch itself sits on the eastern bank; keep its city identity and
- // move both the live graph and the setup-map marker to the same position.
- if(nodes["city-5"]){nodes["city-5"].x=610;nodes["city-5"].y=500;}
+ // Southwatch sits on the eastern bank and is itself a river-crossing city.
+ if(nodes["city-5"]){
+  nodes["city-5"].x=610;nodes["city-5"].y=500;
+  nodes["city-5"].riverCrossing=true;
+ }
  // Turn the 9–10 road feature into the named river crossing. Merge the
  // redundant generated waypoint into it so the 9–24 road reaches the crossing
  // directly instead of stopping at a separate waypoint.
