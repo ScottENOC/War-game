@@ -2,8 +2,8 @@ import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=2
 import { createRoguelike } from "./roguelike.js?v=20261020-chariots-v2";
 import { createWarband } from "./warband.js?v=20261020-warband-v1";
 import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warband-expedition-v4";
-import { createArmyBuilder } from "./armyBuilder.js?v=20261020-wood-elf-v1";
-import { createCollectionManager } from "./collection.js?v=20261020-expedition-objectives-v1";
+import { createArmyBuilder } from "./armyBuilder.js?v=20261021-wyvern-roster-v1";
+import { createCollectionManager } from "./collection.js?v=20261021-wyvern-roster-v1";
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js?v=20261020-vision-v1";
 import { createRules } from "./rules.js?v=20261020-wood-elf-v1";
