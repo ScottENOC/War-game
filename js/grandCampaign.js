@@ -906,7 +906,7 @@ function createInitialCampaignState(faction,city,commander){
  const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;diplomacy[a.id][b.id]=baseFactionRelation(a.id,b.id);}}
  const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints,passive:!!state.passive,boredom:-4,momentum:0,foughtThisTurn:false,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0}));
  const playerState=factionStates.find(f=>f.id===playerPoliticalFaction);
- const graph=createMovementGraph(); const campaign={schemaVersion:8,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,activeAlliances:[],armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph,commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3),maxMovement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3)},armies,lastEvent:"Your campaign begins at "+city.name+"."}; ensureMinorSettlementState(campaign); for(const state of factionStates){const owned=regions.filter(r=>politicalOwner(r)===state.id);state.income=state.passive?0:owned.reduce((sum,r)=>sum+campaignCityIncome(r,campaign),0)+campaignMinorSettlementIncome(campaign,state.id);} return campaign;
+ const graph=createMovementGraph(); const campaign={schemaVersion:8,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,activeWars:[],activeAlliances:[],armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph,commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3),maxMovement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3)},armies,lastEvent:"Your campaign begins at "+city.name+"."}; ensureMinorSettlementState(campaign); for(const state of factionStates){const owned=regions.filter(r=>politicalOwner(r)===state.id);state.income=state.passive?0:owned.reduce((sum,r)=>sum+campaignCityIncome(r,campaign),0)+campaignMinorSettlementIncome(campaign,state.id);} return campaign;
 }
 
 function campaignLabSeededRandom(seed){
@@ -3039,6 +3039,7 @@ function processGreenskinAnimosity(campaign,army){
 }
 
 function runAIFactionTurn(campaign,faction){
+ campaign.activeWars=campaign.activeWars||[];
  if(faction.passive||FACTION_BY_ID[faction.id]?.passive)return faction.name+" remains passive.";
  const factionArmies=(campaign.armies||[]).filter(a=>(a.owner||a.factionId)===faction.id&&a.roster?.length);
  const army=factionArmy(campaign,faction.id);if(!army)return faction.name+" had no field army.";
