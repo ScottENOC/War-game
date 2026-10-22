@@ -908,6 +908,68 @@ function createInitialCampaignState(faction,city,commander){
  const playerState=factionStates.find(f=>f.id===playerPoliticalFaction);
  const graph=createMovementGraph(); const campaign={schemaVersion:8,mapId:MAP_ID,turn:1,phase:"player",playerFaction:faction,playerPoliticalFaction,activeFaction:playerPoliticalFaction,factionTurnOrder:factionStates.map(f=>f.id),factionStates,diplomacy,activeAlliances:[],armyFaction:FACTIONS[faction].armyFaction,startingRegion:city.id,treasury:playerState.treasury,regions,graph,commander:{...commander,nodeId:"city-"+city.id,region:city.id,movement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3),maxMovement:(FACTION_BY_ID[selectedPoliticalFaction]?.race==="elf"?4:3)},armies,lastEvent:"Your campaign begins at "+city.name+"."}; ensureMinorSettlementState(campaign); for(const state of factionStates){const owned=regions.filter(r=>politicalOwner(r)===state.id);state.income=state.passive?0:owned.reduce((sum,r)=>sum+campaignCityIncome(r,campaign),0)+campaignMinorSettlementIncome(campaign,state.id);} return campaign;
 }
+
+function campaignLabSeededRandom(seed){
+ let state=(Number(seed)>>>0)||1;
+ return ()=>{state=(state+0x6D2B79F5)>>>0;let t=state;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296;};
+}
+function runCampaignAiLab({runs=10,maxTurns=100}={}){
+ const oldRandom=Math.random,oldActive=activeCampaign,results=[];
+ try{
+  for(let run=0;run<runs;run++){
+   Math.random=campaignLabSeededRandom(20261022+run*7919);
+   const city=CITIES.find(c=>Number(c.id)===1);
+   const campaign=createInitialCampaignState("empire",city,{id:"campaign-test",name:"Campaign Test Commander",movement:3,maxMovement:3,nodeId:"city-1",region:1});
+   campaign.labSimulation=true;
+   campaign.armies=campaign.factionStates.map(state=>{
+    const built=createCampaignArmyRoster(state.id,500,{player:false});
+    const roster=(built.roster||[]).map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}}));
+    state.rosterFaction=built.faction||state.rosterFaction;
+    state.roster=roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}}));
+    state.armyPoints=roster.reduce((sum,u)=>sum+unitCost(u,state.rosterFaction),0);
+    return {id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster,region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints,passive:!!state.passive,boredom:-4,momentum:0,foughtThisTurn:false,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0};
+   });
+   campaign.factionStates.forEach(state=>{state.alive=true;});
+   activeCampaign=campaign;
+   const eliminatedAt={},errors=[];
+   let outcome="turn-limit",turns=0,winner=null;
+   const cityCounts=()=>{const counts={};for(const region of campaign.regions){const owner=politicalOwner(region);if(owner)counts[owner]=(counts[owner]||0)+1;}return counts;};
+   const checkEnd=()=>{
+    const counts=cityCounts(),living=campaign.factionStates.filter(f=>f.alive&&!f.passive&&counts[f.id]>0);
+    const total=campaign.regions.length,top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+    if(top&&top[1]===total)return {outcome:"world-conquest",winner:top[0]};
+    if(living.length>0&&living.every(a=>living.every(b=>a.id===b.id||campaignAreAllied(campaign,a.id,b.id)||campaignRelation(campaign,a.id,b.id)>=35)))return {outcome:"diplomatic-stalemate",winner:null};
+    if(!living.length)return {outcome:"mutual-collapse",winner:null};
+    return null;
+   };
+   for(let turn=1;turn<=maxTurns;turn++){
+    turns=turn;campaign.turn=turn;
+    try{
+     for(const a of campaign.factionStates)for(const b of campaign.factionStates)if(a.id!==b.id&&!Number.isFinite(campaign.diplomacy?.[a.id]?.[b.id]))setCampaignRelation(campaign,a.id,b.id,baseFactionRelation(a.id,b.id));
+     updatePeaceAndWarRelations(campaign);updateGreenskinDiplomacy(campaign);
+     for(const id of campaign.factionTurnOrder||[]){
+      const faction=campaign.factionStates.find(f=>f.id===id);
+      if(!faction||!faction.alive||faction.passive||FACTION_BY_ID[id]?.passive)continue;
+      try{runAIFactionTurn(campaign,faction);}catch(e){errors.push("Turn "+turn+" / "+faction.name+": "+String(e?.message||e));}
+     }
+     processCampaignLogistics(campaign);
+    }catch(e){errors.push("Turn "+turn+": "+String(e?.message||e));}
+    for(const f of campaign.factionStates){
+     if(f.alive&&!f.passive&&!(campaign.regions||[]).some(r=>politicalOwner(r)===f.id)){f.alive=false;eliminatedAt[f.id]=turn;}
+     const army=(campaign.armies||[]).find(a=>(a.owner||a.factionId)===f.id);
+     if(f.alive&&!f.passive&&army&&!(army.roster||[]).length){f.alive=false;eliminatedAt[f.id]=turn;}
+    }
+    const end=checkEnd();if(end){outcome=end.outcome;winner=end.winner;break;}
+   }
+   const counts=cityCounts(),living=campaign.factionStates.filter(f=>f.alive&&!f.passive&&counts[f.id]>0).map(f=>({id:f.id,name:f.name,cities:counts[f.id],armyPoints:f.armyPoints||0,treasury:f.treasury||0})).sort((a,b)=>b.cities-a.cities);
+   const eliminated=campaign.factionStates.filter(f=>!f.passive&&(!f.alive||!counts[f.id])).map(f=>({id:f.id,name:f.name,turn:eliminatedAt[f.id]||null})).sort((a,b)=>(a.turn||999)-(b.turn||999));
+   results.push({run:run+1,seed:20261022+run*7919,outcome,winner,turns,cities:counts,living,eliminated,errors});
+  }
+ }finally{Math.random=oldRandom;activeCampaign=oldActive;}
+ const outcomes={},factionWins={},factionSurvival={};
+ for(const r of results){outcomes[r.outcome]=(outcomes[r.outcome]||0)+1;if(r.winner)factionWins[r.winner]=(factionWins[r.winner]||0)+1;for(const f of r.living)factionSurvival[f.id]=(factionSurvival[f.id]||0)+1;}
+ return {runs,maxTurns,results,outcomes,factionWins,factionSurvival};
+}
 let selectedFaction="empire",selectedPoliticalFaction="valedorn",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
  const campaignMapNav=new WeakMap();
@@ -3086,6 +3148,38 @@ function endCampaignTurn(){
 }
 function showCampaignWorld(c){activeCampaign=c;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();}
 export function startGrandCampaign(){
+ const labScreen=byId("campaign-ai-lab-screen"),mainMenu=byId("mainmenu");
+ const labOpen=byId("campaign-ai-lab-open"),labBack=byId("campaign-ai-lab-back"),labRun=byId("campaign-ai-run");
+ if(labOpen&&labScreen&&mainMenu)labOpen.addEventListener("click",()=>{mainMenu.hidden=true;labScreen.hidden=false;});
+ if(labBack&&labScreen&&mainMenu)labBack.addEventListener("click",()=>{labScreen.hidden=true;mainMenu.hidden=false;});
+ if(labRun)labRun.addEventListener("click",()=>{
+  const status=byId("campaign-ai-status"),host=byId("campaign-ai-results");
+  const runs=Math.max(1,Math.min(50,Number(byId("campaign-ai-runs")?.value)||10));
+  const maxTurns=Math.max(10,Math.min(200,Number(byId("campaign-ai-turn-limit")?.value)||100));
+  labRun.disabled=true;status.textContent="Running "+runs+" isolated campaigns…";host.replaceChildren();
+  window.setTimeout(()=>{
+   try{
+    const report=runCampaignAiLab({runs,maxTurns});
+    const heading=document.createElement("h2");heading.textContent="Baseline results";host.append(heading);
+    const summary=document.createElement("p");summary.textContent=report.runs+" runs · "+report.maxTurns+" turn limit · fixed, distinct random seeds. No tactical battles launched.";host.append(summary);
+    const outcomeHeading=document.createElement("h3");outcomeHeading.textContent="Campaign outcomes";host.append(outcomeHeading);
+    const outcomeTable=document.createElement("table");outcomeTable.className="campaign-ai-results-table";
+    for(const [label,count] of Object.entries(report.outcomes)){const tr=document.createElement("tr"),a=document.createElement("th"),b=document.createElement("td");a.textContent=label.replace(/-/g," ");b.textContent=count+" ("+Math.round(count/report.runs*100)+"%)";tr.append(a,b);outcomeTable.append(tr);}host.append(outcomeTable);
+    const factionsHeading=document.createElement("h3");factionsHeading.textContent="Faction results";host.append(factionsHeading);
+    const factionTable=document.createElement("table");factionTable.className="campaign-ai-results-table";
+    const head=document.createElement("tr");["Faction","Wins","Survived","Survival rate"].forEach(v=>{const th=document.createElement("th");th.textContent=v;head.append(th);});factionTable.append(head);
+    const allIds=[...new Set(report.results.flatMap(r=>[...r.living.map(f=>f.id),...r.eliminated.map(f=>f.id)]))];
+    allIds.map(id=>({id,name:report.results.flatMap(r=>[...r.living,...r.eliminated]).find(f=>f.id===id)?.name||id,wins:report.factionWins[id]||0,survived:report.factionSurvival[id]||0})).sort((a,b)=>b.wins-a.wins||b.survived-a.survived||a.name.localeCompare(b.name)).forEach(f=>{const tr=document.createElement("tr");[f.name,String(f.wins),f.survived+" / "+report.runs,Math.round(f.survived/report.runs*100)+"%"].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.append(td);});factionTable.append(tr);});host.append(factionTable);
+    const runsHeading=document.createElement("h3");runsHeading.textContent="Run-by-run outcomes";host.append(runsHeading);
+    const details=document.createElement("details"),summaryDetails=document.createElement("summary");summaryDetails.textContent="Show individual runs and elimination order";details.append(summaryDetails);
+    const list=document.createElement("ol");report.results.forEach(r=>{const li=document.createElement("li"),winnerName=r.winner?(report.results.flatMap(x=>[...x.living,...x.eliminated]).find(f=>f.id===r.winner)?.name||r.winner):r.outcome.replace(/-/g," ");li.textContent="Run "+r.run+" (seed "+r.seed+"): "+winnerName+"; "+r.turns+" turns. Eliminated: "+(r.eliminated.map(f=>f.name+(f.turn?" (turn "+f.turn+")":"")).join(", ")||"none")+(r.errors.length?"; simulation errors: "+r.errors.length:"");list.append(li);});details.append(list);host.append(details);
+    const errorCount=report.results.reduce((n,r)=>n+r.errors.length,0);status.textContent="Completed "+report.runs+" runs. "+errorCount+" simulation errors recorded. Treat results as provisional if errors occurred.";
+    window.__campaignAiLabLastReport=report;
+   }catch(e){status.textContent="Simulation failed: "+String(e?.message||e);}
+   finally{labRun.disabled=false;}
+  },20);
+ });
+ window.resolveGrandCampaignConquest=resolveGrandCampaignConquest;
  window.resolveGrandCampaignConquest=resolveGrandCampaignConquest;
  try{const s=JSON.parse(localStorage.getItem("warGameGrandCampaignStart")||"null");if(s&&FACTIONS[s.faction]){selectedFaction=s.faction;if(s.politicalFactionId&&FACTION_BY_ID[s.politicalFactionId])selectedPoliticalFaction=s.politicalFactionId;if(CITIES.some(c=>c.id===s.selectedCity))selectedCity=s.selectedCity;}}catch{}
  const screen=byId("grand-campaign-screen"),menu=byId("mainmenu");if(!screen||!menu)return;
