@@ -414,7 +414,7 @@ function runAiBattleLab(){
 function startAiLabBattle(){
  if(!aiLabRun)return;
  const n=aiLabRun.completed,redArmy=makeAiLabArmy(aiLabRun.redFaction,aiLabRun.points,aiLabRun.composition),blueArmy=makeAiLabArmy(aiLabRun.blueFaction,aiLabRun.points,aiLabRun.composition);
- const red=createUnitsFromArmy(redArmy,aiLabRun.redFaction),blue=createUnitsFromArmy(blueArmy,aiLabRun.blueFaction);
+ const red=createUnitsFromArmy(redArmy,aiLabRun.redFaction,{preserveFactionForOpponent:true}),blue=createUnitsFromArmy(blueArmy,aiLabRun.blueFaction,{preserveFactionForOpponent:true});
  S.aiBattleLab=true;S.aiLabBattleNumber=n+1;S.warbandSkirmish=false;S.objectiveMode=null;S.objectives=[];S.flags=null;S.objectiveScore={player:0,ai:0};S.battleType="skirmish";S.siegeRole="attacker";S.customSiegeMap=null;S.autoTerrain=true;S.terrainSeed=aiLabRun.terrain==="fixed"?aiLabRun.seed:aiLabRun.seed+n*7919;
  S.units={...Object.fromEntries(Object.entries(red).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(blue).filter(([id])=>id.startsWith("a")))};
  const redPoints=units().filter(u=>u.side==="player").reduce((sum,u)=>sum+(u.points||0),0),bluePoints=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);
