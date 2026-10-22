@@ -6,14 +6,14 @@ import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warba
 import { createArmyBuilder } from "./armyBuilder.js?v=20261021-wyvern-roster-v1";
 import { createCollectionManager } from "./collection.js?v=20261021-wyvern-roster-v1";
 import { createGameState } from "./gameState.js";
-import { createAI } from "./ai.js?v=20261020-vision-v1";
+import { createAI } from "./ai.js?v=20261022-ai-battle-lab-v1";
 import { createRules } from "./rules.js?v=20261020-wood-elf-v1";
 import { createShooting } from "./shooting.js?v=20261020-vision-v1";
 import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
 import { createRendering } from "./rendering.js?v=20261021-charge-indicators-v1";
 import { createInput } from "./input.js?v=20261021-flying-wall-pan-guard-v1";
 import { createUI } from "./ui.js?v=20261021-character-undo-v1";
-import { createPhases } from "./phases.js?v=20261020-vision-v1";
+import { createPhases } from "./phases.js?v=20261022-ai-battle-lab-v1";
 import { createDice } from "./dice.js";
 import { createMovement } from "./movement.js?v=20261021-fly-over-walls-v1";
 import { createNarrativeCampaign } from "./campaign.js";
@@ -81,7 +81,7 @@ function canCharge(u,target){
   return !units().some(v=>v!==u&&v!==target&&alive(v)&&!v.fled&&(()=>{const vx=(v.x-u.x)*W(),vy=(v.y-u.y)*H(),t=Math.max(0,Math.min(1,(vx*dx+vy*dy)/(length*length))),px=t*dx,py=t*dy,clear=Math.hypot(vx-px,vy-py),radius=Math.max(shape(v).front,shape(v).depth)*0.45;return t>0.03&&t<0.97&&clear<radius;})());
 }
 function pursueAfterBreak(winner,loser,choice=null){
-  if(winner.side==="player"&&!choice){S.pendingPursuit={winnerId:winner.id,loserId:loser.id};say(winner.name+" has broken "+loser.name+". Choose whether to pursue or hold position.");return true;}
+  if(winner.side==="player"&&!choice&&!S.aiBattleLab){S.pendingPursuit={winnerId:winner.id,loserId:loser.id};say(winner.name+" has broken "+loser.name+". Choose whether to pursue or hold position.");return true;}
   if(choice==="hold"){say(winner.name+" holds position instead of pursuing.");return false;}
   const fleeDice=roll(2),pursuitDice=roll(2),fleeDistance=fleeDice[0]+fleeDice[1],pursuitDistance=pursuitDice[0]+pursuitDice[1];
   const dx=(loser.x-winner.x)*W(),dy=(loser.y-winner.y)*H(),len=Math.max(1,Math.hypot(dx,dy)),nx=dx/len,ny=dy/len;
