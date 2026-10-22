@@ -1,5 +1,6 @@
 import { terrainMovementCost } from "./terrain.js";
-export function createAI({ S, units, alive, eligibleForActivation, enemies, visibleEnemies = enemies, aiLastKnownTargets = () => [], dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, fireCannon, BOW_RANGE, beginCombatPhase, terrain = () => [], side = "ai", policy = "baseline" }) {\n  const enemySide = side === "player" ? "ai" : "player";
+export function createAI({ S, units, alive, eligibleForActivation, enemies, visibleEnemies = enemies, aiLastKnownTargets = () => [], dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, fireCannon, BOW_RANGE, beginCombatPhase, terrain = () => [], side = "ai", policy = "baseline" }) {
+  const enemySide = side === "player" ? "ai" : "player";
   function armyRangeScore(side){const force=units().filter(u=>u.side===side&&alive(u));return force.length?force.filter(u=>u.hasRangedWeapon).length/force.length:0;}
 function aiWantsRange(){return armyRangeScore(side)>armyRangeScore(enemySide);}
 function aiTargetScore(u,t,preferRanged){
