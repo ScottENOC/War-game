@@ -3154,8 +3154,8 @@ export function startGrandCampaign(){
  if(labBack&&labScreen&&mainMenu)labBack.addEventListener("click",()=>{labScreen.hidden=true;mainMenu.hidden=false;});
  if(labRun)labRun.addEventListener("click",()=>{
   const status=byId("campaign-ai-status"),host=byId("campaign-ai-results");
-  const runs=Math.max(1,Math.min(50,Number(byId("campaign-ai-runs")?.value)||10));
-  const maxTurns=Math.max(10,Math.min(200,Number(byId("campaign-ai-turn-limit")?.value)||100));
+  const runs=Math.max(1,Math.min(20,Number(byId("campaign-ai-runs")?.value)||5));
+  const maxTurns=Math.max(10,Math.min(150,Number(byId("campaign-ai-turn-limit")?.value)||50));
   labRun.disabled=true;status.textContent="Running "+runs+" isolated campaigns…";host.replaceChildren();
   window.setTimeout(()=>{
    try{
