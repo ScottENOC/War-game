@@ -13,7 +13,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
     const distText=Number.isFinite(result.distance)?" · "+result.distance.toFixed(1)+'"':"";
     const stack=diceStack(u,result);
     say("<b>"+label+": "+u.name+" → "+target.name+"</b><div class=\"rollsummary\">"+result.attacks+(kind==="shoot"?" shots":" attacks")+distText+extra+"</div>"+stack);
-    $("rollcontent").innerHTML=stack;$("rollview").classList.add("show");
+    if(!S.aiBattleLab){$("rollcontent").innerHTML=stack;$("rollview").classList.add("show");}
   }
   function panicTest(target) {
     if(target.panicTested)return;
@@ -149,7 +149,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
         const ffResult=shootingAttack({...u,friendlyFireShot:true},friend,{...context,forcedHits:friendlyFireCount,attackingModels:friendlyFireCount,attackingChampion:false,overUnitPenalty:0,singleCharacter:false,skirmisher:false,cover:null,targetCharging:false});
         const friendlyKilled=applyDamage(friend,ffResult.wounds,true,ffResult.cascadePlan,u);
         say('<div class="friendly-fire"><b>FRIENDLY FIRE — '+friendlyFireCount+' shot(s) hit '+friend.name+' in the back.</b></div>'+diceStack(friend,ffResult));
-        $("rollcontent").innerHTML=targetDiceStack+'<div class="friendly-fire"><b>Friendly-fire resolution — '+friend.name+'</b></div>'+diceStack(friend,ffResult);$("rollview").classList.add("show");
+        if(!S.aiBattleLab){$("rollcontent").innerHTML=targetDiceStack+'<div class="friendly-fire"><b>Friendly-fire resolution — '+friend.name+'</b></div>'+diceStack(friend,ffResult);$("rollview").classList.add("show");}
         say(friend.name+" loses "+friendlyKilled+" model"+(friendlyKilled===1?"":"s")+" to friendly fire.");
         if(!alive(friend))panicNearby?.(friend,"a friendly unit is destroyed by friendly fire");
         panicTest(friend);
@@ -208,7 +208,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
         if(wounded){wall.wounds=Math.max(0,(wall.wounds??2)-damage);say((wall.type==="gate"?"Gate":"Wall")+" has "+wall.wounds+" wound"+(wall.wounds===1?"":"s")+" remaining.");}
       }else{
         const target=item.unit;
-        if(target.isChariot){const split=roll(1)[0],body=split<=4,need=woundTarget(strength,body?(target.chariotToughness||4):target.stats.T),die=roll(1)[0],wounded=need!==null&&die>=need;let damage=wounded?(roll(1)[0]%3+1):0;if(wounded){if(body){const save=saveTarget({...target,armour:"none",shield:false,mountStats:null,isChariot:false},strength,armourPiercing),saveDie=save!==null&&save<=6?roll(1)[0]:null,saved=saveDie!==null&&saveDie!==1&&saveDie>=save;if(!saved){target.chariotWounds=Math.max(0,target.chariotWounds-damage);target.crewArmourBonus=target.chariotWounds>0?2:0;}else damage=0;}else applyDamage(target,damage,true,null,u);}say(projectileLabel+" hits "+target.name+(body?" chariot":" crew")+" (allocation "+split+"): wound "+die+" vs "+(need===null?"impossible":need)+(wounded?"; D3 damage "+damage+".":"; no wound."));}else if(target.isCannon||target.isBoltThrower){
+        if(target.isChariot){const split=roll(1)[0],body=split<=4,need=woundTarget(strength,body?(target.chariotToughness||4):target.stats.T),die=roll(1)[0],wounded=need!==null&&die>=need;let damage=wounded?(roll(1)[0]%3+1):0;if(wounded){if(body){const save=saveTarget({...target,armour:"none",shield:false,mountStats:null,isChariot:false},strength,armourPiercing),saveDie=save!==null&&save<=6?roll(1)[0]:null,saved=saveDie!==null&&saveDie!==1&&saveDie>=save;if(!saved){target.chariotWounds=Math.max(0,target.chariotWounds-damage);target.crewArmourBonus=target.chariotWounds>0?2:0;}else damage=0;}else applyDamage(target,damage,true,null,cannon);}say(projectileLabel+" hits "+target.name+(body?" chariot":" crew")+" (allocation "+split+"): wound "+die+" vs "+(need===null?"impossible":need)+(wounded?"; D3 damage "+damage+".":"; no wound."));}else if(target.isCannon||target.isBoltThrower){
           const split=roll(1)[0];
           if(split<=4){
             const need=woundTarget(strength,target.artilleryToughness||7),die=roll(1)[0],wounded=need!==null&&die>=need,damage=wounded?(roll(1)[0]%3+1):0;
@@ -216,7 +216,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
             say(projectileLabel+" hits "+target.name+" itself: S"+strength+", wound "+die+" (need "+(need===null?"impossible":need)+")"+(wounded?"; D3 damage "+damage+"; "+target.artilleryWounds+" cannon wounds remain.":"; no wound."));
           }else{
             const need=woundTarget(strength,target.stats.T),die=roll(1)[0],wounded=need!==null&&die>=need,damage=wounded?(roll(1)[0]%3+1):0;
-            if(wounded)applyDamage(target,damage,true,null,u);
+            if(wounded)applyDamage(target,damage,true,null,cannon);
             say(projectileLabel+" hits "+target.name+"'s crew: S"+strength+", wound "+die+" (need "+(need===null?"impossible":need)+")"+(wounded?"; D3 damage "+damage+".":"; no wound."));
           }
         }else{
@@ -226,7 +226,7 @@ export function createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundTa
             const saveDie=save!==null&&save<=6?roll(1)[0]:null,armourSaved=saveDie!==null&&saveDie!==1&&saveDie>=save,wardDie=!armourSaved&&target.wardSave&&(!target.wardSaveFrontOnly||shieldFront)?roll(1)[0]:null,wardSaved=wardDie!==null&&wardDie!==1&&wardDie>=Number(target.wardSave),saved=armourSaved||wardSaved,damage=saved?0:(roll(1)[0]%3+1);
             if(!saved){
               if(target.isCharacter){target.characterWounds=Math.max(0,(target.characterWounds??target.stats.W)-damage);if(target.characterWounds<=0)target.models=0;}
-              else applyDamage(target,damage,true,null,u);
+              else applyDamage(target,damage,true,null,cannon);
               say(projectileLabel+" wounds "+target.name+" at S"+strength+"; D3 damage "+damage+(saveDie!==null?"; armour save "+saveDie+" vs "+save:"")+(wardDie!==null?"; ward save "+wardDie+" vs "+target.wardSave:"")+".");
             }else say(target.name+" saves the "+projectileLabel+" hit"+(armourSaved?" ("+saveDie+" vs "+save+")":"")+(wardSaved?"; ward save "+wardDie+" vs "+target.wardSave:"")+".");
           }
