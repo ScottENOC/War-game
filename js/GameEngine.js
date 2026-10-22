@@ -1,4 +1,4 @@
-import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261020-grinhold-battle-fix-v1";
+import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261022-ai-battle-lab-v2";
 import { FACTIONS } from "./factions.js?v=20261020-thaurgath-v2";
 import { createRoguelike } from "./roguelike.js?v=20261020-chariots-v2";
 import { createWarband } from "./warband.js?v=20261020-warband-v1";
@@ -6,14 +6,14 @@ import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warba
 import { createArmyBuilder } from "./armyBuilder.js?v=20261021-wyvern-roster-v1";
 import { createCollectionManager } from "./collection.js?v=20261021-wyvern-roster-v1";
 import { createGameState } from "./gameState.js";
-import { createAI } from "./ai.js?v=20261022-ai-battle-lab-v1";
+import { createAI } from "./ai.js?v=20261022-ai-battle-lab-v2";
 import { createRules } from "./rules.js?v=20261020-wood-elf-v1";
 import { createShooting } from "./shooting.js?v=20261020-vision-v1";
 import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
 import { createRendering } from "./rendering.js?v=20261021-charge-indicators-v1";
 import { createInput } from "./input.js?v=20261021-flying-wall-pan-guard-v1";
 import { createUI } from "./ui.js?v=20261021-character-undo-v1";
-import { createPhases } from "./phases.js?v=20261022-ai-battle-lab-v1";
+import { createPhases } from "./phases.js?v=20261022-ai-battle-lab-v2";
 import { createDice } from "./dice.js";
 import { createMovement } from "./movement.js?v=20261021-fly-over-walls-v1";
 import { createNarrativeCampaign } from "./campaign.js";
