@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="icons/war-game.svg">
 <title>War-game — Miniature Collection</title>
 <link rel="stylesheet" href="css/style.css?v=20261021-civilian-encounter-ui-v1">
-</head>
+\n<style>\n.lab-team-grid,.lab-options-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}.lab-team{border:1px solid #606a73;border-radius:12px;padding:12px}.red-team{border-top:4px solid #a94343}.blue-team{border-top:4px solid #3976b8}.lab-team h2{font-size:1.05rem;margin:0 0 10px}.lab-check{display:flex;align-items:center;gap:10px;margin:14px 0}.lab-status{margin:14px 0;padding:12px;border:1px solid #6c747b;border-radius:10px;white-space:pre-wrap}.lab-results-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.92rem}.lab-results-table th,.lab-results-table td{padding:8px 6px;border-bottom:1px solid #59636b;text-align:left}.lab-results-table th{font-weight:700}.lab-results-table .red{color:#df7777}.lab-results-table .blue{color:#78aeea}@media(max-width:600px){.lab-team-grid,.lab-options-grid{grid-template-columns:1fr}.lab-results-table{font-size:.8rem}}\n</style>\n</head>
 <body>
 <section id="mainmenu" class="screen menu-screen">
   <div class="menu-panel collection-menu">
@@ -22,7 +22,7 @@
       <button class="mode-card" data-mode="grand"><strong>Grand Campaign</strong><small>4X strategy · build an empire</small></button>
       <button class="mode-card" data-mode="narrative"><strong>Narrative Campaign</strong><small>A branching fantasy war story</small></button>
       <button class="mode-card" data-mode="roguelike"><strong>Roguelike Expedition</strong><small>FTL-style runs · earn miniatures</small></button>
-      <button class="mode-card" data-mode="skirmish"><strong>Skirmish</strong><small>Quick battle with your collection</small></button>
+      <button class="mode-card" data-mode="skirmish"><strong>Skirmish</strong><small>Quick battle with your collection</small></button>\n      <button id="ai-battle-lab-open" class="mode-card"><strong>AI Battle Lab</strong><small>Red baseline vs Blue experimental · automated testing</small></button>
       <button id="river-siege-test-open" class="mode-card"><strong>River-Crossing Siege Test</strong><small>Test Crownfall and Aelthir castle approaches</small></button>
       <button class="mode-card" data-mode="warbandSkirmish"><strong>Warband Skirmish</strong><small>One-off fantasy skirmish · individual fighters · injury rolls</small></button>
       <button class="mode-card" data-mode="warbandExpedition"><strong>Warband Expedition</strong><small>Persistent fighters · experience · lasting injuries · recruit and equip</small></button>
@@ -48,6 +48,24 @@
 <header class="builder-header"><div><div class="eyebrow">Campaign selection</div><h1 id="mode-title">Campaign</h1></div><button id="mode-back" class="secondary-button">Main Menu</button></header>
 <p id="mode-description" class="builder-intro"></p><div class="mode-placeholder"><div class="mode-mark">✦</div><h2>Coming soon</h2><p>This mode will use the same miniature collection as Skirmish. Models you own will determine which troops you can field.</p><button id="mode-collection" class="primary-button">Open Collection</button></div></div></section>
 
+<section id="ai-battle-lab-screen" class="screen builder-screen" hidden><div class="builder-panel campaign-panel">
+<header class="builder-header"><div><div class="eyebrow">Automated battle testing</div><h1>AI Battle Lab</h1></div><button id="ai-battle-lab-back" class="secondary-button">Main Menu</button></header>
+<p class="builder-intro">Red is the current baseline AI. Blue is the experimental threat-aware AI. Both use the real battle engine and faction rules. Armies are generated from the selected faction rosters at the chosen points allowance.</p>
+<div class="lab-team-grid">
+<section class="lab-team red-team"><h2>🔴 Red · Baseline</h2><label class="faction-choice">Faction <select id="ai-lab-red-faction"><option value="empire">Kingdom of Valedorn</option><option value="highElves">Elves</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label></section>
+<section class="lab-team blue-team"><h2>🔵 Blue · Experimental</h2><label class="faction-choice">Faction <select id="ai-lab-blue-faction"><option value="highElves">Elves</option><option value="empire">Kingdom of Valedorn</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label></section>
+</div>
+<div class="lab-options-grid">
+<label class="faction-choice">Points per army <select id="ai-lab-points"><option value="500">500 points</option><option value="750">750 points</option><option value="1000" selected>1,000 points</option><option value="1500">1,500 points</option><option value="2000">2,000 points</option></select></label>
+<label class="faction-choice">Battles in batch <select id="ai-lab-count"><option value="1">1 battle</option><option value="10">10 battles</option><option value="20" selected>20 battles</option><option value="50">50 battles</option><option value="100">100 battles</option></select></label>
+<label class="faction-choice">Terrain <select id="ai-lab-terrain"><option value="varied" selected>Varied terrain</option><option value="fixed">Same terrain seed</option></select></label>
+<label class="faction-choice">Army composition <select id="ai-lab-composition"><option value="balanced" selected>Balanced combined arms</option><option value="melee">Melee-heavy</option><option value="ranged">Ranged-heavy</option><option value="mobile">Mobile / cavalry-heavy</option></select></label>
+</div>
+<label class="lab-check"><input id="ai-lab-swap-sides" type="checkbox" checked> Reverse battlefield sides in alternating battles</label>
+<div class="campaign-actions"><button id="ai-battle-lab-run" class="primary-button">Run AI vs AI test →</button><button id="ai-battle-lab-stop" class="secondary-button" hidden>Stop after current battle</button></div>
+<div id="ai-battle-lab-status" class="lab-status" aria-live="polite">Ready. No battles have been run yet.</div>
+<div id="ai-battle-lab-results"></div>
+</div></section>
 <section id="river-siege-test-screen" class="screen builder-screen" hidden><div class="builder-panel campaign-panel">
 <header class="builder-header"><div><div class="eyebrow">Battlefield prototype</div><h1>River-Crossing Siege Test</h1></div><button id="river-siege-test-back" class="secondary-button">Main Menu</button></header>
 <p class="builder-intro">Choose a city and the direction of attack. Build your force with the normal Skirmish army builder; the opponent fields an AI army using the existing siege roster rules.</p>
