@@ -633,3 +633,17 @@ button,[role="button"]{
 #battle-menu-panel button{display:block;width:100%;min-height:44px;margin-top:10px}
 #battle-concede{background:#682f32;color:#fff;border:1px solid #a65a5d}
 #resume-saved-battle{margin-top:12px}
+
+
+/* Isolated Grand Campaign AI Test Lab */
+.campaign-ai-controls{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:18px 0}
+.campaign-ai-controls label{display:flex;flex-direction:column;gap:6px;min-width:150px;color:var(--text,#e9ecee);font-weight:650}
+.campaign-ai-controls select{min-height:42px;padding:8px 10px;border:1px solid #66767d;border-radius:8px;background:#202a31;color:#f2f5f6;font:inherit}
+#campaign-ai-status{padding:12px 14px;border:1px solid #46555c;border-radius:10px;background:#182228;color:#dce5e8}
+.campaign-ai-results-table{width:100%;border-collapse:collapse;margin:10px 0 22px;font-size:.92rem}
+.campaign-ai-results-table th,.campaign-ai-results-table td{padding:9px 10px;border-bottom:1px solid #46535a;text-align:left}
+.campaign-ai-results-table th{background:#202b31;color:#f0f3f4}
+#campaign-ai-results details{margin:16px 0}
+#campaign-ai-results summary{cursor:pointer;padding:10px 0;font-weight:700}
+#campaign-ai-results li{margin:0 0 10px;line-height:1.45;overflow-wrap:anywhere}
+@media(max-width:600px){.campaign-ai-controls{align-items:stretch;flex-direction:column}.campaign-ai-controls label{width:100%}.campaign-ai-controls select{width:100%;box-sizing:border-box}.campaign-ai-results-table{font-size:.8rem}.campaign-ai-results-table th,.campaign-ai-results-table td{padding:7px 5px}}
