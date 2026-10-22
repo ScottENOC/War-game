@@ -931,7 +931,8 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
    });
    campaign.factionStates.forEach(state=>{state.alive=true;});
    activeCampaign=campaign;
-   const eliminatedAt={},errors=[];
+   const eliminatedAt={},errors=[],errorCounts={};
+   const recordError=message=>{const key=String(message||"Unknown error");errorCounts[key]=(errorCounts[key]||0)+1;if(errors.length<100)errors.push(key);};
    let outcome="turn-limit",turns=0,winner=null;
    const cityCounts=()=>{const counts={};for(const region of campaign.regions){const owner=politicalOwner(region);if(owner)counts[owner]=(counts[owner]||0)+1;}return counts;};
    const checkEnd=()=>{
@@ -950,10 +951,10 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
      for(const id of campaign.factionTurnOrder||[]){
       const faction=campaign.factionStates.find(f=>f.id===id);
       if(!faction||!faction.alive||faction.passive||FACTION_BY_ID[id]?.passive)continue;
-      try{runAIFactionTurn(campaign,faction);}catch(e){errors.push("Turn "+turn+" / "+faction.name+": "+String(e?.message||e));}
+      try{runAIFactionTurn(campaign,faction);}catch(e){recordError("Turn "+turn+" / "+faction.name+": "+String(e?.stack||e?.message||e));}
      }
      processCampaignLogistics(campaign);
-    }catch(e){errors.push("Turn "+turn+": "+String(e?.message||e));}
+    }catch(e){recordError("Turn "+turn+": "+String(e?.stack||e?.message||e));}
     for(const f of campaign.factionStates){
      if(f.alive&&!f.passive&&!(campaign.regions||[]).some(r=>politicalOwner(r)===f.id)){f.alive=false;eliminatedAt[f.id]=turn;}
      const army=(campaign.armies||[]).find(a=>(a.owner||a.factionId)===f.id);
@@ -963,12 +964,13 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
    }
    const counts=cityCounts(),living=campaign.factionStates.filter(f=>f.alive&&!f.passive&&counts[f.id]>0).map(f=>({id:f.id,name:f.name,cities:counts[f.id],armyPoints:f.armyPoints||0,treasury:f.treasury||0})).sort((a,b)=>b.cities-a.cities);
    const eliminated=campaign.factionStates.filter(f=>!f.passive&&(!f.alive||!counts[f.id])).map(f=>({id:f.id,name:f.name,turn:eliminatedAt[f.id]||null})).sort((a,b)=>(a.turn||999)-(b.turn||999));
-   results.push({run:run+1,seed:20261022+run*7919,outcome,winner,turns,cities:counts,living,eliminated,errors});
+   results.push({run:run+1,seed:20261022+run*7919,outcome,winner,turns,cities:counts,living,eliminated,errors,errorCounts});
   }
  }finally{Math.random=oldRandom;activeCampaign=oldActive;}
  const outcomes={},factionWins={},factionSurvival={};
  for(const r of results){outcomes[r.outcome]=(outcomes[r.outcome]||0)+1;if(r.winner)factionWins[r.winner]=(factionWins[r.winner]||0)+1;for(const f of r.living)factionSurvival[f.id]=(factionSurvival[f.id]||0)+1;}
- return {runs,maxTurns,results,outcomes,factionWins,factionSurvival};
+ const aggregateErrors={};for(const r of results)for(const [message,count] of Object.entries(r.errorCounts||{}))aggregateErrors[message]=(aggregateErrors[message]||0)+count;
+ return {runs,maxTurns,results,outcomes,factionWins,factionSurvival,aggregateErrors};
 }
 let selectedFaction="empire",selectedPoliticalFaction="valedorn",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
@@ -3149,9 +3151,31 @@ function endCampaignTurn(){
 function showCampaignWorld(c){activeCampaign=c;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();}
 export function startGrandCampaign(){
  const labScreen=byId("campaign-ai-lab-screen"),mainMenu=byId("mainmenu");
- const labOpen=byId("campaign-ai-lab-open"),labBack=byId("campaign-ai-lab-back"),labRun=byId("campaign-ai-run");
+ const labOpen=byId("campaign-ai-lab-open"),labBack=byId("campaign-ai-lab-back"),labRun=byId("campaign-ai-run"),labCopy=byId("campaign-ai-copy");
  if(labOpen&&labScreen&&mainMenu)labOpen.addEventListener("click",()=>{mainMenu.hidden=true;labScreen.hidden=false;});
  if(labBack&&labScreen&&mainMenu)labBack.addEventListener("click",()=>{labScreen.hidden=true;mainMenu.hidden=false;});
+ const reportText=report=>{
+  const lines=["CAMPAIGN AI TEST LAB RESULTS","Runs: "+report.runs,"Turn limit: "+report.maxTurns,"Outcomes: "+JSON.stringify(report.outcomes),"Faction wins: "+JSON.stringify(report.factionWins),"Faction survival: "+JSON.stringify(report.factionSurvival),"","RUN DETAILS"];
+  for(const r of report.results){
+   lines.push("Run "+r.run+" | seed "+r.seed+" | outcome "+r.outcome+" | turns "+r.turns+" | winner "+(r.winner||"none"));
+   lines.push("  Living: "+(r.living.map(f=>f.name+" ("+f.cities+" cities, army "+f.armyPoints+", treasury "+f.treasury+")").join("; ")||"none"));
+   lines.push("  Eliminated: "+(r.eliminated.map(f=>f.name+(f.turn?" at turn "+f.turn:" (elimination turn not recorded)")).join("; ")||"none"));
+   lines.push("  Errors observed: "+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0)+" (up to 100 example stack traces stored)");
+  }
+  lines.push("","ERROR COUNTS BY MESSAGE");
+  for(const [message,count] of Object.entries(report.aggregateErrors||{}).sort((a,b)=>b[1]-a[1]))lines.push("["+count+" occurrences] "+message);
+  return lines.join("\n");
+ };
+ if(labCopy)labCopy.addEventListener("click",async()=>{
+  const status=byId("campaign-ai-status"),report=window.__campaignAiLabLastReport;
+  if(!report){status.textContent="Run a simulation first; there are no results to copy.";return;}
+  const text=reportText(report);
+  try{
+   if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);}
+   else{const area=document.createElement("textarea");area.value=text;area.style.position="fixed";area.style.opacity="0";document.body.append(area);area.focus();area.select();const ok=document.execCommand("copy");area.remove();if(!ok)throw new Error("Clipboard permission was unavailable");}
+   status.textContent="Full report copied, including run-by-run details and error messages.";
+  }catch(e){status.textContent="Could not access the clipboard. The report is available in the details below; try using the browser's copy selection.";}
+ });
  if(labRun)labRun.addEventListener("click",()=>{
   const status=byId("campaign-ai-status"),host=byId("campaign-ai-results");
   const runs=Math.max(1,Math.min(20,Number(byId("campaign-ai-runs")?.value)||5));
@@ -3159,7 +3183,7 @@ export function startGrandCampaign(){
   labRun.disabled=true;status.textContent="Running "+runs+" isolated campaigns…";host.replaceChildren();
   window.setTimeout(()=>{
    try{
-    const report=runCampaignAiLab({runs,maxTurns});
+    const report=runCampaignAiLab({runs,maxTurns});window.__campaignAiLabLastReport=report;
     const heading=document.createElement("h2");heading.textContent="Baseline results";host.append(heading);
     const summary=document.createElement("p");summary.textContent=report.runs+" runs · "+report.maxTurns+" turn limit · fixed, distinct random seeds. No tactical battles launched.";host.append(summary);
     const outcomeHeading=document.createElement("h3");outcomeHeading.textContent="Campaign outcomes";host.append(outcomeHeading);
@@ -3170,15 +3194,23 @@ export function startGrandCampaign(){
     const head=document.createElement("tr");["Faction","Wins","Survived","Survival rate"].forEach(v=>{const th=document.createElement("th");th.textContent=v;head.append(th);});factionTable.append(head);
     const allIds=[...new Set(report.results.flatMap(r=>[...r.living.map(f=>f.id),...r.eliminated.map(f=>f.id)]))];
     allIds.map(id=>({id,name:report.results.flatMap(r=>[...r.living,...r.eliminated]).find(f=>f.id===id)?.name||id,wins:report.factionWins[id]||0,survived:report.factionSurvival[id]||0})).sort((a,b)=>b.wins-a.wins||b.survived-a.survived||a.name.localeCompare(b.name)).forEach(f=>{const tr=document.createElement("tr");[f.name,String(f.wins),f.survived+" / "+report.runs,Math.round(f.survived/report.runs*100)+"%"].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.append(td);});factionTable.append(tr);});host.append(factionTable);
+    const errorHeading=document.createElement("h3");errorHeading.textContent="Simulation errors";host.append(errorHeading);
+    const totalErrors=Object.values(report.aggregateErrors).reduce((a,b)=>a+b,0);
+    const errorSummary=document.createElement("p");errorSummary.textContent=totalErrors+" total caught exceptions. "+Object.keys(report.aggregateErrors).length+" distinct error messages. Up to 100 stack-trace examples per run are retained; counts include all occurrences.";host.append(errorSummary);
+    const errorDetails=document.createElement("details"),errorSummaryLabel=document.createElement("summary");errorSummaryLabel.textContent="Show error messages and counts";errorDetails.append(errorSummaryLabel);
+    const errorList=document.createElement("ol");Object.entries(report.aggregateErrors).sort((a,b)=>b[1]-a[1]).forEach(([message,count])=>{const li=document.createElement("li");li.textContent=count+" occurrences: "+message;errorList.append(li);});errorDetails.append(errorList);host.append(errorDetails);
     const runsHeading=document.createElement("h3");runsHeading.textContent="Run-by-run outcomes";host.append(runsHeading);
-    const details=document.createElement("details"),summaryDetails=document.createElement("summary");summaryDetails.textContent="Show individual runs and elimination order";details.append(summaryDetails);
-    const list=document.createElement("ol");report.results.forEach(r=>{const li=document.createElement("li"),winnerName=r.winner?(report.results.flatMap(x=>[...x.living,...x.eliminated]).find(f=>f.id===r.winner)?.name||r.winner):r.outcome.replace(/-/g," ");li.textContent="Run "+r.run+" (seed "+r.seed+"): "+winnerName+"; "+r.turns+" turns. Eliminated: "+(r.eliminated.map(f=>f.name+(f.turn?" (turn "+f.turn+")":"")).join(", ")||"none")+(r.errors.length?"; simulation errors: "+r.errors.length:"");list.append(li);});details.append(list);host.append(details);
-    const errorCount=report.results.reduce((n,r)=>n+r.errors.length,0);status.textContent="Completed "+report.runs+" runs. "+errorCount+" simulation errors recorded. Treat results as provisional if errors occurred.";
-    window.__campaignAiLabLastReport=report;
-   }catch(e){status.textContent="Simulation failed: "+String(e?.message||e);}
+    const details=document.createElement("details"),summaryDetails=document.createElement("summary");summaryDetails.textContent="Show all runs, surviving factions and elimination order";details.append(summaryDetails);
+    const list=document.createElement("ol");report.results.forEach(r=>{const li=document.createElement("li");li.append(document.createTextNode("Run "+r.run+" (seed "+r.seed+"): "+(r.winner||r.outcome.replace(/-/g," "))+"; "+r.turns+" turns. "));
+      const living=document.createElement("div");living.textContent="Survivors: "+(r.living.map(f=>f.name+" ("+f.cities+" cities)").join(", ")||"none");li.append(living);
+      const eliminated=document.createElement("div");eliminated.textContent="Eliminated: "+(r.eliminated.map(f=>f.name+(f.turn?" (turn "+f.turn+")":" (turn not recorded)")).join(", ")||"none");li.append(eliminated);
+      const errs=document.createElement("div");errs.textContent="Errors: "+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0);li.append(errs);list.append(li);});details.append(list);host.append(details);
+    status.textContent="Completed "+report.runs+" runs. "+totalErrors+" caught exceptions across "+Object.keys(report.aggregateErrors).length+" distinct messages. Expand Simulation errors to inspect them.";
+   }catch(e){status.textContent="Simulation failed: "+String(e?.stack||e?.message||e);}
    finally{labRun.disabled=false;}
   },20);
  });
+ window.resolveGrandCampaignConquest=resolveGrandCampaignConquest;
  window.resolveGrandCampaignConquest=resolveGrandCampaignConquest;
  window.resolveGrandCampaignConquest=resolveGrandCampaignConquest;
  try{const s=JSON.parse(localStorage.getItem("warGameGrandCampaignStart")||"null");if(s&&FACTIONS[s.faction]){selectedFaction=s.faction;if(s.politicalFactionId&&FACTION_BY_ID[s.politicalFactionId])selectedPoliticalFaction=s.politicalFactionId;if(CITIES.some(c=>c.id===s.selectedCity))selectedCity=s.selectedCity;}}catch{}
