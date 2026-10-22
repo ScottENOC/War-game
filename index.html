@@ -23,6 +23,7 @@
       <button class="mode-card" data-mode="narrative"><strong>Narrative Campaign</strong><small>A branching fantasy war story</small></button>
       <button class="mode-card" data-mode="roguelike"><strong>Roguelike Expedition</strong><small>FTL-style runs · earn miniatures</small></button>
       <button class="mode-card" data-mode="skirmish"><strong>Skirmish</strong><small>Quick battle with your collection</small></button>
+      <button id="campaign-ai-lab-open" class="mode-card"><strong>Campaign AI Test Lab</strong><small>Run AI-only Grand Campaign simulations</small></button>
       <button id="river-siege-test-open" class="mode-card"><strong>River-Crossing Siege Test</strong><small>Test Crownfall and Aelthir castle approaches</small></button>
       <button class="mode-card" data-mode="warbandSkirmish"><strong>Warband Skirmish</strong><small>One-off fantasy skirmish · individual fighters · injury rolls</small></button>
       <button class="mode-card" data-mode="warbandExpedition"><strong>Warband Expedition</strong><small>Persistent fighters · experience · lasting injuries · recruit and equip</small></button>
@@ -31,6 +32,7 @@
     <button id="open-collection" class="primary-button">Army Builder &amp; Collection</button>
   </div>
 </section>
+<section id="campaign-ai-lab-screen" class="screen builder-screen" hidden><div class="builder-panel campaign-panel"><header class="builder-header"><div><div class="eyebrow">Simulation laboratory</div><h1>Campaign AI Test Lab</h1></div><button id="campaign-ai-lab-back" class="secondary-button">Main Menu</button></header><p class="builder-intro">Run fresh AI-only Grand Campaigns using strategic auto-resolved battles. This lab does not launch tactical battles or save over your campaign.</p><div class="campaign-ai-controls"><label>Baseline runs <select id="campaign-ai-runs"><option value="5">5 runs</option><option value="10" selected>10 runs</option><option value="20">20 runs</option><option value="50">50 runs</option></select></label><label>Maximum turns per run <select id="campaign-ai-turn-limit"><option value="50">50 turns</option><option value="100" selected>100 turns</option><option value="150">150 turns</option></select></label><button id="campaign-ai-run" class="primary-button">Run baseline simulations</button></div><p id="campaign-ai-status" aria-live="polite">No simulations run yet.</p><div id="campaign-ai-results"></div></div></section>
 <section id="campaign-screen" class="screen builder-screen" hidden><div class="builder-panel campaign-panel">
 <header class="builder-header"><div><div class="eyebrow">Narrative campaign</div><h1 id="campaign-title">The Horned Rat War</h1></div><button id="campaign-menu" class="secondary-button">Main Menu</button></header>
 <p id="campaign-description" class="builder-intro">A three-mission campaign prototype. Lead a human force through three battles, improving every unit after each mission.</p>
