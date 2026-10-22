@@ -8,7 +8,7 @@ import { createCollectionManager } from "./collection.js?v=20261021-wyvern-roste
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js?v=20261022-ai-battle-lab-v2";
 import { createRules } from "./rules.js?v=20261022-rules-scope-fix-v1";
-import { createShooting } from "./shooting.js?v=20261020-vision-v1";
+import { createShooting } from "./shooting.js?v=20261023-ai-lab-fast-v3";
 import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
 import { createRendering } from "./rendering.js?v=20261021-charge-indicators-v1";
 import { createInput } from "./input.js?v=20261021-flying-wall-pan-guard-v1";
