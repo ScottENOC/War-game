@@ -375,7 +375,7 @@ const AI_LAB_ROSTERS={
 };
 let aiLabRun=null;
 function labRandomInt(min,max){return min+Math.floor(Math.random()*(max-min+1));}
-function makeAiLabArmy(faction,budget,style){
+function makeAiLabArmyOnce(faction,budget,style){
  const groups=AI_LAB_ROSTERS[faction]||AI_LAB_ROSTERS.empire,all=[...groups.infantry,...groups.mobile,...groups.heroes,...groups.support].filter(t=>FACTIONS[faction]?.units?.[t]);
  const weighted=style==="melee"?[...groups.infantry,...groups.infantry,...groups.heroes,...groups.mobile]:style==="ranged"?[...groups.infantry,...groups.infantry,...groups.support,...groups.heroes]:style==="mobile"?[...groups.mobile,...groups.mobile,...groups.infantry,...groups.heroes]:all;
  const candidates=[...new Set(weighted.filter(t=>FACTIONS[faction]?.units?.[t]))];
@@ -402,6 +402,15 @@ function makeAiLabArmy(faction,budget,style){
   if(!best)break;army[best.i]=best.next;spent+=best.delta;
  }
  return army.slice(0,6);
+}
+function makeAiLabArmy(faction,budget,style){
+ let best=null,bestGap=Infinity;
+ for(let attempt=0;attempt<30;attempt++){
+  const candidate=makeAiLabArmyOnce(faction,budget,style),points=candidate.reduce((sum,u)=>sum+unitCost(u,faction),0),gap=Math.abs(budget-points);
+  if(points<=budget*1.08&&gap<bestGap){best=candidate;bestGap=gap;}
+  if(gap<=budget*.025)break;
+ }
+ return best||makeAiLabArmyOnce(faction,budget,style);
 }
 function labSurvivingPoints(side){
  return units().filter(u=>u.side===side).reduce((sum,u)=>{const start=Math.max(1,u.startModels||u.models||1),models=Math.max(0,u.models||0),wounds=u.stats?.W||1;const fraction=u.isCharacter||u.isDragon||u.isDragonRider?Math.max(0,Math.min(1,(u.characterWounds??wounds)/wounds)):Math.max(0,Math.min(1,models/start));return sum+Math.round((u.points||0)*fraction);},0);
