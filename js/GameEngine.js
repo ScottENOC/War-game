@@ -370,7 +370,7 @@ const AI_LAB_ROSTERS={
  empire:{infantry:["swordsmen","archers"],mobile:["cavalry"],heroes:["captain","mageHero","lord"],support:["cannon","humanChariot"]},
  highElves:{infantry:["swordsmen","archers"],mobile:["cavalry"],heroes:["captain","mageHero","lord"],support:["boltThrower","elfChariot","youngDragon","dragon"]},
  dwarfs:{infantry:["dwarfInfantry"],mobile:[],heroes:["dwarfCaptain","dwarfLord"],support:["cannon"]},
- greenskins:{infantry:["goblins","orcBoyz"],mobile:["wolfRiders","boarBoyz"],heroes:["goblinHero","orcHero","goblinShaman","orcShaman"],support:["catapult","trolls"]},
+ greenskins:{infantry:["goblins","orcBoyz"],mobile:["wolfRiders","boarBoyz"],heroes:["goblinHero","orcHero","goblinShaman","orcShaman"],support:["catapult","trolls","giant"]},
  undead:{infantry:["skeletons","zombies"],mobile:["skeletonHorses"],heroes:["necromancer","vampireHero"],support:["catapult","skeletonChariot","skeletonDragon"]}
 };
 let aiLabRun=null;
@@ -383,8 +383,9 @@ function makeAiLabArmy(faction,budget,style){
  const cavalry=new Set(["cavalry","wolfRiders","boarBoyz","skeletonHorses"]);
  const artillery=new Set(["cannon","boltThrower","catapult"]);
  const army=[];let spent=0;
- for(let slot=0;slot<5;slot++){
-  const choices=candidates.filter(t=>unitCost({type:t,models:infantry.has(t)?5:cavalry.has(t)?5:1,weapon:"handWeapon"},faction)<=budget-spent);
+ for(let slot=0;slot<6;slot++){
+  const source=slot<2?groups.infantry:candidates;
+  const choices=source.filter(t=>candidates.includes(t)&&unitCost({type:t,models:infantry.has(t)?5:cavalry.has(t)?5:1,weapon:"handWeapon"},faction)<=budget-spent);
   if(!choices.length)break;
   const type=choices[labRandomInt(0,choices.length-1)];
   const entry={type,models:infantry.has(type)?labRandomInt(8,20):cavalry.has(type)?labRandomInt(5,10):artillery.has(type)?(type==="boltThrower"?2:3):1,weapon:"handWeapon"};
