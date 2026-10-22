@@ -38,7 +38,7 @@ function hasPriorityRule(u){return !!u&&(!!u.priorityActivation||!!u.reserveDepl
  function canUseNeutralZone(u){return !!u&&(!!u.canDeployNeutral||(u.attachedCharacters||[]).some(id=>S.units[id]?.models>0&&S.units[id]?.canDeployNeutral));}
  function validDeployment(u,x,y,f){const poly=corners(u,x,y,f),w=W(),h=H(),scout=!!u.canDeployAnywhere||(u.attachedCharacters||[]).some(id=>S.units[id]?.models>0&&!S.units[id]?.fled&&S.units[id]?.canDeployAnywhere);if(S.battleType==="siege"){const castle=(S.terrain||[]).find(t=>t.type==="siegeCastle");if(!castle)return false;const playerDefends=S.siegeRole==="defender",isDefender=(u.side==="player")===playerDefends,inch=PX_PER_IN(),mx=12*inch/w,my=12*inch/h,wallPad=1.25*inch/w,wallPadY=1.25*inch/h;const inBounds=poly.every(p=>p.x>=1&&p.y>=1&&p.x<=w-1&&p.y<=h-1);const inCastle=x>=castle.left-wallPad&&x<=castle.right+wallPad&&y>=castle.top-wallPadY&&y<=castle.bottom+wallPadY;const outsideRing=x>=castle.left-mx&&x<=castle.right+mx&&y>=castle.top-my&&y<=castle.bottom+my;const customZoneOk=!S.customSiegeMap||(S.customSiegeMap.approach==="north"?y<castle.top-.015:S.customSiegeMap.approach==="east"?x>castle.right+.12:S.customSiegeMap.approach==="south"?y>castle.bottom+.015:x<castle.left-.015);const insideInterior=x>castle.left&&x<castle.right&&y>castle.top&&y<castle.bottom;if(!inBounds||(isDefender?!inCastle:(!outsideRing||insideInterior||!customZoneOk)))return false;if(!isDefender){const minWallDistance=12*inch+Math.hypot(shape(u).front,shape(u).depth)/2,castleWalls=(S.terrain||[]).filter(t=>(t.type==="wall"||t.type==="gate")&&t.castle&&(t.wounds??2)>0),cx=x*w,cy=y*h;for(const wall of castleWalls){const ax=wall.x1*w,ay=wall.y1*h,bx=wall.x2*w,by=wall.y2*h,dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((cx-ax)*dx+(cy-ay)*dy)/l2)),d=Math.hypot(cx-(ax+dx*t),cy-(ay+dy*t));if(d<minWallDistance)return false;}}const priorLevel=u.wallLevel,priorSegment=u.wallSegment,priorDefence=u.wallDefence;if(isDefender){const px=x*w,py=y*h;let nearest=null,nearestD=Infinity;for(const wall of (S.terrain||[]).filter(t=>(t.type==="wall"||t.type==="gate")&&t.castle&&(t.wounds??2)>0)){const ax=wall.x1*w,ay=wall.y1*h,bx=wall.x2*w,by=wall.y2*h,dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l2)),d=Math.hypot(px-(ax+dx*t),py-(ay+dy*t));if(d<nearestD){nearestD=d;nearest=wall;}}if(nearest&&nearestD<=1.25*inch){u.wallLevel=true;u.wallSegment=nearest;u.wallDefence={wall:nearest,posture:"active"};}}const placeable=canPlace(u,x,y,f);u.wallLevel=priorLevel;u.wallSegment=priorSegment;u.wallDefence=priorDefence;return placeable;}const neutral=canUseNeutralZone(u),minX=scout?1:neutral?w/3+1:u.side==="player"?1:2*w/3+1,maxX=scout?w-1:neutral?2*w/3-1:u.side==="player"?w/3-1:w-1;return canPlace(u,x,y,f)&&poly.every(p=>p.x>=minX&&p.y>=1&&p.x<=maxX&&p.y<=h-1);}
 function playCombatDiceQueue(){if(S.combatDicePlaying||!S.combatDiceQueue?.length)return;S.combatDicePlaying=true;const showNext=()=>{const next=S.combatDiceQueue.shift();if(!next){S.combatDicePlaying=false;return;}const content=$("rollcontent");const entry=document.createElement("div");entry.className="combat-roll-entry";entry.innerHTML=next;content.append(entry);$("rollview").classList.add("show");content.scrollTop=content.scrollHeight;setTimeout(showNext,950);};showNext();}
-function say(msg){S.log.unshift(msg);S.log=S.log.slice(0,80);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");if(msg.includes("dice-stack")||msg.includes("dice-duel")){if(S.phase==="combat"){S.combatDiceQueue=S.combatDiceQueue||[];S.combatDiceQueue.push(msg);playCombatDiceQueue();}else{$("rollcontent").innerHTML=msg;$("rollview").classList.add("show");}}if($("logpanel").classList.contains("open"))$("log").scrollTop=0;}
+function say(msg){if(S.aiBattleLab)return;S.log.unshift(msg);S.log=S.log.slice(0,80);$("log").innerHTML=S.log.map(x=>'<div class="logentry">'+x+'</div>').join("");if(msg.includes("dice-stack")||msg.includes("dice-duel")){if(S.phase==="combat"){S.combatDiceQueue=S.combatDiceQueue||[];S.combatDiceQueue.push(msg);playCombatDiceQueue();}else{$("rollcontent").innerHTML=msg;$("rollview").classList.add("show");}}if($("logpanel").classList.contains("open"))$("log").scrollTop=0;}
 const DICE = createDice({ S });
 const { roll, diceStack, diceDuel } = DICE;
 function psychologyType(u){return !u?null:(u.causesTerror||u.isDragon||u.isDragonRider)?"terror":u.causesFear?"fear":null;}
@@ -325,6 +325,7 @@ function saveBattleSnapshot() {
  }
 }
 render = () => {
+ if(S.aiBattleLab){updateAiMemory();Object.values(S.units||{}).forEach(u=>{u.magicSuppressed=isInsideNullificationDome(u);});updateObjectiveInteractions();return;}
  const battleMenuBar = $("battle-menu-bar");
  if (battleMenuBar) battleMenuBar.hidden = !(campaignBattle || grandCampaignBattle);
  updateAiMemory();
@@ -443,11 +444,20 @@ function runAiLabMovement(){
 }
 function runAiLabCharges(){
  if(!S.aiBattleLab||S.finished||S.phase!=="charges")return;
- if(S.turn>=16){finishBattle("The battle is a draw! (AI Lab turn limit)");return;}
- if(S.chargeSide==="ai"){aiChargeStep();if(S.phase==="charges")window.setTimeout(runAiLabCharges,0);return;}
- const candidates=units().filter(u=>u.side==="player"&&alive(u)&&!u.engaged&&!u.fled&&!u.charged&&(!S.priorityChargePending||hasPriorityRule(u))).map(u=>({u,t:visibleEnemies(u).filter(t=>(!t.engaged||t.flyingMount)&&!t.fled&&dist(u,t)<=u.stats.M*2&&canCharge(u,t)).sort((a,b)=>dist(u,a)-dist(u,b))[0]})).filter(x=>x.t).sort((a,b)=>dist(a.u,a.t)-dist(b.u,b.t));
- if(candidates.length){if(!declareCharge(candidates[0].u,candidates[0].t))candidates[0].u.charged=true;window.setTimeout(runAiLabCharges,0);return;}
- if(S.priorityChargePending){S.priorityChargePending=false;S.chargeSide=S.normalChargeSide;if(S.chargeSide==="player"){window.setTimeout(runAiLabCharges,0);return;}}S.chargePasses++;if(S.chargePasses>=2){resolveDeclaredCharges();return;}S.chargeSide="ai";aiChargeStep();if(S.phase==="charges")window.setTimeout(runAiLabCharges,0);
+ let guard=0;
+ while(S.aiBattleLab&&!S.finished&&S.phase==="charges"&&guard++<200){
+  if(S.turn>=16){finishBattle("The battle is a draw! (AI Lab turn limit)");return;}
+  if(S.chargeSide==="ai"){aiChargeStep();continue;}
+  const candidates=units().filter(u=>u.side==="player"&&alive(u)&&!u.engaged&&!u.fled&&!u.charged&&(!S.priorityChargePending||hasPriorityRule(u))).map(u=>({u,t:visibleEnemies(u).filter(t=>(!t.engaged||t.flyingMount)&&!t.fled&&dist(u,t)<=u.stats.M*2&&canCharge(u,t)).sort((a,b)=>dist(u,a)-dist(u,b))[0]})).filter(x=>x.t).sort((a,b)=>dist(a.u,a.t)-dist(b.u,b.t));
+  if(candidates.length){if(!declareCharge(candidates[0].u,candidates[0].t))candidates[0].u.charged=true;continue;}
+  if(S.priorityChargePending){S.priorityChargePending=false;S.chargeSide=S.normalChargeSide;if(S.chargeSide==="player")continue;}
+  S.chargePasses++;
+  if(S.chargePasses>=2){resolveDeclaredCharges();return;}
+  S.chargeSide="ai";aiChargeStep();
+ }
+ if(S.aiBattleLab&&!S.finished&&S.phase==="charges"){
+  finishBattle("The battle is a draw! (AI Lab charge safety limit)");
+ }
 }
 function finishAiLabBattle(msg){
  if(!S.aiBattleLab||!aiLabRun)return;S.finished=true;S.phase="over";clearBattleSave();
