@@ -435,9 +435,9 @@ function runAiLabCharges(){
  if(!S.aiBattleLab||S.finished||S.phase!=="charges")return;
  if(S.turn>=16){finishBattle("The battle is a draw! (AI Lab turn limit)");return;}
  if(S.chargeSide==="ai"){aiChargeStep();if(S.phase==="charges")window.setTimeout(runAiLabCharges,0);return;}
- const candidates=units().filter(u=>u.side==="player"&&alive(u)&&!u.engaged&&!u.fled&&!u.charged).map(u=>({u,t:visibleEnemies(u).filter(t=>(!t.engaged||t.flyingMount)&&!t.fled&&dist(u,t)<=u.stats.M*2&&canCharge(u,t)).sort((a,b)=>dist(u,a)-dist(u,b))[0]})).filter(x=>x.t).sort((a,b)=>dist(a.u,a.t)-dist(b.u,b.t));
- if(candidates.length){declareCharge(candidates[0].u,candidates[0].t);window.setTimeout(runAiLabCharges,0);return;}
- S.chargePasses++;if(S.chargePasses>=2){resolveDeclaredCharges();return;}S.chargeSide="ai";aiChargeStep();if(S.phase==="charges")window.setTimeout(runAiLabCharges,0);
+ const candidates=units().filter(u=>u.side==="player"&&alive(u)&&!u.engaged&&!u.fled&&!u.charged&&(!S.priorityChargePending||hasPriorityRule(u))).map(u=>({u,t:visibleEnemies(u).filter(t=>(!t.engaged||t.flyingMount)&&!t.fled&&dist(u,t)<=u.stats.M*2&&canCharge(u,t)).sort((a,b)=>dist(u,a)-dist(u,b))[0]})).filter(x=>x.t).sort((a,b)=>dist(a.u,a.t)-dist(b.u,b.t));
+ if(candidates.length){if(!declareCharge(candidates[0].u,candidates[0].t))candidates[0].u.charged=true;window.setTimeout(runAiLabCharges,0);return;}
+ if(S.priorityChargePending){S.priorityChargePending=false;S.chargeSide=S.normalChargeSide;if(S.chargeSide==="player"){window.setTimeout(runAiLabCharges,0);return;}}S.chargePasses++;if(S.chargePasses>=2){resolveDeclaredCharges();return;}S.chargeSide="ai";aiChargeStep();if(S.phase==="charges")window.setTimeout(runAiLabCharges,0);
 }
 function finishAiLabBattle(msg){
  if(!S.aiBattleLab||!aiLabRun)return;S.finished=true;S.phase="over";clearBattleSave();
