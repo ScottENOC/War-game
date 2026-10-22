@@ -7,7 +7,7 @@ import { createArmyBuilder } from "./armyBuilder.js?v=20261021-wyvern-roster-v1"
 import { createCollectionManager } from "./collection.js?v=20261021-wyvern-roster-v1";
 import { createGameState } from "./gameState.js";
 import { createAI } from "./ai.js?v=20261022-ai-battle-lab-v2";
-import { createRules } from "./rules.js?v=20261020-wood-elf-v1";
+import { createRules } from "./rules.js?v=20261022-rules-scope-fix-v1";
 import { createShooting } from "./shooting.js?v=20261020-vision-v1";
 import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
 import { createRendering } from "./rendering.js?v=20261021-charge-indicators-v1";
