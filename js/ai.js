@@ -1,8 +1,17 @@
 import { terrainMovementCost } from "./terrain.js";
-export function createAI({ S, units, alive, eligibleForActivation, enemies, visibleEnemies = enemies, aiLastKnownTargets = () => [], dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, fireCannon, BOW_RANGE, beginCombatPhase, terrain = () => [] }) {
+export function createAI({ S, units, alive, eligibleForActivation, enemies, visibleEnemies = enemies, aiLastKnownTargets = () => [], dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, fireCannon, BOW_RANGE, beginCombatPhase, terrain = () => [], side = "ai", policy = "baseline" }) {\n  const enemySide = side === "player" ? "ai" : "player";
   function armyRangeScore(side){const force=units().filter(u=>u.side===side&&alive(u));return force.length?force.filter(u=>u.hasRangedWeapon).length/force.length:0;}
-function aiWantsRange(){return armyRangeScore("ai")>armyRangeScore("player");}
-function aiTargetScore(u,t,preferRanged){const dx=(t.x-u.x)*BATTLEFIELD_WIDTH_IN,dy=(t.y-u.y)*fieldHeightIn(),d=Math.hypot(dx,dy),bearing=Math.atan2(dy,dx),delta=Math.atan2(Math.sin(bearing-u.facing),Math.cos(bearing-u.facing)),frontPenalty=Math.abs(delta)>Math.PI/2?7:Math.abs(delta)*1.5,rangedBonus=preferRanged&&(t.kind==="archer"||t.hasRangedWeapon)?3:0;return d+frontPenalty-rangedBonus;}
+function aiWantsRange(){return armyRangeScore(side)>armyRangeScore(enemySide);}
+function aiTargetScore(u,t,preferRanged){
+ const dx=(t.x-u.x)*BATTLEFIELD_WIDTH_IN,dy=(t.y-u.y)*fieldHeightIn(),d=Math.hypot(dx,dy),bearing=Math.atan2(dy,dx),delta=Math.atan2(Math.sin(bearing-u.facing),Math.cos(bearing-u.facing)),frontPenalty=Math.abs(delta)>Math.PI/2?7:Math.abs(delta)*1.5,rangedBonus=preferRanged&&(t.kind==="archer"||t.hasRangedWeapon)?3:0;
+ if(policy!=="experimental")return d+frontPenalty-rangedBonus;
+ const danger=(t.isCannon||t.isBoltThrower||t.isCatapult?7:0)+(t.spellcaster?5:0)+(t.hasRangedWeapon?2.2:0)+(t.isDragon||t.isDragonRider?5:0)+(t.isCavalry?2:0);
+ const fragility=(t.models<=5?2.5:t.models<=10?1.3:0)+(t.stats?.W&&t.stats.W<=2?1:0);
+ const value=Math.min(5,Math.max(0,(t.points||0)/250));
+ const currentThreat=(u.isCannon||u.isBoltThrower||u.isCatapult?1.5:0)+(u.hasRangedWeapon?1.2:0);
+ const supported=units().filter(v=>v.side===enemySide&&alive(v)&&!v.fled&&v.id!==t.id&&dist(v,t)<=4).length;
+ return d*.72+frontPenalty*.6-rangedBonus-danger*.8-fragility*.65-value*.45-supported*.25-currentThreat*.1;
+}
 function aiBestTarget(u,targets,preferRanged){return targets.slice().sort((a,b)=>aiTargetScore(u,a,preferRanged)-aiTargetScore(u,b,preferRanged))[0]||null;}
 function normalizeTurn(a){while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;return a;}
 function findRoute(u,target,desiredGap){
@@ -68,7 +77,7 @@ function aiPivotAndAdvance(u,target){
   return travelled>0||changedFormation;
 }
 function aiSiegeLadder(u){
-  if(S.battleType!=="siege"||u.side!=="ai"||u.isCharacter||u.isCavalry||u.isSiegeEngine||u.models<1)return false;
+  if(S.battleType!=="siege"||u.side!==side||u.isCharacter||u.isCavalry||u.isSiegeEngine||u.models<1)return false;
   if(S.siegeRole==="attacker"&&!u.wallLevel){
     const stairs=terrain().filter(t=>t.type==="stairs");
     const stair=stairs.sort((a,b)=>dist(u,a)-dist(u,b))[0];
@@ -113,7 +122,7 @@ function aiSiegeLadder(u){
   let near=null;
   for(const wall of walls){const ax=wall.x1*BATTLEFIELD_WIDTH_IN,ay=wall.y1*fieldHeightIn(),bx=wall.x2*BATTLEFIELD_WIDTH_IN,by=wall.y2*fieldHeightIn(),dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy||1,p=Math.max(0,Math.min(1,((u.x*BATTLEFIELD_WIDTH_IN-ax)*dx+(u.y*fieldHeightIn()-ay)*dy)/l2)),x=(ax+dx*p)/BATTLEFIELD_WIDTH_IN,y=(ay+dy*p)/fieldHeightIn(),d=Math.hypot((u.x-x)*BATTLEFIELD_WIDTH_IN,(u.y-y)*fieldHeightIn());if(!near||d<near.d)near={wall,x,y,d};}
   const capacity=Math.floor(u.models/5);
-  if(near&&near.d<=3.5&&capacity>(u.laddersDeployed||0)&&u.ladderDeployedTurn!==S.turn){terrain().push({type:"ladder",x:near.x,y:near.y,wallSegment:near.wall,owner:"ai",usedTurn:0});u.laddersDeployed=(u.laddersDeployed||0)+1;u.ladderDeployedTurn=S.turn;say(u.name+" deploys an assault ladder against the castle "+(near.wall.type==="gate"?"gate":"wall")+".");return true;}
+  if(near&&near.d<=3.5&&capacity>(u.laddersDeployed||0)&&u.ladderDeployedTurn!==S.turn){terrain().push({type:"ladder",x:near.x,y:near.y,wallSegment:near.wall,owner:side,usedTurn:0});u.laddersDeployed=(u.laddersDeployed||0)+1;u.ladderDeployedTurn=S.turn;say(u.name+" deploys an assault ladder against the castle "+(near.wall.type==="gate"?"gate":"wall")+".");return true;}
   return false;
 }
 function aiObjectiveTarget(u){
@@ -121,7 +130,7 @@ function aiObjectiveTarget(u){
  if(S.objectiveMode==="holdGround")return {x:.5,y:.5};
  if(S.objectiveMode==="captureFlag"){
   if(u.carryingFlagSide)return {x:u.side==="player"?.08:.92,y:.5};
-  const enemyFlag=S.flags?.[u.side==="ai"?"player":"ai"];
+  const enemyFlag=S.flags?.[u.side===side?enemySide:side];
   if(enemyFlag?.carrierId){const carrier=S.units[enemyFlag.carrierId];if(carrier?.side===u.side)return {x:u.side==="player"?.08:.92,y:.5};}
   return enemyFlag?{x:enemyFlag.x,y:enemyFlag.y}:null;
  }
@@ -132,7 +141,7 @@ function aiObjectiveTarget(u){
  }
  return null;
 }
-function runAiActivation(){const candidates=units().filter(u=>u.side==="ai"&&eligibleForActivation(u));if(!candidates.length)return false;const wantsRange=aiWantsRange();candidates.sort((a,b)=>{const rank=u=>wantsRange?(u.hasRangedWeapon?0:1):((u.kind==="melee"&&!u.hasRangedWeapon)||u.isCavalry?0:1);return rank(a)-rank(b);});const u=candidates[0],actualTargets=visibleEnemies(u).filter(v=>!v.fled&&alive(v)),targets=actualTargets.length?actualTargets:aiLastKnownTargets();if(S.battleType==="siege"&&S.siegeRole==="attacker"&&u.side==="ai"&&u.wallLevel){const rangedForce=units().filter(v=>v.side==="ai"&&v.hasRangedWeapon&&!v.isCannon&&!v.isBoltThrower),livingRanged=rangedForce.filter(v=>alive(v)&&!v.fled).length;if(livingRanged>Math.max(1,Math.ceil(rangedForce.length*.35))){const inRange=u.hasRangedWeapon?actualTargets.filter(t=>dist(u,t)<=(u.range||BOW_RANGE)):[],target=inRange.length?aiBestTarget(u,inRange,false):null;if(target&&!u.shot){if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,target,false);}u.activated=true;return true;}}if(aiSiegeLadder(u)){u.activated=true;return true;}if(u.isCannon||u.isBoltThrower||u.isCatapult){if(targets.length&&!u.shot&&u.artilleryWounds>0&&!u.moved){const target=aiBestTarget(u,targets,false);fireCannon?.(u,target.x,target.y,target.isLastKnownContact?null:target);}u.activated=true;return true;}if(targets.length){const inRange=u.hasRangedWeapon?actualTargets.filter(t=>dist(u,t)<=(u.range||BOW_RANGE)):[],combatTarget=inRange.length?aiBestTarget(u,inRange,false):aiBestTarget(u,targets,u.kind==="melee"&&!u.hasRangedWeapon),objectiveTarget=aiObjectiveTarget(u),target=objectiveTarget&&(!combatTarget||dist(u,objectiveTarget)+2<dist(u,combatTarget))?objectiveTarget:combatTarget;if(u.hasRangedWeapon&&inRange.length){if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,target,false);}else{if(u.ownsShield){u.rangedMode="shield";u.shield=!!u.ownsShield&&!["greatWeapon","halberd"].includes(u.weapon);}aiPivotAndAdvance(u,target);if(u.hasRangedWeapon){const available=actualTargets.filter(t=>!t.fled&&alive(t)&&dist(u,t)<=(u.range||BOW_RANGE));if(available.length){const shotTarget=aiBestTarget(u,available,false);if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((shotTarget.y-u.y)*fieldHeightIn(),(shotTarget.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,shotTarget,false);}}}}u.activated=true;return true;}
-function runAiActivations(){S.activationSide="ai";while(runAiActivation()){}beginCombatPhase();}
-  return { runAiActivation, runAiActivations };
+function runAiActivation(){const candidates=units().filter(u=>u.side===side&&eligibleForActivation(u));if(!candidates.length)return false;const wantsRange=aiWantsRange();candidates.sort((a,b)=>{const rank=u=>wantsRange?(u.hasRangedWeapon?0:1):((u.kind==="melee"&&!u.hasRangedWeapon)||u.isCavalry?0:1);return rank(a)-rank(b);});const u=candidates[0],actualTargets=visibleEnemies(u).filter(v=>!v.fled&&alive(v)),targets=actualTargets.length?actualTargets:aiLastKnownTargets();if(S.battleType==="siege"&&S.siegeRole==="attacker"&&u.side===side&&u.wallLevel){const rangedForce=units().filter(v=>v.side===side&&v.hasRangedWeapon&&!v.isCannon&&!v.isBoltThrower),livingRanged=rangedForce.filter(v=>alive(v)&&!v.fled).length;if(livingRanged>Math.max(1,Math.ceil(rangedForce.length*.35))){const inRange=u.hasRangedWeapon?actualTargets.filter(t=>dist(u,t)<=(u.range||BOW_RANGE)):[],target=inRange.length?aiBestTarget(u,inRange,false):null;if(target&&!u.shot){if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,target,false);}u.activated=true;return true;}}if(aiSiegeLadder(u)){u.activated=true;return true;}if(u.isCannon||u.isBoltThrower||u.isCatapult){if(targets.length&&!u.shot&&u.artilleryWounds>0&&!u.moved){const target=aiBestTarget(u,targets,false);fireCannon?.(u,target.x,target.y,target.isLastKnownContact?null:target);}u.activated=true;return true;}if(targets.length){const inRange=u.hasRangedWeapon?actualTargets.filter(t=>dist(u,t)<=(u.range||BOW_RANGE)):[],combatTarget=inRange.length?aiBestTarget(u,inRange,false):aiBestTarget(u,targets,u.kind==="melee"&&!u.hasRangedWeapon),objectiveTarget=aiObjectiveTarget(u),target=objectiveTarget&&(!combatTarget||dist(u,objectiveTarget)+2<dist(u,combatTarget))?objectiveTarget:combatTarget;if(u.hasRangedWeapon&&inRange.length){if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,target,false);}else{if(u.ownsShield){u.rangedMode="shield";u.shield=!!u.ownsShield&&!["greatWeapon","halberd"].includes(u.weapon);}aiPivotAndAdvance(u,target);if(u.hasRangedWeapon){const available=actualTargets.filter(t=>!t.fled&&alive(t)&&dist(u,t)<=(u.range||BOW_RANGE));if(available.length){const shotTarget=aiBestTarget(u,available,false);if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((shotTarget.y-u.y)*fieldHeightIn(),(shotTarget.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,shotTarget,false);}}}}u.activated=true;return true;}
+function runAiActivations({finishPhase=true}={}){S.activationSide=side;while(runAiActivation()){}if(finishPhase)beginCombatPhase();}
+  return { runAiActivation, runAiActivations, side, policy };
 }
