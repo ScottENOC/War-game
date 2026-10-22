@@ -3212,7 +3212,6 @@ export function startGrandCampaign(){
  });
  window.resolveGrandCampaignConquest=resolveGrandCampaignConquest;
  window.resolveGrandCampaignConquest=resolveGrandCampaignConquest;
- window.resolveGrandCampaignConquest=resolveGrandCampaignConquest;
  try{const s=JSON.parse(localStorage.getItem("warGameGrandCampaignStart")||"null");if(s&&FACTIONS[s.faction]){selectedFaction=s.faction;if(s.politicalFactionId&&FACTION_BY_ID[s.politicalFactionId])selectedPoliticalFaction=s.politicalFactionId;if(CITIES.some(c=>c.id===s.selectedCity))selectedCity=s.selectedCity;}}catch{}
  const screen=byId("grand-campaign-screen"),menu=byId("mainmenu");if(!screen||!menu)return;
  document.addEventListener("click",event=>{const target=event.target instanceof Element?event.target.closest('[data-mode="grand"]'):null;if(!target)return;event.preventDefault();event.stopPropagation();screen.hidden=false;menu.hidden=true;let saved=null;try{saved=JSON.parse(localStorage.getItem("warGameGrandCampaignStateV1")||"null");}catch{}if(saved?.graph?.nodes&&saved?.commander)showCampaignWorld(ensureSettlementState(saved));else{byId("grand-campaign-setup").hidden=false;byId("grand-campaign-world").hidden=true;renderFaction();}},true);
