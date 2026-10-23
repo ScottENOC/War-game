@@ -148,6 +148,7 @@ function runAiActivation(){
  const before=new Map(units().map(u=>[u.id,{x:u.x,y:u.y,models:u.models,shot:!!u.shot,moved:!!u.moved,activated:!!u.activated,engaged:!!u.engaged,charged:!!u.charged,wounds:u.characterWounds??u.artilleryWounds??u.chariotWounds??null}]));
  const candidates=units().filter(u=>u.side===side&&eligibleForActivation(u));
  const selected=[...candidates].sort((a,b)=>{const wantsRange=armyRangeScore(side)>armyRangeScore(enemySide);const rank=u=>wantsRange?(u.hasRangedWeapon?0:1):((u.kind==="melee"&&!u.hasRangedWeapon)||u.isCavalry?0:1);return rank(a)-rank(b);})[0];
+ const selectedStart=selected?{x:selected.x,y:selected.y}:null;
  const visible=selected?visibleEnemies(selected).filter(v=>!v.fled&&alive(v)):[];
  const nearest=selected&&visible.length?visible.map(t=>({name:t.name,distance:Number(dist(selected,t).toFixed(2))})).sort((a,b)=>a.distance-b.distance)[0]:null;
  const result=runAiActivationCore();
@@ -157,7 +158,7 @@ function runAiActivation(){
   const moved=changes.filter(x=>Math.abs(x.u.x-x.b.x)>.0001||Math.abs(x.u.y-x.b.y)>.0001).map(x=>x.u.name);
   const fired=changes.filter(x=>!x.b.shot&&x.u.shot).map(x=>x.u.name);
   const losses=changes.filter(x=>x.u.models<x.b.models).map(x=>x.u.name+": "+x.b.models+"→"+x.u.models);
-  S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"activation",unit:selected.name,eligible:candidates.length,visibleTargets:visible.length,nearestEnemy:nearest,action:!result?"no-action":moved.length?"move":fired.length?"shoot":losses.length?"casualties/other":changes.length?"other-state-change":"no-visible-change",moved,fired,losses,from:{x:Number(selected.x.toFixed(3)),y:Number(selected.y.toFixed(3))}});
+  S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"activation",unit:selected.name,eligible:candidates.length,visibleTargets:visible.length,nearestEnemy:nearest,action:!result?"no-action":moved.length?"move":fired.length?"shoot":losses.length?"casualties/other":changes.length?"other-state-change":"no-visible-change",moved,fired,losses,from:selectedStart?{x:Number(selectedStart.x.toFixed(3)),y:Number(selectedStart.y.toFixed(3))}:null,to:{x:Number(selected.x.toFixed(3)),y:Number(selected.y.toFixed(3))}});
  }
  return result;
 }
