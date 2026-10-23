@@ -458,7 +458,7 @@ function recruitArmyModels(army,faction,budget,campaign,factionState){
   let unit=(army.roster||[]).find(u=>recruitableTypes.includes(u.type)&&u.models<30);
   if(!unit){
    if((army.roster||[]).length>=6)break;
-   const fresh=makeUnit(),price=Math.max(1,unitCost(fresh,faction));
+   const fresh=makeUnit();if(added+fresh.models>25)break;const price=Math.max(1,unitCost(fresh,faction));
    if(budget-spent<price||recruitmentPoolAvailable(factionState,region)<fresh.models||civilianPopulation(region,race)<fresh.models)break;
    if(!consumeRecruitmentPool(factionState,region,fresh.models)||!consumeCivilianPopulation(region,fresh.models,race))break;
    army.roster.push(fresh);spent+=price;added+=fresh.models;unit=fresh;
