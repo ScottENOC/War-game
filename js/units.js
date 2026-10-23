@@ -61,6 +61,8 @@ function buildUnit(template,config,faction,opposing=false) {
   
   const campaignStats=config.campaignStats||{};
   for(const key of ["WS","BS","S","T","Ld"])if(!(template.spellcaster&&!elf&&["WS","S"].includes(key)))stats[key]+=Math.max(0,campaignStats[key]||0);
+  if(isCharacter&&config.campaignRank==="hero"){stats.WS+=1;stats.Ld+=1;}
+  else if(isCharacter&&config.campaignRank==="champion"){stats.Ld=Math.max(1,stats.Ld-1);}
   if(campaignStats.M)stats.M+=Math.max(0,campaignStats.M);
   if(campaignStats.I)stats.I+=Math.max(0,campaignStats.I);
   if(campaignStats.MI){stats.M+=isSiegeEngine?campaignStats.MI*0.5:campaignStats.MI;stats.I+=campaignStats.MI;}
