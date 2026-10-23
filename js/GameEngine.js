@@ -417,7 +417,7 @@ function labSurvivingPoints(side){
  return units().filter(u=>u.side===side).reduce((sum,u)=>{const start=Math.max(1,u.startModels||u.models||1),models=Math.max(0,u.models||0),wounds=u.stats?.W||1;const fraction=u.isCharacter||u.isDragon||u.isDragonRider?Math.max(0,Math.min(1,(u.characterWounds??wounds)/wounds)):Math.max(0,Math.min(1,models/start));return sum+Math.round((u.points||0)*fraction);},0);
 }
 function aiLabTrace(kind,data={}){
- if(!S.aiLabDiagnosticsEnabled)return;
+ if(!S.aiBattleLab||!S.aiLabDiagnosticsEnabled)return;
  S.aiLabDiagnostics=S.aiLabDiagnostics||[];
  S.aiLabDiagnostics.push({turn:S.turn||0,phase:S.phase||"setup",kind,...data});
 }
@@ -460,6 +460,7 @@ function runAiLabMovement(){
 }
 function runAiLabCharges(){
  if(!S.aiBattleLab||S.finished||S.phase!=="charges")return;
+ aiLabTrace("charge-phase-start",{state:aiLabDistanceSummary(),units:units().filter(u=>alive(u)&&!u.fled&&!u.engaged).map(u=>({unit:u.name,side:u.side,charged:!!u.charged,nearestVisible:visibleEnemies(u).filter(t=>alive(t)&&!t.fled).map(t=>({name:t.name,distance:Number(dist(u,t).toFixed(2)),canCharge:canCharge(u,t)})).sort((a,b)=>a.distance-b.distance)[0]||null}))});
  let guard=0;
  while(S.aiBattleLab&&!S.finished&&S.phase==="charges"&&guard++<200){
   if(S.turn>=16){aiLabTrace("turn-limit",{state:aiLabDistanceSummary()});finishBattle("The battle is a draw! (AI Lab turn limit)");return;}
