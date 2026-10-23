@@ -6,7 +6,7 @@ import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warba
 import { createArmyBuilder } from "./armyBuilder.js?v=20261021-wyvern-roster-v1";
 import { createCollectionManager } from "./collection.js?v=20261021-wyvern-roster-v1";
 import { createGameState } from "./gameState.js";
-import { createAI } from "./ai.js?v=20261022-ai-battle-lab-v2";
+import { createAI } from "./ai.js?v=20261023-ai-lab-diagnostics-v1";
 import { createRules } from "./rules.js?v=20261022-rules-scope-fix-v1";
 import { createShooting } from "./shooting.js?v=20261023-ai-lab-fast-v3";
 import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
@@ -416,6 +416,20 @@ function makeAiLabArmy(faction,budget,style){
 function labSurvivingPoints(side){
  return units().filter(u=>u.side===side).reduce((sum,u)=>{const start=Math.max(1,u.startModels||u.models||1),models=Math.max(0,u.models||0),wounds=u.stats?.W||1;const fraction=u.isCharacter||u.isDragon||u.isDragonRider?Math.max(0,Math.min(1,(u.characterWounds??wounds)/wounds)):Math.max(0,Math.min(1,models/start));return sum+Math.round((u.points||0)*fraction);},0);
 }
+function aiLabTrace(kind,data={}){
+ if(!S.aiLabDiagnosticsEnabled)return;
+ S.aiLabDiagnostics=S.aiLabDiagnostics||[];
+ S.aiLabDiagnostics.push({turn:S.turn||0,phase:S.phase||"setup",kind,...data});
+}
+function aiLabDistanceSummary(){
+ const red=units().filter(u=>u.side==="player"&&alive(u)&&!u.fled),blue=units().filter(u=>u.side==="ai"&&alive(u)&&!u.fled);
+ let closest=null;
+ for(const r of red)for(const b of blue){const d=dist(r,b);if(closest===null||d<closest.distance)closest={red:r.name,blue:b.name,distance:Number(d.toFixed(2))};}
+ return {redAlive:red.length,blueAlive:blue.length,redModels:red.reduce((n,u)=>n+(u.models||0),0),blueModels:blue.reduce((n,u)=>n+(u.models||0),0),closestEnemyPair:closest};
+}
+function aiLabSnapshot(){
+ return new Map(units().map(u=>[u.id,{x:u.x,y:u.y,models:u.models,shot:!!u.shot,moveUsed:u.moveUsed||0,activated:!!u.activated}]));
+}
 function runAiBattleLab(){
  const redFaction=$("ai-lab-red-faction").value,blueFaction=$("ai-lab-blue-faction").value,points=Number($("ai-lab-points").value)||1000,count=Number($("ai-lab-count").value)||1;
  aiLabRun={redFaction,blueFaction,points,count,completed:0,results:[],stop:false,composition:$("ai-lab-composition").value,terrain:$("ai-lab-terrain").value,swap:$("ai-lab-swap-sides").checked,seed:Date.now()};
@@ -428,31 +442,33 @@ function startAiLabBattle(){
  if(n%2===0||!aiLabRun.pair)aiLabRun.pair={redArmy:makeAiLabArmy(aiLabRun.redFaction,aiLabRun.points,aiLabRun.composition),blueArmy:makeAiLabArmy(aiLabRun.blueFaction,aiLabRun.points,aiLabRun.composition),seed:aiLabRun.seed+Math.floor(n/2)*7919};
  const {redArmy,blueArmy}=aiLabRun.pair;
  const red=createUnitsFromArmy(redArmy,aiLabRun.redFaction,{preserveFactionForOpponent:true}),blue=createUnitsFromArmy(blueArmy,aiLabRun.blueFaction,{preserveFactionForOpponent:true});
- S.aiBattleLab=true;S.aiLabBattleNumber=n+1;S.warbandSkirmish=false;S.objectiveMode=null;S.objectives=[];S.flags=null;S.objectiveScore={player:0,ai:0};S.battleType="skirmish";S.siegeRole="attacker";S.customSiegeMap=null;S.autoTerrain=true;S.terrainSeed=aiLabRun.terrain==="fixed"?aiLabRun.seed:aiLabRun.pair.seed;
+ S.aiBattleLab=true;S.aiLabBattleNumber=n+1;S.aiLabDiagnosticsEnabled=aiLabRun.count===1;S.aiLabDiagnostics=[];S.warbandSkirmish=false;S.objectiveMode=null;S.objectives=[];S.flags=null;S.objectiveScore={player:0,ai:0};S.battleType="skirmish";S.siegeRole="attacker";S.customSiegeMap=null;S.autoTerrain=true;S.terrainSeed=aiLabRun.terrain==="fixed"?aiLabRun.seed:aiLabRun.pair.seed;
  S.units={...Object.fromEntries(Object.entries(red).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(blue).filter(([id])=>id.startsWith("a")))};
  const redPoints=units().filter(u=>u.side==="player").reduce((sum,u)=>sum+(u.points||0),0),bluePoints=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);
  reset();Object.values(S.units).forEach(u=>{u.deployed=true;u.aiLabTeam=u.side==="player"?"red":"blue";});
  const reverse=aiLabRun.swap&&n%2===1;if(reverse)Object.values(S.units).forEach(u=>{u.x=1-u.x;u.y=1-u.y;u.facing=(u.facing||0)+Math.PI;});
- S.aiLabStartingPoints={red:redPoints,blue:bluePoints};$("battle-menu-caption").textContent="AI Battle Lab · Battle "+(n+1)+"/"+aiLabRun.count;
+ S.aiLabStartingPoints={red:redPoints,blue:bluePoints};aiLabTrace("battle-start",{redFaction:aiLabRun.redFaction,blueFaction:aiLabRun.blueFaction,redPoints,bluePoints,composition:aiLabRun.composition,terrain:aiLabRun.terrain,terrainSeed:S.terrainSeed,reverse:!!reverse,redArmy:redArmy.map(u=>({type:u.type,points:unitCost(u,aiLabRun.redFaction)})),blueArmy:blueArmy.map(u=>({type:u.type,points:unitCost(u,aiLabRun.blueFaction)})),state:aiLabDistanceSummary()});$("battle-menu-caption").textContent="AI Battle Lab · Battle "+(n+1)+"/"+aiLabRun.count;
  say("AI Battle Lab · Red baseline ("+aiLabRun.redFaction+") "+redPoints+" pts vs Blue experimental ("+aiLabRun.blueFaction+") "+bluePoints+" pts. "+(reverse?"Reversed deployment sides. ":"")+"Battle "+(n+1)+" of "+aiLabRun.count+".");
  setPhase("charges");window.setTimeout(runAiLabCharges,0);
 }
 function runAiLabMovement(){
  if(!S.aiBattleLab||S.finished)return;beginMovementPhase();S.activationSide="player";units().filter(u=>u.fled&&alive(u)).forEach(rallyUnit);
- let guard=0;while(LAB_RED_AI.runAiActivation()&&guard++<30){}guard=0;while(LAB_BLUE_AI.runAiActivation()&&guard++<30){}
- updateObjectiveInteractions();beginCombatPhase();
+ const before=aiLabSnapshot();aiLabTrace("movement-phase-start",{state:aiLabDistanceSummary()});
+ let guard=0;while(LAB_RED_AI.runAiActivation()&&guard++<30){}const redActivationLoops=guard;guard=0;while(LAB_BLUE_AI.runAiActivation()&&guard++<30){}const blueActivationLoops=guard;
+ updateObjectiveInteractions();const moved=[];for(const u of units()){const b=before.get(u.id);if(b&&(Math.abs(u.x-b.x)>.0001||Math.abs(u.y-b.y)>.0001))moved.push({unit:u.name,side:u.side,from:[Number(b.x.toFixed(3)),Number(b.y.toFixed(3))],to:[Number(u.x.toFixed(3)),Number(u.y.toFixed(3))],inches:Number(Math.hypot((u.x-b.x)*BATTLEFIELD_WIDTH_IN,(u.y-b.y)*BATTLEFIELD_HEIGHT_IN).toFixed(2))});}
+ aiLabTrace("movement-phase-end",{redActivationLoops,blueActivationLoops,moved,state:aiLabDistanceSummary()});beginCombatPhase();
 }
 function runAiLabCharges(){
  if(!S.aiBattleLab||S.finished||S.phase!=="charges")return;
  let guard=0;
  while(S.aiBattleLab&&!S.finished&&S.phase==="charges"&&guard++<200){
-  if(S.turn>=16){finishBattle("The battle is a draw! (AI Lab turn limit)");return;}
+  if(S.turn>=16){aiLabTrace("turn-limit",{state:aiLabDistanceSummary()});finishBattle("The battle is a draw! (AI Lab turn limit)");return;}
   if(S.chargeSide==="ai"){aiChargeStep();continue;}
   const candidates=units().filter(u=>u.side==="player"&&alive(u)&&!u.engaged&&!u.fled&&!u.charged&&(!S.priorityChargePending||hasPriorityRule(u))).map(u=>({u,t:visibleEnemies(u).filter(t=>(!t.engaged||t.flyingMount)&&!t.fled&&dist(u,t)<=u.stats.M*2&&canCharge(u,t)).sort((a,b)=>dist(u,a)-dist(u,b))[0]})).filter(x=>x.t).sort((a,b)=>dist(a.u,a.t)-dist(b.u,b.t));
-  if(candidates.length){if(!declareCharge(candidates[0].u,candidates[0].t))candidates[0].u.charged=true;continue;}
+  if(candidates.length){aiLabTrace("charge-declaration",{unit:candidates[0].u.name,target:candidates[0].t.name,distance:Number(dist(candidates[0].u,candidates[0].t).toFixed(2)),side:candidates[0].u.side,canCharge:canCharge(candidates[0].u,candidates[0].t)});if(!declareCharge(candidates[0].u,candidates[0].t))candidates[0].u.charged=true;continue;}
   if(S.priorityChargePending){S.priorityChargePending=false;S.chargeSide=S.normalChargeSide;if(S.chargeSide==="player")continue;}
   S.chargePasses++;
-  if(S.chargePasses>=2){resolveDeclaredCharges();return;}
+  if(S.chargePasses>=2){aiLabTrace("charges-resolved",{state:aiLabDistanceSummary(),declared:units().filter(u=>u.charged&&alive(u)).map(u=>({unit:u.name,side:u.side}))});resolveDeclaredCharges();return;}
   S.chargeSide="ai";aiChargeStep();
  }
  if(S.aiBattleLab&&!S.finished&&S.phase==="charges"){
@@ -463,7 +479,7 @@ function finishAiLabBattle(msg){
  if(!S.aiBattleLab||!aiLabRun)return;S.finished=true;S.phase="over";clearBattleSave();
  const redAlive=units().some(u=>u.side==="player"&&alive(u)&&!u.fled),blueAlive=units().some(u=>u.side==="ai"&&alive(u)&&!u.fled);
  const winner=msg.toLowerCase().includes("draw")?"draw":msg.toLowerCase().includes("player wins")?"red":msg.toLowerCase().includes("opponent wins")?"blue":redAlive&&!blueAlive?"red":blueAlive&&!redAlive?"blue":"draw";
- aiLabRun.completed++;aiLabRun.results.push({battle:aiLabRun.completed,winner,turns:S.turn,redStart:S.aiLabStartingPoints?.red||0,blueStart:S.aiLabStartingPoints?.blue||0,redRemaining:labSurvivingPoints("player"),blueRemaining:labSurvivingPoints("ai"),reason:msg.replace(/<[^>]*>/g,"")});
+ aiLabRun.completed++;aiLabTrace("battle-end",{winner,reason:msg.replace(/<[^>]*>/g,""),state:aiLabDistanceSummary(),redRemaining:labSurvivingPoints("player"),blueRemaining:labSurvivingPoints("ai")});aiLabRun.results.push({battle:aiLabRun.completed,winner,turns:S.turn,redStart:S.aiLabStartingPoints?.red||0,blueStart:S.aiLabStartingPoints?.blue||0,redRemaining:labSurvivingPoints("player"),blueRemaining:labSurvivingPoints("ai"),reason:msg.replace(/<[^>]*>/g,""),diagnostics:aiLabRun.count===1?(S.aiLabDiagnostics||[]):null});
  const redWins=aiLabRun.results.filter(r=>r.winner==="red").length,blueWins=aiLabRun.results.filter(r=>r.winner==="blue").length,draws=aiLabRun.results.filter(r=>r.winner==="draw").length;
  $("ai-battle-lab-status").textContent="Completed "+aiLabRun.completed+" / "+aiLabRun.count+" · Red wins "+redWins+" · Blue wins "+blueWins+" · Draws "+draws+".";
  if(aiLabRun.completed<aiLabRun.count&&!aiLabRun.stop){window.setTimeout(startAiLabBattle,0);return;}
