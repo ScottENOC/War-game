@@ -297,7 +297,7 @@ function campaignTradeIncome(region,campaign){
  }
  return Math.round(total);
 }
-function campaignCityIncome(region,campaign=null){return campaignBaseCityIncome(region)+(campaign?campaignTradeIncome(region,campaign):0);}
+function campaignCityIncome(region,campaign=null){return Math.round((campaignBaseCityIncome(region)+(campaign?campaignTradeIncome(region,campaign):0))*0.2);}
 function ensureMinorSettlementState(campaign){
  if(!Array.isArray(campaign.minorSettlements))campaign.minorSettlements=[];
  const existing=new Map(campaign.minorSettlements.map(p=>[p.id,p]));
@@ -446,10 +446,24 @@ function availableForRecruitment(option,army){
 function recruitArmyModels(army,faction,budget,campaign,factionState){
  let spent=0,added=0;
  const region=campaign?.regions?.find(r=>r.id===army.region),race=factionState?.race||FACTION_BY_ID[factionState?.id]?.race||"human";
- while(added<5&&budget-spent>0&&recruitmentPoolAvailable(factionState,region)>0&&civilianPopulation(region,race)>0){
-  const recruitableTypes=race==="undead"?["skeletons","zombies"]:["swordsmen","dwarfInfantry","archers","goblins","orcBoyz"];
-  const unit=(army.roster||[]).find(u=>recruitableTypes.includes(u.type)&&u.models<30);
-  if(!unit)break;
+ const recruitableTypes=race==="undead"?["skeletons","zombies"]:race==="greenskin"?["orcBoyz","goblins"]:race==="dwarf"?["dwarfInfantry"]:["swordsmen","archers"];
+ const makeUnit=()=>{
+  const type=race==="undead"?"skeletons":race==="greenskin"?"orcBoyz":race==="dwarf"?"dwarfInfantry":"swordsmen";
+  const unit={type,models:5,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}};
+  if(race==="elf"&&type==="swordsmen")unit.meleeWeapons=["spear"];
+  if(race==="dwarf")unit.rangedWeapon=undefined;
+  return unit;
+ };
+ while(added<25&&budget-spent>0&&recruitmentPoolAvailable(factionState,region)>0&&civilianPopulation(region,race)>0){
+  let unit=(army.roster||[]).find(u=>recruitableTypes.includes(u.type)&&u.models<30);
+  if(!unit){
+   if((army.roster||[]).length>=6)break;
+   const fresh=makeUnit(),price=Math.max(1,unitCost(fresh,faction));
+   if(budget-spent<price||recruitmentPoolAvailable(factionState,region)<fresh.models||civilianPopulation(region,race)<fresh.models)break;
+   if(!consumeRecruitmentPool(factionState,region,fresh.models)||!consumeCivilianPopulation(region,fresh.models,race))break;
+   army.roster.push(fresh);spent+=price;added+=fresh.models;unit=fresh;
+   continue;
+  }
   const before=unitCost({...unit,models:unit.models},faction),after=unitCost({...unit,models:unit.models+1},faction),price=Math.max(1,after-before);
   if(budget-spent<price)break;
   if(!consumeRecruitmentPool(factionState,region,1)||!consumeCivilianPopulation(region,1,race))break;
@@ -3051,7 +3065,7 @@ function runAIFactionTurn(campaign,faction){
  faction.turnsTaken=(faction.turnsTaken||0)+1;
  faction.upkeep=campaignArmyUpkeep(army);
  faction.treasury=Math.max(0,(faction.treasury||0)+faction.income-faction.upkeep);
- const recruitBudget=Math.min(Math.max(0,faction.treasury-100),Math.max(0,Math.floor(faction.income*.35)));
+ const recruitBudget=Math.min(Math.max(0,faction.treasury-100),Math.max(0,Math.floor(faction.income*.7)));
  const recruitment=recruitArmyModels(army,army.rosterFaction||rosterFactionForPoliticalFaction(faction.id),recruitBudget,campaign,faction);
  faction.treasury=Math.max(0,faction.treasury-recruitment.spent);
  faction.armyPoints=army.points;faction.roster=army.roster;
