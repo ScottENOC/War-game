@@ -335,7 +335,7 @@ function campaignCharacterRank(c){if(c?.campaignRank)return c.campaignRank;const
 function ensureCharacterRecruitmentPool(s){if(!s)return null;if(!s.characterRecruitment||typeof s.characterRecruitment!=="object")s.characterRecruitment={available:2,progress:0};s.characterRecruitment.available=Math.max(0,Math.floor(Number(s.characterRecruitment.available)||0));s.characterRecruitment.progress=Math.max(0,Number(s.characterRecruitment.progress)||0);return s.characterRecruitment;}
 function growCharacterRecruitmentPool(c,s){const p=ensureCharacterRecruitmentPool(s);if(!p||s.passive)return;const cities=(c?.regions||[]).filter(r=>politicalOwner(r)===s.id).length;if(!cities)return;p.progress+=0.02+Math.max(0,cities-1)*0.005;const cap=2+Math.floor(Math.max(0,cities-1)/3);while(p.progress>=1&&p.available<cap){p.available++;p.progress-=1;}if(p.available>=cap)p.progress=0;}
 function campaignCharacterRecruitmentCost(c,f="empire"){const r=campaignCharacterRank(c),base=r==="lord"?70:r==="hero"?35:18;return base+((["legendaryLord","shadowElf","pegasusChampion","captainWeiss","dwarfKingHaldric"].includes(c?.type))?35:0)+campaignEquipmentGoldCost(c,f);}
-function awardCampaignCharacterExperience(a,won=true){const messages=[];for(const c of a?.roster||[]){let r=campaignCharacterRank(c);if(!r||!isCampaignCharacterType(c.type))continue;c.campaignXp=Math.max(0,Number(c.campaignXp)||0)+(won?2:1);if(r==="champion"&&c.campaignXp>=2){c.campaignRank="hero";c.campaignXp=0;c.upgrades={};c.skills={};c.campaignStats={};messages.push((c.name||c.type)+" promoted to hero");r="hero";}if(r==="hero"&&c.campaignXp>=5){const next={captain:"lord",mageHero:"mageLord",dwarfCaptain:"dwarfLord",necromancer:"masterNecromancer",vampireHero:"vampireLord",goblinHero:"goblinLord",orcHero:"orcLord",goblinShaman:"goblinGreatShaman",orcShaman:"orcGreatShaman"};if(next[c.type]){const old=c.type;c.type=next[old];c.campaignRank="lord";c.campaignXp=0;c.upgrades={};c.skills={};c.campaignStats={};messages.push((c.name||old)+" promoted to "+c.type+"; upgrades reset");}}}return messages;}
+function awardCampaignCharacterExperience(a,won=true){const messages=[];for(const c of a?.roster||[]){let r=campaignCharacterRank(c);if(!r||!isCampaignCharacterType(c.type))continue;c.campaignXp=Math.max(0,Number(c.campaignXp)||0)+(won?2:1);if(r==="champion"&&c.campaignXp>=20){c.campaignRank="hero";c.campaignXp=0;c.upgrades={};c.skills={};c.campaignStats={};messages.push((c.name||c.type)+" promoted to hero");r="hero";}if(r==="hero"&&c.campaignXp>=50){const next={captain:"lord",mageHero:"mageLord",dwarfCaptain:"dwarfLord",necromancer:"masterNecromancer",vampireHero:"vampireLord",goblinHero:"goblinLord",orcHero:"orcLord",goblinShaman:"goblinGreatShaman",orcShaman:"orcGreatShaman"};if(next[c.type]){const old=c.type;c.type=next[old];c.campaignRank="lord";c.campaignXp=0;c.upgrades={};c.skills={};c.campaignStats={};messages.push((c.name||old)+" promoted to "+c.type+"; upgrades reset");}}}return messages;}
 function campaignArmyUpkeep(army){
  return Math.ceil((army?.roster||[]).reduce((sum,u)=>{
   const type=String(u.type||""),models=Math.max(1,Number(u.models)||1),rank=campaignCharacterRank(u);
@@ -2509,7 +2509,7 @@ function launchCampaignBattle(region,attackingArmyOverride=null,defendingArmyOve
  }
  const attackerFaction=playerArmy.rosterFaction||rosterFactionForPoliticalFaction(playerId);
  const defenderFaction=defenderArmies[0].rosterFaction||rosterFactionForPoliticalFaction(enemyId);
- const combine=(armies)=>{const entries=[];for(const army of armies){const originalRoster=(army.roster||[]).map(u=>({...u,campaignStats:{...(u.campaignStats||{})},upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}}));const battleRoster=originalRoster.map(u=>({...u,campaignStats:{...(u.campaignStats||{})}}));const leaderLd=Math.max(0,...campaignArmyBattleUnits(army).map(x=>Number(x.unit.stats?.Ld)||0));const aura=Math.max(0,Math.min(2,Math.floor((leaderLd-6)/3)));if(aura)for(const config of battleRoster)if(!isCampaignCharacterType(config.type))config.campaignStats.Ld=(config.campaignStats.Ld||0)+aura;entries.push({army,start:entries.reduce((n,e)=>n+e.roster.length,0),roster:originalRoster,battleRoster});}return {entries,roster:entries.flatMap(e=>e.battleRoster)};};
+ const combine=(armies)=>{const entries=[];for(const army of armies){const roster=(army.roster||[]).map(u=>({...u,campaignStats:{...(u.campaignStats||{})},upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}}));entries.push({army,start:entries.reduce((n,e)=>n+e.roster.length,0),roster});}return {entries,roster:entries.flatMap(e=>e.roster)};};
  const attackers=combine(attackerArmies),defenders=combine(defenderArmies);
  const started=window.startPoliticalCampaignBattle({army:attackers.roster,faction:attackerFaction,enemyArmy:defenders.roster,enemyFaction:defenderFaction,onComplete:result=>{
   const originalPlayerRoster=attackers.roster.map(u=>({...u})),originalEnemyRoster=defenders.roster.map(u=>({...u}));
@@ -2855,9 +2855,13 @@ function campaignArmyLeadership(army){
  return Math.max(0,...campaignArmyBattleUnits(army).map(x=>Number(x.unit.stats?.Ld)||0));
 }
 function campaignArmyLeadershipMultiplier(army){
- const units=campaignArmyBattleUnits(army),ld=Math.max(0,...units.map(x=>Number(x.unit.stats?.Ld)||0));if(!units.length||!ld)return 1;
- const troops=units.filter(x=>!x.unit.isCharacter).length,characters=units.filter(x=>x.unit.isCharacter).length;
- return 1+Math.max(0,Math.min(.18,(ld-6)*.025))*(troops?1:.35)+Math.min(.04,Math.max(0,characters-1)*.01);
+ const units=campaignArmyBattleUnits(army);if(!units.length)return 1;
+ const leaders=units.filter(x=>x.unit.isCharacter),troops=units.filter(x=>!x.unit.isCharacter);
+ if(!leaders.length||!troops.length)return 1;
+ const leaderLd=Math.max(...leaders.map(x=>Number(x.unit.stats?.Ld)||0));
+ const averageTroopLd=troops.reduce((sum,x)=>sum+(Number(x.unit.stats?.Ld)||0),0)/troops.length;
+ const leadershipAdvantage=Math.max(0,leaderLd-averageTroopLd);
+ return 1+Math.min(.20,leadershipAdvantage*.04);
 }
 function campaignPathCost(campaign,path){
  let cost=0;for(let i=1;i<(path||[]).length;i++){const next=campaign.graph.nodes[path[i]],edge=(campaign.graph.edges[path[i-1]]||[]).find(e=>e.to===path[i]);cost+=(edge?.cost||1)+nodeCost(next)-1;}return cost;
@@ -2965,8 +2969,8 @@ function launchCampaignFieldBattle(attackingArmy,defendingArmy){
  declareCampaignWar(activeCampaign,attackerId,defenderId);
  const attackerFaction=attackingArmy.rosterFaction||rosterFactionForPoliticalFaction(attackerId),defenderFaction=defendingArmy.rosterFaction||rosterFactionForPoliticalFaction(defenderId);
  const targetNode=defendingArmy.nodeId||"city-"+defendingArmy.region;
- const battleRosterWithLeadership=army=>{const roster=(army.roster||[]).map(u=>({...u,campaignStats:{...(u.campaignStats||{})},upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}}));const ld=Math.max(0,...campaignArmyBattleUnits(army).map(x=>Number(x.unit.stats?.Ld)||0)),aura=Math.max(0,Math.min(2,Math.floor((ld-6)/3)));if(aura)for(const c of roster)if(!isCampaignCharacterType(c.type))c.campaignStats.Ld=(c.campaignStats.Ld||0)+aura;return roster;};
- const started=window.startPoliticalCampaignBattle({army:battleRosterWithLeadership(attackingArmy),faction:attackerFaction,enemyArmy:battleRosterWithLeadership(defendingArmy),enemyFaction:defenderFaction,onComplete:result=>{
+ const battleRosterForCampaign=army=>(army.roster||[]).map(u=>({...u,campaignStats:{...(u.campaignStats||{})},upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}}));
+ const started=window.startPoliticalCampaignBattle({army:battleRosterForCampaign(attackingArmy),faction:attackerFaction,enemyArmy:battleRosterForCampaign(defendingArmy),enemyFaction:defenderFaction,onComplete:result=>{
   attackingArmy.foughtThisTurn=true;defendingArmy.foughtThisTurn=true;
   const originalAttackingRoster=attackingArmy.roster.map(u=>({...u})),originalDefendingRoster=defendingArmy.roster.map(u=>({...u}));
   const update=(army,units,faction)=>{army.roster=army.roster.map((config,i)=>({...config,models:Math.max(0,units[i]?.models??0),currentDamage:units[i]?.damage||0,currentWounds:units[i]?.characterWounds})).filter(config=>config.models>0);};
