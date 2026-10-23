@@ -453,14 +453,15 @@ function startAiLabBattle(){
 }
 function runAiLabMovement(){
  if(!S.aiBattleLab||S.finished)return;beginMovementPhase();S.activationSide="player";units().filter(u=>u.fled&&alive(u)).forEach(rallyUnit);
- const before=aiLabSnapshot();aiLabTrace("movement-phase-start",{state:aiLabDistanceSummary()});
+ const before=aiLabSnapshot();aiLabTrace("movement-phase-start",{state:aiLabDistanceSummary(),units:units().filter(u=>alive(u)&&!u.fled).map(u=>({unit:u.name,id:u.id,side:u.side,kind:u.kind||u.type||null,isCharacter:!!u.isCharacter,attachedTo:u.attachedTo||null,engaged:!!u.engaged,eligible:eligibleForActivation(u),exclusion:!alive(u)?"dead":u.fled?"fleeing":u.attachedTo?"attached-to-parent":u.engaged?"engaged":u.activated?"already-activated":null}))});
  let guard=0;while(LAB_RED_AI.runAiActivation()&&guard++<30){}const redActivationLoops=guard;guard=0;while(LAB_BLUE_AI.runAiActivation()&&guard++<30){}const blueActivationLoops=guard;
  updateObjectiveInteractions();const moved=[];for(const u of units()){const b=before.get(u.id);if(b&&(Math.abs(u.x-b.x)>.0001||Math.abs(u.y-b.y)>.0001))moved.push({unit:u.name,side:u.side,from:[Number(b.x.toFixed(3)),Number(b.y.toFixed(3))],to:[Number(u.x.toFixed(3)),Number(u.y.toFixed(3))],inches:Number(Math.hypot((u.x-b.x)*BATTLEFIELD_WIDTH_IN,(u.y-b.y)*BATTLEFIELD_HEIGHT_IN).toFixed(2))});}
  aiLabTrace("movement-phase-end",{redActivationLoops,blueActivationLoops,moved,state:aiLabDistanceSummary()});const beforeCombat=aiLabSnapshot();beginCombatPhase();const combatChanges=[];for(const u of units()){const b=beforeCombat.get(u.id);if(b&&u.models!==b.models)combatChanges.push({unit:u.name,side:u.side,modelsBefore:b.models,modelsAfter:u.models});}aiLabTrace("combat-resolution-result",{changes:combatChanges,state:aiLabDistanceSummary()});
 }
 function runAiLabCharges(){
  if(!S.aiBattleLab||S.finished||S.phase!=="charges")return;
- aiLabTrace("charge-phase-start",{state:aiLabDistanceSummary(),units:units().filter(u=>alive(u)&&!u.fled&&!u.engaged).map(u=>({unit:u.name,side:u.side,charged:!!u.charged,nearestVisible:visibleEnemies(u).filter(t=>alive(t)&&!t.fled).map(t=>({name:t.name,distance:Number(dist(u,t).toFixed(2)),canCharge:canCharge(u,t)})).sort((a,b)=>a.distance-b.distance)[0]||null}))});
+ const chargeGap=(u,t)=>{const bearing=Math.atan2((t.y-u.y)*H(),(t.x-u.x)*W()),a=shape(u),b=shape(t),support=(unit,angle,q)=>{const d=angle-(unit.facing||0);return Math.abs(Math.cos(d))*q.depth/(2*PX_PER_IN())+Math.abs(Math.sin(d))*q.front/(2*PX_PER_IN());};return Math.max(0,dist(u,t)-support(u,bearing,a)-support(t,bearing+Math.PI,b));};
+ aiLabTrace("charge-phase-start",{state:aiLabDistanceSummary(),units:units().filter(u=>alive(u)&&!u.fled&&!u.engaged).map(u=>{const target=visibleEnemies(u).filter(t=>alive(t)&&!t.fled).sort((a,b)=>dist(u,a)-dist(u,b))[0]||null;return {unit:u.name,id:u.id,side:u.side,charged:!!u.charged,move:Number((u.stats?.M||0).toFixed(2)),attachedTo:u.attachedTo||null,nearestVisible:target?{name:target.name,distance:Number(dist(u,target).toFixed(2)),chargeGap:Number(chargeGap(u,target).toFixed(2)),maxChargeRange:Number(((u.stats?.M||0)*2).toFixed(2)),withinChargeRange:chargeGap(u,target)<=(u.stats?.M||0)*2,arcAndPathClear:canCharge(u,target)}:null};})});
  let guard=0;
  while(S.aiBattleLab&&!S.finished&&S.phase==="charges"&&guard++<200){
   if(S.turn>=16){aiLabTrace("turn-limit",{state:aiLabDistanceSummary()});finishBattle("The battle is a draw! (AI Lab turn limit)");return;}
