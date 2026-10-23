@@ -2992,6 +2992,7 @@ function launchCampaignFieldBattle(attackingArmy,defendingArmy){
   loser.nodeId="city-"+home;loser.region=home;
   for(const army of [attackingArmy,defendingArmy]){const state=activeCampaign.factionStates.find(f=>f.id===(army.owner||army.factionId));if(state){state.roster=army.roster;state.armyPoints=army.points;if(!army.roster.length)state.alive=false;}}
   activeCampaign.lastEvent=(result.won?"Greenskin animosity attack wins a field battle. The defeated army retreats.":"Greenskin animosity attack is repelled. The attacking army retreats.")+necromancyMessage+(attackingCollapsed||defendingCollapsed?" An Undead force without a surviving Vampire or Necromancer collapsed after the battle.":"");
+  if(promotionMessages.length)activeCampaign.lastEvent+=" Promotions: "+promotionMessages.join(". ")+".";
   saveCampaign();byId("grand-campaign-screen").hidden=false;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();
  }});
  if(!started){activeCampaign.lastEvent="The tactical field battle could not be started.";renderCampaignMap();return false;}
@@ -3089,7 +3090,7 @@ function runAIFactionTurn(campaign,faction){
  let characterSpend=0;ensureCharacterRecruitmentPool(faction);
  if(!(army.roster||[]).some(u=>isCampaignCharacterType(u.type))&&faction.characterRecruitment.available>0&&(army.roster||[]).length<6){
   const race=faction.race||"human",type=race==="dwarf"?"dwarfCaptain":race==="undead"?"necromancer":race==="greenskin"?"orcHero":"captain";
-  const candidate={type,models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],campaignRank:"hero",upgrades:{},skills:{}};
+  const candidate={type,models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],campaignRank:"champion",upgrades:{},skills:{}};
   const price=campaignRecruitmentGoldCost(candidate,army.rosterFaction||rosterFactionForPoliticalFaction(faction.id));
   if(recruitBudget-recruitment.spent>=price){army.roster.push(candidate);faction.characterRecruitment.available--;characterSpend=price;army.points=campaignArmyCost(army);}
  }
