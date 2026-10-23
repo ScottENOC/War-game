@@ -32,6 +32,7 @@ export function unitCost(config, faction) {
   return models*(elf?12:8)+meleeCost+rangedCost+(config.elvenArchery&&elf&&ranged==="bow"?2*models:0)+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0)+(woodElfStyle&&config.heavyArmour?models:0)+(woodElfStyle&&weapons.includes("offhandWeapon")?models:0)+upgrades+skillCost;
 }
 function buildUnit(template,config,faction,opposing=false) {
+  template=template||Object.values(FACTIONS).map(group=>group.units?.[config.type]).find(Boolean)||{name:String(config.type||"Unknown unit"),short:String(config.type||"Unit"),kind:"melee",models:Math.max(1,Number(config.models)||1),stats:{M:4,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:6}};
   if(faction==="dwarfs"&&(config.rangedWeapon==="bow"||config.weapon==="bow"||config.bow)){
     config={...config,rangedWeapon:"crossbow",weapon:config.weapon==="bow"?"handWeapon":config.weapon,bow:false};
   }
@@ -60,6 +61,8 @@ function buildUnit(template,config,faction,opposing=false) {
   
   const campaignStats=config.campaignStats||{};
   for(const key of ["WS","BS","S","T","Ld"])if(!(template.spellcaster&&!elf&&["WS","S"].includes(key)))stats[key]+=Math.max(0,campaignStats[key]||0);
+  if(isCharacter&&config.campaignRank==="hero"){stats.WS+=1;stats.Ld+=1;}
+  else if(isCharacter&&config.campaignRank==="champion"){stats.Ld=Math.max(1,stats.Ld-1);}
   if(campaignStats.M)stats.M+=Math.max(0,campaignStats.M);
   if(campaignStats.I)stats.I+=Math.max(0,campaignStats.I);
   if(campaignStats.MI){stats.M+=isSiegeEngine?campaignStats.MI*0.5:campaignStats.MI;stats.I+=campaignStats.MI;}
@@ -84,7 +87,7 @@ function buildUnit(template,config,faction,opposing=false) {
     moveUsed:0,damage:0,shootCasualties:0,panicTested:false,terrorTested:false,terrorFledThisTurn:false,failedFearCharge:false,skirmishing:isSiegeEngine||isEagleMounted,cover:isSiegeEngine?"soft":null,stats,champion:{enabled:!!config.champion&&!isCharacter&&!isCavalry,bonus:config.championBonus||(config.type==="archers"?"BS":"A"),stats:null},attachedCharacters:[],
     characterWounds:isCharacter?template.stats.W:null,delayedDeath:false,delayedDeathSnapshot:null,championAlive:!!config.champion,championWounds:config.champion?template.stats.W:0};
 }
-export function createUnitsFromArmy(army,faction="empire") {
+export function createUnitsFromArmy(army,faction="empire",options={}) {
   const units={},playerFaction=["highElves","dwarfs","greenskins","undead"].includes(faction)?faction:"empire";
   army.forEach((entry,index)=>{
     const n=index+1,y=n/(army.length+1),playerEntry={...entry},aiEntry={...entry};
@@ -104,9 +107,9 @@ export function createUnitsFromArmy(army,faction="empire") {
       const riderType=entry.type==="orcLord"?"orcLord":"lord",rider=buildUnit(FACTIONS[playerFaction].units[riderType],{...playerEntry,type:riderType,mounted:false,mountType:"none",id:"p"+n+"r",index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
       rider.points=unitCost(entry,playerFaction)-host.points;rider.isDragonRider=true;rider.mounted=true;rider.mountType=dragonType;rider.flyingMount=true;rider.flightAltitudeIn=12;rider.baseWidthIn=host.baseWidthIn;rider.baseDepthIn=host.baseDepthIn;rider.heightIn=3.5;rider.attachedTo=host.id;host.attachedCharacters=[rider.id];units[host.id]=host;units[rider.id]=rider;
     }else units["p"+n]=buildUnit(FACTIONS[playerFaction].units[entry.type],{...playerEntry,id:"p"+n,index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
-    const opposingType=entry.type==="deepflameDragon"?"deepflameDragon":entry.type==="cannon"&&FACTIONS.empire.units.cannon?"cannon":FACTIONS.opposing.units[entry.type]?entry.type:(["cannon","boltThrower","catapult","skeletonChariot","humanChariot","elfChariot","goblinChariot","orcChariot","wyvern","youngDragon","dragon","ancientDragon","dwarfInfantry","dwarfWarriors","dwarfThunderers","dwarfQuarrellers","dwarfLongbeards","dwarfIronbreakers","goblins","orcBoyz","wolfRiders","boarBoyz","skeletonHorses","trolls","giant","zombies","skeletons"].includes(entry.type)?"swordsmen":["dwarfCaptain","goblinHero","orcHero","goblinShaman","orcShaman","mageHero","necromancer","masterNecromancer","vampireHero"].includes(entry.type)?"captain":(["legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfLord","goblinLord","orcLord","goblinGreatShaman","orcGreatShaman","mageLord","vampireLord"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
-    const opposingTemplate=FACTIONS.opposing.units[opposingType]||FACTIONS.empire.units[opposingType]||FACTIONS.highElves.units[opposingType]||FACTIONS.opposing.units.swordsmen;
-    units["a"+n]=buildUnit(opposingTemplate,{...opposingEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},"empire",true);
+    const opposingType=options.preserveFactionForOpponent&&FACTIONS[playerFaction].units[entry.type]?entry.type:entry.type==="deepflameDragon"?"deepflameDragon":entry.type==="cannon"&&FACTIONS.empire.units.cannon?"cannon":FACTIONS.opposing.units[entry.type]?entry.type:(["cannon","boltThrower","catapult","skeletonChariot","humanChariot","elfChariot","goblinChariot","orcChariot","wyvern","youngDragon","dragon","ancientDragon","dwarfInfantry","dwarfWarriors","dwarfThunderers","dwarfQuarrellers","dwarfLongbeards","dwarfIronbreakers","goblins","orcBoyz","wolfRiders","boarBoyz","skeletonHorses","trolls","giant","zombies","skeletons"].includes(entry.type)?"swordsmen":["dwarfCaptain","goblinHero","orcHero","goblinShaman","orcShaman","mageHero","necromancer","masterNecromancer","vampireHero"].includes(entry.type)?"captain":(["legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfLord","goblinLord","orcLord","goblinGreatShaman","orcGreatShaman","mageLord","vampireLord"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
+    const opposingTemplate=options.preserveFactionForOpponent?(FACTIONS[playerFaction].units[opposingType]||Object.values(FACTIONS).map(group=>group.units?.[opposingType]).find(Boolean)||FACTIONS.empire.units.swordsmen):(FACTIONS.opposing.units[opposingType]||FACTIONS.empire.units[opposingType]||FACTIONS.highElves.units[opposingType]||FACTIONS.opposing.units.swordsmen);
+    units["a"+n]=buildUnit(opposingTemplate,{...opposingEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},options.preserveFactionForOpponent?playerFaction:"empire",!options.preserveFactionForOpponent);
   });
   Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter&&!u.hasRangedWeapon).forEach(hero=>{
     const host=Object.values(units).find(u=>u.side==="ai"&&!u.isCharacter&&u.models>0&&!!u.isCavalry===!!hero.mounted);

@@ -1,19 +1,19 @@
 export const FACTIONS = {
-  empire: { name:"Empire", units:{
-    swordsmen:{name:"Empire Swordsmen",short:"Swordsmen",kind:"melee",models:20,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
-    archers:{name:"Empire Archers",short:"Infantry",kind:"archer",models:10,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},range:24},
-    captain:{name:"Empire Captain",short:"Captain",kind:"hero",models:1,points:50,stats:{M:4,WS:5,BS:5,S:4,T:4,W:2,I:5,A:2,Ld:8}},
-    mageHero:{name:"Empire Mage",short:"Mage",kind:"hero",models:1,points:55,spellcaster:true,baseCasterLevel:1,stats:{M:4,WS:3,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:7}},
-    mageLord:{name:"Empire Wizard Lord",short:"Wizard Lord",kind:"hero",models:1,points:100,spellcaster:true,baseCasterLevel:3,stats:{M:4,WS:3,BS:3,S:3,T:4,W:3,I:3,A:1,Ld:8}},
-    lord:{name:"Empire General",short:"General",kind:"hero",models:1,points:80,stats:{M:4,WS:5,BS:5,S:4,T:4,W:3,I:5,A:3,Ld:9}},
+  empire: { name:"Kingdom of Valedorn", units:{
+    swordsmen:{name:"Valedorn Swordsmen",short:"Swordsmen",kind:"melee",models:20,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
+    archers:{name:"Valedorn Archers",short:"Infantry",kind:"archer",models:10,stats:{M:4,WS:4,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},range:24},
+    captain:{name:"Valedorn Captain",short:"Captain",kind:"hero",models:1,points:50,stats:{M:4,WS:5,BS:5,S:4,T:4,W:2,I:5,A:2,Ld:8}},
+    mageHero:{name:"Valedorn Mage",short:"Mage",kind:"hero",models:1,points:55,spellcaster:true,baseCasterLevel:1,stats:{M:4,WS:3,BS:3,S:3,T:3,W:2,I:3,A:1,Ld:7}},
+    mageLord:{name:"Valedorn Wizard",short:"Wizard Lord",kind:"hero",models:1,points:100,spellcaster:true,baseCasterLevel:3,stats:{M:4,WS:3,BS:3,S:3,T:4,W:3,I:3,A:1,Ld:8}},
+    lord:{name:"Valedorn General",short:"General",kind:"hero",models:1,points:80,stats:{M:4,WS:5,BS:5,S:4,T:4,W:3,I:5,A:3,Ld:9}},
     legendaryLord:{name:"Lord-Marshal Edric Voss",short:"Edric Voss",kind:"hero",models:1,points:160,namedCharacter:true,ignoreArmourSaves:true,defaultHeavyArmour:true,defaultShield:true,stats:{M:4,WS:6,BS:5,S:5,T:5,W:4,I:6,A:4,Ld:10}},
     rifleman:{name:"Matthias Keller, Imperial Marksman",short:"Keller",kind:"hero",models:1,points:65,namedCharacter:true,stats:{M:4,WS:4,BS:5,S:3,T:3,W:2,I:4,A:1,Ld:8}},
     captainWeiss:{name:"Captain Marta Weiss",short:"Marta Weiss",kind:"hero",models:1,points:70,namedCharacter:true,rallyingCall:true,stats:{M:4,WS:5,BS:4,S:4,T:4,W:3,I:4,A:2,Ld:8}},
-    cavalry:{name:"Empire Cavalry",short:"Cavalry",kind:"cavalry",models:5,points:16,stats:{M:8,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},mountStats:{A:1,WS:3,I:3,S:3},range:24},
-    cannon:{name:"Empire Cannon",short:"Cannon",kind:"artillery",models:3,points:80,stats:{M:0,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
-    humanChariot:{name:"Empire War Chariot",short:"War Chariot",kind:"chariot",models:3,points:95,chariot:true,stats:{M:7,WS:3,BS:3,S:3,T:4,W:4,I:3,A:1,Ld:7},mountStats:{A:2,WS:3,I:3,S:3},impactStrength:5,armourSave:3}
+    cavalry:{name:"Valedorn Cavalry",short:"Cavalry",kind:"cavalry",models:5,points:16,stats:{M:8,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7},mountStats:{A:1,WS:3,I:3,S:3},range:24},
+    cannon:{name:"Valedorn Cannon",short:"Cannon",kind:"artillery",models:3,points:80,stats:{M:0,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:7}},
+    humanChariot:{name:"Valedorn War Chariot",short:"War Chariot",kind:"chariot",models:3,points:95,chariot:true,stats:{M:7,WS:3,BS:3,S:3,T:4,W:4,I:3,A:1,Ld:7},mountStats:{A:2,WS:3,I:3,S:3},impactStrength:5,armourSave:3}
   }},
-  highElves: { name:"High Elves", units:{
+  highElves: { name:"Elves", units:{
     swordsmen:{name:"High Elf Spearmen",short:"Spearmen",kind:"melee",models:20,points:12,stats:{M:5,WS:5,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},alwaysStrikesFirst:true},
     archers:{name:"High Elf Archers",short:"Infantry",kind:"archer",models:10,points:15,stats:{M:5,WS:5,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},alwaysStrikesFirst:true,range:30},
     captain:{name:"High Elf Hero",short:"Hero",kind:"hero",models:1,points:75,stats:{M:5,WS:6,BS:6,S:4,T:4,W:2,I:6,A:2,Ld:9},alwaysStrikesFirst:true},
@@ -21,13 +21,13 @@ export const FACTIONS = {
     mageHero:{name:"High Elf Mage",short:"Mage",kind:"hero",models:1,points:95,spellcaster:true,baseCasterLevel:1,dispelBonus:1,alwaysStrikesFirst:true,stats:{M:5,WS:4,BS:4,S:3,T:3,W:2,I:5,A:1,Ld:8}},
     mageLord:{name:"High Elf Archmage",short:"Archmage",kind:"hero",models:1,points:225,spellcaster:true,baseCasterLevel:3,dispelBonus:1,alwaysStrikesFirst:true,stats:{M:5,WS:4,BS:4,S:3,T:3,W:3,I:5,A:1,Ld:9}},
     starwardenLord:{name:"Eldrin Starwarden",short:"Starwarden",kind:"hero",models:1,points:300,namedCharacter:true,spellcaster:true,baseCasterLevel:5,dispelBonus:1,alwaysStrikesFirst:true,specialSpell:"fateward",isGeneral:true,stats:{M:5,WS:6,BS:6,S:4,T:4,W:3,I:6,A:3,Ld:10}},
-    pegasusChampion:{name:"Aelthir, the Dawnwing",short:"Dawnwing",kind:"hero",models:1,points:110,namedCharacter:true,alwaysStrikesFirst:true,stats:{M:5,WS:6,BS:6,S:5,T:4,W:2,I:6,A:3,Ld:9}},
+    pegasusChampion:{name:"Aelthir, the Dawnwing",short:"Dawnwing",kind:"hero",models:1,points:110,namedCharacter:true,canDeployAnywhere:true,alwaysStrikesFirst:true,stats:{M:5,WS:6,BS:6,S:5,T:4,W:2,I:6,A:3,Ld:9}},
     shadowElf:{name:"Lethariel Starweaver",short:"Lethariel",kind:"hero",models:1,points:165,namedCharacter:true,gender:"female",canDeployAnywhere:true,coverHitPenaltyBonus:true,grantsSkirmish:true,dualWield:true,magicBow:true,defaultHeavyArmour:true,stats:{M:5,WS:7,BS:7,S:4,T:3,W:3,I:7,A:3,Ld:10},alwaysStrikesFirst:true},
     cavalry:{name:"High Elf Cavalry",short:"Cavalry",kind:"cavalry",models:5,points:24,stats:{M:9,WS:4,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},mountStats:{A:1,WS:3,I:3,S:3},alwaysStrikesFirst:true,range:24},
     boltThrower:{name:"High Elf Bolt Thrower",short:"Bolt Thrower",kind:"artillery",models:2,points:60,stats:{M:0,WS:3,BS:4,S:3,T:3,W:1,I:4,A:1,Ld:8},range:48},
-    youngDragon:{name:"Young Dragon",short:"Young Dragon",kind:"monster",models:1,points:140,isDragon:true,breathStrength:3,intrinsicArmourSave:5,stats:{M:8,WS:4,BS:0,S:5,T:5,W:4,I:4,A:3,Ld:6}},
-    dragon:{name:"Dragon",short:"Dragon",kind:"monster",models:1,points:220,isDragon:true,breathStrength:4,intrinsicArmourSave:4,stats:{M:8,WS:5,BS:0,S:6,T:6,W:6,I:5,A:4,Ld:7}},
-    ancientDragon:{name:"Ancient Dragon",short:"Ancient Dragon",kind:"monster",models:1,points:320,isDragon:true,breathStrength:5,intrinsicArmourSave:3,stats:{M:8,WS:6,BS:0,S:7,T:7,W:8,I:6,A:5,Ld:8}},
+    youngDragon:{name:"Bronze Dragon",short:"Bronze Dragon",kind:"monster",models:1,points:140,isDragon:true,breathStrength:3,intrinsicArmourSave:5,stats:{M:8,WS:4,BS:0,S:5,T:5,W:4,I:4,A:3,Ld:6}},
+    dragon:{name:"Silver Dragon",short:"Silver Dragon",kind:"monster",models:1,points:220,isDragon:true,breathStrength:4,intrinsicArmourSave:4,stats:{M:8,WS:5,BS:0,S:6,T:6,W:6,I:5,A:4,Ld:7}},
+    ancientDragon:{name:"Gold Dragon",short:"Gold Dragon",kind:"monster",models:1,points:320,isDragon:true,breathStrength:5,intrinsicArmourSave:3,stats:{M:8,WS:6,BS:0,S:7,T:7,W:8,I:6,A:5,Ld:8}},
     deepflameDragon:{name:"Thaurgath the Rune-Eater",short:"Thaurgath",kind:"monster",models:1,points:450,isDragon:true,namedCharacter:true,spellcaster:true,baseCasterLevel:4,breathStrength:5,intrinsicArmourSave:2,stats:{M:8,WS:7,BS:0,S:7,T:7,W:10,I:7,A:6,Ld:8}},
     elfChariot:{name:"High Elf Chariot",short:"Elven Chariot",kind:"chariot",models:3,points:110,chariot:true,alwaysStrikesFirst:true,stats:{M:8,WS:4,BS:4,S:3,T:4,W:4,I:4,A:1,Ld:8},mountStats:{A:2,WS:3,I:4,S:3},impactStrength:5,armourSave:4}
   }},

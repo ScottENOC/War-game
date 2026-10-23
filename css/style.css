@@ -329,9 +329,9 @@ button,[role="button"]{
 .grand-live-map-legend{display:flex;flex-wrap:wrap;gap:8px 14px;padding:5px 3px 10px;color:#1d2b2b;font-size:11px;font-weight:850}.grand-live-hint{font-size:12px;line-height:1.4;color:#172d2b;font-weight:750;margin:8px 3px 3px}
 .grand-world-sidebar{display:grid;gap:10px;align-content:start}.grand-world-card{display:grid;gap:6px;padding:13px;border:1px solid #ffffff22;border-radius:12px;background:#151d1e;color:#f2e8cb;font-size:12px;line-height:1.4}.grand-world-card strong{font-size:16px;color:#f3e6bc}.grand-world-card span{color:#c1cbbf}
 .grand-world-economy{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border:1px solid #d9bf7555;border-radius:10px;background:#2c3028;font-size:12px}.grand-world-economy strong{color:var(--gold);font-size:15px}
-.grand-world-event{font-size:12px;line-height:1.5;color:#d4dacf;padding:10px;border-left:3px solid var(--gold);background:#20292a;border-radius:0 8px 8px 0}.grand-world-sidebar #grand-campaign-end-turn{width:100%}
-.campaign-road{fill:none;stroke:#e9d7a1;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;opacity:.85;filter:drop-shadow(0 1px 1px #4d5540)}.campaign-road.river-road{stroke:#e5d9b2;stroke-dasharray:5 4}
-.campaign-node{cursor:pointer;outline:none}.campaign-node circle{fill:#e8d8a9;stroke:#334b3d;stroke-width:2.5}.campaign-node.city circle{fill:#f7e9c0;stroke:#4a5940}.campaign-node.crossroads circle{fill:#d4c18c}.campaign-node.border circle{fill:#f0dfad}.campaign-node.port circle{fill:#8bc5cf;stroke:#315a68}.campaign-node.river circle{fill:#b9d9e0;stroke:#3b6b7a}.campaign-node path{fill:none;stroke:#24464a;stroke-width:1.6;pointer-events:none}.campaign-node.reachable circle{stroke:#fff8d6;stroke-width:4;filter:drop-shadow(0 0 4px #fff)}.campaign-node.current circle{fill:#e7c46b;stroke:#fff8d6;stroke-width:4}.campaign-node:focus circle{stroke:#fff;stroke-width:5}
+.grand-world-event{font-size:12px;line-height:1.5;color:#d4dacf;padding:10px;border-left:3px solid var(--gold);background:#20292a;border-radius:0 8px 8px 0}
+.campaign-road{fill:none;stroke:#4a2e1d;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;opacity:.92;filter:drop-shadow(0 1px 1px #4d5540)}.campaign-road.river-road{stroke:#4a2e1d;stroke-dasharray:5 4}.campaign-road.sea-road{stroke:#123f66;stroke-width:4;opacity:.96;filter:drop-shadow(0 1px 1px #162c42)}
+.campaign-node{cursor:pointer;outline:none}.campaign-node circle{fill:#e8d8a9;stroke:#334b3d;stroke-width:2.5}.campaign-node.city circle{fill:#f7e9c0;stroke:#4a5940}.campaign-node.crossroads circle{fill:#d4c18c}.campaign-node.border circle{fill:#f0dfad}.campaign-node.port circle{fill:#8bc5cf;stroke:#315a68}.campaign-node.river circle{fill:#b9d9e0;stroke:#3b6b7a}.campaign-node path{fill:none;stroke:#24464a;stroke-width:1.6;pointer-events:none}.campaign-node.reachable circle{stroke:#fff8d6;stroke-width:4;filter:drop-shadow(0 0 4px #fff)}.campaign-node.current circle{fill:#e7c46b;stroke:#fff8d6;stroke-width:4}.campaign-node:focus circle{stroke:#fff;stroke-width:5}.campaign-node.village circle{fill:#d7c7a0;stroke:#66563a}.campaign-node.farm circle{fill:#b5c47d;stroke:#4c6538}.campaign-node .campaign-node-symbol{font-size:9px;font-weight:800;fill:#28392b;stroke:none;pointer-events:none}
 .commander-token{fill:#18251f;stroke:#ffe8a3;stroke-width:3;filter:drop-shadow(0 2px 2px #0008)}.commander-initials{fill:#ffe8a3;font:800 9px system-ui,sans-serif;pointer-events:none}.faction-locked{opacity:.55}.grand-faction-choice.faction-locked{border-style:dashed}
 @media(max-width:850px){.grand-world-layout{grid-template-columns:1fr}.grand-world-sidebar{grid-template-columns:repeat(2,minmax(0,1fr))}.grand-world-sidebar #grand-campaign-end-turn,.grand-world-event{grid-column:1/-1}.grand-live-map-panel{padding:5px}.grand-world-header h1{font-size:23px}}
 @media(max-width:520px){.grand-world-sidebar{grid-template-columns:1fr}.grand-world-sidebar #grand-campaign-end-turn,.grand-world-event{grid-column:auto}.grand-world-header-actions{flex-direction:column}.grand-world-header-actions button{min-height:36px;padding:7px 10px;font-size:11px}.grand-live-map-legend{font-size:9px}}
@@ -582,3 +582,68 @@ button,[role="button"]{
 @media(orientation:landscape) and (max-height:500px){
  #grand-campaign-world .grand-world-sidebar{max-height:48dvh;bottom:calc(env(safe-area-inset-bottom) + 6px)}
 }
+
+
+/* Campaign maps should be scrollable on desktop as well as touch devices.
+   Keep the setup map at its natural SVG size so the viewport can pan instead
+   of scaling the entire world to fit and leaving no scrollable area. */
+#grand-campaign-setup .grand-map-wrap{overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y;scrollbar-width:auto;-webkit-overflow-scrolling:touch}
+#grand-campaign-setup .grand-world-map{width:1300px;height:760px;max-width:none;max-height:none;object-fit:initial}
+#grand-campaign-world .grand-map-live-wrap{overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y;scrollbar-width:auto;-webkit-overflow-scrolling:touch}
+#grand-campaign-world .grand-map-live-wrap .grand-world-map{max-width:none;max-height:none}
+
+/* Desktop grand-campaign map dragging */
+#grand-campaign-setup .grand-map-wrap,
+#grand-campaign-world .grand-map-live-wrap{cursor:grab;}
+#grand-campaign-setup .grand-map-wrap.campaign-map-panning,
+#grand-campaign-world .grand-map-live-wrap.campaign-map-panning{cursor:grabbing;user-select:none;-webkit-user-select:none;}
+
+
+/* Modern campaign civilian encounter decision panel */
+.campaign-encounter-backdrop{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:20px;background:rgba(4,8,12,.78);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+.campaign-encounter-dialog{width:min(100%,560px);max-height:min(90dvh,760px);overflow:auto;padding:clamp(22px,5vw,34px);border:1px solid rgba(180,198,207,.25);border-radius:18px;background:linear-gradient(145deg,#202a31,#11181e 75%);color:#edf2f3;box-shadow:0 24px 90px rgba(0,0,0,.55)}
+.campaign-encounter-eyebrow{font-size:.72rem;letter-spacing:.18em;font-weight:800;color:#a7c5cf}
+.campaign-encounter-dialog h2{margin:10px 0 8px;font-size:clamp(1.45rem,5vw,2rem);line-height:1.12;color:#fff}
+.campaign-encounter-description{margin:0 0 22px;color:#c0cbd0;line-height:1.55}
+.campaign-encounter-choices{display:grid;gap:10px}
+.campaign-encounter-choice{display:grid;grid-template-columns:44px minmax(0,1fr) 18px;align-items:center;gap:13px;width:100%;padding:15px;text-align:left;border:1px solid #39464e;border-radius:12px;background:#26323a;color:#f5f7f8;cursor:pointer;transition:transform .15s,border-color .15s,background .15s}
+.campaign-encounter-choice:hover,.campaign-encounter-choice:focus-visible{outline:none;transform:translateY(-1px);border-color:#a7c5cf;background:#303e47}
+.campaign-encounter-choice-symbol{display:grid;place-items:center;width:42px;height:42px;border-radius:10px;background:#35454e;color:#d9e7ec;font-size:1.3rem}
+.campaign-encounter-choice-copy{display:grid;gap:4px;min-width:0}
+.campaign-encounter-choice-copy strong{font-size:1rem;font-weight:750}
+.campaign-encounter-choice-copy span{font-size:.86rem;line-height:1.4;color:#bdc8ce}
+.campaign-encounter-choice-arrow{font-size:1.5rem;color:#a7c5cf}
+.campaign-encounter-choice.peaceful .campaign-encounter-choice-symbol{background:#24483f;color:#b6e4d2}
+.campaign-encounter-choice.coercive .campaign-encounter-choice-symbol{background:#4b4029;color:#f0d39a}
+.campaign-encounter-choice.violent .campaign-encounter-choice-symbol{background:#512d30;color:#ffc0bc}
+@media(max-width:420px){.campaign-encounter-backdrop{padding:12px}.campaign-encounter-dialog{padding:20px 16px;border-radius:15px}.campaign-encounter-choice{grid-template-columns:38px minmax(0,1fr) 12px;gap:10px;padding:12px}.campaign-encounter-choice-symbol{width:36px;height:36px}}
+
+/* Clear, touch-friendly cancellation while aiming a dragon's breath weapon */
+.dragon-breath-cancel{position:fixed;z-index:10020;left:50%;bottom:max(22px,env(safe-area-inset-bottom));transform:translateX(-50%);min-height:48px;padding:12px 22px;border:1px solid #e6b6a8;border-radius:999px;background:#33201f;color:#fff4f0;font:700 15px/1.2 system-ui,-apple-system,sans-serif;box-shadow:0 8px 30px #0008;cursor:pointer;touch-action:manipulation}
+.dragon-breath-cancel:hover,.dragon-breath-cancel:focus-visible{background:#58302c;outline:2px solid #f0c4b6;outline-offset:3px}
+
+/* In-battle menu for campaign saves, concession and returning to the title screen */
+#battle-menu-bar{position:fixed;z-index:10010;top:max(8px,env(safe-area-inset-top));right:12px;display:flex;align-items:center;gap:10px;padding:6px 8px 6px 12px;border:1px solid #59666c;border-radius:12px;background:#172127ef;color:#edf2f3;box-shadow:0 5px 22px #0006;font:600 13px/1.2 system-ui,sans-serif}
+#battle-menu-caption{max-width:36vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c4d2d8}
+#battle-menu-bar button{min-height:38px;padding:8px 13px;border:1px solid #66767d;border-radius:8px;background:#34434b;color:#fff;font:700 14px system-ui,sans-serif;touch-action:manipulation}
+#battle-menu-panel{position:fixed;z-index:10011;top:calc(max(8px,env(safe-area-inset-top)) + 54px);right:12px;width:min(340px,calc(100vw - 24px));box-sizing:border-box;padding:20px;border:1px solid #59666c;border-radius:14px;background:linear-gradient(145deg,#202a31,#11181e);color:#edf2f3;box-shadow:0 16px 60px #000a;font-family:system-ui,sans-serif}
+#battle-menu-panel[hidden]{display:none}
+#battle-menu-panel h2{margin:0 0 8px;font-size:1.3rem}
+#battle-menu-panel p{margin:0 0 16px;color:#c0cbd0;font-size:.92rem;line-height:1.5}
+#battle-menu-panel button{display:block;width:100%;min-height:44px;margin-top:10px}
+#battle-concede{background:#682f32;color:#fff;border:1px solid #a65a5d}
+#resume-saved-battle{margin-top:12px}
+
+
+/* Isolated Grand Campaign AI Test Lab */
+.campaign-ai-controls{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:18px 0}
+.campaign-ai-controls label{display:flex;flex-direction:column;gap:6px;min-width:150px;color:var(--text,#e9ecee);font-weight:650}
+.campaign-ai-controls select{min-height:42px;padding:8px 10px;border:1px solid #66767d;border-radius:8px;background:#202a31;color:#f2f5f6;font:inherit}
+#campaign-ai-status{padding:12px 14px;border:1px solid #46555c;border-radius:10px;background:#182228;color:#dce5e8}
+.campaign-ai-results-table{width:100%;border-collapse:collapse;margin:10px 0 22px;font-size:.92rem}
+.campaign-ai-results-table th,.campaign-ai-results-table td{padding:9px 10px;border-bottom:1px solid #46535a;text-align:left}
+.campaign-ai-results-table th{background:#202b31;color:#f0f3f4}
+#campaign-ai-results details{margin:16px 0}
+#campaign-ai-results summary{cursor:pointer;padding:10px 0;font-weight:700}
+#campaign-ai-results li{margin:0 0 10px;line-height:1.45;overflow-wrap:anywhere}
+@media(max-width:600px){.campaign-ai-controls{align-items:stretch;flex-direction:column}.campaign-ai-controls label{width:100%}.campaign-ai-controls select{width:100%;box-sizing:border-box}.campaign-ai-results-table{font-size:.8rem}.campaign-ai-results-table th,.campaign-ai-results-table td{padding:7px 5px}}
