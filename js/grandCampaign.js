@@ -3088,7 +3088,7 @@ function runAIFactionTurn(campaign,faction){
  const recruitBudget=Math.min(Math.max(0,faction.treasury-100),Math.max(0,Math.floor(faction.income*.7)));
  const recruitment=recruitArmyModels(army,army.rosterFaction||rosterFactionForPoliticalFaction(faction.id),recruitBudget,campaign,faction);
  let characterSpend=0;ensureCharacterRecruitmentPool(faction);
- if(!(army.roster||[]).some(u=>isCampaignCharacterType(u.type))&&faction.characterRecruitment.available>0&&(army.roster||[]).length<6){
+ if(faction.characterRecruitment.available>0&&(army.roster||[]).length<6){
   const race=faction.race||"human",type=race==="dwarf"?"dwarfCaptain":race==="undead"?"necromancer":race==="greenskin"?"orcHero":"captain";
   const candidate={type,models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],campaignRank:"champion",upgrades:{},skills:{}};
   const price=campaignRecruitmentGoldCost(candidate,army.rosterFaction||rosterFactionForPoliticalFaction(faction.id));
