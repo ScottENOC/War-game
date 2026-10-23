@@ -80,14 +80,15 @@ function aiPivotAndAdvance(u,target){
         if(dist({x,y},target)<=desiredGap+.15)break;
       }
       const improvement=gap-dist({x,y},target);
-      if(improvement>.1&&(!best||improvement>best.improvement))best={angle,x,y,turnCost,travel,improvement};
+      if(improvement>.1&&(!best||improvement>best.improvement))best={angle,x,y,startX:u.x,startY:u.y,turnCost,travel,improvement};
     }
     if(best){
       u.facing=best.angle;u.x=best.x;u.y=best.y;u.moveUsed+=best.turnCost+best.travel;u.moved=true;
       say(u.name+" makes a direct approach toward "+target.name+" after route search found no complete path.");
-      if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-route-fallback",unit:u.name,target:target.name,routeFound:false,from:{x:Number((u.x-Math.cos(best.angle)*best.travel/BATTLEFIELD_WIDTH_IN).toFixed(3)),y:Number((u.y-Math.sin(best.angle)*best.travel/fieldHeightIn()).toFixed(3))},to:{x:Number(u.x.toFixed(3)),y:Number(u.y.toFixed(3))},movementCost:Number((best.turnCost+best.travel).toFixed(2)),distanceImprovement:Number(best.improvement.toFixed(2))});
+      if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-route-fallback",unit:u.name,target:target.name,routeFound:false,from:{x:Number(best.startX.toFixed(3)),y:Number(best.startY.toFixed(3))},to:{x:Number(u.x.toFixed(3)),y:Number(u.y.toFixed(3))},movementCost:Number((best.turnCost+best.travel).toFixed(2)),distanceImprovement:Number(best.improvement.toFixed(2))});
       return true;
     }
+    if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-route-fallback",unit:u.name,target:target.name,routeFound:false,fallbackMoved:false,reason:"no-legal-progress",distance:Number(gap.toFixed(2)),movementRemaining:Number(budgetLeft.toFixed(2))});
     const turns=angles.map(a=>({a,c:Math.abs(normalizeTurn(a-u.facing))*frontIn})).filter(v=>v.c<=budgetLeft+.001&&canPlace(u,u.x,u.y,v.a)).sort((a,b)=>Math.abs(normalizeTurn(a.a-desired))-Math.abs(normalizeTurn(b.a-desired)));
     if(turns.length){u.facing=turns[0].a;u.moveUsed+=turns[0].c;u.moved=true;say(u.name+" turns toward "+target.name+" but cannot advance along any tested approach this turn.");return true;}
     say(u.name+" cannot find a passable route to "+target.name+" this turn.");return false;
