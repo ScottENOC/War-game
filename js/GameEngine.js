@@ -6,7 +6,7 @@ import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warba
 import { createArmyBuilder } from "./armyBuilder.js?v=20261021-wyvern-roster-v1";
 import { createCollectionManager } from "./collection.js?v=20261021-wyvern-roster-v1";
 import { createGameState } from "./gameState.js";
-import { createAI } from "./ai.js?v=20261023-ai-lab-diagnostics-v1";
+import { createAI } from "./ai.js?v=20261023-ai-lab-diagnostics-v2";
 import { createRules } from "./rules.js?v=20261022-rules-scope-fix-v1";
 import { createShooting } from "./shooting.js?v=20261023-ai-lab-fast-v3";
 import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
@@ -456,7 +456,7 @@ function runAiLabMovement(){
  const before=aiLabSnapshot();aiLabTrace("movement-phase-start",{state:aiLabDistanceSummary()});
  let guard=0;while(LAB_RED_AI.runAiActivation()&&guard++<30){}const redActivationLoops=guard;guard=0;while(LAB_BLUE_AI.runAiActivation()&&guard++<30){}const blueActivationLoops=guard;
  updateObjectiveInteractions();const moved=[];for(const u of units()){const b=before.get(u.id);if(b&&(Math.abs(u.x-b.x)>.0001||Math.abs(u.y-b.y)>.0001))moved.push({unit:u.name,side:u.side,from:[Number(b.x.toFixed(3)),Number(b.y.toFixed(3))],to:[Number(u.x.toFixed(3)),Number(u.y.toFixed(3))],inches:Number(Math.hypot((u.x-b.x)*BATTLEFIELD_WIDTH_IN,(u.y-b.y)*BATTLEFIELD_HEIGHT_IN).toFixed(2))});}
- aiLabTrace("movement-phase-end",{redActivationLoops,blueActivationLoops,moved,state:aiLabDistanceSummary()});beginCombatPhase();
+ aiLabTrace("movement-phase-end",{redActivationLoops,blueActivationLoops,moved,state:aiLabDistanceSummary()});const beforeCombat=aiLabSnapshot();beginCombatPhase();const combatChanges=[];for(const u of units()){const b=beforeCombat.get(u.id);if(b&&u.models!==b.models)combatChanges.push({unit:u.name,side:u.side,modelsBefore:b.models,modelsAfter:u.models});}aiLabTrace("combat-resolution-result",{changes:combatChanges,state:aiLabDistanceSummary()});
 }
 function runAiLabCharges(){
  if(!S.aiBattleLab||S.finished||S.phase!=="charges")return;
@@ -487,7 +487,7 @@ function finishAiLabBattle(msg){
  const n=aiLabRun.results.length,redRate=n?Math.round(redWins/n*100):0,blueRate=n?Math.round(blueWins/n*100):0;
  const rows=aiLabRun.results.map(r=>"<tr><td>"+r.battle+"</td><td class='"+r.winner+"'>"+(r.winner==="red"?"Red win":r.winner==="blue"?"Blue win":"Draw")+"</td><td>"+r.turns+"</td><td>"+r.redRemaining+"</td><td>"+r.blueRemaining+"</td></tr>").join("");
  const detail=aiLabRun.count===1?aiLabRun.results[0]?.diagnostics:null;
- const diagnosticText=detail?detail.map((entry,i)=>String(i+1).padStart(4,"0")+" "+JSON.stringify(entry)).join("\\n"):"";
+ const diagnosticText=detail?detail.map((entry,i)=>String(i+1).padStart(4,"0")+" "+JSON.stringify(entry)).join(String.fromCharCode(10)):"";
  const escapedDiagnostic=diagnosticText.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
  $("ai-battle-lab-results").innerHTML="<h2>"+(aiLabRun.count===1?"Single battle results":"Batch results")+"</h2><p><strong>Red win rate:</strong> "+redRate+"% ("+redWins+") · <strong>Blue win rate:</strong> "+blueRate+"% ("+blueWins+") · <strong>Draws:</strong> "+draws+"</p><p>Average surviving points — Red "+Math.round(aiLabRun.results.reduce((s,r)=>s+r.redRemaining,0)/Math.max(1,n))+"; Blue "+Math.round(aiLabRun.results.reduce((s,r)=>s+r.blueRemaining,0)/Math.max(1,n))+". These are initial test results, not proof of general superiority.</p><table class='lab-results-table'><thead><tr><th>#</th><th>Winner</th><th>Turns</th><th>Red left</th><th>Blue left</th></tr></thead><tbody>"+rows+"</tbody></table>"+(detail?"<section class='lab-diagnostics'><h3>Detailed diagnostics · "+detail.length+" events</h3><p>Includes army setup, closest enemy distance, AI activations, movement progress, charge declarations and final state. Multi-battle runs keep this detail disabled.</p><button type='button' id='ai-lab-copy-diagnostics' class='secondary-button'>Copy diagnostic log</button><details><summary>View diagnostic log</summary><pre>"+escapedDiagnostic+"</pre></details></section>":"");
  $("battle-menu-caption").textContent="Battle";
