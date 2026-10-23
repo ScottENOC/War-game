@@ -338,11 +338,11 @@ function campaignCharacterRecruitmentCost(c,f="empire"){const r=campaignCharacte
 function awardCampaignCharacterExperience(a,won=true){const messages=[];for(const c of a?.roster||[]){let r=campaignCharacterRank(c);if(!r||!isCampaignCharacterType(c.type))continue;c.campaignXp=Math.max(0,Number(c.campaignXp)||0)+(won?2:1);if(r==="champion"&&c.campaignXp>=2){c.campaignRank="hero";c.campaignXp=0;c.upgrades={};c.skills={};c.campaignStats={};messages.push((c.name||c.type)+" promoted to hero");r="hero";}if(r==="hero"&&c.campaignXp>=5){const next={captain:"lord",mageHero:"mageLord",dwarfCaptain:"dwarfLord",necromancer:"masterNecromancer",vampireHero:"vampireLord",goblinHero:"goblinLord",orcHero:"orcLord",goblinShaman:"goblinGreatShaman",orcShaman:"orcGreatShaman"};if(next[c.type]){const old=c.type;c.type=next[old];c.campaignRank="lord";c.campaignXp=0;c.upgrades={};c.skills={};c.campaignStats={};messages.push((c.name||old)+" promoted to "+c.type+"; upgrades reset");}}}return messages;}
 function campaignArmyUpkeep(army){
  return Math.ceil((army?.roster||[]).reduce((sum,u)=>{
-  const type=String(u.type||""),models=Math.max(1,Number(u.models)||1);
-  const character=["captain","lord","mageHero","mageLord","starwardenLord","necromancer","masterNecromancer","vampireHero","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman","legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfCaptain","dwarfLord","dwarfKingHaldric","goblinHero","goblinLord","orcHero","orcLord"].includes(type);
+  const type=String(u.type||""),models=Math.max(1,Number(u.models)||1),rank=campaignCharacterRank(u);
   const monster=["dragon","youngDragon","ancientDragon","deepflameDragon","wyvern","giant","trolls","skeletonDragon","skeletonGiant","skeletonTroll"].includes(type);
   const cavalry=["cavalry","wolfRiders","boarBoyz","skeletonHorses"].includes(type);
-  return sum+(u.siegeMachine?5:monster?8:character?3:cavalry?2:models);
+  const character=rank?(rank==="lord"?10:rank==="hero"?6:4)+(["mageHero","mageLord","necromancer","masterNecromancer","vampireHero","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"].includes(type)?2:0):0;
+  return sum+(u.siegeMachine?5:monster?8:character?character:cavalry?2:models);
  },0));
 }
 function recruitmentRaceForCulture(culture){
@@ -2832,6 +2832,7 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  const winArmy=factionArmy(campaign,winner.id),loseArmy=factionArmy(campaign,loser.id);
  applyStrategicArmyLosses(winArmy,winner===attacker?.72:.82);
  applyStrategicArmyLosses(loseArmy,winner===attacker?.42:.55);
+ awardCampaignCharacterExperience(winArmy,true);awardCampaignCharacterExperience(loseArmy,false);
  for(const state of campaign.factionStates){const army=state.id===winner.id?winArmy:state.id===loser.id?loseArmy:null;if(army){state.armyPoints=army.points;state.roster=army.roster;if(!army.roster.length)state.alive=false;}}
  if(winner===attacker){
   const result=resolveGrandCampaignConquest(campaign,target.id,attacker.id,{army:attacking});
@@ -3083,7 +3084,14 @@ function runAIFactionTurn(campaign,faction){
  faction.treasury=Math.max(0,(faction.treasury||0)+faction.income-faction.upkeep);
  const recruitBudget=Math.min(Math.max(0,faction.treasury-100),Math.max(0,Math.floor(faction.income*.7)));
  const recruitment=recruitArmyModels(army,army.rosterFaction||rosterFactionForPoliticalFaction(faction.id),recruitBudget,campaign,faction);
- faction.treasury=Math.max(0,faction.treasury-recruitment.spent);
+ let characterSpend=0;ensureCharacterRecruitmentPool(faction);
+ if(!(army.roster||[]).some(u=>isCampaignCharacterType(u.type))&&faction.characterRecruitment.available>0&&(army.roster||[]).length<6){
+  const race=faction.race||"human",type=race==="dwarf"?"dwarfCaptain":race==="undead"?"necromancer":race==="greenskin"?"orcHero":"captain";
+  const candidate={type,models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],campaignRank:"hero",upgrades:{},skills:{}};
+  const price=campaignRecruitmentGoldCost(candidate,army.rosterFaction||rosterFactionForPoliticalFaction(faction.id));
+  if(recruitBudget-recruitment.spent>=price){army.roster.push(candidate);faction.characterRecruitment.available--;characterSpend=price;army.points=campaignArmyCost(army);}
+ }
+ faction.treasury=Math.max(0,faction.treasury-recruitment.spent-characterSpend);
  faction.armyPoints=army.points;faction.roster=army.roster;
  const region=campaign.regions.find(r=>r.id===army.region)||campaign.regions.find(r=>r.id===faction.homeRegion);
  if(!region)return faction.name+" could not locate its army.";
