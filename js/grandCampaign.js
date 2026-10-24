@@ -2889,6 +2889,8 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  applyStrategicArmyLosses(loseArmy,winner===attacker?.42:.55);
  awardCampaignCharacterExperience(winArmy,true);awardCampaignCharacterExperience(loseArmy,false);
  for(const state of campaign.factionStates){const army=state.id===winner.id?winArmy:state.id===loser.id?loseArmy:null;if(army){state.armyPoints=army.points;state.roster=army.roster;if(!army.roster.length)state.alive=false;}}
+ const defenderRemainingFraction=winner===attacker?0.42:0.82;
+ const civilianCasualties=applyStrategicCivilianLevyCasualties(defenderRegion,defender,defenderRemainingFraction);
  if(winner===attacker){
   const result=resolveGrandCampaignConquest(campaign,target.id,attacker.id,{army:attacking});
   if(attacking){attacking.region=target.id;attacking.nodeId="city-"+target.id;}
@@ -2897,8 +2899,6 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
   if(attacking){attacking.region=attacker.homeRegion;attacking.nodeId="city-"+attacker.homeRegion;}
   campaign.lastEvent=defender.name+" repels "+attacker.name+" at "+target.name+". Both armies suffer losses.";
  }
- const defenderRemainingFraction=winner===attacker?0.42:0.82;
- const civilianCasualties=applyStrategicCivilianLevyCasualties(defenderRegion,defender,defenderRemainingFraction);
  if(civilianCasualties>0)campaign.lastEvent+=" Civilian levy casualties: "+civilianCasualties.toLocaleString()+" residents.";
 }
 
