@@ -2855,8 +2855,9 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  const civilianPopulation=Math.max(0,Number(defenderRegion?.settlement?.population?.total)||0);
  const levyBonus=defenderRegion&&politicalOwner(defenderRegion)===defender.id?Math.min(0.35,Math.floor(civilianPopulation/1000)*0.05):0;
  const capitalBonus=defenderRegion&&defenderRegion.id===defender.homeRegion?0.15:0;
+ const totalDefenceBonus=Math.min(0.65,defenceBonus+levyBonus+capitalBonus);
  const attackPower=Math.max(1,attacking?.points||100)*campaignArmyLeadershipMultiplier(attacking)*(.8+Math.random()*.4);
- const defencePower=Math.max(1,defending?.points||250)*campaignArmyLeadershipMultiplier(defending)*(.8+Math.random()*.4)*(1+defenceBonus+levyBonus+capitalBonus);
+ const defencePower=Math.max(1,defending?.points||250)*campaignArmyLeadershipMultiplier(defending)*(.8+Math.random()*.4)*(1+totalDefenceBonus);
  const winner=attackPower>=defencePower?attacker:defender,loser=winner===attacker?defender:attacker;
  awardGreenskinMomentum(campaign,factionArmy(campaign,winner.id),2);
  awardGreenskinMomentum(campaign,factionArmy(campaign,loser.id),-2);
@@ -3138,8 +3139,15 @@ function runAIFactionTurn(campaign,faction){
  const capitalNode=capital?"city-"+capital.id:null;
  const enemyAtCapital=capitalNode?campaignArmyAtNode(campaign,capitalNode,army).find(a=>(a.owner||a.factionId)!==faction.id&&!campaignAreAllied(campaign,faction.id,a.owner||a.factionId)):null;
  if(capital&&politicalOwner(capital)===faction.id&&enemyAtCapital){
-  const enemyId=enemyAtCapital.owner||enemyAtCapital.factionId,enemyState=campaign.factionStates.find(x=>x.id===enemyId);
-  if(enemyState?.alive){army.nodeId=capitalNode;army.region=capital.id;resolveStrategicBattle(campaign,faction,enemyState,capital);return faction.name+" prioritises defending its capital "+capital.name+". "+campaign.lastEvent;}
+  if(army.nodeId===capitalNode){
+   const enemyId=enemyAtCapital.owner||enemyAtCapital.factionId,enemyState=campaign.factionStates.find(x=>x.id===enemyId);
+   if(enemyState?.alive){resolveStrategicBattle(campaign,faction,enemyState,capital);return faction.name+" prioritises defending its capital "+capital.name+". "+campaign.lastEvent;}
+  }
+  const path=campaignMovementPath(campaign,army.nodeId||("city-"+army.region),capitalNode),movement=campaignArmyMovementProfile(army,campaign).points;
+  if(path){
+   let spent=0,last=path[0];for(let i=1;i<path.length;i++){const cost=campaignPathCost(campaign,path.slice(0,i+1));if(cost>movement)break;spent=cost;last=path[i];}
+   if(last!==army.nodeId){army.nodeId=last;army.region=campaign.graph.nodes[last]?.region??army.region;army.movement=Math.max(0,movement-spent);return faction.name+" diverts its army to relieve its besieged capital "+capital.name+".";}
+  }
  }
  const capitalThreat=capital&&politicalOwner(capital)===faction.id?(campaign.graph.edges[capitalNode]||[]).map(e=>e.to).map(id=>campaignArmyAtNode(campaign,id,army).find(a=>(a.owner||a.factionId)!==faction.id&&!campaignAreAllied(campaign,faction.id,a.owner||a.factionId))).find(Boolean):null;
  if(capitalThreat&&army.nodeId!==capitalNode){
