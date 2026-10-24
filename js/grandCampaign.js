@@ -2877,7 +2877,6 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  if(attacking)attacking.foughtThisTurn=true;if(defending)defending.foughtThisTurn=true;
  const defenderRegion=campaign.regions.find(r=>r.id===target.id);
  const totalDefenceBonus=campaignSettlementDefenceBonus(campaign,defender,defenderRegion);
- const civilianPopulationBefore=Math.max(0,Number(defenderRegion?.settlement?.population?.total)||0);
  const attackPower=Math.max(1,attacking?.points||100)*campaignArmyLeadershipMultiplier(attacking)*(.8+Math.random()*.4);
  const defencePower=Math.max(1,defending?.points||250)*campaignArmyLeadershipMultiplier(defending)*(.8+Math.random()*.4)*(1+totalDefenceBonus);
  const winner=attackPower>=defencePower?attacker:defender,loser=winner===attacker?defender:attacker;
