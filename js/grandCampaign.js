@@ -2524,7 +2524,7 @@ function launchCampaignBattle(region,attackingArmyOverride=null,defendingArmyOve
  if(isSettlementDefence){
   const population=Math.max(0,Number(region.settlement.population?.total)||0);
   const levyModels=Math.min(60,Math.floor(population/100));
-  const template=(defenders.roster.find(u=>!CAMPAIGN_CHARACTER_TYPE_LIST.includes(String(u.type||"").toLowerCase())&&Number(u.models)>0)||{}).type;
+  const template=(defenders.roster.find(u=>!CAMPAIGN_CHARACTER_TYPE_LIST.some(type=>type.toLowerCase()===String(u.type||"").toLowerCase())&&Number(u.models)>0)||{}).type;
   const race=FACTION_BY_ID[enemyId]?.race||"human";
   const levyType=template||(race==="elf"?"swordsmen":race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":race==="undead"?"skeletons":"swordsmen");
   for(let remaining=levyModels;remaining>0;){
