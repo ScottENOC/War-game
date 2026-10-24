@@ -2846,16 +2846,38 @@ function applyStrategicArmyLosses(army,remainingFraction){
  army.roster=(army.roster||[]).filter(u=>u.models>0);
  army.points=campaignArmyCost(army);
 }
+function campaignSettlementDefenceBonus(campaign,defender,region){
+ const settlement=region?.settlement,fort=settlement?.fortification;
+ const defenceBonus=fort?Math.max(0,Math.min(0.35,(Number(fort.condition)||0)/300)):0;
+ const population=Math.max(0,Number(settlement?.population?.total)||0);
+ const levyBonus=region&&politicalOwner(region)===defender.id?Math.min(0.35,Math.floor(population/1000)*0.05):0;
+ const capitalBonus=region&&region.id===defender.homeRegion?0.15:0;
+ return Math.min(0.65,defenceBonus+levyBonus+capitalBonus);
+}
+function campaignStrategicCityAttackAssessment(campaign,attacker,defender,region){
+ const attacking=factionArmy(campaign,attacker.id),defending=factionArmy(campaign,defender.id);
+ const attackStrength=Math.max(1,attacking?.points||100)*campaignArmyLeadershipMultiplier(attacking);
+ const defenceStrength=Math.max(1,defending?.points||250)*campaignArmyLeadershipMultiplier(defending)*(1+campaignSettlementDefenceBonus(campaign,defender,region));
+ return {attackStrength,defenceStrength,ratio:attackStrength/Math.max(1,defenceStrength),favourable:attackStrength>=defenceStrength*1.2};
+}
+function applyStrategicCivilianLevyCasualties(region,defender,defenderRemainingFraction){
+ if(!region?.settlement?.population||politicalOwner(region)!==defender.id)return 0;
+ const population=Math.max(0,Number(region.settlement.population.total)||0);
+ const levyModels=Math.min(60,Math.floor(population/100));
+ if(levyModels<=0)return 0;
+ // Civilian levies represent up to 100 residents per temporary model. Casualties
+ // track the defending army's losses: light in a successful defence, heavier in defeat.
+ const lostModels=Math.min(levyModels,Math.max(0,Math.round(levyModels*(1-Math.max(0,Math.min(1,defenderRemainingFraction))))));
+ const casualties=Math.min(population,lostModels*100);
+ if(casualties<=0)return 0;
+ return consumeCivilianPopulation(region,casualties)?casualties:0;
+}
 function resolveStrategicBattle(campaign,attacker,defender,target){
  const attacking=factionArmy(campaign,attacker.id),defending=factionArmy(campaign,defender.id);
  if(attacking)attacking.foughtThisTurn=true;if(defending)defending.foughtThisTurn=true;
  const defenderRegion=campaign.regions.find(r=>r.id===target.id);
- const fort=defenderRegion?.settlement?.fortification;
- const defenceBonus=fort?Math.max(0,Math.min(0.35,(fort.condition||0)/300)):0;
- const civilianPopulation=Math.max(0,Number(defenderRegion?.settlement?.population?.total)||0);
- const levyBonus=defenderRegion&&politicalOwner(defenderRegion)===defender.id?Math.min(0.35,Math.floor(civilianPopulation/1000)*0.05):0;
- const capitalBonus=defenderRegion&&defenderRegion.id===defender.homeRegion?0.15:0;
- const totalDefenceBonus=Math.min(0.65,defenceBonus+levyBonus+capitalBonus);
+ const totalDefenceBonus=campaignSettlementDefenceBonus(campaign,defender,defenderRegion);
+ const civilianPopulationBefore=Math.max(0,Number(defenderRegion?.settlement?.population?.total)||0);
  const attackPower=Math.max(1,attacking?.points||100)*campaignArmyLeadershipMultiplier(attacking)*(.8+Math.random()*.4);
  const defencePower=Math.max(1,defending?.points||250)*campaignArmyLeadershipMultiplier(defending)*(.8+Math.random()*.4)*(1+totalDefenceBonus);
  const winner=attackPower>=defencePower?attacker:defender,loser=winner===attacker?defender:attacker;
@@ -2875,6 +2897,9 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
   if(attacking){attacking.region=attacker.homeRegion;attacking.nodeId="city-"+attacker.homeRegion;}
   campaign.lastEvent=defender.name+" repels "+attacker.name+" at "+target.name+". Both armies suffer losses.";
  }
+ const defenderRemainingFraction=winner===attacker?0.42:0.82;
+ const civilianCasualties=applyStrategicCivilianLevyCasualties(defenderRegion,defender,defenderRemainingFraction);
+ if(civilianCasualties>0)campaign.lastEvent+=" Civilian levy casualties: "+civilianCasualties.toLocaleString()+" residents.";
 }
 
 const CAMPAIGN_CHARACTER_TYPES=new Set(["captain","lord","magehero","magelord","starwardenlord","goblinshaman","goblingreatshaman","orcshaman","orcgreatshaman","legendarylord","shadowelf","pegasuschampion","rifleman","captainweiss","dwarfcaptain","dwarflord","dwarfkinghaldric","goblinhero","goblinlord","orchero","orclord"]);
@@ -3095,7 +3120,10 @@ function processGreenskinAnimosity(campaign,army){
    const defender=factionArmy(campaign,choice.owner);
    if(defender){
     if(own===campaign.playerPoliticalFaction)return {interrupted:true,battleRegion:targetRegion,battleArmy:army,message:name+" attacks "+targetRegion.name+" after failing animosity. A battle is required."};
-    army.nodeId=choice.nodeId;army.region=targetRegion.id;resolveStrategicBattle(campaign,campaign.factionStates.find(f=>f.id===own)||{id:own,name},campaign.factionStates.find(f=>f.id===choice.owner)||{id:choice.owner,name:choice.owner},targetRegion);army.foughtThisTurn=true;defender.foughtThisTurn=true;return {interrupted:true,message:name+" attacks "+targetRegion.name+" after failing animosity. "+campaign.lastEvent};
+    const attackerState=campaign.factionStates.find(f=>f.id===own)||{id:own,name},defenderState=campaign.factionStates.find(f=>f.id===choice.owner)||{id:choice.owner,name:choice.owner};
+    const assessment=campaignStrategicCityAttackAssessment(campaign,attackerState,defenderState,targetRegion);
+    if(assessment.ratio<1.2)return {interrupted:true,message:name+" checks its charge after failing animosity; "+targetRegion.name+" is too well defended (estimated strength ratio "+assessment.ratio.toFixed(2)+")."};
+    army.nodeId=choice.nodeId;army.region=targetRegion.id;resolveStrategicBattle(campaign,attackerState,defenderState,targetRegion);army.foughtThisTurn=true;defender.foughtThisTurn=true;return {interrupted:true,message:name+" attacks "+targetRegion.name+" after failing animosity. "+campaign.lastEvent};
    }
   }
   const defender=choice.targetArmy||campaignArmyAtNode(campaign,choice.nodeId,army)[0];
@@ -3174,6 +3202,8 @@ function runAIFactionTurn(campaign,faction){
  }
  if(campaign.activeWars.includes(warKey)){
   const enemyArmy=factionArmy(campaign,enemy.id),race=faction.race||FACTION_BY_ID[faction.id]?.race||"human";
+  const assessment=campaignStrategicCityAttackAssessment(campaign,faction,enemy,choice.region);
+  if(assessment.ratio<1.2)return faction.name+" declines an unfavourable attack on "+choice.region.name+"; estimated strength ratio "+assessment.ratio.toFixed(2)+" after fortifications, capital defence and civilian levies.";
   if(race==="dwarf"&&enemyArmy?.region===choice.region.id&&army.points<(enemyArmy.points||0)*1.15)return faction.name+" holds its defensive line rather than attacking a stronger enemy at "+choice.region.name+".";
   army.region=choice.region.id;army.nodeId="city-"+choice.region.id;
   resolveStrategicBattle(campaign,faction,enemy,choice.region);
