@@ -2518,6 +2518,22 @@ function launchCampaignBattle(region,attackingArmyOverride=null,defendingArmyOve
  const defenderFaction=defenderArmies[0].rosterFaction||rosterFactionForPoliticalFaction(enemyId);
  const combine=(armies)=>{const entries=[];for(const army of armies){const roster=(army.roster||[]).map(u=>({...u,campaignStats:{...(u.campaignStats||{})},upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}}));entries.push({army,start:entries.reduce((n,e)=>n+e.roster.length,0),roster});}return {entries,roster:entries.flatMap(e=>e.roster)};};
  const attackers=combine(attackerArmies),defenders=combine(defenderArmies);
+ // Defending civilians can be called up for this settlement battle only. They use poor improvised equipment and reduced core stats; they never join the campaign army.
+ const levyConfigs=[];
+ const isSettlementDefence=targetId==="city-"+region.id&&politicalOwner(region)===enemyId&&!!region.settlement;
+ if(isSettlementDefence){
+  const population=Math.max(0,Number(region.settlement.population?.total)||0);
+  const levyModels=Math.min(60,Math.floor(population/100));
+  const template=(defenders.roster.find(u=>!CAMPAIGN_CHARACTER_TYPE_LIST.includes(String(u.type||"").toLowerCase())&&Number(u.models)>0)||{}).type;
+  const race=FACTION_BY_ID[enemyId]?.race||"human";
+  const levyType=template||(race==="elf"?"swordsmen":race==="dwarf"?"dwarfInfantry":race==="greenskin"?"goblins":race==="undead"?"skeletons":"swordsmen");
+  for(let remaining=levyModels;remaining>0;){
+   const models=Math.min(20,remaining);remaining-=models;
+   levyConfigs.push({type:levyType,models,weapon:"handWeapon",meleeWeapons:["handWeapon"],armour:"none",shield:false,campaignStats:{WS:-2,BS:-2,S:-1,Ld:-2},isCivilianLevy:true});
+  }
+  defenders.roster.push(...levyConfigs);
+ }
+ const levyStartIndex=defenders.roster.length-levyConfigs.length;
  const started=window.startPoliticalCampaignBattle({army:attackers.roster,faction:attackerFaction,enemyArmy:defenders.roster,enemyFaction:defenderFaction,onComplete:result=>{
   const originalPlayerRoster=attackers.roster.map(u=>({...u})),originalEnemyRoster=defenders.roster.map(u=>({...u}));
   const survivors=result.playerUnits||[],enemySurvivors=result.enemyUnits||[];
@@ -2533,6 +2549,12 @@ function launchCampaignBattle(region,attackingArmyOverride=null,defendingArmyOve
   };
   distribute(attackers,survivors,attackerArmies,attackerFaction);
   distribute(defenders,enemySurvivors,defenderArmies,defenderFaction);
+  if(levyConfigs.length){
+   const levyCasualties=levyConfigs.reduce((sum,u,i)=>sum+Math.max(0,(Number(u.models)||0)-(Number(enemySurvivors[levyStartIndex+i]?.models)||0)),0);
+   const settlement=region.settlement,population=settlement.population;
+   let civiliansToRemove=Math.min(Math.max(0,Number(population?.total)||0),levyCasualties*100);
+   if(population){population.total=Math.max(0,population.total-civiliansToRemove);for(const group of population.groups||[]){const loss=Math.min(Math.max(0,Number(group.count)||0),civiliansToRemove);group.count-=loss;civiliansToRemove-=loss;if(civiliansToRemove<=0)break;}}
+  }
   const promotionMessages=[...attackers.entries.flatMap(e=>awardCampaignCharacterExperience(e.army,!!result.won)),...defenders.entries.flatMap(e=>awardCampaignCharacterExperience(e.army,!result.won))];
   const playerCollapsed=attackerArmies.every(a=>collapseCasterlessUndeadArmy(a));
   const enemyCollapsed=defenderArmies.every(a=>collapseCasterlessUndeadArmy(a));
@@ -2830,8 +2852,11 @@ function resolveStrategicBattle(campaign,attacker,defender,target){
  const defenderRegion=campaign.regions.find(r=>r.id===target.id);
  const fort=defenderRegion?.settlement?.fortification;
  const defenceBonus=fort?Math.max(0,Math.min(0.35,(fort.condition||0)/300)):0;
+ const civilianPopulation=Math.max(0,Number(defenderRegion?.settlement?.population?.total)||0);
+ const levyBonus=defenderRegion&&politicalOwner(defenderRegion)===defender.id?Math.min(0.35,Math.floor(civilianPopulation/1000)*0.05):0;
+ const capitalBonus=defenderRegion&&defenderRegion.id===defender.homeRegion?0.15:0;
  const attackPower=Math.max(1,attacking?.points||100)*campaignArmyLeadershipMultiplier(attacking)*(.8+Math.random()*.4);
- const defencePower=Math.max(1,defending?.points||250)*campaignArmyLeadershipMultiplier(defending)*(.8+Math.random()*.4)*(1+defenceBonus);
+ const defencePower=Math.max(1,defending?.points||250)*campaignArmyLeadershipMultiplier(defending)*(.8+Math.random()*.4)*(1+defenceBonus+levyBonus+capitalBonus);
  const winner=attackPower>=defencePower?attacker:defender,loser=winner===attacker?defender:attacker;
  awardGreenskinMomentum(campaign,factionArmy(campaign,winner.id),2);
  awardGreenskinMomentum(campaign,factionArmy(campaign,loser.id),-2);
@@ -3109,10 +3134,24 @@ function runAIFactionTurn(campaign,faction){
  faction.armyPoints=army.points;faction.roster=army.roster;
  const region=campaign.regions.find(r=>r.id===army.region)||campaign.regions.find(r=>r.id===faction.homeRegion);
  if(!region)return faction.name+" could not locate its army.";
+ const capital=campaign.regions.find(r=>r.id===faction.homeRegion);
+ const capitalNode=capital?"city-"+capital.id:null;
+ const enemyAtCapital=capitalNode?campaignArmyAtNode(campaign,capitalNode,army).find(a=>(a.owner||a.factionId)!==faction.id&&!campaignAreAllied(campaign,faction.id,a.owner||a.factionId)):null;
+ if(capital&&politicalOwner(capital)===faction.id&&enemyAtCapital){
+  const enemyId=enemyAtCapital.owner||enemyAtCapital.factionId,enemyState=campaign.factionStates.find(x=>x.id===enemyId);
+  if(enemyState?.alive){army.nodeId=capitalNode;army.region=capital.id;resolveStrategicBattle(campaign,faction,enemyState,capital);return faction.name+" prioritises defending its capital "+capital.name+". "+campaign.lastEvent;}
+ }
+ const capitalThreat=capital&&politicalOwner(capital)===faction.id?(campaign.graph.edges[capitalNode]||[]).map(e=>e.to).map(id=>campaignArmyAtNode(campaign,id,army).find(a=>(a.owner||a.factionId)!==faction.id&&!campaignAreAllied(campaign,faction.id,a.owner||a.factionId))).find(Boolean):null;
+ if(capitalThreat&&army.nodeId!==capitalNode){
+  const path=campaignMovementPath(campaign,army.nodeId||("city-"+army.region),capitalNode),movement=campaignArmyMovementProfile(army,campaign).points;
+  if(path&&campaignPathCost(campaign,path)<=movement){army.nodeId=capitalNode;army.region=capital.id;army.movement=movement-campaignPathCost(campaign,path);return faction.name+" abandons expansion to reinforce its threatened capital "+capital.name+".";}
+ }
  const candidates=(region.neighbors||[]).map(id=>campaign.regions.find(r=>r.id===id)).filter(Boolean);
  const hostile=candidates.filter(r=>politicalOwner(r)!==faction.id&&!campaignAreAllied(campaign,faction.id,politicalOwner(r))).map(r=>({region:r,owner:campaign.factionStates.find(x=>x.id===politicalOwner(r))})).filter(x=>x.owner?.alive);
  if(!hostile.length)return faction.name+" earns "+faction.income+", pays "+faction.upkeep+" upkeep and recruits "+recruitment.added+" models.";
  hostile.sort((a,b)=>{
+  const aCapital=a.region.id===faction.homeRegion?0:1,bCapital=b.region.id===faction.homeRegion?0:1;
+  if(aCapital!==bCapital)return aCapital-bCapital;
   const av=campaignRelation(campaign,faction.id,a.owner.id),bv=campaignRelation(campaign,faction.id,b.owner.id);
   return av-bv||(a.region.settlement?.prosperity||0)-(b.region.settlement?.prosperity||0);
  });
