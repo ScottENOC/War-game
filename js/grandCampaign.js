@@ -952,7 +952,8 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
    });
    campaign.factionStates.forEach(state=>{state.alive=true;});
    activeCampaign=campaign;
-   const eliminatedAt={},errors=[],errorCounts={};
+   const eliminatedAt={},eliminationReasons={},errors=[],errorCounts={},turnLog=[];
+   const initialSnapshot=campaign.factionStates.filter(f=>!f.passive).map(f=>{const a=(campaign.armies||[]).find(x=>(x.owner||x.factionId)===f.id);return {id:f.id,name:f.name,homeRegion:f.homeRegion,homeOwner:politicalOwner(campaign.regions.find(r=>r.id===f.homeRegion)),rosterUnits:a?.roster?.length||0,models:(a?.roster||[]).reduce((n,u)=>n+Math.max(0,Number(u.models)||0),0),armyPoints:a?.points||0};});
    const recordError=message=>{const key=String(message||"Unknown error");errorCounts[key]=(errorCounts[key]||0)+1;if(errors.length<100)errors.push(key);};
    let outcome="turn-limit",turns=0,winner=null;
    const cityCounts=()=>{const counts={};for(const region of campaign.regions){const owner=politicalOwner(region);if(owner)counts[owner]=(counts[owner]||0)+1;}return counts;};
@@ -966,26 +967,32 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
    };
    for(let turn=1;turn<=maxTurns;turn++){
     turns=turn;campaign.turn=turn;
+    const ownersBefore=campaign.regions.map(r=>({id:r.id,name:r.name,owner:politicalOwner(r)}));
+    const actions=[];
     try{
      for(const a of campaign.factionStates)for(const b of campaign.factionStates)if(a.id!==b.id&&!Number.isFinite(campaign.diplomacy?.[a.id]?.[b.id]))setCampaignRelation(campaign,a.id,b.id,baseFactionRelation(a.id,b.id));
      updatePeaceAndWarRelations(campaign);updateGreenskinDiplomacy(campaign);
      for(const id of campaign.factionTurnOrder||[]){
       const faction=campaign.factionStates.find(f=>f.id===id);
       if(!faction||!faction.alive||faction.passive||FACTION_BY_ID[id]?.passive)continue;
-      try{runAIFactionTurn(campaign,faction);}catch(e){recordError("Turn "+turn+" / "+faction.name+": "+String(e?.stack||e?.message||e));}
+      try{const message=runAIFactionTurn(campaign,faction);if(turn<=5)actions.push(faction.name+": "+String(message||"no action message"));}catch(e){recordError("Turn "+turn+" / "+faction.name+": "+String(e?.stack||e?.message||e));}
      }
      processCampaignLogistics(campaign);
     }catch(e){recordError("Turn "+turn+": "+String(e?.stack||e?.message||e));}
+    const eliminatedThisTurn=[];
     for(const f of campaign.factionStates){
-     if(f.alive&&!f.passive&&!(campaign.regions||[]).some(r=>politicalOwner(r)===f.id)){f.alive=false;eliminatedAt[f.id]=turn;}
+     if(f.alive&&!f.passive&&!(campaign.regions||[]).some(r=>politicalOwner(r)===f.id)){f.alive=false;eliminatedAt[f.id]=turn;eliminationReasons[f.id]="lost all regions";}
      const army=(campaign.armies||[]).find(a=>(a.owner||a.factionId)===f.id);
-     if(f.alive&&!f.passive&&army&&!(army.roster||[]).length){f.alive=false;eliminatedAt[f.id]=turn;}
+     if(f.alive&&!f.passive&&army&&!(army.roster||[]).length){f.alive=false;eliminatedAt[f.id]=turn;eliminationReasons[f.id]="army roster empty";}
+     if(eliminatedAt[f.id]===turn)eliminatedThisTurn.push(f.name+" ("+eliminationReasons[f.id]+")");
     }
+    const changes=campaign.regions.map((r,i)=>({region:r.name,from:ownersBefore[i].owner,to:politicalOwner(r)})).filter(x=>x.from!==x.to);
+    if(turn<=5||changes.length||eliminatedThisTurn.length)turnLog.push({turn,actions:turn<=5?actions:[],ownershipChanges:changes,eliminated:eliminatedThisTurn});
     const end=checkEnd();if(end){outcome=end.outcome;winner=end.winner;break;}
    }
    const counts=cityCounts(),living=campaign.factionStates.filter(f=>f.alive&&!f.passive&&counts[f.id]>0).map(f=>({id:f.id,name:f.name,cities:counts[f.id],armyPoints:f.armyPoints||0,treasury:f.treasury||0})).sort((a,b)=>b.cities-a.cities);
-   const eliminated=campaign.factionStates.filter(f=>!f.passive&&(!f.alive||!counts[f.id])).map(f=>({id:f.id,name:f.name,turn:eliminatedAt[f.id]||null})).sort((a,b)=>(a.turn||999)-(b.turn||999));
-   results.push({run:run+1,seed:20261022+run*7919,outcome,winner,turns,cities:counts,living,eliminated,errors,errorCounts});
+   const eliminated=campaign.factionStates.filter(f=>!f.passive&&(!f.alive||!counts[f.id])).map(f=>({id:f.id,name:f.name,turn:eliminatedAt[f.id]||null,reason:eliminationReasons[f.id]||"elimination turn not recorded"})).sort((a,b)=>(a.turn||999)-(b.turn||999));
+   results.push({run:run+1,seed:20261022+run*7919,outcome,winner,turns,cities:counts,initialSnapshot,turnLog,living,eliminated,errors,errorCounts});
   }
  }finally{Math.random=oldRandom;activeCampaign=oldActive;}
  const outcomes={},factionWins={},factionSurvival={};
@@ -3206,7 +3213,10 @@ export function startGrandCampaign(){
   for(const r of report.results){
    lines.push("Run "+r.run+" | seed "+r.seed+" | outcome "+r.outcome+" | turns "+r.turns+" | winner "+(r.winner||"none"));
    lines.push("  Living: "+(r.living.map(f=>f.name+" ("+f.cities+" cities, army "+f.armyPoints+", treasury "+f.treasury+")").join("; ")||"none"));
-   lines.push("  Eliminated: "+(r.eliminated.map(f=>f.name+(f.turn?" at turn "+f.turn:" (elimination turn not recorded)")).join("; ")||"none"));
+   lines.push("  Eliminated: "+(r.eliminated.map(f=>f.name+(f.turn?" at turn "+f.turn:" (elimination turn not recorded)")+" ["+(f.reason||"unknown reason")+"]").join("; ")||"none"));
+   lines.push("  Initial faction state: "+(r.initialSnapshot||[]).map(f=>f.name+" {home "+f.homeRegion+" owned by "+f.homeOwner+", units "+f.rosterUnits+", models "+f.models+", points "+f.armyPoints+"}").join("; "));
+   lines.push("  Early-turn diagnostics:");
+   for(const t of (r.turnLog||[])){lines.push("    Turn "+t.turn+" | ownership changes: "+(t.ownershipChanges.map(c=>c.region+": "+c.from+" -> "+c.to).join("; ")||"none")+" | eliminations: "+(t.eliminated.join("; ")||"none"));for(const a of t.actions||[])lines.push("      "+a);}
    lines.push("  Errors observed: "+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0)+" (up to 100 example stack traces stored)");
   }
   lines.push("","ERROR COUNTS BY MESSAGE");
