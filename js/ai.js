@@ -1,5 +1,5 @@
 import { terrainMovementCost } from "./terrain.js";
-export function createAI({ S, units, alive, eligibleForActivation, enemies, visibleEnemies = enemies, aiLastKnownTargets = () => [], dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, fireCannon, BOW_RANGE, beginCombatPhase, terrain = () => [], side = "ai", policy = "baseline" }) {
+export function createAI({ S, units, alive, eligibleForActivation, enemies, visibleEnemies = enemies, aiLastKnownTargets = () => [], dist, gap, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, fireCannon, BOW_RANGE, beginCombatPhase, terrain = () => [], side = "ai", policy = "baseline" }) {
   const enemySide = side === "player" ? "ai" : "player";
   function armyRangeScore(side){const force=units().filter(u=>u.side===side&&alive(u));return force.length?force.filter(u=>u.hasRangedWeapon).length/force.length:0;}
 function aiWantsRange(){return armyRangeScore(side)>armyRangeScore(enemySide);}
@@ -18,14 +18,14 @@ function normalizeTurn(a){while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math
 function findRoute(u,target,desiredGap){
   const step=.035,frontIn=shape(u).front/PX_PER_IN(),minX=Math.ceil((-.0-u.x)/step),maxX=Math.floor((1-u.x)/step),minY=Math.ceil((-.0-u.y)/step),maxY=Math.floor((1-u.y)/step),dirs=Array.from({length:8},(_,i)=>i*Math.PI/4);
   const position=(ix,iy)=>({x:u.x+ix*step,y:u.y+iy*step}),key=(ix,iy,d)=>ix+","+iy+","+d;
-  const startDir=((Math.round((normalizeTurn(u.facing)+Math.PI*2)%(Math.PI*2)/(Math.PI/4)))%8),start={ix:0,iy:0,dir:startDir,g:0,f:Math.max(0,dist(u,target)-desiredGap),parent:null},best=new Map([[key(0,0,startDir),0]]);
-  if(dist(u,target)<=desiredGap+.15)return [];
+  const startDir=((Math.round((normalizeTurn(u.facing)+Math.PI*2)%(Math.PI*2)/(Math.PI/4)))%8),start={ix:0,iy:0,dir:startDir,g:0,f:Math.max(0,gap(u,target)-desiredGap),parent:null},best=new Map([[key(0,0,startDir),0]]);
+  if(gap(u,target)<=desiredGap+.15)return [];
   const heap=[];const push=n=>{heap.push(n);let i=heap.length-1;while(i>0){const p=(i-1)>>1;if(heap[p].f<=heap[i].f)break;heap[i]=heap[p];i=p;}heap[i]=n;};const pop=()=>{const root=heap[0],last=heap.pop();if(heap.length){let i=0;while(true){let l=i*2+1,r=l+1;if(l>=heap.length)break;let m=r<heap.length&&heap[r].f<heap[l].f?r:l;if(heap[m].f>=last.f)break;heap[i]=heap[m];i=m;}heap[i]=last;}return root;};push(start);
   let found=null,expanded=0;
   while(heap.length&&expanded<3200){
     const node=pop(),k=key(node.ix,node.iy,node.dir);if(node.g>(best.get(k)??Infinity)+1e-6)continue;expanded++;
     const p=position(node.ix,node.iy);
-    if((node.ix!==0||node.iy!==0)&&dist(p,target)<=desiredGap+.18){found=node;break;}
+    if((node.ix!==0||node.iy!==0)&&gap(u,target,p.x,p.y,dirs[node.dir])<=desiredGap+.18){found=node;break;}
     const currentAngle=node.parent?dirs[node.dir]:u.facing;
     for(let d=0;d<8;d++){
       const nx=node.ix+Math.round(Math.cos(dirs[d])),ny=node.iy+Math.round(Math.sin(dirs[d]));
@@ -35,7 +35,7 @@ function findRoute(u,target,desiredGap){
       if(!canPlace(u,q.x,q.y,dirs[d]))continue;
       const moveCost=terrainMovementCost(terrain(),p.x,p.y,q.x,q.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
       const g=node.g+turnCost+moveCost,nk=key(nx,ny,d);if(g>=(best.get(nk)??Infinity)-1e-6)continue;
-      best.set(nk,g);const h=Math.max(0,dist(q,target)-desiredGap);
+      best.set(nk,g);const h=Math.max(0,gap(u,target,q.x,q.y,dirs[d])-desiredGap);
       push({ix:nx,iy:ny,dir:d,g,f:g+h,parent:node});
     }
   }
@@ -43,8 +43,8 @@ function findRoute(u,target,desiredGap){
   const path=[];for(let n=found;n&&n.parent;n=n.parent)path.push({ ...position(n.ix,n.iy),dir:n.dir });return path.reverse();
 }
 function aiPivotAndAdvance(u,target){
-  const gap=dist(u,target),melee=(u.kind==="melee"&&!u.hasRangedWeapon)||(u.isCavalry&&!u.hasRangedWeapon)||(u.isCharacter&&!u.hasRangedWeapon),desiredGap=melee?1.2:Math.max(0,(u.range||BOW_RANGE)-.5),budget=Math.max(0,u.stats.M-u.moveUsed);
-  if(gap<=desiredGap+.15)return false;
+  const separation=gap(u,target),melee=(u.kind==="melee"&&!u.hasRangedWeapon)||(u.isCavalry&&!u.hasRangedWeapon)||(u.isCharacter&&!u.hasRangedWeapon),desiredGap=melee?1.2:Math.max(0,(u.range||BOW_RANGE)-.5),budget=Math.max(0,u.stats.M-u.moveUsed);
+  if(separation<=desiredGap+.15)return false;
   let route=findRoute(u,target,desiredGap),changedFormation=false;
   if(!route&&budget>=u.stats.M/2&&!u.isCharacter&&!u.isCavalry&&!u.isDragon&&!u.isSiegeEngine){
     const original=Math.max(1,Math.floor(u.formationWidth||5)),maxWidth=Math.max(1,Math.min(u.models||1,12)),candidates=[original-1,original+1,1,maxWidth].filter((v,i,a)=>v>=1&&v<=maxWidth&&v!==original&&a.indexOf(v)===i);
@@ -77,18 +77,18 @@ function aiPivotAndAdvance(u,target){
         const cost=terrainMovementCost(terrain(),x,y,nx,ny,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
         if(travel+cost>budgetLeft-turnCost+.001)break;
         x=nx;y=ny;travel+=cost;
-        if(dist({x,y},target)<=desiredGap+.15)break;
+        if(gap(u,target,x,y,angle)<=desiredGap+.15)break;
       }
-      const improvement=gap-dist({x,y},target);
+      const improvement=separation-gap(u,target,x,y,angle);
       if(improvement>.1&&(!best||improvement>best.improvement))best={angle,x,y,startX:u.x,startY:u.y,turnCost,travel,improvement};
     }
     if(best){
       u.facing=best.angle;u.x=best.x;u.y=best.y;u.moveUsed+=best.turnCost+best.travel;u.moved=true;
       say(u.name+" makes a direct approach toward "+target.name+" after route search found no complete path.");
-      if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-route-fallback",unit:u.name,target:target.name,routeFound:false,from:{x:Number(best.startX.toFixed(3)),y:Number(best.startY.toFixed(3))},to:{x:Number(u.x.toFixed(3)),y:Number(u.y.toFixed(3))},movementCost:Number((best.turnCost+best.travel).toFixed(2)),distanceImprovement:Number(best.improvement.toFixed(2))});
+      if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-route-fallback",unit:u.name,target:target.name,routeFound:false,from:{x:Number(best.startX.toFixed(3)),y:Number(best.startY.toFixed(3))},to:{x:Number(u.x.toFixed(3)),y:Number(u.y.toFixed(3))},movementCost:Number((best.turnCost+best.travel).toFixed(2)),centreDistanceBefore:Number(dist({x:best.startX,y:best.startY},target).toFixed(2)),centreDistanceAfter:Number(dist(u,target).toFixed(2)),baseGapBefore:Number(separation.toFixed(2)),baseGapAfter:Number(gap(u,target).toFixed(2)),distanceImprovement:Number(best.improvement.toFixed(2))});
       return true;
     }
-    if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-route-fallback",unit:u.name,target:target.name,routeFound:false,fallbackMoved:false,reason:"no-legal-progress",distance:Number(gap.toFixed(2)),movementRemaining:Number(budgetLeft.toFixed(2))});
+    if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-route-fallback",unit:u.name,target:target.name,routeFound:false,fallbackMoved:false,reason:"no-legal-progress",distance:Number(separation.toFixed(2)),centreDistance:Number(dist(u,target).toFixed(2)),baseGap:Number(separation.toFixed(2)),movementRemaining:Number(budgetLeft.toFixed(2))});
     const turns=angles.map(a=>({a,c:Math.abs(normalizeTurn(a-u.facing))*frontIn})).filter(v=>v.c<=budgetLeft+.001&&canPlace(u,u.x,u.y,v.a)).sort((a,b)=>Math.abs(normalizeTurn(a.a-desired))-Math.abs(normalizeTurn(b.a-desired)));
     if(turns.length){u.facing=turns[0].a;u.moveUsed+=turns[0].c;u.moved=true;say(u.name+" turns toward "+target.name+" but cannot advance along any tested approach this turn.");return true;}
     say(u.name+" cannot find a passable route to "+target.name+" this turn.");return false;
@@ -172,7 +172,7 @@ function aiObjectiveTarget(u){
  }
  return null;
 }
-function runAiActivationCore(){const candidates=units().filter(u=>u.side===side&&eligibleForActivation(u));if(!candidates.length)return false;const wantsRange=aiWantsRange();candidates.sort((a,b)=>{const rank=u=>wantsRange?(u.hasRangedWeapon?0:1):((u.kind==="melee"&&!u.hasRangedWeapon)||u.isCavalry?0:1);return rank(a)-rank(b);});const u=candidates[0],actualTargets=visibleEnemies(u).filter(v=>!v.fled&&alive(v)),targets=actualTargets.length?actualTargets:aiLastKnownTargets();if(S.battleType==="siege"&&S.siegeRole==="attacker"&&u.side===side&&u.wallLevel){const rangedForce=units().filter(v=>v.side===side&&v.hasRangedWeapon&&!v.isCannon&&!v.isBoltThrower),livingRanged=rangedForce.filter(v=>alive(v)&&!v.fled).length;if(livingRanged>Math.max(1,Math.ceil(rangedForce.length*.35))){const inRange=u.hasRangedWeapon?actualTargets.filter(t=>dist(u,t)<=(u.range||BOW_RANGE)):[],target=inRange.length?aiBestTarget(u,inRange,false):null;if(target&&!u.shot){if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,target,false);}u.activated=true;return true;}}if(aiSiegeLadder(u)){u.activated=true;return true;}if(u.isCannon||u.isBoltThrower||u.isCatapult){if(targets.length&&!u.shot&&u.artilleryWounds>0&&!u.moved){const target=aiBestTarget(u,targets,false);fireCannon?.(u,target.x,target.y,target.isLastKnownContact?null:target);}u.activated=true;return true;}if(targets.length){const inRange=u.hasRangedWeapon?actualTargets.filter(t=>dist(u,t)<=(u.range||BOW_RANGE)):[],combatTarget=inRange.length?aiBestTarget(u,inRange,false):aiBestTarget(u,targets,u.kind==="melee"&&!u.hasRangedWeapon),objectiveTarget=aiObjectiveTarget(u),target=objectiveTarget&&(!combatTarget||dist(u,objectiveTarget)+2<dist(u,combatTarget))?objectiveTarget:combatTarget;if(u.hasRangedWeapon&&inRange.length){if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,target,false);}else{if(u.ownsShield){u.rangedMode="shield";u.shield=!!u.ownsShield&&!["greatWeapon","halberd"].includes(u.weapon);}aiPivotAndAdvance(u,target);if(u.hasRangedWeapon){const available=actualTargets.filter(t=>!t.fled&&alive(t)&&dist(u,t)<=(u.range||BOW_RANGE));if(available.length){const shotTarget=aiBestTarget(u,available,false);if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((shotTarget.y-u.y)*fieldHeightIn(),(shotTarget.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,shotTarget,false);}}}}u.activated=true;return true;}
+function runAiActivationCore(){const candidates=units().filter(u=>u.side===side&&eligibleForActivation(u));if(!candidates.length)return false;const wantsRange=aiWantsRange();candidates.sort((a,b)=>{const rank=u=>wantsRange?(u.hasRangedWeapon?0:1):((u.kind==="melee"&&!u.hasRangedWeapon)||u.isCavalry?0:1);return rank(a)-rank(b);});const u=candidates[0],actualTargets=visibleEnemies(u).filter(v=>!v.fled&&alive(v)),targets=actualTargets.length?actualTargets:aiLastKnownTargets();if(S.battleType==="siege"&&S.siegeRole==="attacker"&&u.side===side&&u.wallLevel){const rangedForce=units().filter(v=>v.side===side&&v.hasRangedWeapon&&!v.isCannon&&!v.isBoltThrower),livingRanged=rangedForce.filter(v=>alive(v)&&!v.fled).length;if(livingRanged>Math.max(1,Math.ceil(rangedForce.length*.35))){const inRange=u.hasRangedWeapon?actualTargets.filter(t=>gap(u,t)<=(u.range||BOW_RANGE)):[],target=inRange.length?aiBestTarget(u,inRange,false):null;if(target&&!u.shot){if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,target,false);}u.activated=true;return true;}}if(aiSiegeLadder(u)){u.activated=true;return true;}if(u.isCannon||u.isBoltThrower||u.isCatapult){if(targets.length&&!u.shot&&u.artilleryWounds>0&&!u.moved){const target=aiBestTarget(u,targets,false);fireCannon?.(u,target.x,target.y,target.isLastKnownContact?null:target);}u.activated=true;return true;}if(targets.length){const inRange=u.hasRangedWeapon?actualTargets.filter(t=>gap(u,t)<=(u.range||BOW_RANGE)):[],combatTarget=inRange.length?aiBestTarget(u,inRange,false):aiBestTarget(u,targets,u.kind==="melee"&&!u.hasRangedWeapon),objectiveTarget=aiObjectiveTarget(u),target=objectiveTarget&&(!combatTarget||dist(u,objectiveTarget)+2<dist(u,combatTarget))?objectiveTarget:combatTarget;if(u.hasRangedWeapon&&inRange.length){if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,target,false);}else{if(u.ownsShield){u.rangedMode="shield";u.shield=!!u.ownsShield&&!["greatWeapon","halberd"].includes(u.weapon);}aiPivotAndAdvance(u,target);if(u.hasRangedWeapon){const available=actualTargets.filter(t=>!t.fled&&alive(t)&&gap(u,t)<=(u.range||BOW_RANGE));if(available.length){const shotTarget=aiBestTarget(u,available,false);if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((shotTarget.y-u.y)*fieldHeightIn(),(shotTarget.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,shotTarget,false);}}}}u.activated=true;return true;}
 
 function runAiActivation(){
  const before=new Map(units().map(u=>[u.id,{x:u.x,y:u.y,facing:u.facing,models:u.models,shot:!!u.shot,moved:!!u.moved,activated:!!u.activated,engaged:!!u.engaged,charged:!!u.charged,moveUsed:u.moveUsed||0,formationWidth:u.formationWidth||null,shield:!!u.shield,rangedMode:u.rangedMode||null,wounds:u.characterWounds??u.artilleryWounds??u.chariotWounds??null}]));
