@@ -60,7 +60,7 @@ function buildUnit(template,config,faction,opposing=false) {
   for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.type!=="pegasusChampion"&&config.upgrades&&config.upgrades[key]&&!(template.spellcaster&&!elf&&["WS","S"].includes(key)))stats[key]+=(isSiegeEngine&&key==="M"?0.5:1);
   
   const campaignStats=config.campaignStats||{};
-  for(const key of ["WS","BS","S","T","Ld"])if(!(template.spellcaster&&!elf&&["WS","S"].includes(key)))stats[key]+=Math.max(0,campaignStats[key]||0);
+  for(const key of ["WS","BS","S","T","Ld"])if(!(template.spellcaster&&!elf&&["WS","S"].includes(key)))stats[key]+=Number.isFinite(Number(campaignStats[key]))?Number(campaignStats[key]):0;
   if(isCharacter&&config.campaignRank==="hero"){stats.WS+=1;stats.Ld+=1;}
   else if(isCharacter&&config.campaignRank==="champion"){stats.Ld=Math.max(1,stats.Ld-1);}
   if(campaignStats.M)stats.M+=Math.max(0,campaignStats.M);
