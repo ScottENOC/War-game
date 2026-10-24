@@ -6,7 +6,7 @@ import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warba
 import { createArmyBuilder } from "./armyBuilder.js?v=20261021-wyvern-roster-v1";
 import { createCollectionManager } from "./collection.js?v=20261021-wyvern-roster-v1";
 import { createGameState } from "./gameState.js";
-import { createAI } from "./ai.js?v=20261023-ai-lab-diagnostics-v2";
+import { createAI } from "./ai.js?v=20261025-base-gap-v1";
 import { createRules } from "./rules.js?v=20261022-rules-scope-fix-v1";
 import { createShooting } from "./shooting.js?v=20261023-ai-lab-fast-v3";
 import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
@@ -15,7 +15,7 @@ import { createInput } from "./input.js?v=20261021-flying-wall-pan-guard-v1";
 import { createUI } from "./ui.js?v=20261021-character-undo-v1";
 import { createPhases } from "./phases.js?v=20261022-ai-battle-lab-v2";
 import { createDice } from "./dice.js";
-import { createMovement } from "./movement.js?v=20261021-fly-over-walls-v1";
+import { createMovement } from "./movement.js?v=20261025-base-gap-v1";
 import { createNarrativeCampaign } from "./campaign.js";
 import { generateSkirmishTerrain, generateRiverCrossingCastleTerrain } from "./terrain.js?v=20261021-river-crossing-castles-v5";
 import { createVision } from "./vision.js?v=20261020-vision-v1";
@@ -31,7 +31,7 @@ const units=()=>Object.values(S.units), alive=u=>!!u&&(u.models>0||(u.attachedCh
 const BATTLEFIELD_HEIGHT_IN=36,W=()=>BATTLEFIELD_WIDTH_IN*20,H=()=>BATTLEFIELD_HEIGHT_IN*20,PX_PER_IN=()=>20,fieldHeightIn=()=>BATTLEFIELD_HEIGHT_IN;
 const enemies=u=>units().filter(v=>v.side!==u.side&&alive(v)&&!v.attachedTo);
 const MOVEMENT = createMovement({ W, H, PX_PER_IN, MODEL_BASE_IN, BATTLEFIELD_WIDTH_IN, fieldHeightIn, units, alive, terrain:()=>S.terrain, canPassGate:u=>S.battleType==="siege"&&((u.side==="player")===(S.siegeRole==="defender")) });
-const { dist, shape, corners, overlap, canPlace } = MOVEMENT;
+const { dist, gap, shape, corners, overlap, canPlace } = MOVEMENT;
 const VISION=createVision({S,units,alive,dist,terrain:()=>S.terrain,W,H,shape,BATTLEFIELD_WIDTH_IN,fieldHeightIn});
 const {isUnitVisible,visibleEnemies,aiLastKnownTargets,revealUnit,beginMovementPhase,updateAiMemory}=VISION;
 function hasPriorityRule(u){return !!u&&(!!u.priorityActivation||!!u.reserveDeployRule||(u.attachedCharacters||[]).some(id=>S.units[id]?.models>0&&S.units[id]?.priorityActivation));}
@@ -185,10 +185,10 @@ const SHOOTING = createShooting({ S, units, alive, dist, BOW_RANGE, roll, woundT
 const { shoot, fireCannon, breathAttack } = SHOOTING;
 function resolvePursuit(choice){const pending=S.pendingPursuit;if(!pending)return;S.pendingPursuit=null;const winner=S.units[pending.winnerId],loser=S.units[pending.loserId];if(winner&&loser)pursueAfterBreak(winner,loser,choice);if(units().filter(alive).every(v=>v.fled)||units().filter(v=>v.side==="player"&&alive(v)).length===0||units().filter(v=>v.side==="ai"&&alive(v)).length===0){finishBattle(units().some(v=>v.side==="player"&&alive(v)&&!v.fled)?"Player wins the battle!":"Opponent wins the battle!");return;}if(continueBreakTests())return;S.phase="combat";S.combatResolved=true;render();}
 function startActivations(){if(S.aiBattleLab){runAiLabMovement();return;}beginMovementPhase();S.activationSide="player";S.prioritySpentThisPhase=false;S.forcePlayerNext=false;S.normalMovementSide=S.turn%2===1?"player":"ai";units().filter(u=>u.fled&&alive(u)).forEach(rallyUnit);const p=units().filter(u=>u.side==="player"&&eligibleForActivation(u));if(!p.length){runAiActivations();return;}const priority=p.find(hasPriorityRule);if(priority){S.selected=priority.id;render();return;}if(S.normalMovementSide==="ai")runAiActivation();const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.selected=next.id;render();return;}runAiActivations();}
-const AI = createAI({ S, units, alive, eligibleForActivation, enemies, visibleEnemies, aiLastKnownTargets, dist, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, fireCannon, BOW_RANGE, beginCombatPhase, terrain:()=>S.terrain });
+const AI = createAI({ S, units, alive, eligibleForActivation, enemies, visibleEnemies, aiLastKnownTargets, dist, gap, BATTLEFIELD_WIDTH_IN, fieldHeightIn, shape, PX_PER_IN, canPlace, say, shoot, fireCannon, BOW_RANGE, beginCombatPhase, terrain:()=>S.terrain });
 const runAiActivation = AI.runAiActivation;
 const runAiActivations = AI.runAiActivations;
-const LAB_RED_AI=createAI({S,units,alive,eligibleForActivation,enemies,visibleEnemies,aiLastKnownTargets:()=>[],dist,BATTLEFIELD_WIDTH_IN,fieldHeightIn,shape,PX_PER_IN,canPlace,say,shoot,fireCannon,BOW_RANGE,beginCombatPhase,terrain:()=>S.terrain,side:"player",policy:"baseline"});
+const LAB_RED_AI=createAI({S,units,alive,eligibleForActivation,enemies,visibleEnemies,aiLastKnownTargets:()=>[],dist,gap,BATTLEFIELD_WIDTH_IN,fieldHeightIn,shape,PX_PER_IN,canPlace,say,shoot,fireCannon,BOW_RANGE,beginCombatPhase,terrain:()=>S.terrain,side:"player",policy:"baseline"});
 const LAB_BLUE_AI=createAI({S,units,alive,eligibleForActivation,enemies,visibleEnemies,aiLastKnownTargets:()=>[],dist,BATTLEFIELD_WIDTH_IN,fieldHeightIn,shape,PX_PER_IN,canPlace,say,shoot,fireCannon,BOW_RANGE,beginCombatPhase,terrain:()=>S.terrain,side:"ai",policy:"experimental"});
 function finishActivation(unitOverride=null,alreadyActivated=false){const u=unitOverride||S.units[S.selected];if(!u||u.side!=="player"||(!alreadyActivated&&u.activated)||S.phase!=="movement")return;u.activated=true;S.mode=null;say(u.name+" completes its activation.");if(hasPriorityRule(u)&&!S.prioritySpentThisPhase){S.prioritySpentThisPhase=true;if(S.normalMovementSide==="ai"&&runAiActivation()){const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.selected=next.id;render();return;}}const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.forcePlayerNext=true;S.selected=next.id;render();return;}runAiActivations();return;}if(S.forcePlayerNext){S.forcePlayerNext=false;const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.selected=next.id;render();return;}}if(runAiActivation()){const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.activationSide="player";S.selected=next.id;render();return;}}const next=units().find(v=>v.side==="player"&&eligibleForActivation(v));if(next){S.activationSide="player";S.selected=next.id;render();return;}runAiActivations();}
 function rallyUnit(u){if(!u||!u.fled||u.rallyAttemptTurn===S.turn||u.terrorFledTurn===S.turn)return false;if(u.models*4<u.startModels){say(u.name+" is below a quarter of its starting strength and cannot rally.");return false;}u.rallyAttemptTurn=S.turn;const ld=leadership(u),dice=roll(2),total=dice[0]+dice[1];say("Rally test — "+u.name+": "+dice.join(" + ")+" = "+total+" against unmodified Leadership "+ld+".");if(total<=ld){u.fled=false;u.moveUsed=u.stats.M;u.activated=true;say(u.name+" rallies, but cannot move further this turn.");}else{const foe=closestEnemy(u),dx=foe?(u.x-foe.x)*W():Math.cos(u.facing+Math.PI)*W(),dy=foe?(u.y-foe.y)*H():Math.sin(u.facing+Math.PI)*H(),len=Math.max(1,Math.hypot(dx,dy)),distanceRoll=roll(2),distance=distanceRoll[0]+distanceRoll[1],px=distance*PX_PER_IN();u.x+=dx/len*px/W();u.y+=dy/len*px/H();say(u.name+" fails to rally and flees "+distance+" inches ("+distanceRoll.join(" + ")+").");if(u.x<0||u.x>1||u.y<0||u.y>1){u.models=0;u.fled=false;say(u.name+" flees off the battlefield.");}}render();return !u.fled;}
@@ -460,7 +460,7 @@ function runAiLabMovement(){
 }
 function runAiLabCharges(){
  if(!S.aiBattleLab||S.finished||S.phase!=="charges")return;
- const chargeGap=(u,t)=>{const bearing=Math.atan2((t.y-u.y)*H(),(t.x-u.x)*W()),a=shape(u),b=shape(t),support=(unit,angle,q)=>{const d=angle-(unit.facing||0);return Math.abs(Math.cos(d))*q.depth/(2*PX_PER_IN())+Math.abs(Math.sin(d))*q.front/(2*PX_PER_IN());};return Math.max(0,dist(u,t)-support(u,bearing,a)-support(t,bearing+Math.PI,b));};
+ const chargeGap=(u,t)=>gap(u,t);
  aiLabTrace("charge-phase-start",{state:aiLabDistanceSummary(),units:units().filter(u=>alive(u)&&!u.fled&&!u.engaged).map(u=>{const target=visibleEnemies(u).filter(t=>alive(t)&&!t.fled).sort((a,b)=>dist(u,a)-dist(u,b))[0]||null;return {unit:u.name,id:u.id,side:u.side,charged:!!u.charged,move:Number((u.stats?.M||0).toFixed(2)),attachedTo:u.attachedTo||null,nearestVisible:target?{name:target.name,distance:Number(dist(u,target).toFixed(2)),chargeGap:Number(chargeGap(u,target).toFixed(2)),maxChargeRange:Number(((u.stats?.M||0)*2).toFixed(2)),withinChargeRange:chargeGap(u,target)<=(u.stats?.M||0)*2,arcAndPathClear:canCharge(u,target)}:null};})});
  let guard=0;
  while(S.aiBattleLab&&!S.finished&&S.phase==="charges"&&guard++<200){
