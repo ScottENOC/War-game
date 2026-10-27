@@ -111,9 +111,39 @@ export function createUnitsFromArmy(army,faction="empire",options={}) {
     const opposingTemplate=options.preserveFactionForOpponent?(FACTIONS[playerFaction].units[opposingType]||Object.values(FACTIONS).map(group=>group.units?.[opposingType]).find(Boolean)||FACTIONS.empire.units.swordsmen):(FACTIONS.opposing.units[opposingType]||FACTIONS.empire.units[opposingType]||FACTIONS.highElves.units[opposingType]||FACTIONS.opposing.units.swordsmen);
     units["a"+n]=buildUnit(opposingTemplate,{...opposingEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},options.preserveFactionForOpponent?playerFaction:"empire",!options.preserveFactionForOpponent);
   });
-  Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter&&!u.hasRangedWeapon).forEach(hero=>{
-    const host=Object.values(units).find(u=>u.side==="ai"&&!u.isCharacter&&u.models>0&&!!u.isCavalry===!!hero.mounted);
-    if(!host)return;hero.attachedTo=host.id;hero.x=host.x;hero.y=host.y;host.attachedCharacters=[...new Set([...(host.attachedCharacters||[]),hero.id])];host.stats.M=Math.min(host.baseMove??host.stats.M,hero.stats.M);
+  // Assign AI characters by battlefield role, not by the mere presence of a ranged weapon.
+  // A melee lord carrying a backup bow remains a melee/leadership character.
+  const aiHosts=Object.values(units).filter(u=>u.side==="ai"&&!u.isCharacter&&u.models>0);
+  const aiHeroes=Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter&&!u.attachedTo);
+  const characterRole=hero=>{
+    const type=hero.type||"";
+    if(hero.spellcaster||["mageHero","mageLord","starwardenLord","necromancer","masterNecromancer","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"].includes(type))return "caster";
+    if(["rifleman","shadowElf"].includes(type)||hero.characterRole==="ranged")return "ranged";
+    // Elf lords/captains with a modest spell level are hybrids; their melee/leadership
+    // role takes precedence unless they are explicitly a caster archetype.
+    return "melee";
+  };
+  const assignedHosts=new Set();
+  aiHeroes.sort((a,b)=>{
+    const roleRank=u=>characterRole(u)==="caster"?0:characterRole(u)==="ranged"?1:2;
+    return roleRank(a)-roleRank(b)||(b.stats.Ld||0)-(a.stats.Ld||0);
+  }).forEach(hero=>{
+    const role=characterRole(hero),mounted=!!hero.mounted;
+    const candidates=aiHosts.filter(host=>!!host.isCavalry===mounted);
+    const score=host=>{
+      const already=(host.attachedCharacters||[]).filter(id=>units[id]?.models>0).length;
+      const ranged=!!host.hasRangedWeapon||host.kind==="archer"||host.type==="archers"||host.type==="dwarfThunderers"||host.type==="dwarfQuarrellers";
+      const melee=host.kind==="melee"||["swordsmen","dwarfInfantry","dwarfWarriors","dwarfLongbeards","dwarfIronbreakers","orcBoyz","skeletons","zombies","trolls"].includes(host.type)||host.isCavalry&&!ranged;
+      let fit=role==="caster"?(ranged?8:melee?2:0):role==="ranged"?(ranged?10:melee?-2:0):(melee?9:ranged?-3:1);
+      return fit-already*7+(assignedHosts.has(host.id)?-1:0)+Math.min(2,(host.models||1)/10);
+    };
+    const host=candidates.filter(h=>!h.attachedCharacters?.some(id=>units[id]?.models>0)).sort((a,b)=>score(b)-score(a))[0]
+      ||candidates.sort((a,b)=>score(b)-score(a))[0];
+    if(!host)return;
+    hero.attachedTo=host.id;hero.x=host.x;hero.y=host.y;
+    host.attachedCharacters=[...new Set([...(host.attachedCharacters||[]),hero.id])];
+    host.stats.M=Math.min(host.baseMove??host.stats.M,hero.stats.M);
+    assignedHosts.add(host.id);
   });
   for(const side of ["player","ai"]){const eligible=Object.values(units).filter(u=>u.side===side&&u.isCharacter);const general=(faction==="undead"&&side==="player"?eligible.filter(u=>u.spellcaster):eligible).sort((a,b)=>b.stats.Ld-a.stats.Ld)[0];if(general)general.isGeneral=true;}
   return units;
