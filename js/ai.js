@@ -225,18 +225,28 @@ function aiPivotAndAdvance(u,target,retargeted=null){
         // Plan A: try the furthest turn allowed by the movement budget.
         // Plan B: if that facing is illegal, back off in bounded increments and
         // take the largest legal partial turn we can find.
-        const turnCandidates=[1,.875,.75,.625,.5,.375,.25,.125]
-          .map(fraction=>({fraction,turn:desiredPartialTurn*fraction,facing:normalizeTurn(u.facing+desiredPartialTurn*fraction)}));
+        const turnFractions=[1,.875,.75,.625,.5,.375,.25,.125];
+        const candidatesFor=(direction,arc)=>turnFractions.map(fraction=>({
+          fraction,direction,turn:arc*fraction,facing:normalizeTurn(u.facing+arc*fraction)
+        }));
+        // Try the shortest rotation first. If every intermediate facing is blocked,
+        // try turning the other way around the unit; the endpoint facing may be legal
+        // even when the direct arc is obstructed.
+        const turnCandidates=[
+          ...candidatesFor("shortest",desiredPartialTurn),
+          ...candidatesFor("alternate",-Math.sign(turn)*Math.min(Math.abs(turn),maxTurnRadians))
+        ];
         let accepted=null;
         const rejected=[];
         for(const candidate of turnCandidates){
           if(canPlace(u,u.x,u.y,candidate.facing)){accepted=candidate;break;}
-          rejected.push({fraction:candidate.fraction,facing:Number(candidate.facing.toFixed(4))});
+          rejected.push({fraction:candidate.fraction,direction:candidate.direction,facing:Number(candidate.facing.toFixed(4))});
         }
         lastMovementAttempt.partialTurnCandidatesRejected=rejected;
         if(accepted){
           u.facing=accepted.facing;u.moveUsed+=Math.abs(accepted.turn)*frontIn;u.moved=true;turned=Math.abs(accepted.turn)>.001;
-          lastMovementAttempt.stage=accepted.fraction===1?"partial-turn-budget":"partial-turn-budget-plan-b";
+          lastMovementAttempt.stage=accepted.direction==="alternate"?"partial-turn-budget-alternate-direction":accepted.fraction===1?"partial-turn-budget":"partial-turn-budget-plan-b";
+          lastMovementAttempt.partialTurnDirection=accepted.direction;
           lastMovementAttempt.partialTurnRadians=Number(accepted.turn.toFixed(4));
           lastMovementAttempt.partialTurnFraction=accepted.fraction;
           lastMovementAttempt.partialFacing=Number(accepted.facing.toFixed(4));
