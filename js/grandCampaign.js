@@ -3374,17 +3374,17 @@ export function startGrandCampaign(){
    lines.push("X:"+(r.eliminated.map(f=>f.id+"@"+(f.turn||"?")+":"+(f.reason||"?")).join(",")||"-"));
    lines.push("I:"+(r.initialSnapshot||[]).map(f=>f.id+"="+f.homeOwner+"/"+f.rosterUnits+"u/"+f.models+"m/"+(f.strategicArmyPoints??f.armyPoints)+"p"+(f.namedCommander?"/"+f.namedCommander:"")).join(","));
    lines.push("D faction:a/rej/bat/+c/-c/idle");
-   for(const d of r.decisionStats||[])if(d.attacks||d.rejectedAttacks||d.battleResults||d.territoryGains||d.territoryLosses)lines.push(d.id+":"+d.attacks+"/"+d.rejectedAttacks+"/"+d.battleResults+"/"+d.territoryGains+"/"+d.territoryLosses+"/"+d.idleTurns);
+   for(const d of r.decisionStats||[])if(d.attacks||d.rejectedAttacks||d.battleResults||d.territoryGains||d.territoryLosses||d.idleTurns)lines.push(d.id+":"+d.attacks+"/"+d.rejectedAttacks+"/"+d.battleResults+"/"+d.territoryGains+"/"+d.territoryLosses+"/"+d.idleTurns);
    lines.push("LOG t/f/c/msg/out");
-   for(const d of r.decisionLog||[])lines.push(d.turn+"/"+d.faction+"/"+({ "rejected-attack":"R","battle-result":"B","attack":"A","idle":"I","other":"?"}[d.category]||"?")+"/"+d.message+(d.event?"/"+d.event:""));
+   for(const d of r.decisionLog||[]){const short=s=>String(s||"").replace(/\s+/g," ").replace(/declines an unfavourable attack/gi,"reject").replace(/holds its defensive line/gi,"holds").replace(/too well defended/gi,"def high").replace(/wages war against/gi,"war>").replace(/attacks /gi,"atk ").replace(/ remains passive/gi," idle").slice(0,180);lines.push(d.turn+"/"+d.factionId+"/"+({ "rejected-attack":"R","battle-result":"B","attack":"A","idle":"I","other":"?"}[d.category]||"?")+"/"+short(d.message)+(d.event?"/"+short(d.event):""));}
    for(const t of (r.turnLog||[])){
     const changes=(t.ownershipChanges||[]).map(c=>c.region+":"+c.from+">"+c.to).join(",");
     if(changes||(t.eliminated||[]).length)lines.push("t"+t.turn+" C:"+changes+" X:"+(t.eliminated||[]).join(","));
-    if(t.turn<=5)for(const a of t.actions||[])lines.push("t"+t.turn+" "+a);
+    if(t.turn<=5)for(const a of t.actions||[])lines.push("t"+t.turn+" "+String(a).replace(/\s+/g," ").slice(0,150));
    }
    lines.push("err="+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0));
   }
-  for(const [message,count] of Object.entries(report.aggregateErrors||{}).sort((a,b)=>b[1]-a[1]))lines.push("E"+count+":"+message);
+  for(const [message,count] of Object.entries(report.aggregateErrors||{}).sort((a,b)=>b[1]-a[1]))lines.push("E"+count+":"+String(message).split("\n")[0].slice(0,180));
   return lines.join("\n");
  };
  if(labCopy)labCopy.addEventListener("click",async()=>{
