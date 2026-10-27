@@ -62,7 +62,7 @@ function aiCastSpells(){
  return castAny;
 }
 function normalizeTurn(a){while(a>Math.PI)a-=Math.PI*2;while(a< -Math.PI)a+=Math.PI*2;return a;}
-function findRoute(u,target,desiredGap){
+function findRouteCore(u,target,desiredGap){
   const step=.035,frontIn=shape(u).front/PX_PER_IN(),minX=Math.ceil((-.0-u.x)/step),maxX=Math.floor((1-u.x)/step),minY=Math.ceil((-.0-u.y)/step),maxY=Math.floor((1-u.y)/step),dirs=Array.from({length:8},(_,i)=>i*Math.PI/4);
   const position=(ix,iy)=>({x:u.x+ix*step,y:u.y+iy*step}),key=(ix,iy,d)=>ix+","+iy+","+d;
   const startDir=((Math.round((normalizeTurn(u.facing)+Math.PI*2)%(Math.PI*2)/(Math.PI/4)))%8),start={ix:0,iy:0,dir:startDir,g:0,f:Math.max(0,gap(u,target)-desiredGap),parent:null},best=new Map([[key(0,0,startDir),0]]);
@@ -88,6 +88,38 @@ function findRoute(u,target,desiredGap){
   }
   if(!found)return null;
   const path=[];for(let n=found;n&&n.parent;n=n.parent)path.push({ ...position(n.ix,n.iy),dir:n.dir });return path.reverse();
+}
+function aiNow(){return typeof performance!=="undefined"&&typeof performance.now==="function"?performance.now():Date.now();}
+function findRoute(u,target,desiredGap){
+ const started=aiNow();
+ try{return findRouteCore(u,target,desiredGap);}
+ finally{
+  if(S.aiBattleLab){
+   const elapsed=Math.max(0,aiNow()-started),key=side==="player"?"red":"blue",stats=S.aiLabDecisionTiming?.[key];
+   if(stats){stats.routeCalls++;stats.routeMs+=elapsed;}
+  }
+ }
+}
+function aiStuckContext(u,target){
+ const nearbyFriendly=units().filter(v=>v.id!==u.id&&v.side===u.side&&alive(v)&&!v.fled)
+  .map(v=>({name:v.name,kind:v.kind||v.type||null,distance:Math.hypot((v.x-u.x)*BATTLEFIELD_WIDTH_IN,(v.y-u.y)*fieldHeightIn())}))
+  .filter(v=>v.distance<=2.5).sort((a,b)=>a.distance-b.distance).slice(0,3).map(v=>({...v,distance:Number(v.distance.toFixed(2))}));
+ const nearbyTerrain=terrain().filter(t=>Number.isFinite(t.x)&&Number.isFinite(t.y))
+  .map(t=>({type:t.type||t.kind||"terrain",name:t.label||t.name||null,distance:Math.hypot((t.x-u.x)*BATTLEFIELD_WIDTH_IN,(t.y-u.y)*fieldHeightIn())}))
+  .filter(t=>t.distance<=2.5).sort((a,b)=>a.distance-b.distance).slice(0,3).map(t=>({...t,distance:Number(t.distance.toFixed(2))}));
+ return {target:target?.name||"unknown",nearbyFriendly,nearbyTerrain,likelyBlocker:nearbyFriendly.length?"friendly unit(s)":nearbyTerrain.length?"nearby terrain":"not identified by proximity"};
+}
+function aiRecordStagnation(u,target,reason){
+ u.aiStagnationEvents=(u.aiStagnationEvents||0)+1;
+ const context=aiStuckContext(u,target);
+ u.aiLastStuckReport={turn:S.turn,reason,...context};
+ if(S.aiBattleLab){
+  const blockers=S.aiLabStuckBlockers||(S.aiLabStuckBlockers={});
+  blockers[context.likelyBlocker]=(blockers[context.likelyBlocker]||0)+1;
+  if(context.nearbyFriendly.length){const k="friendly: "+context.nearbyFriendly[0].name;blockers[k]=(blockers[k]||0)+1;}
+  if(context.nearbyTerrain.length){const k="terrain: "+context.nearbyTerrain[0].type;blockers[k]=(blockers[k]||0)+1;}
+ }
+ return context;
 }
 function aiPivotAndAdvance(u,target,retargeted=null){
   const seen=retargeted||new Set();
@@ -139,7 +171,8 @@ function aiPivotAndAdvance(u,target,retargeted=null){
       return true;
     }
     if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-route-fallback",unit:u.name,target:target.name,routeFound:false,fallbackMoved:false,reason:"no-legal-progress",distance:Number(separation.toFixed(2)),centreDistance:Number(dist(u,target).toFixed(2)),baseGap:Number(separation.toFixed(2)),movementRemaining:Number(budgetLeft.toFixed(2))});
-    u.aiStagnationEvents=(u.aiStagnationEvents||0)+1;
+    const stuckContext=aiRecordStagnation(u,target,"no-legal-progress");
+    if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"stuck-context",unit:u.name,...stuckContext});
     if(u.aiStagnantTurn!==S.turn){u.aiStagnantTurns=(u.aiStuckTargetId===target.id?(u.aiStagnantTurns||0)+1:1);u.aiStagnantTurn=S.turn;}
     u.aiStuckTargetId=target.id||null;
     // If the chosen target is physically unreachable from this position, stop repeating
@@ -174,7 +207,8 @@ function aiPivotAndAdvance(u,target,retargeted=null){
   if(travelled>0){say(u.name+" advances "+travelled.toFixed(1)+'" along a passable route toward '+target.name+".");u.aiStuckTargetId=null;u.aiStagnantTurns=0;}
   else if(!changedFormation){
     if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-stagnation",unit:u.name,target:target.name,reason:"route-found-but-no-step-applied",routeLength:route.length,movementRemaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2))});
-    u.aiStagnationEvents=(u.aiStagnationEvents||0)+1;
+    const stuckContext=aiRecordStagnation(u,target,"route-found-but-no-step-applied");
+    if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"stuck-context",unit:u.name,...stuckContext});
     if(u.aiStagnantTurn!==S.turn){u.aiStagnantTurns=(u.aiStuckTargetId===target.id?(u.aiStagnantTurns||0)+1:1);u.aiStagnantTurn=S.turn;}
     u.aiStuckTargetId=target.id||null;
     if(seen.size<3){
@@ -259,7 +293,12 @@ function runAiActivation(){
  const selectedStart=selected?{x:selected.x,y:selected.y}:null;
  const visible=selected?visibleEnemies(selected).filter(v=>!v.fled&&alive(v)):[];
  const nearest=selected&&visible.length?visible.map(t=>({name:t.name,distance:Number(dist(selected,t).toFixed(2))})).sort((a,b)=>a.distance-b.distance)[0]:null;
+ const decisionStarted=aiNow();
  const result=runAiActivationCore();
+ if(S.aiBattleLab){
+  const elapsed=Math.max(0,aiNow()-decisionStarted),key=side==="player"?"red":"blue",stats=S.aiLabDecisionTiming?.[key];
+  if(stats){stats.calls++;stats.totalMs+=elapsed;if(elapsed>stats.maxMs){stats.maxMs=elapsed;stats.maxUnit=selected?.name||"unknown";}}
+ }
  if(S.aiLabDiagnosticsEnabled&&selected){
   const after=units().map(u=>({u,b:before.get(u.id)})).filter(x=>x.b);
   const changes=after.filter(({u,b})=>Math.abs(u.x-b.x)>.0001||Math.abs(u.y-b.y)>.0001||Math.abs((u.facing||0)-(b.facing||0))>.0001||u.models!==b.models||!!u.shot!==b.shot||!!u.moved!==b.moved||!!u.activated!==b.activated||!!u.engaged!==b.engaged||!!u.charged!==b.charged||u.moveUsed!==b.moveUsed||u.formationWidth!==b.formationWidth||!!u.shield!==b.shield||u.rangedMode!==b.rangedMode||((u.characterWounds??u.artilleryWounds??u.chariotWounds??null)!==b.wounds));
