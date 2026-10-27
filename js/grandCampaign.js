@@ -2269,8 +2269,8 @@ function processCampaignLogistics(campaign){
  for(const region of regions){
   const st=region.settlement;if(!st)continue;
   const owner=politicalOwner(region),besieger=armies.find(a=>a.roster?.length&&a.nodeId==="city-"+region.id&&(a.owner||a.factionId)!==owner);
-  const relief=armies.some(a=>a.roster?.length&&a.nodeId==="city-"+region.id&&(a.owner||a.factionId)===owner);
-  if(besieger&&!relief){
+  // The city's own field army is its garrison; its presence does not end a siege.
+  if(besieger){
    st.siegeTurns=(st.siegeTurns||0)+1;st.foodStores=Math.max(0,(st.foodStores||0)-1);st.besiegedBy=besieger.owner||besieger.factionId;
    if(st.foodStores===0&&st.siegeTurns%2===0){st.prosperity=Math.max(0,(st.prosperity||0)-2);st.unrest=Math.min(100,(st.unrest||0)+5);st.fortification.condition=Math.max(0,(st.fortification?.condition||0)-1);events.push(region.name+" is starving under siege; unrest rises and fortifications deteriorate.");}
   }else{st.siegeTurns=0;st.besiegedBy=null;if(!besieger)st.foodStores=Math.min(st.maxFoodStores||8,(st.foodStores||0)+1);}
