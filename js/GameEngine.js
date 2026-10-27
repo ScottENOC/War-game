@@ -1,4 +1,4 @@
-import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261027-role-based-character-attachments-v1";
+import { createUnitsFromArmy, buildOpponentArmy, unitCost } from "./units.js?v=20261027-role-based-character-attachments-v2";
 import { FACTIONS } from "./factions.js?v=20261020-thaurgath-v2";
 import { createRoguelike } from "./roguelike.js?v=20261020-chariots-v2";
 import { createWarband } from "./warband.js?v=20261020-warband-v1";
@@ -441,7 +441,7 @@ function startAiLabBattle(){
  const n=aiLabRun.completed;
  if(n%2===0||!aiLabRun.pair)aiLabRun.pair={redArmy:makeAiLabArmy(aiLabRun.redFaction,aiLabRun.points,aiLabRun.composition),blueArmy:makeAiLabArmy(aiLabRun.blueFaction,aiLabRun.points,aiLabRun.composition),seed:aiLabRun.seed+Math.floor(n/2)*7919};
  const {redArmy,blueArmy}=aiLabRun.pair;
- const red=createUnitsFromArmy(redArmy,aiLabRun.redFaction,{preserveFactionForOpponent:true}),blue=createUnitsFromArmy(blueArmy,aiLabRun.blueFaction,{preserveFactionForOpponent:true});
+ const red=createUnitsFromArmy(redArmy,aiLabRun.redFaction,{preserveFactionForOpponent:true,autoAttachCharacters:true}),blue=createUnitsFromArmy(blueArmy,aiLabRun.blueFaction,{preserveFactionForOpponent:true,autoAttachCharacters:true});
  S.aiBattleLab=true;S.aiLabBattleNumber=n+1;S.aiLabDiagnosticsEnabled=aiLabRun.count===1;S.aiLabDiagnostics=[];S.warbandSkirmish=false;S.objectiveMode=null;S.objectives=[];S.flags=null;S.objectiveScore={player:0,ai:0};S.battleType="skirmish";S.siegeRole="attacker";S.customSiegeMap=null;S.autoTerrain=true;S.terrainSeed=aiLabRun.terrain==="fixed"?aiLabRun.seed:aiLabRun.pair.seed;
  S.units={...Object.fromEntries(Object.entries(red).filter(([id])=>id.startsWith("p"))),...Object.fromEntries(Object.entries(blue).filter(([id])=>id.startsWith("a")))};
  const redPoints=units().filter(u=>u.side==="player").reduce((sum,u)=>sum+(u.points||0),0),bluePoints=units().filter(u=>u.side==="ai").reduce((sum,u)=>sum+(u.points||0),0);
