@@ -139,6 +139,16 @@ function aiPivotAndAdvance(u,target,retargeted=null){
   if(target?.id)seen.add(target.id);
   const separation=gap(u,target),melee=(u.kind==="melee"&&!u.hasRangedWeapon)||(u.isCavalry&&!u.hasRangedWeapon)||(u.isCharacter&&!u.hasRangedWeapon),desiredGap=melee?1.2:Math.max(0,(u.range||BOW_RANGE)-.5),budget=Math.max(0,u.stats.M-u.moveUsed);
   if(separation<=desiredGap+.15)return false;
+  // Use the centre-line pivot for sharp reorientation only when it is affordable
+  // and the target is at least 120 degrees away from the current facing.
+  const pivotCost=u.stats.M*.75,remainingBeforePivot=Math.max(0,u.stats.M-u.moveUsed);
+  const targetBearing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);
+  const bearingDelta=normalizeTurn(targetBearing-u.facing);
+  if(remainingBeforePivot+0.001>=pivotCost&&Math.abs(bearingDelta)>=Math.PI*2/3&&canPlace(u,u.x,u.y,targetBearing)){
+    u.facing=targetBearing;u.moveUsed+=pivotCost;u.moved=true;
+    if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-pivot",unit:u.name,target:target.name,angleDegrees:Number((bearingDelta*180/Math.PI).toFixed(1)),movementCost:Number(pivotCost.toFixed(2)),remainingAfter:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2)),reason:"target-was-at-least-120-degrees-off-facing"});
+    say(u.name+" pivots "+Math.round(Math.abs(bearingDelta)*180/Math.PI)+"° toward "+target.name+" (75% Move).");
+  }
   let route=findRoute(u,target,desiredGap),changedFormation=false;
   if(!route&&budget>=u.stats.M/2&&!u.isCharacter&&!u.isCavalry&&!u.isDragon&&!u.isSiegeEngine){
     const original=Math.max(1,Math.floor(u.formationWidth||5)),maxWidth=Math.max(1,Math.min(u.models||1,12)),candidates=[original-1,original+1,1,maxWidth].filter((v,i,a)=>v>=1&&v<=maxWidth&&v!==original&&a.indexOf(v)===i);
