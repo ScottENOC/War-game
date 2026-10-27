@@ -221,16 +221,28 @@ function aiPivotAndAdvance(u,target,retargeted=null){
       // Use the remaining movement allowance to turn as far as possible instead of doing nothing.
       const turnBudget=Math.max(0,u.stats.M-u.moveUsed),maxTurnRadians=frontIn>0?turnBudget/frontIn:0;
       if(turnBudget>.001&&Math.abs(turn)>.001&&maxTurnRadians>.001){
-        const partialTurn=Math.sign(turn)*Math.min(Math.abs(turn),maxTurnRadians);
-        const partialFacing=normalizeTurn(u.facing+partialTurn);
-        if(canPlace(u,u.x,u.y,partialFacing)){
-          u.facing=partialFacing;u.moveUsed+=Math.abs(partialTurn)*frontIn;u.moved=true;
-          lastMovementAttempt.stage="partial-turn-budget";
-          lastMovementAttempt.partialTurnRadians=Number(partialTurn.toFixed(4));
-          lastMovementAttempt.partialFacing=Number(partialFacing.toFixed(4));
+        const desiredPartialTurn=Math.sign(turn)*Math.min(Math.abs(turn),maxTurnRadians);
+        // Plan A: try the furthest turn allowed by the movement budget.
+        // Plan B: if that facing is illegal, back off in bounded increments and
+        // take the largest legal partial turn we can find.
+        const turnCandidates=[1,.875,.75,.625,.5,.375,.25,.125]
+          .map(fraction=>({fraction,turn:desiredPartialTurn*fraction,facing:normalizeTurn(u.facing+desiredPartialTurn*fraction)}));
+        let accepted=null;
+        const rejected=[];
+        for(const candidate of turnCandidates){
+          if(canPlace(u,u.x,u.y,candidate.facing)){accepted=candidate;break;}
+          rejected.push({fraction:candidate.fraction,facing:Number(candidate.facing.toFixed(4))});
+        }
+        lastMovementAttempt.partialTurnCandidatesRejected=rejected;
+        if(accepted){
+          u.facing=accepted.facing;u.moveUsed+=Math.abs(accepted.turn)*frontIn;u.moved=true;
+          lastMovementAttempt.stage=accepted.fraction===1?"partial-turn-budget":"partial-turn-budget-plan-b";
+          lastMovementAttempt.partialTurnRadians=Number(accepted.turn.toFixed(4));
+          lastMovementAttempt.partialTurnFraction=accepted.fraction;
+          lastMovementAttempt.partialFacing=Number(accepted.facing.toFixed(4));
           lastMovementAttempt.moveCostSpent=Number((u.moveUsed-startUsed).toFixed(3));
           lastMovementAttempt.actualDistanceIn=0;
-        }else lastMovementAttempt.stage="turn-budget-and-partial-facing-blocked";
+        }else lastMovementAttempt.stage="turn-budget-all-partial-facings-blocked";
       }else lastMovementAttempt.stage="turn-budget";
       break;
     }
