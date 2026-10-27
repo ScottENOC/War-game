@@ -150,7 +150,7 @@ function aiPivotAndAdvance(u,target,retargeted=null){
       for(const alternative of alternatives.slice(0,3-seen.size)){
         seen.add(alternative.id);
         if(aiPivotAndAdvance(u,alternative,seen)){
-          u.aiMovementRetargets=(u.aiMovementRetargets||0)+1;
+          if(!retargeted)u.aiMovementRetargets=(u.aiMovementRetargets||0)+1;
           u.aiStuckTargetId=null;u.aiStagnantTurns=0;
           if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-retarget",unit:u.name,fromTarget:target.name||"objective",toTarget:alternative.name,reason:"no-legal-progress"});
           return true;
@@ -179,7 +179,7 @@ function aiPivotAndAdvance(u,target,retargeted=null){
     u.aiStuckTargetId=target.id||null;
     if(seen.size<3){
       const alternatives=visibleEnemies(u).filter(t=>t.side!==side&&alive(t)&&!t.fled&&!seen.has(t.id)).sort((a,b)=>aiTargetScore(u,a,false)-aiTargetScore(u,b,false));
-      for(const alternative of alternatives.slice(0,3-seen.size)){seen.add(alternative.id);if(aiPivotAndAdvance(u,alternative,seen)){u.aiMovementRetargets=(u.aiMovementRetargets||0)+1;u.aiStuckTargetId=null;u.aiStagnantTurns=0;if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-retarget",unit:u.name,fromTarget:target.name||"objective",toTarget:alternative.name,reason:"route-found-but-no-progress"});return true;}}
+      for(const alternative of alternatives.slice(0,3-seen.size)){seen.add(alternative.id);if(aiPivotAndAdvance(u,alternative,seen)){if(!retargeted)u.aiMovementRetargets=(u.aiMovementRetargets||0)+1;u.aiStuckTargetId=null;u.aiStagnantTurns=0;if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-retarget",unit:u.name,fromTarget:target.name||"objective",toTarget:alternative.name,reason:"route-found-but-no-progress"});return true;}}
     }
     say(u.name+" cannot make progress toward "+target.name+" this turn; it will reconsider its target and route next turn.");
   }
