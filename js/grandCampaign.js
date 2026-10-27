@@ -1000,10 +1000,18 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
     const stats=decisionStats[id]||(decisionStats[id]={id,name,turns:0,attacks:0,rejectedAttacks:0,battleResults:0,territoryGains:0,territoryLosses:0,idleTurns:0,examples:[]});
     stats.turns++;
     let category="other";
-    if(/declines an unfavourable attack|too well defended|checks its charge|holds its defensive line/i.test(combined)){category="rejected-attack";stats.rejectedAttacks++;}
-    else if(/defeats|repels|wins .*battle|loses .*battle/i.test(eventText||"")){category="battle-result";stats.battleResults++;}
-    else if(/attacks |attacks!|wages war against|declares war on/i.test(text)){category="attack";stats.attacks++;}
-    else if(/earns .* pays .* upkeep|no hostile|remains passive|could not locate/i.test(text)){category="idle";stats.idleTurns++;}
+    const rejected=/declines an unfavourable attack|too well defended|checks its charge|holds its defensive line/i.test(combined);
+    const attack=/attacks |attacks!|wages war against|declares war on/i.test(text);
+    const battleResult=/defeats|repels|wins .*battle|loses .*battle/i.test(eventText||"");
+    const idle=/earns .* pays .* upkeep|no hostile|remains passive|could not locate/i.test(text);
+    if(attack)stats.attacks++;
+    if(rejected)stats.rejectedAttacks++;
+    if(battleResult)stats.battleResults++;
+    if(idle)stats.idleTurns++;
+    if(rejected)category="rejected-attack";
+    else if(battleResult)category="battle-result";
+    else if(attack)category="attack";
+    else if(idle)category="idle";
     const item={turn:campaign.turn,factionId:id,faction:name,category,message:text,event:category==="battle-result"?String(eventText||""):""};
     if(category==="attack"||category==="rejected-attack"||category==="battle-result"||campaign.turn<=5)decisionLog.push(item);
     if(stats.examples.length<8&&category!=="other")stats.examples.push("T"+campaign.turn+" "+category+": "+text+(item.event?" | "+item.event:""));
