@@ -5,14 +5,14 @@ export function createAI({ S, units, alive, eligibleForActivation, enemies, visi
 function aiWantsRange(){return armyRangeScore(side)>armyRangeScore(enemySide);}
 function aiTargetScore(u,t,preferRanged){
  const dx=(t.x-u.x)*BATTLEFIELD_WIDTH_IN,dy=(t.y-u.y)*fieldHeightIn(),d=Math.hypot(dx,dy),bearing=Math.atan2(dy,dx),delta=Math.atan2(Math.sin(bearing-u.facing),Math.cos(bearing-u.facing)),frontPenalty=Math.abs(delta)>Math.PI/2?7:Math.abs(delta)*1.5,rangedBonus=preferRanged&&(t.kind==="archer"||t.hasRangedWeapon)?3:0;
- if(policy!=="experimental")return d+frontPenalty-rangedBonus;
+ if(policy==="baseline")return d+frontPenalty-rangedBonus;
  const danger=(t.isCannon||t.isBoltThrower||t.isCatapult?7:0)+(t.spellcaster?5:0)+(t.hasRangedWeapon?2.2:0)+(t.isDragon||t.isDragonRider?5:0)+(t.isCavalry?2:0);
  const fragility=(t.models<=5?2.5:t.models<=10?1.3:0)+(t.stats?.W&&t.stats.W<=2?1:0);
  const value=Math.min(5,Math.max(0,(t.points||0)/250));
  const currentThreat=(u.isCannon||u.isBoltThrower||u.isCatapult?1.5:0)+(u.hasRangedWeapon?1.2:0);
  const supported=units().filter(v=>v.side===enemySide&&alive(v)&&!v.fled&&v.id!==t.id&&dist(v,t)<=4).length;
  // Blue values enemy shooting opportunities that can still be denied by acting now.
- const unspentEnemyShot=policy==="experimental"&&t.hasRangedWeapon&&!t.activated&&!t.shot?3.5:0;
+ const unspentEnemyShot=policy!=="baseline"&&t.hasRangedWeapon&&!t.activated&&!t.shot?3.5:0;
  return d*.72+frontPenalty*.6-rangedBonus-danger*.8-fragility*.65-value*.45-supported*.25-currentThreat*.1-unspentEnemyShot;
 }
 function aiBestTarget(u,targets,preferRanged){return targets.slice().sort((a,b)=>aiTargetScore(u,a,preferRanged)-aiTargetScore(u,b,preferRanged))[0]||null;}
