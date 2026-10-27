@@ -3367,25 +3367,23 @@ export function startGrandCampaign(){
  if(labOpen&&labScreen&&mainMenu)labOpen.addEventListener("click",()=>{mainMenu.hidden=true;labScreen.hidden=false;});
  if(labBack&&labScreen&&mainMenu)labBack.addEventListener("click",()=>{labScreen.hidden=true;mainMenu.hidden=false;});
  const reportText=report=>{
-  const lines=["CAI|n="+report.runs+"|lt="+report.maxTurns,"O:"+Object.entries(report.outcomes||{}).map(([k,v])=>k+"="+v).join(","),"W:"+Object.entries(report.factionWins||{}).filter(([,v])=>v).map(([k,v])=>k+"="+v).join(","),"S:"+Object.entries(report.factionSurvival||{}).map(([k,v])=>k+"="+v).join(","),"R:"];
+  const lines=["CAI|n"+report.runs+"|lt"+report.maxTurns,"O "+Object.entries(report.outcomes||{}).map(([k,v])=>k+"="+v).join(" ")];
   for(const r of report.results){
-   lines.push("r"+r.run+" s"+r.seed+" "+r.outcome+" t"+r.turns+" w="+(r.winner||"-"));
-   lines.push("L:"+(r.living.map(f=>f.id+"("+f.cities+"c,"+f.armyPoints+"p,"+f.treasury+"g)").join(",")||"-"));
-   lines.push("X:"+(r.eliminated.map(f=>f.id+"@"+(f.turn||"?")+":"+(f.reason||"?")).join(",")||"-"));
-   lines.push("I:"+(r.initialSnapshot||[]).map(f=>f.id+"="+f.homeOwner+"/"+f.rosterUnits+"u/"+f.models+"m/"+(f.strategicArmyPoints??f.armyPoints)+"p"+(f.namedCommander?"/"+f.namedCommander:"")).join(","));
-   lines.push("D faction:a/rej/bat/+c/-c/idle");
+   lines.push("R"+r.run+" s"+r.seed+" "+r.outcome+" t"+r.turns+" w"+(r.winner||"-")+" err"+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0));
+   lines.push("ELIM "+(r.eliminated||[]).map(f=>f.id+"@"+(f.turn||"?")).join(" ")+" | TOP "+(r.living||[]).slice(0,5).map(f=>f.id+":"+f.cities+"c/"+f.armyPoints+"p").join(" "));
+   lines.push("INIT "+(r.initialSnapshot||[]).filter(f=>f.namedCommander).map(f=>f.id+":"+f.namedCommander+"/"+(f.strategicArmyPoints??f.armyPoints)+"p").join(" "));
+   lines.push("FACTION id:a/r/b/+/-/i");
    for(const d of r.decisionStats||[])if(d.attacks||d.rejectedAttacks||d.battleResults||d.territoryGains||d.territoryLosses||d.idleTurns)lines.push(d.id+":"+d.attacks+"/"+d.rejectedAttacks+"/"+d.battleResults+"/"+d.territoryGains+"/"+d.territoryLosses+"/"+d.idleTurns);
-   lines.push("LOG t/f/c/msg/out");
-   for(const d of r.decisionLog||[]){const short=s=>String(s||"").replace(/\s+/g," ").replace(/declines an unfavourable attack/gi,"reject").replace(/holds its defensive line/gi,"holds").replace(/too well defended/gi,"def high").replace(/wages war against/gi,"war>").replace(/attacks /gi,"atk ").replace(/ remains passive/gi," idle").slice(0,180);lines.push(d.turn+"/"+d.factionId+"/"+({ "rejected-attack":"R","battle-result":"B","attack":"A","idle":"I","other":"?"}[d.category]||"?")+"/"+short(d.message)+(d.event?"/"+short(d.event):""));}
-   for(const t of (r.turnLog||[])){
-    const changes=(t.ownershipChanges||[]).map(c=>c.region+":"+c.from+">"+c.to).join(",");
-    if(changes||(t.eliminated||[]).length)lines.push("t"+t.turn+" C:"+changes+" X:"+(t.eliminated||[]).join(","));
-    if(t.turn<=5)for(const a of t.actions||[])lines.push("t"+t.turn+" "+String(a).replace(/\s+/g," ").slice(0,150));
-   }
-   lines.push("err="+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0));
+   lines.push("EVENTS (first/last samples)");
+   const log=r.decisionLog||[];
+   const sample=log.length<=12?log:[...log.slice(0,6),...log.slice(-6)];
+   for(const d of sample)lines.push("t"+d.turn+" "+d.factionId+" "+({ "rejected-attack":"R","battle-result":"B","attack":"A","idle":"I","other":"?"}[d.category]||"?")+" "+String(d.message||"").replace(/\\s+/g," ").slice(0,90)+(d.event?" => "+String(d.event).replace(/\\s+/g," ").slice(0,70):""));
+   const changes=(r.turnLog||[]).filter(t=>(t.ownershipChanges||[]).length||(t.eliminated||[]).length);
+   lines.push("CHANGES "+changes.map(t=>"t"+t.turn+":"+(t.ownershipChanges||[]).map(c=>c.from+">"+c.to).join(",")+(t.eliminated||[]).length?(" x"+(t.eliminated||[]).join(",")):"").join(" "));
   }
-  for(const [message,count] of Object.entries(report.aggregateErrors||{}).sort((a,b)=>b[1]-a[1]))lines.push("E"+count+":"+String(message).split("\n")[0].slice(0,180));
-  return lines.join("\n");
+  const errs=Object.entries(report.aggregateErrors||{}).sort((a,b)=>b[1]-a[1]);
+  if(errs.length)lines.push("ERR "+errs.slice(0,5).map(([m,n])=>n+":"+String(m).split("\\n")[0].slice(0,100)).join(" | "));
+  return lines.join("\\n");
  };
  if(labCopy)labCopy.addEventListener("click",async()=>{
   const status=byId("campaign-ai-status"),report=window.__campaignAiLabLastReport;
@@ -3396,6 +3394,19 @@ export function startGrandCampaign(){
    else{const area=document.createElement("textarea");area.value=text;area.style.position="fixed";area.style.opacity="0";document.body.append(area);area.focus();area.select();const ok=document.execCommand("copy");area.remove();if(!ok)throw new Error("Clipboard permission was unavailable");}
    status.textContent="Full report copied, including run-by-run details and error messages.";
   }catch(e){status.textContent="Could not access the clipboard. The report is available in the details below; try using the browser's copy selection.";}
+ });
+ const labCopyDetail=byId("campaign-ai-copy-detail");
+ if(labCopyDetail)labCopyDetail.addEventListener("click",async()=>{
+  const status=byId("campaign-ai-status"),report=window.__campaignAiLabLastReport;
+  if(!report){status.textContent="Run a simulation first.";return;}
+  const detail=[];
+  for(const r of report.results){
+   detail.push("RUN "+r.run+" seed="+r.seed+" outcome="+r.outcome+" turns="+r.turns);
+   for(const d of r.decisionLog||[])detail.push("t"+d.turn+" "+d.factionId+" "+d.category+" "+d.message+(d.event?" | "+d.event:""));
+   for(const t of r.turnLog||[])if((t.ownershipChanges||[]).length||(t.eliminated||[]).length)detail.push("t"+t.turn+" changes "+(t.ownershipChanges||[]).map(c=>c.region+":"+c.from+">"+c.to).join(",")+" elim "+(t.eliminated||[]).join(","));
+   for(const [e,n] of Object.entries(r.errorCounts||{}))detail.push("ERR "+n+" "+e);
+  }
+  try{await navigator.clipboard.writeText(detail.join("\\n"));status.textContent="Detailed log copied.";}catch(e){status.textContent="Clipboard unavailable for detailed log.";}
  });
  if(labRun)labRun.addEventListener("click",()=>{
   const status=byId("campaign-ai-status"),host=byId("campaign-ai-results");
