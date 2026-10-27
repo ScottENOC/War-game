@@ -1042,6 +1042,7 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
    };
    for(let turn=1;turn<=maxTurns;turn++){
     turns=turn;campaign.turn=turn;
+    ensureSettlementState(campaign);settleMonthlyPopulation(campaign);settleMonthlyMigration(campaign);settleVillageCityPopulation(campaign);
     const ownersBefore=campaign.regions.map(r=>({id:r.id,name:r.name,owner:politicalOwner(r)}));
     const actions=[];
     try{
@@ -3290,9 +3291,64 @@ function processGreenskinAnimosity(campaign,army){
  return {interrupted:true,message:name+" attacks! It cannot reach "+(choice.region?.name||choice.targetArmy?.name||choice.nodeId)+" this turn, so it advances "+(last===army.nodeId?"towards its target.":"along the roads towards its target.")};
 }
 
+function campaignAiRawArmyStrength(army){
+ return Math.max(1,campaignStrategicArmyPowerPoints(army,100))*campaignArmyLeadershipMultiplier(army);
+}
+function campaignAiMoveArmy(campaign,army,targetNode){
+ const from=army.nodeId||("city-"+army.region),path=campaignMovementPath(campaign,from,targetNode);
+ if(!path||path.length<2)return false;
+ const movement=Number.isFinite(army.movement)?army.movement:campaignArmyMovementProfile(army,campaign).points;
+ let last=path[0],spent=0;
+ for(let i=1;i<path.length;i++){const cost=campaignPathCost(campaign,path.slice(0,i+1));if(cost>movement)break;last=path[i];spent=cost;}
+ if(last===from)return false;
+ army.nodeId=last;army.region=campaign.graph.nodes[last]?.region??army.region;army.movement=Math.max(0,movement-spent);
+ return true;
+}
+function campaignAiRaidSupplyLine(campaign,army){
+ const own=army.owner||army.factionId,graph=campaign.graph,from=army.nodeId||("city-"+army.region);
+ if(!graph?.nodes?.[from])return null;
+ const candidates=[];
+ for(const enemy of campaign.armies||[]){
+  const owner=enemy.owner||enemy.factionId;if(owner===own||!enemy.roster?.length)continue;
+  const race=FACTION_BY_ID[owner]?.race||campaign.factionStates?.find(f=>f.id===owner)?.race||"human";
+  if(race==="undead"||campaignAreAllied(campaign,own,owner))continue;
+  const supply=campaignSupplyPath(campaign,enemy);if(!supply.length)continue;
+  const approach=new Set(supply);
+  for(const id of supply)for(const edge of graph.edges[id]||[])approach.add(edge.to);
+  for(const nodeId of approach){
+   if(!graph.nodes[nodeId])continue;
+   const path=campaignMovementPath(campaign,from,nodeId);if(!path)continue;
+   candidates.push({enemy,nodeId,path,cost:campaignPathCost(campaign,path)});
+  }
+ }
+ candidates.sort((a,b)=>a.cost-b.cost);
+ if(!candidates.length)return null;
+ const target=candidates[0];
+ if(target.cost>0&&campaignAiMoveArmy(campaign,army,target.nodeId))return "moves to threaten "+(target.enemy.name||"an enemy")+" supply line.";
+ const at=army.nodeId||from,near=new Set([at,...(graph.edges[at]||[]).map(e=>e.to)]);
+ const enemyPath=campaignSupplyPath(campaign,target.enemy);
+ if(!enemyPath.some(id=>near.has(id)))return null;
+ target.enemy.supplyRaidedUntilTurn=campaign.turn+2;
+ target.enemy.supplies=Math.max(0,(target.enemy.supplies||0)-1);
+ target.enemy.supplyStatus="raided";
+ return "raids "+(target.enemy.name||target.enemy.owner+" army")+"'s supply line.";
+}
+function campaignAiMergeCoLocatedArmies(campaign,ownerId){
+ const armies=(campaign.armies||[]).filter(a=>(a.owner||a.factionId)===ownerId&&a.roster?.length);
+ for(let i=0;i<armies.length;i++){
+  const main=armies[i];if(!main||!campaign.armies.includes(main))continue;
+  for(let j=i+1;j<armies.length;j++){
+   const other=armies[j];if(!other||!campaign.armies.includes(other)||other.nodeId!==main.nodeId)continue;
+   if((main.roster.length+other.roster.length)>6)continue;
+   main.roster.push(...other.roster);main.points=campaignArmyCost(main);main.supplies=Math.min(Number(main.supplies)||0,Number(other.supplies)||0);
+   campaign.armies.splice(campaign.armies.indexOf(other),1);
+  }
+ }
+}
 function runAIFactionTurn(campaign,faction){
  campaign.activeWars=campaign.activeWars||[];
  if(faction.passive||FACTION_BY_ID[faction.id]?.passive)return faction.name+" remains passive.";
+ campaignAiMergeCoLocatedArmies(campaign,faction.id);
  const factionArmies=(campaign.armies||[]).filter(a=>(a.owner||a.factionId)===faction.id&&a.roster?.length);
  const army=factionArmy(campaign,faction.id);if(!army)return faction.name+" had no field army.";
  if(!factionArmies.includes(army))factionArmies.unshift(army);
@@ -3319,16 +3375,28 @@ function runAIFactionTurn(campaign,faction){
  if(!region)return faction.name+" could not locate its army.";
  const capital=campaign.regions.find(r=>r.id===faction.homeRegion);
  const capitalNode=capital?"city-"+capital.id:null;
- const enemyAtCapital=capitalNode?campaignArmyAtNode(campaign,capitalNode,army).find(a=>(a.owner||a.factionId)!==faction.id&&!campaignAreAllied(campaign,faction.id,a.owner||a.factionId)):null;
- if(capital&&politicalOwner(capital)===faction.id&&enemyAtCapital){
-  if(army.nodeId===capitalNode){
-   const enemyId=enemyAtCapital.owner||enemyAtCapital.factionId,enemyState=campaign.factionStates.find(x=>x.id===enemyId);
-   if(enemyState?.alive){resolveStrategicBattle(campaign,faction,enemyState,capital);return faction.name+" prioritises defending its capital "+capital.name+". "+campaign.lastEvent;}
-  }
-  const path=campaignMovementPath(campaign,army.nodeId||("city-"+army.region),capitalNode),movement=campaignArmyMovementProfile(army,campaign).points;
-  if(path){
-   let spent=0,last=path[0];for(let i=1;i<path.length;i++){const cost=campaignPathCost(campaign,path.slice(0,i+1));if(cost>movement)break;spent=cost;last=path[i];}
-   if(last!==army.nodeId){army.nodeId=last;army.region=campaign.graph.nodes[last]?.region??army.region;army.movement=Math.max(0,movement-spent);return faction.name+" diverts its army to relieve its besieged capital "+capital.name+".";}
+ const besiegedOwned=campaign.regions.filter(r=>politicalOwner(r)===faction.id).map(r=>({region:r,node:"city-"+r.id,enemy:campaignArmyAtNode(campaign,"city-"+r.id).find(a=>(a.owner||a.factionId)!==faction.id&&!campaignAreAllied(campaign,faction.id,a.owner||a.factionId))})).find(x=>x.enemy);
+ if(besiegedOwned){
+  const enemyId=besiegedOwned.enemy.owner||besiegedOwned.enemy.factionId,enemyState=campaign.factionStates.find(x=>x.id===enemyId);
+  const ownStrength=campaignAiRawArmyStrength(army),enemyStrength=campaignAiRawArmyStrength(besiegedOwned.enemy);
+  if(enemyState?.alive&&ownStrength>=enemyStrength*1.15){resolveStrategicBattle(campaign,faction,enemyState,besiegedOwned.region);return faction.name+" sallies out against the besieging army at "+besiegedOwned.region.name+". "+campaign.lastEvent;}
+  if(army.nodeId===besiegedOwned.node)return faction.name+" holds "+besiegedOwned.region.name+" behind its defences rather than risk a sally.";
+  if(campaignAiMoveArmy(campaign,army,besiegedOwned.node))return faction.name+" rushes to relieve the siege at "+besiegedOwned.region.name+".";
+ }
+ if(army.aiSiegeTarget){
+  const target=campaign.regions.find(r=>r.id===army.aiSiegeTarget),owner=target&&politicalOwner(target);
+  if(!target||!owner||owner===faction.id||!campaign.activeWars.includes(campaignWarKey(faction.id,owner))){army.aiSiegeTarget=null;}
+  else if(army.nodeId==="city-"+target.id){
+   const defender=campaign.factionStates.find(x=>x.id===owner),assessment=defender&&campaignStrategicCityAttackAssessment(campaign,faction,defender,target);
+   if(!defender?.alive){army.aiSiegeTarget=null;}
+   else if((target.settlement?.foodStores||0)<=0&&(target.settlement?.siegeTurns||0)>=8&&(assessment?.ratio||0)>=0.75){
+    army.aiSiegeTarget=null;resolveStrategicBattle(campaign,faction,defender,target);return faction.name+" assaults "+target.name+" after starving its defenders. "+campaign.lastEvent;
+   }else if((army.supplies||0)<=1){
+    army.aiSiegeTarget=null;
+    const home=campaign.regions.find(r=>politicalOwner(r)===faction.id),homeNode=home?"city-"+home.id:null;
+    if(homeNode)campaignAiMoveArmy(campaign,army,homeNode);
+    return faction.name+" abandons the siege of "+target.name+" before its own army is starved.";
+   }else return faction.name+" maintains the siege of "+target.name+"; provisions remaining: "+Math.max(0,Number(target.settlement?.foodStores)||0)+".";
   }
  }
  const capitalThreat=capital&&politicalOwner(capital)===faction.id?(campaign.graph.edges[capitalNode]||[]).map(e=>e.to).map(id=>campaignArmyAtNode(campaign,id,army).find(a=>(a.owner||a.factionId)!==faction.id&&!campaignAreAllied(campaign,faction.id,a.owner||a.factionId))).find(Boolean):null;
@@ -3339,11 +3407,17 @@ function runAIFactionTurn(campaign,faction){
  const candidates=(region.neighbors||[]).map(id=>campaign.regions.find(r=>r.id===id)).filter(Boolean);
  const hostile=candidates.filter(r=>politicalOwner(r)!==faction.id&&!campaignAreAllied(campaign,faction.id,politicalOwner(r))).map(r=>({region:r,owner:campaign.factionStates.find(x=>x.id===politicalOwner(r))})).filter(x=>x.owner?.alive);
  if(!hostile.length)return faction.name+" earns "+faction.income+", pays "+faction.upkeep+" upkeep and recruits "+recruitment.added+" models.";
+ const originNode=army.nodeId||("city-"+army.region);
  hostile.sort((a,b)=>{
-  const aCapital=a.region.id===faction.homeRegion?0:1,bCapital=b.region.id===faction.homeRegion?0:1;
-  if(aCapital!==bCapital)return aCapital-bCapital;
-  const av=campaignRelation(campaign,faction.id,a.owner.id),bv=campaignRelation(campaign,faction.id,b.owner.id);
-  return av-bv||(a.region.settlement?.prosperity||0)-(b.region.settlement?.prosperity||0);
+  const score=x=>{
+   const assessment=campaignStrategicCityAttackAssessment(campaign,faction,x.owner,x.region);
+   const route=campaignMovementPath(campaign,originNode,"city-"+x.region.id);
+   const distance=route?campaignPathCost(campaign,route):999;
+   const economic=campaignCityIncome(x.region,campaign)+campaignMinorSettlementIncome(campaign,x.owner.id);
+   const capitalThreat=x.region.id===x.owner.homeRegion?0.25:0;
+   return assessment.ratio+Math.min(0.25,economic/800)+capitalThreat-distance*0.015;
+  };
+  return score(b)-score(a);
  });
  const choice=hostile[0],enemy=choice.owner;
  let relation=campaignRelation(campaign,faction.id,enemy.id);
@@ -3357,9 +3431,18 @@ function runAIFactionTurn(campaign,faction){
  if(campaign.activeWars.includes(warKey)){
   const enemyArmy=factionArmy(campaign,enemy.id),race=faction.race||FACTION_BY_ID[faction.id]?.race||"human";
   const assessment=campaignStrategicCityAttackAssessment(campaign,faction,enemy,choice.region);
-  if(assessment.ratio<1.2)return faction.name+" declines an unfavourable attack on "+choice.region.name+"; estimated strength ratio "+assessment.ratio.toFixed(2)+" after fortifications, capital defence and civilian levies.";
+  const rawOwn=campaignAiRawArmyStrength(army),rawEnemy=campaignAiRawArmyStrength(enemyArmy);
+  if(assessment.ratio<1.2&&rawOwn>=rawEnemy*1.15){
+   army.region=choice.region.id;army.nodeId="city-"+choice.region.id;army.aiSiegeTarget=choice.region.id;
+   return faction.name+" begins a siege of "+choice.region.name+"; its army can contain a sally but the fortifications make an immediate assault too costly.";
+  }
+  if(assessment.ratio<1.2){
+   const raid=campaignAiRaidSupplyLine(campaign,army);
+   if(raid)return faction.name+" postpones the attack on "+choice.region.name+" and "+raid;
+   return faction.name+" declines an unfavourable attack on "+choice.region.name+"; estimated strength ratio "+assessment.ratio.toFixed(2)+" after fortifications, capital defence and civilian levies.";
+  }
   if(race==="dwarf"&&enemyArmy?.region===choice.region.id&&army.points<(enemyArmy.points||0)*1.15)return faction.name+" holds its defensive line rather than attacking a stronger enemy at "+choice.region.name+".";
-  army.region=choice.region.id;army.nodeId="city-"+choice.region.id;
+  army.region=choice.region.id;army.nodeId="city-"+choice.region.id;army.aiSiegeTarget=null;
   resolveStrategicBattle(campaign,faction,enemy,choice.region);
   return faction.name+" wages war against "+enemy.name+".";
  }
