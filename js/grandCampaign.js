@@ -3379,7 +3379,7 @@ export function startGrandCampaign(){
    const sample=log.length<=12?log:[...log.slice(0,6),...log.slice(-6)];
    for(const d of sample)lines.push("t"+d.turn+" "+d.factionId+" "+({ "rejected-attack":"R","battle-result":"B","attack":"A","idle":"I","other":"?"}[d.category]||"?")+" "+String(d.message||"").replace(/\\s+/g," ").slice(0,90)+(d.event?" => "+String(d.event).replace(/\\s+/g," ").slice(0,70):""));
    const changes=(r.turnLog||[]).filter(t=>(t.ownershipChanges||[]).length||(t.eliminated||[]).length);
-   lines.push("CHANGES "+changes.map(t=>"t"+t.turn+":"+(t.ownershipChanges||[]).map(c=>c.from+">"+c.to).join(",")+(t.eliminated||[]).length?(" x"+(t.eliminated||[]).join(",")):"").join(" "));
+   lines.push("CHANGES "+changes.map(t=>"t"+t.turn+":"+(t.ownershipChanges||[]).map(c=>c.from+">"+c.to).join(",")+((t.eliminated||[]).length?" x"+t.eliminated.join(","):"")).join(" "));
   }
   const errs=Object.entries(report.aggregateErrors||{}).sort((a,b)=>b[1]-a[1]);
   if(errs.length)lines.push("ERR "+errs.slice(0,5).map(([m,n])=>n+":"+String(m).split("\\n")[0].slice(0,100)).join(" | "));
