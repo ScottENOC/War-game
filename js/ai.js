@@ -81,10 +81,7 @@ function findRouteCore(u,target,desiredGap){
       if(turnCost>.02&&!canPlace(u,p.x,p.y,dirs[d]))continue;
       if(!canPlace(u,q.x,q.y,dirs[d]))continue;
       const moveCost=terrainMovementCost(terrain(),p.x,p.y,q.x,q.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
-      // The route may span multiple turns, but its first step must be affordable this turn.
-      // Otherwise execution stops at step zero and the AI repeatedly retargets without moving.
-      const edgeCost=turnCost+moveCost,firstStepBudget=Math.max(0,(u.stats?.M||0)-(u.moveUsed||0));
-      if(!node.parent&&edgeCost>firstStepBudget+.001)continue;
+      const edgeCost=turnCost+moveCost;
       const g=node.g+edgeCost,nk=key(nx,ny,d);if(g>=(best.get(nk)??Infinity)-1e-6)continue;
       best.set(nk,g);const h=Math.max(0,gap(u,target,q.x,q.y,dirs[d])-desiredGap);
       push({ix:nx,iy:ny,dir:d,g,f:g+h,parent:node});
@@ -205,9 +202,42 @@ function aiPivotAndAdvance(u,target,retargeted=null){
     const angle=point.dir*Math.PI/4,turn=normalizeTurn(angle-u.facing),turnCost=Math.abs(turn)*frontIn;
     if(u.moveUsed+turnCost>u.stats.M+.001)break;
     if(turnCost>.02&&!canPlace(u,u.x,u.y,angle))break;
-    const moveCost=terrainMovementCost(terrain(),u.x,u.y,point.x,point.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
-    if(u.moveUsed+turnCost+moveCost>u.stats.M+.001||!canPlace(u,point.x,point.y,angle))break;
-    u.facing=angle;u.moveUsed+=turnCost;u.x=point.x;u.y=point.y;u.moveUsed+=moveCost;u.moved=true;travelled+=moveCost;
+    const startX=u.x,startY=u.y;
+    const moveCost=terrainMovementCost(terrain(),startX,startY,point.x,point.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
+    if(!canPlace(u,point.x,point.y,angle))break;
+    u.facing=angle;u.moveUsed+=turnCost;u.moved=true;
+    const remaining=Math.max(0,u.stats.M-u.moveUsed);
+    if(moveCost<=remaining+.001){
+      u.x=point.x;u.y=point.y;u.moveUsed+=moveCost;travelled+=moveCost;
+      continue;
+    }
+    // The next route waypoint may be legal but just beyond this turn's budget.
+    // Move the furthest affordable, collision-free fraction of this segment instead
+    // of discarding an otherwise valid route. Sample along the short segment as well
+    // as checking its endpoint so partial movement cannot skip through an obstacle.
+    const isLegalFraction=f=>{
+      const x=startX+(point.x-startX)*f,y=startY+(point.y-startY)*f;
+      const cost=terrainMovementCost(terrain(),startX,startY,x,y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
+      if(cost>remaining+.001)return false;
+      for(let i=1;i<=4;i++){
+        const t=f*i/4,sx=startX+(point.x-startX)*t,sy=startY+(point.y-startY)*t;
+        if(!canPlace(u,sx,sy,angle))return false;
+      }
+      return true;
+    };
+    let lo=0,hi=1;
+    for(let i=0;i<12;i++){
+      const mid=(lo+hi)/2;
+      if(isLegalFraction(mid))lo=mid;else hi=mid;
+    }
+    if(lo>.025){
+      const x=startX+(point.x-startX)*lo,y=startY+(point.y-startY)*lo;
+      const partialCost=terrainMovementCost(terrain(),startX,startY,x,y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
+      if(partialCost<=remaining+.001&&canPlace(u,x,y,angle)){
+        u.x=x;u.y=y;u.moveUsed+=partialCost;travelled+=partialCost;
+      }
+    }
+    break;
   }
   if(travelled>0){say(u.name+" advances "+travelled.toFixed(1)+'" along a passable route toward '+target.name+".");u.aiStuckTargetId=null;u.aiStagnantTurns=0;}
   else if(!changedFormation){
