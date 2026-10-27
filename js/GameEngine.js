@@ -6,13 +6,13 @@ import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warba
 import { createArmyBuilder } from "./armyBuilder.js?v=20261021-wyvern-roster-v1";
 import { createCollectionManager } from "./collection.js?v=20261021-wyvern-roster-v1";
 import { createGameState } from "./gameState.js";
-import { createAI } from "./ai.js?v=20261027-alternate-turn-direction-v1";
+import { createAI } from "./ai.js?v=20261027-centre-pivot-v1";
 import { createRules } from "./rules.js?v=20261022-rules-scope-fix-v1";
 import { createShooting } from "./shooting.js?v=20261023-ai-lab-fast-v3";
 import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
 import { createRendering } from "./rendering.js?v=20261021-charge-indicators-v1";
 import { createInput } from "./input.js?v=20261021-flying-wall-pan-guard-v1";
-import { createUI } from "./ui.js?v=20261021-character-undo-v1";
+import { createUI } from "./ui.js?v=20261027-centre-pivot-v1";
 import { createPhases } from "./phases.js?v=20261027-stuck-charge-history-v2";
 import { createDice } from "./dice.js";
 import { createMovement } from "./movement.js?v=20261025-base-gap-v1";
