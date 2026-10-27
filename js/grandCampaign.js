@@ -172,6 +172,42 @@ function campaignCharacterConfig(id,commander=null){
  if(id==="verdantCourt"){config.woodElfStyle=true;config.shield=false;config.dualWield=true;config.weapon="handWeapon";config.meleeWeapons=["handWeapon","offhandWeapon"];config.skills={...(config.skills||{}),skirmish:true};if(model?.mounted&&model.mountType){config.mounted=true;config.mountType=model.mountType;config.barding=!!model.barding;}}
  return config;
 }
+function campaignNamedRivalPackage(id,humanRivalId){
+ const faction=rosterFactionForPoliticalFaction(id);
+ const named=(type,name,extra={})=>({type,models:1,name,namedCharacter:true,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{},...extra});
+ let roster=null,name=null;
+ if(id==="paleRegent"){
+  name="Morcant the Undying";
+  roster=[
+   {type:"skeletons",models:24,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
+   {type:"zombies",models:18,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
+   {type:"skeletons",models:24,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
+   {type:"skeletonTroll",models:4,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
+   named("necromancer",name,{casterLevel:2})
+  ];
+ }else if(id==="cragBosses"){
+  name="Grubnash Skullcleaver";
+  roster=[
+   {type:"orcBoyz",models:20,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
+   {type:"orcBoyz",models:20,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
+   {type:"goblins",models:18,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
+   {type:"catapult",models:3,weapon:"handWeapon",crewType:"goblins",crewModels:3,champion:false,upgrades:{},skills:{}},
+   named("orcLord",name)
+  ];
+ }else if(id===humanRivalId){
+  name="Marshal Seraphine Vale";
+  roster=[
+   {type:"swordsmen",models:20,weapon:"handWeapon",meleeWeapons:["handWeapon"],champion:false,upgrades:{},skills:{}},
+   {type:"archers",models:15,weapon:"handWeapon",meleeWeapons:["handWeapon"],rangedWeapon:"bow",champion:false,upgrades:{},skills:{}},
+   {type:"cavalry",models:8,weapon:"handWeapon",meleeWeapons:["handWeapon"],mounted:true,mountType:"horse",champion:false,upgrades:{},skills:{}},
+   {type:"cannon",models:3,weapon:"handWeapon",crewType:"swordsmen",crewModels:3,champion:false,upgrades:{},skills:{}},
+   named("captain",name)
+  ];
+ }
+ if(!roster)return null;
+ const points=roster.reduce((sum,u)=>sum+unitCost(u,faction),0);
+ return {faction,roster,points,politicalFactionId:id,namedCommander:name};
+}
 function createCampaignArmyRoster(id,targetPoints=500,{player=false,commander=null}={}){
  const woodElfStyle=id==="verdantCourt";
  if(id==="deepflame"){const roster=[{type:"deepflameDragon",models:1,weapon:"handWeapon",meleeWeapons:["handWeapon"],casterLevel:4,spells:["fireBolt","nullificationDome"],champion:false,upgrades:{},skills:{}}];return {faction:"highElves",roster,points:unitCost(roster[0],"highElves"),politicalFactionId:id};}
@@ -918,11 +954,15 @@ function resolveGrandCampaignConquest(campaign,regionId,conquerorFaction,options
 const MAP_ID="shattered-realms-v25-eastern-sea-routes-camera-pan";
 function createInitialCampaignState(faction,city,commander){
  const playerPoliticalFaction=FACTION_PROFILES[city.id].id;
+ const humanRivalCandidates=["valedorn","merrow","kest","vane","caedmon","blackthorn","ironMarshal","varkesh","ashenCouncil","eastwatch"].filter(id=>id!==playerPoliticalFaction);
+ const humanRivalId=humanRivalCandidates[Math.floor(Math.random()*humanRivalCandidates.length)]||null;
  const regions=CITIES.map(r=>{const settlement=initialSettlement(r);return {id:r.id,name:r.name,faction:r.faction,politicalFactionId:FACTION_PROFILES[r.id].id,ownerFaction:FACTION_PROFILES[r.id].id,owner:FACTION_PROFILES[r.id].id,nativeFaction:r.faction,nativeCulture:CULTURE_BY_FACTION[r.faction]||"Local",terrain:r.terrain,neighbors:[...(REGION_NEIGHBORS[r.id]||[])],ruler:r.ruler,status:r.status,settlement};});
  const factionStates=Object.values(FACTION_PROFILES).map(profile=>{
   const home=CITIES.find(x=>FACTION_PROFILES[x.id].id===profile.id),isPlayer=profile.id===playerPoliticalFaction;
-  const army=createCampaignArmyRoster(profile.id,isPlayer?1000:500,{player:isPlayer,commander:isPlayer?commander:null});
-  return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,passive:!!profile.passive,treasury:profile.passive?0:isPlayer?500:300,income:profile.passive?0:campaignCityIncome(regions.find(r=>r.id===home.id)),upkeep:profile.passive?0:Math.ceil(army.points*.04),armyPoints:army.points,turnsTaken:0,relations:{},};
+  let army=createCampaignArmyRoster(profile.id,isPlayer?1000:500,{player:isPlayer,commander:isPlayer?commander:null});
+  const rivalPackage=!isPlayer?campaignNamedRivalPackage(profile.id,humanRivalId):null;
+  if(rivalPackage)army=rivalPackage;
+  return {id:profile.id,name:profile.name,race:profile.race,rosterFaction:army.faction,roster:army.roster,homeRegion:home.id,alive:true,passive:!!profile.passive,treasury:profile.passive?0:isPlayer?500:300,income:profile.passive?0:campaignCityIncome(regions.find(r=>r.id===home.id)),upkeep:profile.passive?0:Math.ceil(army.points*.04),armyPoints:army.points,namedCommander:army.namedCommander||null,turnsTaken:0,relations:{},};
  });
  const diplomacy={};for(const a of factionStates){diplomacy[a.id]={};for(const b of factionStates){if(a.id===b.id)continue;diplomacy[a.id][b.id]=baseFactionRelation(a.id,b.id);}}
  const armies=factionStates.map(state=>({id:state.id+"-main",owner:state.id,factionId:state.id,rosterFaction:state.rosterFaction,roster:state.roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}})),region:state.homeRegion,nodeId:"city-"+state.homeRegion,points:state.armyPoints,passive:!!state.passive,boredom:-4,momentum:0,foughtThisTurn:false,supplies:3,maxSupplies:3,supplyRaidedUntilTurn:0}));
@@ -943,7 +983,7 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
    const campaign=createInitialCampaignState("empire",city,{id:"campaign-test",name:"Campaign Test Commander",movement:3,maxMovement:3,nodeId:"city-1",region:1});
    campaign.labSimulation=true;
    campaign.armies=campaign.factionStates.map(state=>{
-    const built=createCampaignArmyRoster(state.id,500,{player:false});
+    const built=state.namedCommander?{faction:state.rosterFaction,roster:state.roster}:createCampaignArmyRoster(state.id,500,{player:false});
     const roster=(built.roster||[]).map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}}));
     state.rosterFaction=built.faction||state.rosterFaction;
     state.roster=roster.map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}}));
@@ -2872,13 +2912,20 @@ function applyStrategicCivilianLevyCasualties(region,defender,defenderRemainingF
  if(casualties<=0)return 0;
  return consumeCivilianPopulation(region,casualties)?casualties:0;
 }
+function campaignStrategicArmyPowerPoints(army,fallback=100){
+ if(!army)return fallback;
+ const faction=army.rosterFaction||rosterFactionForPoliticalFaction(army.owner||army.factionId||"");
+ const base=Math.max(0,Number(army.points)||campaignArmyCost(army));
+ const namedValue=(army.roster||[]).filter(unit=>unit.namedCharacter===true).reduce((sum,unit)=>sum+Math.max(0,unitCost(unit,faction)),0);
+ return base+Math.round(namedValue*0.2);
+}
 function resolveStrategicBattle(campaign,attacker,defender,target){
  const attacking=factionArmy(campaign,attacker.id),defending=factionArmy(campaign,defender.id);
  if(attacking)attacking.foughtThisTurn=true;if(defending)defending.foughtThisTurn=true;
  const defenderRegion=campaign.regions.find(r=>r.id===target.id);
  const totalDefenceBonus=campaignSettlementDefenceBonus(campaign,defender,defenderRegion);
- const attackPower=Math.max(1,attacking?.points||100)*campaignArmyLeadershipMultiplier(attacking)*(.8+Math.random()*.4);
- const defencePower=Math.max(1,defending?.points||250)*campaignArmyLeadershipMultiplier(defending)*(.8+Math.random()*.4)*(1+totalDefenceBonus);
+ const attackPower=Math.max(1,campaignStrategicArmyPowerPoints(attacking,100))*campaignArmyLeadershipMultiplier(attacking)*(.8+Math.random()*.4);
+ const defencePower=Math.max(1,campaignStrategicArmyPowerPoints(defending,250))*campaignArmyLeadershipMultiplier(defending)*(.8+Math.random()*.4)*(1+totalDefenceBonus);
  const winner=attackPower>=defencePower?attacker:defender,loser=winner===attacker?defender:attacker;
  awardGreenskinMomentum(campaign,factionArmy(campaign,winner.id),2);
  awardGreenskinMomentum(campaign,factionArmy(campaign,loser.id),-2);
