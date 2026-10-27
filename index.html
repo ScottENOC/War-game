@@ -57,10 +57,10 @@
 
 <section id="ai-battle-lab-screen" class="screen builder-screen" hidden><div class="builder-panel campaign-panel">
 <header class="builder-header"><div><div class="eyebrow">Automated battle testing</div><h1>AI Battle Lab</h1></div><button id="ai-battle-lab-back" class="secondary-button">Main Menu</button></header>
-<p class="builder-intro">Red uses the fixed baseline AI from the previous test. Blue uses Experimental 3, which adds a focus-fire bonus for weakened units and targets that are close to being eliminated, testing whether concentrated damage creates more decisive battles. Both use the real battle engine and faction rules; armies are generated from the selected faction rosters at the chosen points allowance.</p>
+<p class="builder-intro">Both sides use the same baseline AI policy, so this run focuses on whether movement recovery reduces stagnation rather than comparing target-scoring experiments. AI characters are assigned to units by battlefield role, and the results report failed movement approaches and successful retargets. Armies are generated from the selected faction rosters at the chosen points allowance.</p>
 <div class="lab-team-grid">
-<section class="lab-team red-team"><h2>🔴 Red · Fixed baseline AI</h2><label class="faction-choice">Faction <select id="ai-lab-red-faction"><option value="empire">Kingdom of Valedorn</option><option value="highElves">Elves</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label></section>
-<section class="lab-team blue-team"><h2>🔵 Blue · Experimental 3 (focus fire)</h2><label class="faction-choice">Faction <select id="ai-lab-blue-faction"><option value="highElves">Elves</option><option value="empire">Kingdom of Valedorn</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label></section>
+<section class="lab-team red-team"><h2>🔴 Red · Baseline AI</h2><label class="faction-choice">Faction <select id="ai-lab-red-faction"><option value="empire">Kingdom of Valedorn</option><option value="highElves">Elves</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label></section>
+<section class="lab-team blue-team"><h2>🔵 Blue · Baseline AI (same policy)</h2><label class="faction-choice">Faction <select id="ai-lab-blue-faction"><option value="highElves">Elves</option><option value="empire">Kingdom of Valedorn</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label></section>
 </div>
 <div class="lab-options-grid">
 <label class="faction-choice">Points per army <select id="ai-lab-points"><option value="500">500 points</option><option value="750">750 points</option><option value="1000" selected>1,000 points</option><option value="1500">1,500 points</option><option value="2000">2,000 points</option></select></label>
@@ -223,5 +223,5 @@
  </div>
 </section>
 
-<script type="module" src="js/main.js?v=20261027-blue-focus-fire-v1"></script>
+<script type="module" src="js/main.js?v=20261027-movement-stagnation-v1"></script>
 </body></html>
