@@ -116,7 +116,8 @@ function aiStuckContext(u,target){
   return {ever:records.length>0,thisTurn:records.some(e=>e.turn===S.turn),previousTurn:records.some(e=>e.turn===S.turn-1),latest:latest?describe(latest):null,recent:records.filter(e=>e.turn>=S.turn-1).map(describe)};
  };
  const ownCharges=summarizeHistory(u.aiChargeHistory,false),incomingCharges=summarizeHistory(u.aiIncomingChargeHistory,true);
- return {target:target?.name||"unknown",chargeHistory:{own:ownCharges,incoming:incomingCharges},nearbyFriendly,nearbyTerrain,likelyBlocker:nearbyFriendly.length?"friendly unit(s)":nearbyTerrain.length?"nearby terrain":"not identified by proximity"};
+ const livingEnemies=units().filter(v=>v.side!==u.side&&alive(v)&&!v.attachedTo),eligibleEnemies=livingEnemies.filter(v=>!v.fled);
+ return {target:target?.name||"unknown",enemyTargets:{living:livingEnemies.length,eligible:eligibleEnemies.length,fleeing:livingEnemies.length-eligibleEnemies.length},chargeHistory:{own:ownCharges,incoming:incomingCharges},nearbyFriendly,nearbyTerrain,likelyBlocker:nearbyFriendly.length?"friendly unit(s)":nearbyTerrain.length?"nearby terrain":"not identified by proximity"};
 }
 function aiRecordStagnation(u,target,reason){
  u.aiStagnationEvents=(u.aiStagnationEvents||0)+1;
