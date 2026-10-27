@@ -81,7 +81,11 @@ function findRouteCore(u,target,desiredGap){
       if(turnCost>.02&&!canPlace(u,p.x,p.y,dirs[d]))continue;
       if(!canPlace(u,q.x,q.y,dirs[d]))continue;
       const moveCost=terrainMovementCost(terrain(),p.x,p.y,q.x,q.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
-      const g=node.g+turnCost+moveCost,nk=key(nx,ny,d);if(g>=(best.get(nk)??Infinity)-1e-6)continue;
+      // The route may span multiple turns, but its first step must be affordable this turn.
+      // Otherwise execution stops at step zero and the AI repeatedly retargets without moving.
+      const edgeCost=turnCost+moveCost,firstStepBudget=Math.max(0,(u.stats?.M||0)-(u.moveUsed||0));
+      if(!node.parent&&edgeCost>firstStepBudget+.001)continue;
+      const g=node.g+edgeCost,nk=key(nx,ny,d);if(g>=(best.get(nk)??Infinity)-1e-6)continue;
       best.set(nk,g);const h=Math.max(0,gap(u,target,q.x,q.y,dirs[d])-desiredGap);
       push({ix:nx,iy:ny,dir:d,g,f:g+h,parent:node});
     }
