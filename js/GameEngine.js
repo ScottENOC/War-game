@@ -453,6 +453,10 @@ function startAiLabBattle(){
 }
 function pauseAiLabForInspection(){
  if(!S.aiLabPauseRequested)return;
+ const pausedDiagnostics=S.aiLabDiagnostics||[];
+ const pausedResult={battle:1,winner:"paused",turns:S.turn,redRemaining:labSurvivingPoints("player"),blueRemaining:labSurvivingPoints("ai"),diagnostics:pausedDiagnostics,pause:S.aiLabPauseRequested};
+ aiLabRun.results=[pausedResult];aiLabRun.completed=1;
+ $("ai-battle-lab-results").innerHTML="<h2>Single battle · paused for inspection</h2><p>Paused on turn "+S.turn+" when <strong>"+S.aiLabPauseRequested.unit+"</strong> ("+S.aiLabPauseRequested.side+") failed to make movement progress. The full battlefield is now visible. Switch control between Red and Blue to manually inspect either side.</p><p>Diagnostic events captured before the pause: "+pausedDiagnostics.length+".</p><button type='button' id='ai-lab-copy-diagnostics' class='secondary-button'>Copy diagnostic log</button>";
  S.aiBattleLab=false;S.aiLabInspectMode=true;S.aiLabControlSide="red";S.finished=false;S.phase="movement";S.activationSide="player";S.selected=null;S.mode=null;
  units().forEach(u=>{u.side=u.aiLabTeam==="red"?"player":"ai";});
  $("ai-battle-lab-screen").hidden=true;$("mainmenu").hidden=true;$("game").hidden=false;$("battle-menu-caption").textContent="AI Lab · paused for manual inspection";
