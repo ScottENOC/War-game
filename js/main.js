@@ -1,6 +1,6 @@
 import "./tooltips.js";
 import { installSaveBackupControls } from "./saveBackup.js?v=20261016-save-backup-v1";
-import { startGame } from "./GameEngine.js?v=20261027-movement-stagnation-v1";
+import { startGame } from "./GameEngine.js?v=20261027-movement-stagnation-v2";
 import { startGrandCampaign } from "./grandCampaign.js?v=20261027-named-rival-armies-v1";
 
 startGrandCampaign();
