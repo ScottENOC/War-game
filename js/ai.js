@@ -115,7 +115,9 @@ function aiRecordStagnation(u,target,reason){
  u.aiStagnationEvents=(u.aiStagnationEvents||0)+1;
  const context=aiStuckContext(u,target);
  u.aiLastStuckReport={turn:S.turn,reason,...context};
- if(S.aiBattleLab&&S.aiLabPauseOnStuck&&!S.aiLabPauseRequested)S.aiLabPauseRequested={turn:S.turn,phase:S.phase,side:side==="player"?"red":"blue",unit:u.name,target:target?.name||"unknown",reason,...context};
+ // Pause only for a route that was found but could not execute a step.
+ // A failed route search may still recover by retargeting or turning in place.
+ if(S.aiBattleLab&&S.aiLabPauseOnStuck&&!S.aiLabPauseRequested&&!u.engaged&&reason==="route-found-but-no-step-applied")S.aiLabPauseRequested={turn:S.turn,phase:S.phase,side:side==="player"?"red":"blue",unit:u.name,target:target?.name||"unknown",reason,engaged:!!u.engaged,...context};
  if(S.aiBattleLab){
   const blockers=S.aiLabStuckBlockers||(S.aiLabStuckBlockers={});
   blockers[context.likelyBlocker]=(blockers[context.likelyBlocker]||0)+1;
