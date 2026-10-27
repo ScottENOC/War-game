@@ -109,7 +109,14 @@ function aiStuckContext(u,target){
  const nearbyTerrain=terrain().filter(t=>Number.isFinite(t.x)&&Number.isFinite(t.y))
   .map(t=>({type:t.type||t.kind||"terrain",name:t.label||t.name||null,distance:Math.hypot((t.x-u.x)*BATTLEFIELD_WIDTH_IN,(t.y-u.y)*fieldHeightIn())}))
   .filter(t=>t.distance<=2.5).sort((a,b)=>a.distance-b.distance).slice(0,3).map(t=>({...t,distance:Number(t.distance.toFixed(2))}));
- return {target:target?.name||"unknown",nearbyFriendly,nearbyTerrain,likelyBlocker:nearbyFriendly.length?"friendly unit(s)":nearbyTerrain.length?"nearby terrain":"not identified by proximity"};
+ const summarizeHistory=(history,incoming=false)=>{
+  const records=Array.isArray(history)?history:[];
+  const latest=records.length?records[records.length-1]:null;
+  const describe=e=>({turn:e.turn,turnsAgo:S.turn-e.turn,otherUnit:incoming?e.chargerName:e.targetName,status:e.status||"declared",counterCharge:!!e.counterCharge,reason:e.reason||null});
+  return {ever:records.length>0,thisTurn:records.some(e=>e.turn===S.turn),previousTurn:records.some(e=>e.turn===S.turn-1),latest:latest?describe(latest):null,recent:records.filter(e=>e.turn>=S.turn-1).map(describe)};
+ };
+ const ownCharges=summarizeHistory(u.aiChargeHistory,false),incomingCharges=summarizeHistory(u.aiIncomingChargeHistory,true);
+ return {target:target?.name||"unknown",chargeHistory:{own:ownCharges,incoming:incomingCharges},nearbyFriendly,nearbyTerrain,likelyBlocker:nearbyFriendly.length?"friendly unit(s)":nearbyTerrain.length?"nearby terrain":"not identified by proximity"};
 }
 function aiRecordStagnation(u,target,reason){
  u.aiStagnationEvents=(u.aiStagnationEvents||0)+1;
