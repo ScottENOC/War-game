@@ -13,7 +13,7 @@ import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
 import { createRendering } from "./rendering.js?v=20261021-charge-indicators-v1";
 import { createInput } from "./input.js?v=20261021-flying-wall-pan-guard-v1";
 import { createUI } from "./ui.js?v=20261021-character-undo-v1";
-import { createPhases } from "./phases.js?v=20261022-ai-battle-lab-v2";
+import { createPhases } from "./phases.js?v=20261027-failed-charge-guard-v1";
 import { createDice } from "./dice.js";
 import { createMovement } from "./movement.js?v=20261025-base-gap-v1";
 import { createNarrativeCampaign } from "./campaign.js";
