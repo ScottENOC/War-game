@@ -115,6 +115,7 @@ function aiRecordStagnation(u,target,reason){
  u.aiStagnationEvents=(u.aiStagnationEvents||0)+1;
  const context=aiStuckContext(u,target);
  u.aiLastStuckReport={turn:S.turn,reason,...context};
+ if(S.aiBattleLab&&S.aiLabPauseOnStuck&&!S.aiLabPauseRequested)S.aiLabPauseRequested={turn:S.turn,phase:S.phase,side:side==="player"?"red":"blue",unit:u.name,target:target?.name||"unknown",reason,...context};
  if(S.aiBattleLab){
   const blockers=S.aiLabStuckBlockers||(S.aiLabStuckBlockers={});
   blockers[context.likelyBlocker]=(blockers[context.likelyBlocker]||0)+1;
@@ -175,6 +176,7 @@ function aiPivotAndAdvance(u,target,retargeted=null){
     if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-route-fallback",unit:u.name,target:target.name,routeFound:false,fallbackMoved:false,reason:"no-legal-progress",distance:Number(separation.toFixed(2)),centreDistance:Number(dist(u,target).toFixed(2)),baseGap:Number(separation.toFixed(2)),movementRemaining:Number(budgetLeft.toFixed(2))});
     const stuckContext=aiRecordStagnation(u,target,"no-legal-progress");
     if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"stuck-context",unit:u.name,...stuckContext});
+    if(S.aiLabPauseRequested)return false;
     if(u.aiStagnantTurn!==S.turn){u.aiStagnantTurns=(u.aiStuckTargetId===target.id?(u.aiStagnantTurns||0)+1:1);u.aiStagnantTurn=S.turn;}
     u.aiStuckTargetId=target.id||null;
     // If the chosen target is physically unreachable from this position, stop repeating
@@ -197,33 +199,38 @@ function aiPivotAndAdvance(u,target,retargeted=null){
     say(u.name+" cannot find a passable route to "+target.name+" this turn.");return false;
   }
   if(!route.length)return changedFormation;
-  const frontIn=shape(u).front/PX_PER_IN();let travelled=0;
+  const frontIn=shape(u).front/PX_PER_IN();let travelled=0,lastMovementAttempt=null;
   for(const point of route){
+    const startX=u.x,startY=u.y,startFacing=u.facing,startUsed=u.moveUsed;
     const angle=point.dir*Math.PI/4,turn=normalizeTurn(angle-u.facing),turnCost=Math.abs(turn)*frontIn;
-    if(u.moveUsed+turnCost>u.stats.M+.001)break;
-    if(turnCost>.02&&!canPlace(u,u.x,u.y,angle))break;
-    const startX=u.x,startY=u.y;
     const moveCost=terrainMovementCost(terrain(),startX,startY,point.x,point.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
-    if(!canPlace(u,point.x,point.y,angle))break;
+    const turnPlaceable=turnCost<=.02||canPlace(u,u.x,u.y,angle),endpointPlaceable=canPlace(u,point.x,point.y,angle);
+    lastMovementAttempt={stage:null,start:{x:Number(startX.toFixed(4)),y:Number(startY.toFixed(4)),facing:Number(startFacing.toFixed(3)),moveUsed:Number(startUsed.toFixed(3))},waypoint:{x:Number(point.x.toFixed(4)),y:Number(point.y.toFixed(4)),dir:point.dir},turnCost:Number(turnCost.toFixed(3)),moveCost:Number(moveCost.toFixed(3)),movementBudget:Number(u.stats.M.toFixed(3)),remainingBeforeTurn:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(3)),turnPlaceable,endpointPlaceable,partialFraction:null,partialEndpoint:null,actualDistanceIn:0,moveCostSpent:0};
+    if(u.moveUsed+turnCost>u.stats.M+.001){lastMovementAttempt.stage="turn-budget";break;}
+    if(!turnPlaceable){lastMovementAttempt.stage="turn-position-blocked";break;}
     u.facing=angle;u.moveUsed+=turnCost;u.moved=true;
     const remaining=Math.max(0,u.stats.M-u.moveUsed);
-    if(moveCost<=remaining+.001){
+    if(moveCost<=remaining+.001&&endpointPlaceable){
       u.x=point.x;u.y=point.y;u.moveUsed+=moveCost;travelled+=moveCost;
+      lastMovementAttempt.stage="full-step";lastMovementAttempt.actualDistanceIn=Number(Math.hypot((u.x-startX)*BATTLEFIELD_WIDTH_IN,(u.y-startY)*fieldHeightIn()).toFixed(3));lastMovementAttempt.moveCostSpent=Number((turnCost+moveCost).toFixed(3));
       continue;
     }
     // The next route waypoint may be legal but just beyond this turn's budget.
     // Move the furthest affordable, collision-free fraction of this segment instead
     // of discarding an otherwise valid route. Sample along the short segment as well
     // as checking its endpoint so partial movement cannot skip through an obstacle.
+    const fractionChecks=[];
     const isLegalFraction=f=>{
       const x=startX+(point.x-startX)*f,y=startY+(point.y-startY)*f;
       const cost=terrainMovementCost(terrain(),startX,startY,x,y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
+      const sampleFailures=[];
       if(cost>remaining+.001)return false;
       for(let i=1;i<=4;i++){
-        const t=f*i/4,sx=startX+(point.x-startX)*t,sy=startY+(point.y-startY)*t;
-        if(!canPlace(u,sx,sy,angle))return false;
+        const t=f*i/4,sx=startX+(point.x-startX)*t,sy=startY+(point.y-startY)*t,placeable=canPlace(u,sx,sy,angle);
+        if(!placeable)sampleFailures.push({sample:i,fraction:Number(t.toFixed(4)),x:Number(sx.toFixed(4)),y:Number(sy.toFixed(4))});
       }
-      return true;
+      fractionChecks.push({fraction:Number(f.toFixed(4)),cost:Number(cost.toFixed(3)),withinBudget:cost<=remaining+.001,legal:sampleFailures.length===0,sampleFailures});
+      return sampleFailures.length===0;
     };
     let lo=0,hi=1;
     for(let i=0;i<12;i++){
@@ -235,13 +242,18 @@ function aiPivotAndAdvance(u,target,retargeted=null){
       const partialCost=terrainMovementCost(terrain(),startX,startY,x,y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
       if(partialCost<=remaining+.001&&canPlace(u,x,y,angle)){
         u.x=x;u.y=y;u.moveUsed+=partialCost;travelled+=partialCost;
-      }
-    }
+        lastMovementAttempt.stage=endpointPlaceable?"partial-budget-step":"partial-before-blocked-waypoint";
+        lastMovementAttempt.partialFraction=Number(lo.toFixed(4));lastMovementAttempt.partialEndpoint={x:Number(x.toFixed(4)),y:Number(y.toFixed(4))};
+        lastMovementAttempt.actualDistanceIn=Number(Math.hypot((u.x-startX)*BATTLEFIELD_WIDTH_IN,(u.y-startY)*fieldHeightIn()).toFixed(3));
+        lastMovementAttempt.moveCostSpent=Number((turnCost+partialCost).toFixed(3));
+      }else lastMovementAttempt.stage="partial-recheck-failed";
+    }else lastMovementAttempt.stage=endpointPlaceable?"partial-step-no-legal-fraction":"waypoint-blocked-no-legal-fraction";
+    lastMovementAttempt.fractionChecks=fractionChecks.slice(-16);
     break;
   }
   if(travelled>0){say(u.name+" advances "+travelled.toFixed(1)+'" along a passable route toward '+target.name+".");u.aiStuckTargetId=null;u.aiStagnantTurns=0;}
   else if(!changedFormation){
-    if(S.aiLabDiagnosticsEnabled){const first=route[0]||null,firstAngle=first?first.dir*Math.PI/4:u.facing,firstTurn=first?Math.abs(normalizeTurn(firstAngle-u.facing))*shape(u).front/PX_PER_IN():0,firstMove=first?terrainMovementCost(terrain(),u.x,u.y,first.x,first.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn()):0;S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-stagnation",unit:u.name,target:target.name,reason:"route-found-but-no-step-applied",routeLength:route.length,firstStep:first?{x:Number(first.x.toFixed(3)),y:Number(first.y.toFixed(3)),dir:first.dir,canPlace:canPlace(u,first.x,first.y,firstAngle),turnCost:Number(firstTurn.toFixed(2)),moveCost:Number(firstMove.toFixed(2)),totalCost:Number((firstTurn+firstMove).toFixed(2)),remaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2))}:null,movementRemaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2)),lastRouteSearch:u.aiLastRouteSearch||null});}
+    if(S.aiLabDiagnosticsEnabled){const first=route[0]||null,firstAngle=first?first.dir*Math.PI/4:u.facing,firstTurn=first?Math.abs(normalizeTurn(firstAngle-u.facing))*shape(u).front/PX_PER_IN():0,firstMove=first?terrainMovementCost(terrain(),u.x,u.y,first.x,first.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn()):0;S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-stagnation",unit:u.name,target:target.name,reason:"route-found-but-no-step-applied",routeLength:route.length,firstStep:first?{x:Number(first.x.toFixed(3)),y:Number(first.y.toFixed(3)),dir:first.dir,canPlace:canPlace(u,first.x,first.y,firstAngle),turnCost:Number(firstTurn.toFixed(2)),moveCost:Number(firstMove.toFixed(2)),totalCost:Number((firstTurn+firstMove).toFixed(2)),remaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2))}:null,movementAttempt:lastMovementAttempt,movementRemaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2)),lastRouteSearch:u.aiLastRouteSearch||null});}
     const stuckContext=aiRecordStagnation(u,target,"route-found-but-no-step-applied");
     if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"stuck-context",unit:u.name,...stuckContext});
     if(u.aiStagnantTurn!==S.turn){u.aiStagnantTurns=(u.aiStuckTargetId===target.id?(u.aiStagnantTurns||0)+1:1);u.aiStagnantTurn=S.turn;}
