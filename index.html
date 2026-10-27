@@ -27,7 +27,7 @@
       <button class="mode-card" data-mode="narrative"><strong>Narrative Campaign</strong><small>A branching fantasy war story</small></button>
       <button class="mode-card" data-mode="roguelike"><strong>Roguelike Expedition</strong><small>FTL-style runs · earn miniatures</small></button>
       <button class="mode-card" data-mode="skirmish"><strong>Skirmish</strong><small>Quick battle with your collection</small></button>
-      <button id="ai-battle-lab-open" class="mode-card"><strong>AI Battle Lab</strong><small>Same Blue AI on both sides · baseline repeatability test</small></button>
+      <button id="ai-battle-lab-open" class="mode-card"><strong>AI Battle Lab</strong><small>Blue tests aggressive target selection against the fixed baseline</small></button>
       <button id="campaign-ai-lab-open" class="mode-card"><strong>Campaign AI Test Lab</strong><small>Run AI-only Grand Campaign simulations</small></button>
       <button id="river-siege-test-open" class="mode-card"><strong>River-Crossing Siege Test</strong><small>Test Crownfall and Aelthir castle approaches</small></button>
       <button class="mode-card" data-mode="warbandSkirmish"><strong>Warband Skirmish</strong><small>One-off fantasy skirmish · individual fighters · injury rolls</small></button>
@@ -57,10 +57,10 @@
 
 <section id="ai-battle-lab-screen" class="screen builder-screen" hidden><div class="builder-panel campaign-panel">
 <header class="builder-header"><div><div class="eyebrow">Automated battle testing</div><h1>AI Battle Lab</h1></div><button id="ai-battle-lab-back" class="secondary-button">Main Menu</button></header>
-<p class="builder-intro">Red and Blue both use the same current Blue AI policy for this baseline repeatability test. Both use the real battle engine and faction rules. Armies are generated from the selected faction rosters at the chosen points allowance.</p>
+<p class="builder-intro">Red uses the fixed Blue AI baseline from the previous test. Blue uses Experimental 2, which prioritises nearby targets more strongly to test whether more direct engagements reduce turn-limit draws. Both use the real battle engine and faction rules; armies are generated from the selected faction rosters at the chosen points allowance.</p>
 <div class="lab-team-grid">
-<section class="lab-team red-team"><h2>🔴 Red · Blue AI baseline</h2><label class="faction-choice">Faction <select id="ai-lab-red-faction"><option value="empire">Kingdom of Valedorn</option><option value="highElves">Elves</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label></section>
-<section class="lab-team blue-team"><h2>🔵 Blue · Blue AI baseline</h2><label class="faction-choice">Faction <select id="ai-lab-blue-faction"><option value="highElves">Elves</option><option value="empire">Kingdom of Valedorn</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label></section>
+<section class="lab-team red-team"><h2>🔴 Red · Fixed baseline AI</h2><label class="faction-choice">Faction <select id="ai-lab-red-faction"><option value="empire">Kingdom of Valedorn</option><option value="highElves">Elves</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label></section>
+<section class="lab-team blue-team"><h2>🔵 Blue · Experimental 2 (aggressive targets)</h2><label class="faction-choice">Faction <select id="ai-lab-blue-faction"><option value="highElves">Elves</option><option value="empire">Kingdom of Valedorn</option><option value="dwarfs">Dwarfs</option><option value="greenskins">Greenskins</option><option value="undead">Undead</option></select></label></section>
 </div>
 <div class="lab-options-grid">
 <label class="faction-choice">Points per army <select id="ai-lab-points"><option value="500">500 points</option><option value="750">750 points</option><option value="1000" selected>1,000 points</option><option value="1500">1,500 points</option><option value="2000">2,000 points</option></select></label>
@@ -223,5 +223,5 @@
  </div>
 </section>
 
-<script type="module" src="js/main.js?v=20261027-blue-baseline-repeatability-v1"></script>
+<script type="module" src="js/main.js?v=20261027-blue-aggressive-targets-v1"></script>
 </body></html>
