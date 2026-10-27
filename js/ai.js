@@ -5,16 +5,17 @@ export function createAI({ S, units, alive, eligibleForActivation, enemies, visi
 function aiWantsRange(){return armyRangeScore(side)>armyRangeScore(enemySide);}
 function aiTargetScore(u,t,preferRanged){
  const dx=(t.x-u.x)*BATTLEFIELD_WIDTH_IN,dy=(t.y-u.y)*fieldHeightIn(),d=Math.hypot(dx,dy),bearing=Math.atan2(dy,dx),delta=Math.atan2(Math.sin(bearing-u.facing),Math.cos(bearing-u.facing)),frontPenalty=Math.abs(delta)>Math.PI/2?7:Math.abs(delta)*1.5,rangedBonus=preferRanged&&(t.kind==="archer"||t.hasRangedWeapon)?3:0;
- if(policy!=="experimental"&&policy!=="experimental2"&&policy!=="experimental3")return d+frontPenalty-rangedBonus;
+ if(policy!=="experimental"&&policy!=="experimental2"&&policy!=="experimental3")return d+frontPenalty-rangedBonus+stagnationPenalty;
  const danger=(t.isCannon||t.isBoltThrower||t.isCatapult?7:0)+(t.spellcaster?5:0)+(t.hasRangedWeapon?2.2:0)+(t.isDragon||t.isDragonRider?5:0)+(t.isCavalry?2:0);
  const fragility=(t.models<=5?2.5:t.models<=10?1.3:0)+(t.stats?.W&&t.stats.W<=2?1:0);
  const value=Math.min(5,Math.max(0,(t.points||0)/250));
  const currentThreat=(u.isCannon||u.isBoltThrower||u.isCatapult?1.5:0)+(u.hasRangedWeapon?1.2:0);
+ const stagnationPenalty=u.aiStuckTargetId===t.id?Math.min(18,6*Math.max(1,u.aiStagnantTurns||1)):0;
  const supported=units().filter(v=>v.side===enemySide&&alive(v)&&!v.fled&&v.id!==t.id&&dist(v,t)<=4).length;
  // Blue values enemy shooting opportunities that can still be denied by acting now.
  const unspentEnemyShot=(policy==="experimental"||policy==="experimental2"||policy==="experimental3")&&t.hasRangedWeapon&&!t.activated&&!t.shot?3.5:0;
  // Experimental 2 tests a simpler aggression hypothesis: prefer reachable, nearby targets over distant high-value threats, to turn attritional draws into engagements.
- const aggressiveScore=d*1.15+frontPenalty*.6-rangedBonus-danger*.35-fragility*.65-value*.2-supported*.1-currentThreat*.1-unspentEnemyShot;
+ const aggressiveScore=d*1.15+frontPenalty*.6-rangedBonus-danger*.35-fragility*.65-value*.2-supported*.1-currentThreat*.1-unspentEnemyShot+stagnationPenalty;
  if(policy==="experimental2")return aggressiveScore;
  if(policy==="experimental3"){
   const startingModels=Math.max(1,t.startModels||t.models||1);
@@ -88,7 +89,9 @@ function findRoute(u,target,desiredGap){
   if(!found)return null;
   const path=[];for(let n=found;n&&n.parent;n=n.parent)path.push({ ...position(n.ix,n.iy),dir:n.dir });return path.reverse();
 }
-function aiPivotAndAdvance(u,target){
+function aiPivotAndAdvance(u,target,retargeted=null){
+  const seen=retargeted||new Set();
+  if(target?.id)seen.add(target.id);
   const separation=gap(u,target),melee=(u.kind==="melee"&&!u.hasRangedWeapon)||(u.isCavalry&&!u.hasRangedWeapon)||(u.isCharacter&&!u.hasRangedWeapon),desiredGap=melee?1.2:Math.max(0,(u.range||BOW_RANGE)-.5),budget=Math.max(0,u.stats.M-u.moveUsed);
   if(separation<=desiredGap+.15)return false;
   let route=findRoute(u,target,desiredGap),changedFormation=false;
@@ -131,10 +134,27 @@ function aiPivotAndAdvance(u,target){
     if(best){
       u.facing=best.angle;u.x=best.x;u.y=best.y;u.moveUsed+=best.turnCost+best.travel;u.moved=true;
       say(u.name+" makes a direct approach toward "+target.name+" after route search found no complete path.");
+      u.aiStuckTargetId=null;u.aiStagnantTurns=0;
       if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-route-fallback",unit:u.name,target:target.name,routeFound:false,from:{x:Number(best.startX.toFixed(3)),y:Number(best.startY.toFixed(3))},to:{x:Number(u.x.toFixed(3)),y:Number(u.y.toFixed(3))},movementCost:Number((best.turnCost+best.travel).toFixed(2)),centreDistanceBefore:Number(dist({x:best.startX,y:best.startY},target).toFixed(2)),centreDistanceAfter:Number(dist(u,target).toFixed(2)),baseGapBefore:Number(separation.toFixed(2)),baseGapAfter:Number(gap(u,target).toFixed(2)),distanceImprovement:Number(best.improvement.toFixed(2))});
       return true;
     }
     if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-route-fallback",unit:u.name,target:target.name,routeFound:false,fallbackMoved:false,reason:"no-legal-progress",distance:Number(separation.toFixed(2)),centreDistance:Number(dist(u,target).toFixed(2)),baseGap:Number(separation.toFixed(2)),movementRemaining:Number(budgetLeft.toFixed(2))});
+    if(u.aiStagnantTurn!==S.turn){u.aiStagnantTurns=(u.aiStuckTargetId===target.id?(u.aiStagnantTurns||0)+1:1);u.aiStagnantTurn=S.turn;}
+    u.aiStuckTargetId=target.id||null;
+    // If the chosen target is physically unreachable from this position, stop repeating
+    // the same failed approach. Try a small number of other visible targets first.
+    if(seen.size<3){
+      const alternatives=visibleEnemies(u).filter(t=>t.side!==side&&alive(t)&&!t.fled&&!seen.has(t.id))
+        .sort((a,b)=>aiTargetScore(u,a,false)-aiTargetScore(u,b,false));
+      for(const alternative of alternatives.slice(0,3-seen.size)){
+        seen.add(alternative.id);
+        if(aiPivotAndAdvance(u,alternative,seen)){
+          u.aiStuckTargetId=null;u.aiStagnantTurns=0;
+          if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-retarget",unit:u.name,fromTarget:target.name||"objective",toTarget:alternative.name,reason:"no-legal-progress"});
+          return true;
+        }
+      }
+    }
     const turns=angles.map(a=>({a,c:Math.abs(normalizeTurn(a-u.facing))*frontIn})).filter(v=>v.c<=budgetLeft+.001&&canPlace(u,u.x,u.y,v.a)).sort((a,b)=>Math.abs(normalizeTurn(a.a-desired))-Math.abs(normalizeTurn(b.a-desired)));
     if(turns.length){u.facing=turns[0].a;u.moveUsed+=turns[0].c;u.moved=true;say(u.name+" turns toward "+target.name+" but cannot advance along any tested approach this turn.");return true;}
     say(u.name+" cannot find a passable route to "+target.name+" this turn.");return false;
@@ -149,8 +169,17 @@ function aiPivotAndAdvance(u,target){
     if(u.moveUsed+turnCost+moveCost>u.stats.M+.001||!canPlace(u,point.x,point.y,angle))break;
     u.facing=angle;u.moveUsed+=turnCost;u.x=point.x;u.y=point.y;u.moveUsed+=moveCost;u.moved=true;travelled+=moveCost;
   }
-  if(travelled>0)say(u.name+" advances "+travelled.toFixed(1)+'" along a passable route toward '+target.name+".");
-  else if(!changedFormation)say(u.name+" cannot make progress toward "+target.name+" this turn; it will reconsider its formation and route next turn.");
+  if(travelled>0){say(u.name+" advances "+travelled.toFixed(1)+'" along a passable route toward '+target.name+".");u.aiStuckTargetId=null;u.aiStagnantTurns=0;}
+  else if(!changedFormation){
+    if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-stagnation",unit:u.name,target:target.name,reason:"route-found-but-no-step-applied",routeLength:route.length,movementRemaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2))});
+    if(u.aiStagnantTurn!==S.turn){u.aiStagnantTurns=(u.aiStuckTargetId===target.id?(u.aiStagnantTurns||0)+1:1);u.aiStagnantTurn=S.turn;}
+    u.aiStuckTargetId=target.id||null;
+    if(seen.size<3){
+      const alternatives=visibleEnemies(u).filter(t=>t.side!==side&&alive(t)&&!t.fled&&!seen.has(t.id)).sort((a,b)=>aiTargetScore(u,a,false)-aiTargetScore(u,b,false));
+      for(const alternative of alternatives.slice(0,3-seen.size)){seen.add(alternative.id);if(aiPivotAndAdvance(u,alternative,seen)){u.aiStuckTargetId=null;u.aiStagnantTurns=0;if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-retarget",unit:u.name,fromTarget:target.name||"objective",toTarget:alternative.name,reason:"route-found-but-no-progress"});return true;}}
+    }
+    say(u.name+" cannot make progress toward "+target.name+" this turn; it will reconsider its target and route next turn.");
+  }
   return travelled>0||changedFormation;
 }
 function aiSiegeLadder(u){
