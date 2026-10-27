@@ -256,6 +256,7 @@ function aiPivotAndAdvance(u,target,retargeted=null){
     if(S.aiLabDiagnosticsEnabled){const first=route[0]||null,firstAngle=first?first.dir*Math.PI/4:u.facing,firstTurn=first?Math.abs(normalizeTurn(firstAngle-u.facing))*shape(u).front/PX_PER_IN():0,firstMove=first?terrainMovementCost(terrain(),u.x,u.y,first.x,first.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn()):0;S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-stagnation",unit:u.name,target:target.name,reason:"route-found-but-no-step-applied",routeLength:route.length,firstStep:first?{x:Number(first.x.toFixed(3)),y:Number(first.y.toFixed(3)),dir:first.dir,canPlace:canPlace(u,first.x,first.y,firstAngle),turnCost:Number(firstTurn.toFixed(2)),moveCost:Number(firstMove.toFixed(2)),totalCost:Number((firstTurn+firstMove).toFixed(2)),remaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2))}:null,movementAttempt:lastMovementAttempt,movementRemaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2)),lastRouteSearch:u.aiLastRouteSearch||null});}
     const stuckContext=aiRecordStagnation(u,target,"route-found-but-no-step-applied");
     if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"stuck-context",unit:u.name,...stuckContext});
+    if(S.aiLabPauseRequested)return false;
     if(u.aiStagnantTurn!==S.turn){u.aiStagnantTurns=(u.aiStuckTargetId===target.id?(u.aiStagnantTurns||0)+1:1);u.aiStagnantTurn=S.turn;}
     u.aiStuckTargetId=target.id||null;
     if(seen.size<3){
