@@ -216,7 +216,24 @@ function aiPivotAndAdvance(u,target,retargeted=null){
     const moveCost=terrainMovementCost(terrain(),startX,startY,point.x,point.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn());
     const turnPlaceable=turnCost<=.02||canPlace(u,u.x,u.y,angle),endpointPlaceable=canPlace(u,point.x,point.y,angle);
     lastMovementAttempt={stage:null,start:{x:Number(startX.toFixed(4)),y:Number(startY.toFixed(4)),facing:Number(startFacing.toFixed(3)),moveUsed:Number(startUsed.toFixed(3))},waypoint:{x:Number(point.x.toFixed(4)),y:Number(point.y.toFixed(4)),dir:point.dir},turnCost:Number(turnCost.toFixed(3)),moveCost:Number(moveCost.toFixed(3)),movementBudget:Number(u.stats.M.toFixed(3)),remainingBeforeTurn:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(3)),turnPlaceable,endpointPlaceable,partialFraction:null,partialEndpoint:null,actualDistanceIn:0,moveCostSpent:0};
-    if(u.moveUsed+turnCost>u.stats.M+.001){lastMovementAttempt.stage="turn-budget";break;}
+    if(u.moveUsed+turnCost>u.stats.M+.001){
+      // A route can be valid even when the unit cannot complete the whole wheel this turn.
+      // Use the remaining movement allowance to turn as far as possible instead of doing nothing.
+      const turnBudget=Math.max(0,u.stats.M-u.moveUsed),maxTurnRadians=frontIn>0?turnBudget/frontIn:0;
+      if(turnBudget>.001&&Math.abs(turn)>.001&&maxTurnRadians>.001){
+        const partialTurn=Math.sign(turn)*Math.min(Math.abs(turn),maxTurnRadians);
+        const partialFacing=normalizeTurn(u.facing+partialTurn);
+        if(canPlace(u,u.x,u.y,partialFacing)){
+          u.facing=partialFacing;u.moveUsed+=Math.abs(partialTurn)*frontIn;u.moved=true;
+          lastMovementAttempt.stage="partial-turn-budget";
+          lastMovementAttempt.partialTurnRadians=Number(partialTurn.toFixed(4));
+          lastMovementAttempt.partialFacing=Number(partialFacing.toFixed(4));
+          lastMovementAttempt.moveCostSpent=Number((u.moveUsed-startUsed).toFixed(3));
+          lastMovementAttempt.actualDistanceIn=0;
+        }else lastMovementAttempt.stage="turn-budget-and-partial-facing-blocked";
+      }else lastMovementAttempt.stage="turn-budget";
+      break;
+    }
     if(!turnPlaceable){lastMovementAttempt.stage="turn-position-blocked";break;}
     u.facing=angle;u.moveUsed+=turnCost;u.moved=true;
     const remaining=Math.max(0,u.stats.M-u.moveUsed);
