@@ -12,14 +12,17 @@ function aiTargetScore(u,t,preferRanged){
  const currentThreat=(u.isCannon||u.isBoltThrower||u.isCatapult?1.5:0)+(u.hasRangedWeapon?1.2:0);
  const supported=units().filter(v=>v.side===enemySide&&alive(v)&&!v.fled&&v.id!==t.id&&dist(v,t)<=4).length;
  // Blue values enemy shooting opportunities that can still be denied by acting now.
- const unspentEnemyShot=(policy==="experimental"||policy==="experimental2"||policy==="experimental3"||policy==="experimental3")&&t.hasRangedWeapon&&!t.activated&&!t.shot?3.5:0;
+ const unspentEnemyShot=(policy==="experimental"||policy==="experimental2"||policy==="experimental3")&&t.hasRangedWeapon&&!t.activated&&!t.shot?3.5:0;
  // Experimental 2 tests a simpler aggression hypothesis: prefer reachable, nearby targets over distant high-value threats, to turn attritional draws into engagements.
- if(policy==="experimental2")return d*1.15+frontPenalty*.6-rangedBonus-danger*.35-fragility*.65-value*.2-supported*.1-currentThreat*.1-unspentEnemyShot;
- const startingModels=Math.max(1,t.startModels||t.models||1);
- const remainingRatio=t.isCharacter&&t.stats?.W>0?Math.max(0,Math.min(1,(t.characterWounds??t.stats.W)/t.stats.W)):Math.max(0,Math.min(1,(t.models||0)/startingModels));
- const focusFire=Math.min(5,Math.max(0,1-remainingRatio)*5)+(t.models>0&&t.models<=3?1.25:0);
- // Experimental 3 adds a strong incentive to concentrate damage and finish off weakened units.
- return d*1.15+frontPenalty*.6-rangedBonus-danger*.35-fragility*.65-value*.2-supported*.1-currentThreat*.1-unspentEnemyShot-focusFire;
+ const aggressiveScore=d*1.15+frontPenalty*.6-rangedBonus-danger*.35-fragility*.65-value*.2-supported*.1-currentThreat*.1-unspentEnemyShot;
+ if(policy==="experimental2")return aggressiveScore;
+ if(policy==="experimental3"){
+  const startingModels=Math.max(1,t.startModels||t.models||1);
+  const remainingRatio=t.isCharacter&&t.stats?.W>0?Math.max(0,Math.min(1,(t.characterWounds??t.stats.W)/t.stats.W)):Math.max(0,Math.min(1,(t.models||0)/startingModels));
+  const focusFire=Math.min(5,Math.max(0,1-remainingRatio)*5)+(t.models>0&&t.models<=3?1.25:0);
+  // Experimental 3 adds a strong incentive to concentrate damage and finish off weakened units.
+  return aggressiveScore-focusFire;
+ }
  return d*.72+frontPenalty*.6-rangedBonus-danger*.8-fragility*.65-value*.45-supported*.25-currentThreat*.1-unspentEnemyShot;
 }
 function aiBestTarget(u,targets,preferRanged){return targets.slice().sort((a,b)=>aiTargetScore(u,a,preferRanged)-aiTargetScore(u,b,preferRanged))[0]||null;}
