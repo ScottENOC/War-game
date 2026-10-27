@@ -337,7 +337,18 @@ function campaignCityIncome(region,campaign=null){return Math.round((campaignBas
 function ensureMinorSettlementState(campaign){
  if(!Array.isArray(campaign.minorSettlements))campaign.minorSettlements=[];
  const existing=new Map(campaign.minorSettlements.map(p=>[p.id,p]));
- for(const node of Object.values(campaign.graph?.nodes||{})){if(!["village","farm"].includes(node.type))continue;const previous=existing.get(node.id);if(previous){previous.region=node.region;previous.type=node.type;previous.name=node.label;continue;}campaign.minorSettlements.push({id:node.id,name:node.label,type:node.type,region:node.region,population:Math.max(0,Number(node.population)||0),prosperity:Math.max(0,Number(node.prosperity)||40)});}
+ for(const node of Object.values(campaign.graph?.nodes||{})){
+  if(!["village","farm"].includes(node.type))continue;
+  const previous=existing.get(node.id);
+  if(previous){
+   previous.region=node.region;previous.type=node.type;previous.name=node.label;
+   previous.population=Math.max(0,Number(previous.population)||0);
+   if(!Number.isFinite(Number(previous.startingPopulation)))previous.startingPopulation=previous.population;
+   continue;
+  }
+  const population=Math.max(0,Number(node.population)||0);
+  campaign.minorSettlements.push({id:node.id,name:node.label,type:node.type,region:node.region,population,startingPopulation:population,prosperity:Math.max(0,Number(node.prosperity)||40)});
+ }
 }
 function campaignArmyCost(army){
  return Math.max(0,Math.round((army?.roster||[]).reduce((sum,u)=>sum+unitCost(u,army.rosterFaction||"empire"),0)));
@@ -644,6 +655,7 @@ function ensureSettlementState(campaign){
   if(!region.politicalFactionId)region.politicalFactionId=FACTION_PROFILES[region.id]?.id||FACTION_PROFILES[city.id]?.id;
   if(!region.nativeCulture)region.nativeCulture=CULTURE_BY_FACTION[city.faction]||"Local";
   if(!region.settlement.population)region.settlement.population=initialSettlement(city).population;
+  if(!Number.isFinite(Number(region.settlement.population.startingTotal)))region.settlement.population.startingTotal=Math.max(0,Number(region.settlement.population.total)||0);
   if(!Number.isFinite(Number(region.settlement.population.capacity)))region.settlement.population.capacity=Math.round((CITY_PROFILES[city.id]?.population||region.settlement.population.total||10000)*1.5);
   if(!Array.isArray(region.settlement.population.displacedGroups))region.settlement.population.displacedGroups=[];
   if(!region.settlement.architectureType)region.settlement.architectureType=cityArchitectureType(city);
@@ -2126,6 +2138,67 @@ function settleMonthlyMigration(campaign){
   p.total=p.groups.reduce((n,g)=>n+Math.max(0,Number(g.count)||0),0);
  }
 }
+function safePopulationRoute(campaign,startId,endId,ownerId){
+ const graph=campaign?.graph;
+ if(!graph?.nodes?.[startId]||!graph.nodes[endId])return null;
+ const safeNode=id=>{
+  const node=graph.nodes[id];if(!node)return false;
+  if(node.region==null||["seaRoute","river","sea","port"].includes(node.type))return true;
+  const region=campaign.regions?.find(r=>r.id===node.region);
+  return !!region&&politicalOwner(region)===ownerId;
+ };
+ if(!safeNode(startId)||!safeNode(endId))return null;
+ const queue=[startId],previous=new Map([[startId,null]]);
+ while(queue.length){
+  const at=queue.shift();if(at===endId)break;
+  for(const edge of graph.edges[at]||[]){
+   if(previous.has(edge.to)||!safeNode(edge.to))continue;
+   previous.set(edge.to,at);queue.push(edge.to);
+  }
+ }
+ if(!previous.has(endId))return null;
+ const path=[];for(let at=endId;at!==null;at=previous.get(at))path.push(at);
+ return path.reverse();
+}
+function settleVillageCityPopulation(campaign){
+ const places=campaign.minorSettlements||[],regions=campaign.regions||[];
+ for(const place of places){
+  const region=regions.find(r=>r.id===place.region),owner=region&&politicalOwner(region);
+  if(!region||!owner||!(place.population>=0))continue;
+  const villageBase=Math.max(0,Number(place.startingPopulation)||0);
+  const villageDelta=Number(place.population)-villageBase;
+  const candidates=regions.filter(city=>politicalOwner(city)===owner&&city.settlement?.population&&safePopulationRoute(campaign,place.id,"city-"+city.id,owner));
+  if(!candidates.length)continue;
+  candidates.sort((a,b)=>{
+   const pa=a.settlement.population,pb=b.settlement.population;
+   const da=(Number(pa.total)||0)-(Number(pa.startingTotal)||0),db=(Number(pb.total)||0)-(Number(pb.startingTotal)||0);
+   const needA=villageDelta<0&&da>0?Math.min(-villageDelta,da):0,needB=villageDelta<0&&db>0?Math.min(-villageDelta,db):0;
+   return needB-needA;
+  });
+  let city=candidates.find(c=>{
+   const p=c.settlement.population,delta=(Number(p.total)||0)-(Number(p.startingTotal)||0);
+   return (villageDelta<0&&delta>0)||(villageDelta>0&&delta<0);
+  });
+  if(!city)continue;
+  const population=city.settlement.population,cityDelta=(Number(population.total)||0)-(Number(population.startingTotal)||0);
+  let sourceKind,targetKind;
+  if(villageDelta<0&&cityDelta>0){sourceKind="city";targetKind="village";}
+  else if(villageDelta>0&&cityDelta<0){sourceKind="village";targetKind="city";}
+  else continue;
+  const sourceExcess=sourceKind==="city"?cityDelta:villageDelta;
+  const targetDeficit=targetKind==="city"?-cityDelta:-villageDelta;
+  const transfer=Math.min(Math.max(1,Math.floor(Math.min(villageBase,Number(population.startingTotal)||0)*0.005)),sourceExcess,targetDeficit);
+  if(transfer<=0)continue;
+  if(sourceKind==="city"){
+   if(!consumeCivilianPopulation(city,transfer))continue;
+   place.population+=transfer;
+  }else{
+   place.population=Math.max(0,place.population-transfer);
+   const culture=(population.groups||[]).slice().sort((a,b)=>(b.count||0)-(a.count||0))[0]?.culture||city.nativeCulture||"Local";
+   addPopulationGroup(city,culture,transfer);
+  }
+ }
+}
 function settleMonthlyPopulation(campaign){
  for(const region of campaign.regions||[]){
   const s=region.settlement;if(!s||!s.population)continue;
@@ -3295,7 +3368,7 @@ function runAIFactionTurn(campaign,faction){
 function endCampaignTurn(){
  if(!activeCampaign)return;
  let playerAnimosityMessage="";
- ensureSettlementState(activeCampaign);settleMonthlyPopulation(activeCampaign);settleMonthlyMigration(activeCampaign);
+ ensureSettlementState(activeCampaign);settleMonthlyPopulation(activeCampaign);settleMonthlyMigration(activeCampaign);settleVillageCityPopulation(activeCampaign);
  const order=activeCampaign.factionTurnOrder||[],states=activeCampaign.factionStates||[];
  const playerId=activeCampaign.playerPoliticalFaction||FACTION_PROFILES[activeCampaign.startingRegion]?.id;
  activeCampaign.activeWars=activeCampaign.activeWars||[];
