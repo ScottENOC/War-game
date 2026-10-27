@@ -69,7 +69,7 @@
 <label class="faction-choice">Army composition <select id="ai-lab-composition"><option value="balanced" selected>Balanced combined arms</option><option value="melee">Melee-heavy</option><option value="ranged">Ranged-heavy</option><option value="mobile">Mobile / cavalry-heavy</option></select></label>
 </div>
 <label class="lab-check"><input id="ai-lab-swap-sides" type="checkbox" checked> Reverse battlefield sides in alternating battles</label>
-<div class="campaign-actions"><button id="ai-battle-lab-run" class="primary-button">Run AI vs AI test →</button><button id="ai-battle-lab-stop" class="secondary-button" hidden>Stop after current battle</button></div>
+<div class="campaign-actions"><button id="ai-battle-lab-run" class="primary-button">Run AI vs AI test →</button><button id="ai-battle-lab-inspect" class="secondary-button">Run 1 battle · pause on stuck</button><button id="ai-battle-lab-stop" class="secondary-button" hidden>Stop after current battle</button></div>
 <div id="ai-battle-lab-status" class="lab-status" aria-live="polite">Ready. No battles have been run yet.</div><div id="ai-battle-lab-results"></div>
 </div></section><section id="river-siege-test-screen" class="screen builder-screen" hidden><div class="builder-panel campaign-panel">
 <header class="builder-header"><div><div class="eyebrow">Battlefield prototype</div><h1>River-Crossing Siege Test</h1></div><button id="river-siege-test-back" class="secondary-button">Main Menu</button></header>
@@ -223,5 +223,5 @@
  </div>
 </section>
 
-<script type="module" src="js/main.js?v=20261027-partial-first-step-v4"></script>
+<script type="module" src="js/main.js?v=20261027-stuck-inspector-v1"></script>
 </body></html>
