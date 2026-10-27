@@ -3604,7 +3604,7 @@ function endCampaignTurn(){
 function showCampaignWorld(c){activeCampaign=c;byId("grand-campaign-setup").hidden=true;byId("grand-campaign-world").hidden=false;renderCampaignMap();}
 export function startGrandCampaign(){
  const labScreen=byId("campaign-ai-lab-screen"),mainMenu=byId("mainmenu");
- const labOpen=byId("campaign-ai-lab-open"),labBack=byId("campaign-ai-lab-back"),labRun=byId("campaign-ai-run"),labCopy=byId("campaign-ai-copy");
+ const labOpen=byId("campaign-ai-lab-open"),labBack=byId("campaign-ai-lab-back"),labRun=byId("campaign-ai-run"),labCompare=byId("campaign-ai-compare"),labCopy=byId("campaign-ai-copy");
  if(labOpen&&labScreen&&mainMenu)labOpen.addEventListener("click",()=>{mainMenu.hidden=true;labScreen.hidden=false;});
  if(labBack&&labScreen&&mainMenu)labBack.addEventListener("click",()=>{labScreen.hidden=true;mainMenu.hidden=false;});
  const reportText=report=>{
@@ -3624,10 +3624,43 @@ export function startGrandCampaign(){
    const changes=(r.turnLog||[]).filter(t=>(t.ownershipChanges||[]).length||(t.eliminated||[]).length);
    lines.push("CHANGES "+changes.map(t=>"t"+t.turn+":"+(t.ownershipChanges||[]).map(c=>c.from+">"+c.to).join(",")+((t.eliminated||[]).length?" x"+t.eliminated.join(","):"")).join(" "));
   }
+  if(report.comparison){const c=report.comparison;lines.push("RED-BLUE paired test faction="+c.faction+" profile="+c.profile+"; same seeds and initial setup in each pair");lines.push("METRIC faction survived baseline="+c.baselineMetrics.survived+"/"+report.runs+" experiment="+c.experimentMetrics.survived+"/"+report.runs);lines.push("METRIC mean cities/run baseline="+c.baselineMetrics.meanCities.toFixed(2)+" experiment="+c.experimentMetrics.meanCities.toFixed(2)+" delta="+(c.experimentMetrics.meanCities-c.baselineMetrics.meanCities).toFixed(2));lines.push("METRIC mean cities when alive baseline="+c.baselineMetrics.meanCitiesIfAlive.toFixed(2)+" experiment="+c.experimentMetrics.meanCitiesIfAlive.toFixed(2));lines.push("METRIC mean army-p baseline="+Math.round(c.baselineMetrics.meanArmyPoints)+" experiment="+Math.round(c.experimentMetrics.meanArmyPoints));lines.push("METRIC mean civ-pop baseline="+Math.round(c.baselineMetrics.meanCivilianPopulation)+" experiment="+Math.round(c.experimentMetrics.meanCivilianPopulation));for(const p of c.paired)lines.push("PAIR R"+p.run+" s"+p.seed+" cities "+p.baseline.cities+"->"+p.experiment.cities+" army-p "+Math.round(p.baseline.armyPoints)+"->"+Math.round(p.experiment.armyPoints)+" civ "+Math.round(p.baseline.civilianPopulation)+"->"+Math.round(p.experiment.civilianPopulation)+" survived "+Number(p.baseline.survived)+"->"+Number(p.experiment.survived)+" outcomes "+p.outcomeBaseline+"/"+p.outcomeExperiment);}
   const errs=Object.entries(report.aggregateErrors||{}).sort((a,b)=>b[1]-a[1]);
   if(errs.length)lines.push("ERR "+errs.slice(0,5).map(([m,n])=>n+":"+String(m).split("\\n")[0].slice(0,100)).join(" | "));
   return lines.join("\\n");
  };
+ if(labCompare)labCompare.addEventListener("click",()=>{
+  const status=byId("campaign-ai-status"),host=byId("campaign-ai-results");
+  const runs=Math.max(1,Math.min(20,Number(byId("campaign-ai-runs")?.value)||5));
+  const maxTurns=Math.max(10,Math.min(150,Number(byId("campaign-ai-turn-limit")?.value)||150));
+  const experimentFaction=byId("campaign-ai-experiment-faction")?.value||"verdantCourt";
+  const experimentProfile=byId("campaign-ai-experiment-profile")?.value||"aggressive";
+  labCompare.disabled=true;if(labRun)labRun.disabled=true;
+  status.textContent="Running paired baseline and experimental campaigns ("+(runs*2)+" simulations)…";host.replaceChildren();
+  window.setTimeout(()=>{
+   try{
+    const report=runCampaignAiLab({runs,maxTurns,experimentFaction,experimentProfile});window.__campaignAiLabLastReport=report;
+    const c=report.comparison,heading=document.createElement("h2");heading.textContent="Red/blue comparison: "+(c?.faction||experimentFaction)+" · "+(c?.profile||experimentProfile);host.append(heading);
+    const summary=document.createElement("p");summary.textContent=runs+" paired seeds · "+maxTurns+" turn limit · "+(runs*2)+" simulations. Baseline and experimental condition start from the same seed and initial setup; once decisions diverge, their random streams may diverge too.";host.append(summary);
+    const table=document.createElement("table");table.className="campaign-ai-results-table";
+    const head=document.createElement("tr");["Measure","Baseline (red)","Experiment (blue)","Difference"].forEach(v=>{const th=document.createElement("th");th.textContent=v;head.append(th);});table.append(head);
+    const rows=[
+     ["Survived to end",c.baselineMetrics.survived+"/"+runs,c.experimentMetrics.survived+"/"+runs,String(c.experimentMetrics.survived-c.baselineMetrics.survived)],
+     ["Mean cities per run",c.baselineMetrics.meanCities.toFixed(2),c.experimentMetrics.meanCities.toFixed(2),(c.experimentMetrics.meanCities-c.baselineMetrics.meanCities).toFixed(2)],
+     ["Mean cities when alive",c.baselineMetrics.meanCitiesIfAlive.toFixed(2),c.experimentMetrics.meanCitiesIfAlive.toFixed(2),(c.experimentMetrics.meanCitiesIfAlive-c.baselineMetrics.meanCitiesIfAlive).toFixed(2)],
+     ["Mean army points",Math.round(c.baselineMetrics.meanArmyPoints).toLocaleString(),Math.round(c.experimentMetrics.meanArmyPoints).toLocaleString(),Math.round(c.experimentMetrics.meanArmyPoints-c.baselineMetrics.meanArmyPoints).toLocaleString()],
+     ["Mean civilian population",Math.round(c.baselineMetrics.meanCivilianPopulation).toLocaleString(),Math.round(c.experimentMetrics.meanCivilianPopulation).toLocaleString(),Math.round(c.experimentMetrics.meanCivilianPopulation-c.baselineMetrics.meanCivilianPopulation).toLocaleString()]
+    ];
+    for(const row of rows){const tr=document.createElement("tr");for(const v of row){const td=document.createElement("td");td.textContent=v;tr.append(td);}table.append(tr);}host.append(table);
+    const pairedHeading=document.createElement("h3");pairedHeading.textContent="Paired seed results";host.append(pairedHeading);
+    const paired=document.createElement("table");paired.className="campaign-ai-results-table";const ph=document.createElement("tr");["Seed","Cities red→blue","Army points red→blue","Civilians red→blue","Survived red→blue","Overall outcome red→blue"].forEach(v=>{const th=document.createElement("th");th.textContent=v;ph.append(th);});paired.append(ph);
+    for(const p of c.paired){const tr=document.createElement("tr");const values=[String(p.seed),p.baseline.cities+" → "+p.experiment.cities,Math.round(p.baseline.armyPoints).toLocaleString()+" → "+Math.round(p.experiment.armyPoints).toLocaleString(),Math.round(p.baseline.civilianPopulation).toLocaleString()+" → "+Math.round(p.experiment.civilianPopulation).toLocaleString(),(p.baseline.survived?"yes":"no")+" → "+(p.experiment.survived?"yes":"no"),(p.winnerBaseline||p.outcomeBaseline)+" → "+(p.winnerExperiment||p.outcomeExperiment)];for(const v of values){const td=document.createElement("td");td.textContent=v;tr.append(td);}paired.append(tr);}host.append(paired);
+    const caveat=document.createElement("p");caveat.textContent="Interpretation: compare survival and mean cities first, then army strength and population. One faction's gain may come at another faction's expense; this is a strategic outcome test, not a pure measure of AI quality. Repeat across more seeds before accepting a change.";host.append(caveat);
+   }catch(e){status.textContent="Simulation failed: "+String(e?.stack||e?.message||e);return;}
+   finally{labCompare.disabled=false;if(labRun)labRun.disabled=false;}
+   status.textContent="Paired comparison complete. Copy compact report for a reproducible text summary.";
+  },50);
+ });
  if(labCopy)labCopy.addEventListener("click",async()=>{
   const status=byId("campaign-ai-status"),report=window.__campaignAiLabLastReport;
   if(!report){status.textContent="Run a simulation first; there are no results to copy.";return;}
