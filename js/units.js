@@ -113,8 +113,9 @@ export function createUnitsFromArmy(army,faction="empire",options={}) {
   });
   // Assign AI characters by battlefield role, not by the mere presence of a ranged weapon.
   // A melee lord carrying a backup bow remains a melee/leadership character.
-  const aiHosts=Object.values(units).filter(u=>u.side==="ai"&&!u.isCharacter&&u.models>0);
-  const aiHeroes=Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter&&!u.attachedTo);
+  const attachCharactersForSide=attachmentSide=>{
+  const aiHosts=Object.values(units).filter(u=>u.side===attachmentSide&&!u.isCharacter&&u.models>0);
+  const aiHeroes=Object.values(units).filter(u=>u.side===attachmentSide&&u.isCharacter&&!u.attachedTo);
   const characterRole=hero=>{
     const type=hero.type||"";
     if(hero.spellcaster||["mageHero","mageLord","starwardenLord","necromancer","masterNecromancer","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"].includes(type))return "caster";
@@ -145,6 +146,9 @@ export function createUnitsFromArmy(army,faction="empire",options={}) {
     host.stats.M=Math.min(host.baseMove??host.stats.M,hero.stats.M);
     assignedHosts.add(host.id);
   });
+  };
+  attachCharactersForSide("ai");
+  if(options.autoAttachCharacters)attachCharactersForSide("player");
   for(const side of ["player","ai"]){const eligible=Object.values(units).filter(u=>u.side===side&&u.isCharacter);const general=(faction==="undead"&&side==="player"?eligible.filter(u=>u.spellcaster):eligible).sort((a,b)=>b.stats.Ld-a.stats.Ld)[0];if(general)general.isGeneral=true;}
   return units;
 }
