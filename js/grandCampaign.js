@@ -993,7 +993,7 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
    campaign.factionStates.forEach(state=>{state.alive=true;});
    activeCampaign=campaign;
    const eliminatedAt={},eliminationReasons={},errors=[],errorCounts={},turnLog=[];
-   const initialSnapshot=campaign.factionStates.filter(f=>!f.passive).map(f=>{const a=(campaign.armies||[]).find(x=>(x.owner||x.factionId)===f.id);return {id:f.id,name:f.name,homeRegion:f.homeRegion,homeOwner:politicalOwner(campaign.regions.find(r=>r.id===f.homeRegion)),rosterUnits:a?.roster?.length||0,models:(a?.roster||[]).reduce((n,u)=>n+Math.max(0,Number(u.models)||0),0),armyPoints:a?.points||0};});
+   const initialSnapshot=campaign.factionStates.filter(f=>!f.passive).map(f=>{const a=(campaign.armies||[]).find(x=>(x.owner||x.factionId)===f.id);return {id:f.id,name:f.name,homeRegion:f.homeRegion,homeOwner:politicalOwner(campaign.regions.find(r=>r.id===f.homeRegion)),namedCommander:f.namedCommander||null,rosterUnits:a?.roster?.length||0,models:(a?.roster||[]).reduce((n,u)=>n+Math.max(0,Number(u.models)||0),0),armyPoints:a?.points||0,strategicArmyPoints:campaignStrategicArmyPowerPoints(a,100)};});
    const recordError=message=>{const key=String(message||"Unknown error");errorCounts[key]=(errorCounts[key]||0)+1;if(errors.length<100)errors.push(key);};
    let outcome="turn-limit",turns=0,winner=null;
    const cityCounts=()=>{const counts={};for(const region of campaign.regions){const owner=politicalOwner(region);if(owner)counts[owner]=(counts[owner]||0)+1;}return counts;};
@@ -2896,8 +2896,8 @@ function campaignSettlementDefenceBonus(campaign,defender,region){
 }
 function campaignStrategicCityAttackAssessment(campaign,attacker,defender,region){
  const attacking=factionArmy(campaign,attacker.id),defending=factionArmy(campaign,defender.id);
- const attackStrength=Math.max(1,attacking?.points||100)*campaignArmyLeadershipMultiplier(attacking);
- const defenceStrength=Math.max(1,defending?.points||250)*campaignArmyLeadershipMultiplier(defending)*(1+campaignSettlementDefenceBonus(campaign,defender,region));
+ const attackStrength=Math.max(1,campaignStrategicArmyPowerPoints(attacking,100))*campaignArmyLeadershipMultiplier(attacking);
+ const defenceStrength=Math.max(1,campaignStrategicArmyPowerPoints(defending,250))*campaignArmyLeadershipMultiplier(defending)*(1+campaignSettlementDefenceBonus(campaign,defender,region));
  return {attackStrength,defenceStrength,ratio:attackStrength/Math.max(1,defenceStrength),favourable:attackStrength>=defenceStrength*1.2};
 }
 function applyStrategicCivilianLevyCasualties(region,defender,defenderRemainingFraction){
@@ -3111,8 +3111,8 @@ function campaignStrategicFieldBattle(campaign,attackerArmy,defenderArmy){
  const attackerId=attackerArmy.owner||attackerArmy.factionId,defenderId=defenderArmy.owner||defenderArmy.factionId;
  const attacker=campaign.factionStates.find(f=>f.id===attackerId)||{id:attackerId,name:attackerId,homeRegion:attackerArmy.region};
  const defender=campaign.factionStates.find(f=>f.id===defenderId)||{id:defenderId,name:defenderId,homeRegion:defenderArmy.region};
- const attackPower=Math.max(1,attackerArmy.points||campaignArmyCost(attackerArmy)||100)*(.8+Math.random()*.4);
- const defencePower=Math.max(1,defenderArmy.points||campaignArmyCost(defenderArmy)||100)*(.8+Math.random()*.4);
+ const attackPower=Math.max(1,campaignStrategicArmyPowerPoints(attackerArmy,100))*(.8+Math.random()*.4);
+ const defencePower=Math.max(1,campaignStrategicArmyPowerPoints(defenderArmy,100))*(.8+Math.random()*.4);
  const winner=attackPower>=defencePower?attackerArmy:defenderArmy,loser=winner===attackerArmy?defenderArmy:attackerArmy;
  awardGreenskinMomentum(campaign,winner,2);
  awardGreenskinMomentum(campaign,loser,-2);
@@ -3337,7 +3337,7 @@ export function startGrandCampaign(){
    lines.push("Run "+r.run+" | seed "+r.seed+" | outcome "+r.outcome+" | turns "+r.turns+" | winner "+(r.winner||"none"));
    lines.push("  Living: "+(r.living.map(f=>f.name+" ("+f.cities+" cities, army "+f.armyPoints+", treasury "+f.treasury+")").join("; ")||"none"));
    lines.push("  Eliminated: "+(r.eliminated.map(f=>f.name+(f.turn?" at turn "+f.turn:" (elimination turn not recorded)")+" ["+(f.reason||"unknown reason")+"]").join("; ")||"none"));
-   lines.push("  Initial faction state: "+(r.initialSnapshot||[]).map(f=>f.name+" {home "+f.homeRegion+" owned by "+f.homeOwner+", units "+f.rosterUnits+", models "+f.models+", points "+f.armyPoints+"}").join("; "));
+   lines.push("  Initial faction state: "+(r.initialSnapshot||[]).map(f=>f.name+" {home "+f.homeRegion+" owned by "+f.homeOwner+", units "+f.rosterUnits+", models "+f.models+", points "+f.armyPoints+(f.strategicArmyPoints!==undefined?", strategic points "+f.strategicArmyPoints:"")+(f.namedCommander?", named commander "+f.namedCommander:"")+"}").join("; "));
    lines.push("  Early-turn diagnostics:");
    for(const t of (r.turnLog||[])){lines.push("    Turn "+t.turn+" | ownership changes: "+(t.ownershipChanges.map(c=>c.region+": "+c.from+" -> "+c.to).join("; ")||"none")+" | eliminations: "+(t.eliminated.join("; ")||"none"));for(const a of t.actions||[])lines.push("      "+a);}
    lines.push("  Errors observed: "+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0)+" (up to 100 example stack traces stored)");
