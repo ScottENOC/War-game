@@ -5,12 +5,12 @@ export function createAI({ S, units, alive, eligibleForActivation, enemies, visi
 function aiWantsRange(){return armyRangeScore(side)>armyRangeScore(enemySide);}
 function aiTargetScore(u,t,preferRanged){
  const dx=(t.x-u.x)*BATTLEFIELD_WIDTH_IN,dy=(t.y-u.y)*fieldHeightIn(),d=Math.hypot(dx,dy),bearing=Math.atan2(dy,dx),delta=Math.atan2(Math.sin(bearing-u.facing),Math.cos(bearing-u.facing)),frontPenalty=Math.abs(delta)>Math.PI/2?7:Math.abs(delta)*1.5,rangedBonus=preferRanged&&(t.kind==="archer"||t.hasRangedWeapon)?3:0;
+ const stagnationPenalty=u.aiStuckTargetId===t.id?Math.min(18,6*Math.max(1,u.aiStagnantTurns||1)):0;
  if(policy!=="experimental"&&policy!=="experimental2"&&policy!=="experimental3")return d+frontPenalty-rangedBonus+stagnationPenalty;
  const danger=(t.isCannon||t.isBoltThrower||t.isCatapult?7:0)+(t.spellcaster?5:0)+(t.hasRangedWeapon?2.2:0)+(t.isDragon||t.isDragonRider?5:0)+(t.isCavalry?2:0);
  const fragility=(t.models<=5?2.5:t.models<=10?1.3:0)+(t.stats?.W&&t.stats.W<=2?1:0);
  const value=Math.min(5,Math.max(0,(t.points||0)/250));
  const currentThreat=(u.isCannon||u.isBoltThrower||u.isCatapult?1.5:0)+(u.hasRangedWeapon?1.2:0);
- const stagnationPenalty=u.aiStuckTargetId===t.id?Math.min(18,6*Math.max(1,u.aiStagnantTurns||1)):0;
  const supported=units().filter(v=>v.side===enemySide&&alive(v)&&!v.fled&&v.id!==t.id&&dist(v,t)<=4).length;
  // Blue values enemy shooting opportunities that can still be denied by acting now.
  const unspentEnemyShot=(policy==="experimental"||policy==="experimental2"||policy==="experimental3")&&t.hasRangedWeapon&&!t.activated&&!t.shot?3.5:0;
