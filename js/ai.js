@@ -17,17 +17,31 @@ function aiTargetScore(u,t,preferRanged){
 }
 function aiBestTarget(u,targets,preferRanged){return targets.slice().sort((a,b)=>aiTargetScore(u,a,preferRanged)-aiTargetScore(u,b,preferRanged))[0]||null;}
 function aiActivationPriority(u){
- if(policy!=="experimental")return 0;
+ if(policy==="baseline")return 0;
  const targets=visibleEnemies(u).filter(t=>t.side!==side&&alive(t)&&!t.fled);
  const range=u.range||BOW_RANGE;
  if(u.hasRangedWeapon){
   const inRange=targets.filter(t=>gap(u,t)<=range);
   if(inRange.some(t=>t.hasRangedWeapon&&!t.activated&&!t.shot))return 10;
+  if(policy==="decisive"){
+   // Take a worthwhile shot now rather than repeatedly waiting for a theoretically better range.
+   if(inRange.length)return inRange.some(t=>gap(u,t)<=range/2)?7:5;
+   return 0;
+  }
   if(inRange.some(t=>gap(u,t)<=range/2))return 6;
   if(inRange.length){
    const canImproveByWaiting=units().some(t=>t.side===enemySide&&alive(t)&&!t.fled&&!t.activated&&!t.hasRangedWeapon&&gap(u,t)>range/2&&gap(u,t)<=range/2+(t.stats?.M||0));
    return canImproveByWaiting?0:3;
   }
+  return 0;
+ }
+ if(policy==="decisive"){
+  // Give approaching melee units early activations so they spend their movement closing,
+  // rather than letting low-impact activations consume the phase first.
+  const nearestGap=targets.length?Math.min(...targets.map(t=>gap(u,t))):Infinity;
+  if(nearestGap<=Math.max(0,u.stats?.M||0)+2.5)return 9;
+  if(targets.length)return 6;
+  return 0;
  }
  return 0;
 }
@@ -208,12 +222,12 @@ function aiObjectiveTarget(u){
  }
  return null;
 }
-function runAiActivationCore(){aiCastSpells();const candidates=units().filter(u=>u.side===side&&eligibleForActivation(u));if(!candidates.length)return false;const wantsRange=aiWantsRange();candidates.sort((a,b)=>{const rank=u=>wantsRange?(u.hasRangedWeapon?0:1):((u.kind==="melee"&&!u.hasRangedWeapon)||u.isCavalry?0:1);if(policy==="experimental"){const delta=aiActivationPriority(b)-aiActivationPriority(a);if(delta)return delta;}return rank(a)-rank(b);});const u=candidates[0],actualTargets=visibleEnemies(u).filter(v=>!v.fled&&alive(v)),targets=actualTargets.length?actualTargets:aiLastKnownTargets();if(S.battleType==="siege"&&S.siegeRole==="attacker"&&u.side===side&&u.wallLevel){const rangedForce=units().filter(v=>v.side===side&&v.hasRangedWeapon&&!v.isCannon&&!v.isBoltThrower),livingRanged=rangedForce.filter(v=>alive(v)&&!v.fled).length;if(livingRanged>Math.max(1,Math.ceil(rangedForce.length*.35))){const inRange=u.hasRangedWeapon?actualTargets.filter(t=>gap(u,t)<=(u.range||BOW_RANGE)):[],target=inRange.length?aiBestTarget(u,inRange,false):null;if(target&&!u.shot){if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,target,false);}u.activated=true;return true;}}if(aiSiegeLadder(u)){u.activated=true;return true;}if(u.isCannon||u.isBoltThrower||u.isCatapult){if(targets.length&&!u.shot&&u.artilleryWounds>0&&!u.moved){const target=aiBestTarget(u,targets,false);fireCannon?.(u,target.x,target.y,target.isLastKnownContact?null:target);}u.activated=true;return true;}if(targets.length){const inRange=u.hasRangedWeapon?actualTargets.filter(t=>gap(u,t)<=(u.range||BOW_RANGE)):[],combatTarget=inRange.length?aiBestTarget(u,inRange,false):aiBestTarget(u,targets,u.kind==="melee"&&!u.hasRangedWeapon),objectiveTarget=aiObjectiveTarget(u),target=objectiveTarget&&(!combatTarget||dist(u,objectiveTarget)+2<dist(u,combatTarget))?objectiveTarget:combatTarget;if(u.hasRangedWeapon&&inRange.length){if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,target,false);}else{if(u.ownsShield){u.rangedMode="shield";u.shield=!!u.ownsShield&&!["greatWeapon","halberd"].includes(u.weapon);}aiPivotAndAdvance(u,target);if(u.hasRangedWeapon){const available=actualTargets.filter(t=>!t.fled&&alive(t)&&gap(u,t)<=(u.range||BOW_RANGE));if(available.length){const shotTarget=aiBestTarget(u,available,false);if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((shotTarget.y-u.y)*fieldHeightIn(),(shotTarget.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,shotTarget,false);}}}}u.activated=true;return true;}
+function runAiActivationCore(){aiCastSpells();const candidates=units().filter(u=>u.side===side&&eligibleForActivation(u));if(!candidates.length)return false;const wantsRange=aiWantsRange();candidates.sort((a,b)=>{const rank=u=>wantsRange?(u.hasRangedWeapon?0:1):((u.kind==="melee"&&!u.hasRangedWeapon)||u.isCavalry?0:1);if(policy!=="baseline"){const delta=aiActivationPriority(b)-aiActivationPriority(a);if(delta)return delta;}return rank(a)-rank(b);});const u=candidates[0],actualTargets=visibleEnemies(u).filter(v=>!v.fled&&alive(v)),targets=actualTargets.length?actualTargets:aiLastKnownTargets();if(S.battleType==="siege"&&S.siegeRole==="attacker"&&u.side===side&&u.wallLevel){const rangedForce=units().filter(v=>v.side===side&&v.hasRangedWeapon&&!v.isCannon&&!v.isBoltThrower),livingRanged=rangedForce.filter(v=>alive(v)&&!v.fled).length;if(livingRanged>Math.max(1,Math.ceil(rangedForce.length*.35))){const inRange=u.hasRangedWeapon?actualTargets.filter(t=>gap(u,t)<=(u.range||BOW_RANGE)):[],target=inRange.length?aiBestTarget(u,inRange,false):null;if(target&&!u.shot){if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,target,false);}u.activated=true;return true;}}if(aiSiegeLadder(u)){u.activated=true;return true;}if(u.isCannon||u.isBoltThrower||u.isCatapult){if(targets.length&&!u.shot&&u.artilleryWounds>0&&!u.moved){const target=aiBestTarget(u,targets,false);fireCannon?.(u,target.x,target.y,target.isLastKnownContact?null:target);}u.activated=true;return true;}if(targets.length){const inRange=u.hasRangedWeapon?actualTargets.filter(t=>gap(u,t)<=(u.range||BOW_RANGE)):[],combatTarget=inRange.length?aiBestTarget(u,inRange,false):aiBestTarget(u,targets,u.kind==="melee"&&!u.hasRangedWeapon),objectiveTarget=aiObjectiveTarget(u),target=objectiveTarget&&(!combatTarget||dist(u,objectiveTarget)+2<dist(u,combatTarget))?objectiveTarget:combatTarget;if(u.hasRangedWeapon&&inRange.length){if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((target.y-u.y)*fieldHeightIn(),(target.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,target,false);}else{if(u.ownsShield){u.rangedMode="shield";u.shield=!!u.ownsShield&&!["greatWeapon","halberd"].includes(u.weapon);}aiPivotAndAdvance(u,target);if(u.hasRangedWeapon){const available=actualTargets.filter(t=>!t.fled&&alive(t)&&gap(u,t)<=(u.range||BOW_RANGE));if(available.length){const shotTarget=aiBestTarget(u,available,false);if(u.ownsShield){u.rangedMode="bow";u.shield=false;}u.facing=Math.atan2((shotTarget.y-u.y)*fieldHeightIn(),(shotTarget.x-u.x)*BATTLEFIELD_WIDTH_IN);shoot(u,shotTarget,false);}}}}u.activated=true;return true;}
 
 function runAiActivation(){
  const before=new Map(units().map(u=>[u.id,{x:u.x,y:u.y,facing:u.facing,models:u.models,shot:!!u.shot,moved:!!u.moved,activated:!!u.activated,engaged:!!u.engaged,charged:!!u.charged,moveUsed:u.moveUsed||0,formationWidth:u.formationWidth||null,shield:!!u.shield,rangedMode:u.rangedMode||null,wounds:u.characterWounds??u.artilleryWounds??u.chariotWounds??null}]));
  const candidates=units().filter(u=>u.side===side&&eligibleForActivation(u));
- const selected=[...candidates].sort((a,b)=>{const wantsRange=armyRangeScore(side)>armyRangeScore(enemySide);const rank=u=>wantsRange?(u.hasRangedWeapon?0:1):((u.kind==="melee"&&!u.hasRangedWeapon)||u.isCavalry?0:1);if(policy==="experimental"){const delta=aiActivationPriority(b)-aiActivationPriority(a);if(delta)return delta;}return rank(a)-rank(b);})[0];
+ const selected=[...candidates].sort((a,b)=>{const wantsRange=armyRangeScore(side)>armyRangeScore(enemySide);const rank=u=>wantsRange?(u.hasRangedWeapon?0:1):((u.kind==="melee"&&!u.hasRangedWeapon)||u.isCavalry?0:1);if(policy!=="baseline"){const delta=aiActivationPriority(b)-aiActivationPriority(a);if(delta)return delta;}return rank(a)-rank(b);})[0];
  const selectedStart=selected?{x:selected.x,y:selected.y}:null;
  const visible=selected?visibleEnemies(selected).filter(v=>!v.fled&&alive(v)):[];
  const nearest=selected&&visible.length?visible.map(t=>({name:t.name,distance:Number(dist(selected,t).toFixed(2))})).sort((a,b)=>a.distance-b.distance)[0]:null;
