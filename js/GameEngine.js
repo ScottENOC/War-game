@@ -6,7 +6,7 @@ import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warba
 import { createArmyBuilder } from "./armyBuilder.js?v=20261021-wyvern-roster-v1";
 import { createCollectionManager } from "./collection.js?v=20261021-wyvern-roster-v1";
 import { createGameState } from "./gameState.js";
-import { createAI } from "./ai.js?v=20261027-stagnation-retarget-v4";
+import { createAI } from "./ai.js?v=20261027-ai-cost-diagnostics-v1";
 import { createRules } from "./rules.js?v=20261022-rules-scope-fix-v1";
 import { createShooting } from "./shooting.js?v=20261023-ai-lab-fast-v3";
 import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
