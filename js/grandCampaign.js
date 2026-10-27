@@ -2159,7 +2159,7 @@ function safePopulationRoute(campaign,startId,endId,ownerId){
  if(!graph?.nodes?.[startId]||!graph.nodes[endId])return null;
  const safeNode=id=>{
   const node=graph.nodes[id];if(!node)return false;
-  if(node.region==null||["seaRoute","river","sea","port"].includes(node.type))return true;
+  if(node.region==null)return true;
   const region=campaign.regions?.find(r=>r.id===node.region);
   return !!region&&politicalOwner(region)===ownerId;
  };
