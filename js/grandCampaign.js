@@ -1087,7 +1087,13 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
     if(turn<=5||changes.length||eliminatedThisTurn.length||turnDecisions.length)turnLog.push({turn,actions:turn<=5?actions:[],decisions:turnDecisions,ownershipChanges:changes,eliminated:eliminatedThisTurn});
     const end=checkEnd();if(end){outcome=end.outcome;winner=end.winner;break;}
    }
-   const counts=cityCounts(),living=campaign.factionStates.filter(f=>f.alive&&!f.passive&&counts[f.id]>0).map(f=>({id:f.id,name:f.name,cities:counts[f.id],armyPoints:f.armyPoints||0,treasury:f.treasury||0})).sort((a,b)=>b.cities-a.cities);
+   const counts=cityCounts(),living=campaign.factionStates.filter(f=>f.alive&&!f.passive&&counts[f.id]>0).map(f=>{
+    const armies=(campaign.armies||[]).filter(a=>(a.owner||a.factionId)===f.id&&a.roster?.length);
+    const armyPoints=armies.reduce((n,a)=>n+Math.max(0,Number(a.points)||0),0);
+    const cityPopulation=campaign.regions.filter(r=>politicalOwner(r)===f.id).reduce((n,r)=>n+Math.max(0,Number(r.settlement?.population?.total)||0),0);
+    const villagePopulation=(campaign.minorSettlements||[]).filter(p=>politicalOwner(campaign.regions.find(r=>r.id===p.region))===f.id).reduce((n,p)=>n+Math.max(0,Number(p.population)||0),0);
+    return {id:f.id,name:f.name,cities:counts[f.id],armyPoints,civilianPopulation:cityPopulation+villagePopulation,cityPopulation,villagePopulation,fieldArmies:armies.length,treasury:f.treasury||0};
+   }).sort((a,b)=>b.cities-a.cities||b.armyPoints-a.armyPoints);
    const eliminated=campaign.factionStates.filter(f=>!f.passive&&(!f.alive||!counts[f.id])).map(f=>({id:f.id,name:f.name,turn:eliminatedAt[f.id]||null,reason:eliminationReasons[f.id]||"elimination turn not recorded"})).sort((a,b)=>(a.turn||999)-(b.turn||999));
    const villageBase=(campaign.minorSettlements||[]).reduce((n,p)=>n+Math.max(0,Number(p.startingPopulation)||0),0);
    const villageNow=(campaign.minorSettlements||[]).reduce((n,p)=>n+Math.max(0,Number(p.population)||0),0);
@@ -3593,7 +3599,8 @@ export function startGrandCampaign(){
   const lines=["CAI|n"+report.runs+"|lt"+report.maxTurns,"O "+Object.entries(report.outcomes||{}).map(([k,v])=>k+"="+v).join(" ")];
   for(const r of report.results){
    lines.push("R"+r.run+" s"+r.seed+" "+r.outcome+" t"+r.turns+" w"+(r.winner||"-")+" err"+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0));
-   lines.push("ELIM "+(r.eliminated||[]).map(f=>f.id+"@"+(f.turn||"?")).join(" ")+" | TOP "+(r.living||[]).slice(0,5).map(f=>f.id+":"+f.cities+"c/"+f.armyPoints+"p").join(" "));
+   lines.push("SURVIVORS "+((r.living||[]).map(f=>f.id+":"+f.cities+"c/"+f.armyPoints+" army-p/"+f.civilianPopulation+" civ-pop (city "+f.cityPopulation+", village "+f.villagePopulation+")").join(" | ")||"none"));
+   lines.push("ELIM "+(r.eliminated||[]).map(f=>f.id+"@"+(f.turn||"?")).join(" "));
    lines.push("INIT "+(r.initialSnapshot||[]).filter(f=>f.namedCommander).map(f=>f.id+":"+f.namedCommander+"/"+(f.strategicArmyPoints??f.armyPoints)+"p").join(" "));
    if(r.populationSummary)lines.push("POP village="+r.populationSummary.villagePercent+"% zero="+r.populationSummary.zeroVillages+" city="+r.populationSummary.cityPercent+"%");
    lines.push("FACTION id:a/r/b/s/raid/def/+/-/i");
@@ -3658,7 +3665,7 @@ export function startGrandCampaign(){
     const runsHeading=document.createElement("h3");runsHeading.textContent="Run-by-run outcomes";host.append(runsHeading);
     const details=document.createElement("details"),summaryDetails=document.createElement("summary");summaryDetails.textContent="Show all runs, surviving factions and elimination order";details.append(summaryDetails);
     const list=document.createElement("ol");report.results.forEach(r=>{const li=document.createElement("li");li.append(document.createTextNode("Run "+r.run+" (seed "+r.seed+"): "+(r.winner||r.outcome.replace(/-/g," "))+"; "+r.turns+" turns. "));
-      const living=document.createElement("div");living.textContent="Survivors: "+(r.living.map(f=>f.name+" ("+f.cities+" cities)").join(", ")||"none");li.append(living);
+      const living=document.createElement("div");living.textContent="Survivors: "+(r.living.map(f=>f.name+" ("+f.cities+" cities; "+Math.round(f.armyPoints).toLocaleString()+" army points; "+Math.round(f.civilianPopulation).toLocaleString()+" civilians: "+Math.round(f.cityPopulation).toLocaleString()+" city, "+Math.round(f.villagePopulation).toLocaleString()+" village/farm; "+f.fieldArmies+" field armies)").join("; ")||"none");li.append(living);
       const eliminated=document.createElement("div");eliminated.textContent="Eliminated: "+(r.eliminated.map(f=>f.name+(f.turn?" (turn "+f.turn+")":" (turn not recorded)")).join(", ")||"none");li.append(eliminated);
       const errs=document.createElement("div");errs.textContent="Errors: "+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0);li.append(errs);list.append(li);});details.append(list);host.append(details);
     status.textContent="Completed "+report.runs+" runs. "+totalErrors+" caught exceptions across "+Object.keys(report.aggregateErrors).length+" distinct messages. Expand Simulation errors to inspect them.";
