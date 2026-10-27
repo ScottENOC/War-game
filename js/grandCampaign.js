@@ -986,7 +986,7 @@ function campaignLabSeededRandom(seed){
  let state=(Number(seed)>>>0)||1;
  return ()=>{state=(state+0x6D2B79F5)>>>0;let t=state;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296;};
 }
-function runCampaignAiLab({runs=10,maxTurns=100}={}){
+function runCampaignAiLabSingle({runs=10,maxTurns=100,profileOverrides={}}={}){
  const oldRandom=Math.random,oldActive=activeCampaign,results=[];
  try{
   for(let run=0;run<runs;run++){
@@ -994,6 +994,7 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
    const city=CITIES.find(c=>Number(c.id)===1);
    const campaign=createInitialCampaignState("empire",city,{id:"campaign-test",name:"Campaign Test Commander",movement:3,maxMovement:3,nodeId:"city-1",region:1});
    campaign.labSimulation=true;
+   campaign.aiLabProfiles={...profileOverrides};
    campaign.armies=campaign.factionStates.map(state=>{
     const built=state.namedCommander?{faction:state.rosterFaction,roster:state.roster}:createCampaignArmyRoster(state.id,500,{player:false});
     const roster=(built.roster||[]).map(u=>({...u,meleeWeapons:[...(u.meleeWeapons||[])],upgrades:{...(u.upgrades||{})},skills:{...(u.skills||{})}}));
@@ -1062,7 +1063,8 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
       if(!faction||!faction.alive||faction.passive||FACTION_BY_ID[id]?.passive)continue;
       try{
        const eventBefore=campaign.lastEvent||"";
-       const message=runAIFactionTurn(campaign,faction);
+       const profile=campaign.aiLabProfiles?.[faction.id]||"baseline";
+       const message=runAIFactionTurn(campaign,faction,profile);
        const eventAfter=campaign.lastEvent||"";
        const eventText=eventAfter!==eventBefore?eventAfter:"";
        if(turn<=5)actions.push(faction.name+": "+String(message||"no action message"));
@@ -1108,6 +1110,15 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
  for(const r of results){outcomes[r.outcome]=(outcomes[r.outcome]||0)+1;if(r.winner)factionWins[r.winner]=(factionWins[r.winner]||0)+1;for(const f of r.living)factionSurvival[f.id]=(factionSurvival[f.id]||0)+1;}
  const aggregateErrors={};for(const r of results)for(const [message,count] of Object.entries(r.errorCounts||{}))aggregateErrors[message]=(aggregateErrors[message]||0)+count;
  return {runs,maxTurns,results,outcomes,factionWins,factionSurvival,aggregateErrors};
+}
+function runCampaignAiLab({runs=10,maxTurns=100,experimentFaction=null,experimentProfile="aggressive"}={}){
+ const baseline=runCampaignAiLabSingle({runs,maxTurns});
+ if(!experimentFaction||experimentProfile==="baseline")return baseline;
+ const experiment=runCampaignAiLabSingle({runs,maxTurns,profileOverrides:{[experimentFaction]:experimentProfile}});
+ const findFaction=(result,id)=>({living:result.living.find(f=>f.id===id)||null,eliminated:result.eliminated.find(f=>f.id===id)||null});
+ const paired=baseline.results.map((base,i)=>{const test=experiment.results[i],a=findFaction(base,experimentFaction),b=findFaction(test,experimentFaction);return {run:base.run,seed:base.seed,baseline:{cities:a.living?.cities||0,armyPoints:a.living?.armyPoints||0,civilianPopulation:a.living?.civilianPopulation||0,survived:!!a.living,eliminatedTurn:a.eliminated?.turn||null},experiment:{cities:b.living?.cities||0,armyPoints:b.living?.armyPoints||0,civilianPopulation:b.living?.civilianPopulation||0,survived:!!b.living,eliminatedTurn:b.eliminated?.turn||null},outcomeBaseline:base.outcome,outcomeExperiment:test.outcome,winnerBaseline:base.winner,winnerExperiment:test.winner};});
+ const aggregate=side=>{const rows=paired.map(p=>p[side]);return {survived:rows.filter(x=>x.survived).length,meanCities:rows.reduce((n,x)=>n+x.cities,0)/Math.max(1,runs),meanArmyPoints:rows.reduce((n,x)=>n+x.armyPoints,0)/Math.max(1,runs),meanCivilianPopulation:rows.reduce((n,x)=>n+x.civilianPopulation,0)/Math.max(1,runs),meanCitiesIfAlive:rows.filter(x=>x.survived).reduce((n,x)=>n+x.cities,0)/Math.max(1,rows.filter(x=>x.survived).length)};};
+ return {...baseline,comparison:{faction:experimentFaction,profile:experimentProfile,baseline,experiment,paired,baselineMetrics:aggregate("baseline"),experimentMetrics:aggregate("experiment")}};
 }
 let selectedFaction="empire",selectedPoliticalFaction="valedorn",selectedCity=1,activeCampaign=null;
 const byId=id=>document.getElementById(id);
@@ -3397,7 +3408,7 @@ function campaignAiMergeCoLocatedArmies(campaign,ownerId){
   }
  }
 }
-function runAIFactionTurn(campaign,faction){
+function runAIFactionTurn(campaign,faction,aiProfile="baseline"){
  campaign.activeWars=campaign.activeWars||[];
  if(faction.passive||FACTION_BY_ID[faction.id]?.passive)return faction.name+" remains passive.";
  campaignAiMergeCoLocatedArmies(campaign,faction.id);
@@ -3505,11 +3516,12 @@ function runAIFactionTurn(campaign,faction){
   const enemyArmy=factionArmy(campaign,enemy.id),race=faction.race||FACTION_BY_ID[faction.id]?.race||"human";
   const assessment=campaignStrategicCityAttackAssessment(campaign,faction,enemy,choice.region);
   const rawOwn=campaignAiRawArmyStrength(army),rawEnemy=campaignAiRawArmyStrength(enemyArmy);
-  if(assessment.ratio<1.2&&rawOwn>=rawEnemy*1.15){
+  const attackThreshold=aiProfile==="aggressive"?0.9:aiProfile==="cautious"?1.4:1.2;
+  if(assessment.ratio<attackThreshold&&rawOwn>=rawEnemy*1.15){
    army.region=choice.region.id;army.nodeId="city-"+choice.region.id;army.aiSiegeTarget=choice.region.id;
    return faction.name+" begins a siege of "+choice.region.name+"; its army can contain a sally but the fortifications make an immediate assault too costly.";
   }
-  if(assessment.ratio<1.2){
+  if(assessment.ratio<attackThreshold){
    const raid=campaignAiRaidSupplyLine(campaign,army);
    if(raid)return faction.name+" postpones the attack on "+choice.region.name+" and "+raid;
    return faction.name+" declines an unfavourable attack on "+choice.region.name+"; estimated strength ratio "+assessment.ratio.toFixed(2)+" after fortifications, capital defence and civilian levies.";
