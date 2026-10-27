@@ -139,6 +139,7 @@ function aiPivotAndAdvance(u,target,retargeted=null){
       return true;
     }
     if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-route-fallback",unit:u.name,target:target.name,routeFound:false,fallbackMoved:false,reason:"no-legal-progress",distance:Number(separation.toFixed(2)),centreDistance:Number(dist(u,target).toFixed(2)),baseGap:Number(separation.toFixed(2)),movementRemaining:Number(budgetLeft.toFixed(2))});
+    u.aiStagnationEvents=(u.aiStagnationEvents||0)+1;
     if(u.aiStagnantTurn!==S.turn){u.aiStagnantTurns=(u.aiStuckTargetId===target.id?(u.aiStagnantTurns||0)+1:1);u.aiStagnantTurn=S.turn;}
     u.aiStuckTargetId=target.id||null;
     // If the chosen target is physically unreachable from this position, stop repeating
@@ -149,6 +150,7 @@ function aiPivotAndAdvance(u,target,retargeted=null){
       for(const alternative of alternatives.slice(0,3-seen.size)){
         seen.add(alternative.id);
         if(aiPivotAndAdvance(u,alternative,seen)){
+          u.aiMovementRetargets=(u.aiMovementRetargets||0)+1;
           u.aiStuckTargetId=null;u.aiStagnantTurns=0;
           if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-retarget",unit:u.name,fromTarget:target.name||"objective",toTarget:alternative.name,reason:"no-legal-progress"});
           return true;
@@ -172,11 +174,12 @@ function aiPivotAndAdvance(u,target,retargeted=null){
   if(travelled>0){say(u.name+" advances "+travelled.toFixed(1)+'" along a passable route toward '+target.name+".");u.aiStuckTargetId=null;u.aiStagnantTurns=0;}
   else if(!changedFormation){
     if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-stagnation",unit:u.name,target:target.name,reason:"route-found-but-no-step-applied",routeLength:route.length,movementRemaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2))});
+    u.aiStagnationEvents=(u.aiStagnationEvents||0)+1;
     if(u.aiStagnantTurn!==S.turn){u.aiStagnantTurns=(u.aiStuckTargetId===target.id?(u.aiStagnantTurns||0)+1:1);u.aiStagnantTurn=S.turn;}
     u.aiStuckTargetId=target.id||null;
     if(seen.size<3){
       const alternatives=visibleEnemies(u).filter(t=>t.side!==side&&alive(t)&&!t.fled&&!seen.has(t.id)).sort((a,b)=>aiTargetScore(u,a,false)-aiTargetScore(u,b,false));
-      for(const alternative of alternatives.slice(0,3-seen.size)){seen.add(alternative.id);if(aiPivotAndAdvance(u,alternative,seen)){u.aiStuckTargetId=null;u.aiStagnantTurns=0;if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-retarget",unit:u.name,fromTarget:target.name||"objective",toTarget:alternative.name,reason:"route-found-but-no-progress"});return true;}}
+      for(const alternative of alternatives.slice(0,3-seen.size)){seen.add(alternative.id);if(aiPivotAndAdvance(u,alternative,seen)){u.aiMovementRetargets=(u.aiMovementRetargets||0)+1;u.aiStuckTargetId=null;u.aiStagnantTurns=0;if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-retarget",unit:u.name,fromTarget:target.name||"objective",toTarget:alternative.name,reason:"route-found-but-no-progress"});return true;}}
     }
     say(u.name+" cannot make progress toward "+target.name+" this turn; it will reconsider its target and route next turn.");
   }
