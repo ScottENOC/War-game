@@ -118,7 +118,7 @@ export function createUnitsFromArmy(army,faction="empire",options={}) {
   const aiHeroes=Object.values(units).filter(u=>u.side===attachmentSide&&u.isCharacter&&!u.attachedTo);
   const characterRole=hero=>{
     const type=hero.type||"";
-    if(hero.spellcaster||["mageHero","mageLord","starwardenLord","necromancer","masterNecromancer","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"].includes(type))return "caster";
+    if(["mageHero","mageLord","starwardenLord","necromancer","masterNecromancer","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"].includes(type)||(hero.spellcaster&&(hero.casterLevel||0)>=2))return "caster";
     if(["rifleman","shadowElf"].includes(type)||hero.characterRole==="ranged")return "ranged";
     // Elf lords/captains with a modest spell level are hybrids; their melee/leadership
     // role takes precedence unless they are explicitly a caster archetype.
