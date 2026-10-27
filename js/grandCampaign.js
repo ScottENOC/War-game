@@ -3367,22 +3367,24 @@ export function startGrandCampaign(){
  if(labOpen&&labScreen&&mainMenu)labOpen.addEventListener("click",()=>{mainMenu.hidden=true;labScreen.hidden=false;});
  if(labBack&&labScreen&&mainMenu)labBack.addEventListener("click",()=>{labScreen.hidden=true;mainMenu.hidden=false;});
  const reportText=report=>{
-  const lines=["CAMPAIGN AI TEST LAB RESULTS","Runs: "+report.runs,"Turn limit: "+report.maxTurns,"Outcomes: "+JSON.stringify(report.outcomes),"Faction wins: "+JSON.stringify(report.factionWins),"Faction survival: "+JSON.stringify(report.factionSurvival),"","RUN DETAILS"];
+  const lines=["CAI|n="+report.runs+"|lt="+report.maxTurns,"O:"+Object.entries(report.outcomes||{}).map(([k,v])=>k+"="+v).join(","),"W:"+Object.entries(report.factionWins||{}).filter(([,v])=>v).map(([k,v])=>k+"="+v).join(","),"S:"+Object.entries(report.factionSurvival||{}).map(([k,v])=>k+"="+v).join(","),"R:"];
   for(const r of report.results){
-   lines.push("Run "+r.run+" | seed "+r.seed+" | outcome "+r.outcome+" | turns "+r.turns+" | winner "+(r.winner||"none"));
-   lines.push("  Living: "+(r.living.map(f=>f.name+" ("+f.cities+" cities, army "+f.armyPoints+", treasury "+f.treasury+")").join("; ")||"none"));
-   lines.push("  Eliminated: "+(r.eliminated.map(f=>f.name+(f.turn?" at turn "+f.turn:" (elimination turn not recorded)")+" ["+(f.reason||"unknown reason")+"]").join("; ")||"none"));
-   lines.push("  Initial faction state: "+(r.initialSnapshot||[]).map(f=>f.name+" {home "+f.homeRegion+" owned by "+f.homeOwner+", units "+f.rosterUnits+", models "+f.models+", points "+f.armyPoints+(f.strategicArmyPoints!==undefined?", strategic points "+f.strategicArmyPoints:"")+(f.namedCommander?", named commander "+f.namedCommander:"")+"}").join("; "));
-   lines.push("  Decision summary (attacks / rejected attacks / battle results / city gains / city losses / idle turns):");
-   for(const d of r.decisionStats||[])lines.push("    "+d.name+": "+d.attacks+" / "+d.rejectedAttacks+" / "+d.battleResults+" / "+d.territoryGains+" / "+d.territoryLosses+" / "+d.idleTurns+" (logged turns "+d.turns+")");
-   lines.push("  Strategic decision log:");
-   for(const d of r.decisionLog||[])lines.push("    Turn "+d.turn+" | "+d.faction+" | "+d.category+" | "+d.message+(d.event?" | outcome: "+d.event:""));
-   lines.push("  Turn and territorial diagnostics:");
-   for(const t of (r.turnLog||[])){lines.push("    Turn "+t.turn+" | ownership changes: "+(t.ownershipChanges.map(c=>c.region+": "+c.from+" -> "+c.to).join("; ")||"none")+" | eliminations: "+(t.eliminated.join("; ")||"none"));for(const a of t.actions||[])lines.push("      "+a);}
-   lines.push("  Errors observed: "+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0)+" (up to 100 example stack traces stored)");
+   lines.push("r"+r.run+" s"+r.seed+" "+r.outcome+" t"+r.turns+" w="+(r.winner||"-"));
+   lines.push("L:"+(r.living.map(f=>f.id+"("+f.cities+"c,"+f.armyPoints+"p,"+f.treasury+"g)").join(",")||"-"));
+   lines.push("X:"+(r.eliminated.map(f=>f.id+"@"+(f.turn||"?")+":"+(f.reason||"?")).join(",")||"-"));
+   lines.push("I:"+(r.initialSnapshot||[]).map(f=>f.id+"="+f.homeOwner+"/"+f.rosterUnits+"u/"+f.models+"m/"+(f.strategicArmyPoints??f.armyPoints)+"p"+(f.namedCommander?"/"+f.namedCommander:"")).join(","));
+   lines.push("D faction:a/rej/bat/+c/-c/idle");
+   for(const d of r.decisionStats||[])if(d.attacks||d.rejectedAttacks||d.battleResults||d.territoryGains||d.territoryLosses)lines.push(d.id+":"+d.attacks+"/"+d.rejectedAttacks+"/"+d.battleResults+"/"+d.territoryGains+"/"+d.territoryLosses+"/"+d.idleTurns);
+   lines.push("LOG t/f/c/msg/out");
+   for(const d of r.decisionLog||[])lines.push(d.turn+"/"+d.faction+"/"+({ "rejected-attack":"R","battle-result":"B","attack":"A","idle":"I","other":"?"}[d.category]||"?")+"/"+d.message+(d.event?"/"+d.event:""));
+   for(const t of (r.turnLog||[])){
+    const changes=(t.ownershipChanges||[]).map(c=>c.region+":"+c.from+">"+c.to).join(",");
+    if(changes||(t.eliminated||[]).length)lines.push("t"+t.turn+" C:"+changes+" X:"+(t.eliminated||[]).join(","));
+    if(t.turn<=5)for(const a of t.actions||[])lines.push("t"+t.turn+" "+a);
+   }
+   lines.push("err="+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0));
   }
-  lines.push("","ERROR COUNTS BY MESSAGE");
-  for(const [message,count] of Object.entries(report.aggregateErrors||{}).sort((a,b)=>b[1]-a[1]))lines.push("["+count+" occurrences] "+message);
+  for(const [message,count] of Object.entries(report.aggregateErrors||{}).sort((a,b)=>b[1]-a[1]))lines.push("E"+count+":"+message);
   return lines.join("\n");
  };
  if(labCopy)labCopy.addEventListener("click",async()=>{
