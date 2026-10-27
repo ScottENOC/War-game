@@ -6,7 +6,7 @@ import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warba
 import { createArmyBuilder } from "./armyBuilder.js?v=20261021-wyvern-roster-v1";
 import { createCollectionManager } from "./collection.js?v=20261021-wyvern-roster-v1";
 import { createGameState } from "./gameState.js";
-import { createAI } from "./ai.js?v=20261027-inspector-recovery-v1";
+import { createAI } from "./ai.js?v=20261027-failed-charge-guard-v1";
 import { createRules } from "./rules.js?v=20261022-rules-scope-fix-v1";
 import { createShooting } from "./shooting.js?v=20261023-ai-lab-fast-v3";
 import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
@@ -71,7 +71,7 @@ function panicNearby(source,reason="a nearby friendly unit is lost"){
 function selectedTarget(u){const list=visibleEnemies(u);if(S.mode==="shoot"&&S.targetId===null)return null;return list.find(v=>v.id===S.targetId)||list.sort((a,b)=>dist(u,a)-dist(u,b))[0]||null;}
 function equipMeleeWeapon(u,weapon){if(!u||!(u.meleeWeapons||["handWeapon"]).includes(weapon))return false;u.weapon=weapon;u.spears=weapon==="spear"&&!!u.hasSpear;u.greatWeapon=weapon==="greatWeapon";u.shield=!!u.ownsShield&&(weapon==="spear"||(!["greatWeapon","halberd"].includes(weapon)&&(!u.hasRangedWeapon||u.rangedMode==="shield")));return true;}
 function setRangedMode(u,mode){if(!u||!u.hasRangedWeapon||!u.ownsShield||u.shot||!["bow","shield"].includes(mode))return false;u.rangedMode=mode;u.shield=mode==="shield";if(["greatWeapon","halberd"].includes(u.weapon))u.shield=false;return true;}
-function eligibleForActivation(u){return alive(u)&&!u.attachedTo&&!u.fled&&!u.engaged&&!u.activated;}
+function eligibleForActivation(u){return alive(u)&&!u.attachedTo&&!u.fled&&!u.engaged&&!u.activated&&!u.chargeFailed;}
 function canCharge(u,target){
   if(target?.flyingMount&&!target.engaged&&!u?.flyingMount)return false;
   const dx=(target.x-u.x)*W(),dy=(target.y-u.y)*H(),bearing=Math.atan2(dy,dx),length=Math.hypot(dx,dy);if(length<1)return false;
@@ -485,8 +485,8 @@ function runAiLabCharges(){
  while(S.aiBattleLab&&!S.finished&&S.phase==="charges"&&guard++<200){
   if(S.turn>=16){aiLabTrace("turn-limit",{state:aiLabDistanceSummary()});finishBattle("The battle is a draw! (AI Lab turn limit)");return;}
   if(S.chargeSide==="ai"){aiChargeStep();continue;}
-  const candidates=units().filter(u=>u.side==="player"&&alive(u)&&!u.engaged&&!u.fled&&!u.charged&&(!S.priorityChargePending||hasPriorityRule(u))).map(u=>({u,t:visibleEnemies(u).filter(t=>(!t.engaged||t.flyingMount)&&!t.fled&&dist(u,t)<=u.stats.M*2&&canCharge(u,t)).sort((a,b)=>dist(u,a)-dist(u,b))[0]})).filter(x=>x.t).sort((a,b)=>dist(a.u,a.t)-dist(b.u,b.t));
-  if(candidates.length){aiLabTrace("charge-declaration",{unit:candidates[0].u.name,target:candidates[0].t.name,distance:Number(dist(candidates[0].u,candidates[0].t).toFixed(2)),side:candidates[0].u.side,canCharge:canCharge(candidates[0].u,candidates[0].t)});if(!declareCharge(candidates[0].u,candidates[0].t))candidates[0].u.charged=true;continue;}
+  const candidates=units().filter(u=>u.side==="player"&&alive(u)&&!u.engaged&&!u.fled&&!u.charged&&(!S.priorityChargePending||hasPriorityRule(u))).map(u=>({u,t:visibleEnemies(u).filter(t=>(!t.engaged||t.flyingMount)&&!t.fled&&gap(u,t)<=u.stats.M*2&&canCharge(u,t)).sort((a,b)=>dist(u,a)-dist(u,b))[0]})).filter(x=>x.t).sort((a,b)=>dist(a.u,a.t)-dist(b.u,b.t));
+  if(candidates.length){aiLabTrace("charge-declaration",{unit:candidates[0].u.name,target:candidates[0].t.name,distance:Number(dist(candidates[0].u,candidates[0].t).toFixed(2)),chargeGap:Number(gap(candidates[0].u,candidates[0].t).toFixed(2)),side:candidates[0].u.side,canCharge:canCharge(candidates[0].u,candidates[0].t)});if(!declareCharge(candidates[0].u,candidates[0].t))candidates[0].u.charged=true;continue;}
   if(S.priorityChargePending){S.priorityChargePending=false;S.chargeSide=S.normalChargeSide;if(S.chargeSide==="player")continue;}
   S.chargePasses++;
   if(S.chargePasses>=2){aiLabTrace("charges-resolved",{state:aiLabDistanceSummary(),declared:units().filter(u=>u.charged&&alive(u)).map(u=>({unit:u.name,side:u.side}))});resolveDeclaredCharges();return;}
