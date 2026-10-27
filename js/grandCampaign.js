@@ -1089,7 +1089,13 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
    }
    const counts=cityCounts(),living=campaign.factionStates.filter(f=>f.alive&&!f.passive&&counts[f.id]>0).map(f=>({id:f.id,name:f.name,cities:counts[f.id],armyPoints:f.armyPoints||0,treasury:f.treasury||0})).sort((a,b)=>b.cities-a.cities);
    const eliminated=campaign.factionStates.filter(f=>!f.passive&&(!f.alive||!counts[f.id])).map(f=>({id:f.id,name:f.name,turn:eliminatedAt[f.id]||null,reason:eliminationReasons[f.id]||"elimination turn not recorded"})).sort((a,b)=>(a.turn||999)-(b.turn||999));
-   results.push({run:run+1,seed:20261022+run*7919,outcome,winner,turns,cities:counts,initialSnapshot,turnLog,decisionStats:Object.values(decisionStats).sort((a,b)=>b.attacks-a.attacks||b.rejectedAttacks-a.rejectedAttacks),decisionLog,living,eliminated,errors,errorCounts});
+   const villageBase=(campaign.minorSettlements||[]).reduce((n,p)=>n+Math.max(0,Number(p.startingPopulation)||0),0);
+   const villageNow=(campaign.minorSettlements||[]).reduce((n,p)=>n+Math.max(0,Number(p.population)||0),0);
+   const zeroVillages=(campaign.minorSettlements||[]).filter(p=>(Number(p.startingPopulation)||0)>0&&(Number(p.population)||0)<=0).length;
+   const cityBase=campaign.regions.reduce((n,r)=>n+Math.max(0,Number(r.settlement?.population?.startingTotal)||0),0);
+   const cityNow=campaign.regions.reduce((n,r)=>n+Math.max(0,Number(r.settlement?.population?.total)||0),0);
+   const populationSummary={villagePercent:villageBase?Math.round(villageNow/villageBase*100):100,zeroVillages,cityPercent:cityBase?Math.round(cityNow/cityBase*100):100};
+   results.push({run:run+1,seed:20261022+run*7919,outcome,winner,turns,cities:counts,initialSnapshot,populationSummary,turnLog,decisionStats:Object.values(decisionStats).sort((a,b)=>b.attacks-a.attacks||b.rejectedAttacks-a.rejectedAttacks),decisionLog,living,eliminated,errors,errorCounts});
   }
  }finally{Math.random=oldRandom;activeCampaign=oldActive;}
  const outcomes={},factionWins={},factionSurvival={};
@@ -3589,6 +3595,7 @@ export function startGrandCampaign(){
    lines.push("R"+r.run+" s"+r.seed+" "+r.outcome+" t"+r.turns+" w"+(r.winner||"-")+" err"+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0));
    lines.push("ELIM "+(r.eliminated||[]).map(f=>f.id+"@"+(f.turn||"?")).join(" ")+" | TOP "+(r.living||[]).slice(0,5).map(f=>f.id+":"+f.cities+"c/"+f.armyPoints+"p").join(" "));
    lines.push("INIT "+(r.initialSnapshot||[]).filter(f=>f.namedCommander).map(f=>f.id+":"+f.namedCommander+"/"+(f.strategicArmyPoints??f.armyPoints)+"p").join(" "));
+   if(r.populationSummary)lines.push("POP village="+r.populationSummary.villagePercent+"% zero="+r.populationSummary.zeroVillages+" city="+r.populationSummary.cityPercent+"%");
    lines.push("FACTION id:a/r/b/s/raid/def/+/-/i");
    for(const d of r.decisionStats||[])if(d.attacks||d.rejectedAttacks||d.battleResults||d.sieges||d.raids||d.defensiveActions||d.territoryGains||d.territoryLosses||d.idleTurns)lines.push(d.id+":"+d.attacks+"/"+d.rejectedAttacks+"/"+d.battleResults+"/"+(d.sieges||0)+"/"+(d.raids||0)+"/"+(d.defensiveActions||0)+"/"+d.territoryGains+"/"+d.territoryLosses+"/"+d.idleTurns);
    lines.push("EVENTS (first/last samples)");
