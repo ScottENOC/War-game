@@ -86,6 +86,7 @@ function findRouteCore(u,target,desiredGap){
       push({ix:nx,iy:ny,dir:d,g,f:g+h,parent:node});
     }
   }
+  u.aiLastRouteSearch={expanded,found:!!found,limitHit:expanded>=3200,desiredGap};
   if(!found)return null;
   const path=[];for(let n=found;n&&n.parent;n=n.parent)path.push({ ...position(n.ix,n.iy),dir:n.dir });return path.reverse();
 }
@@ -96,7 +97,7 @@ function findRoute(u,target,desiredGap){
  finally{
   if(S.aiBattleLab){
    const elapsed=Math.max(0,aiNow()-started),key=side==="player"?"red":"blue",stats=S.aiLabDecisionTiming?.[key];
-   if(stats){stats.routeCalls++;stats.routeMs+=elapsed;}
+   if(stats){stats.routeCalls++;stats.routeMs+=elapsed;const detail=u.aiLastRouteSearch;if(detail){stats.expandedNodes=(stats.expandedNodes||0)+detail.expanded;stats.routeNulls=(stats.routeNulls||0)+(!detail.found?1:0);stats.routeCaps=(stats.routeCaps||0)+(detail.limitHit?1:0);}}
   }
  }
 }
@@ -206,7 +207,7 @@ function aiPivotAndAdvance(u,target,retargeted=null){
   }
   if(travelled>0){say(u.name+" advances "+travelled.toFixed(1)+'" along a passable route toward '+target.name+".");u.aiStuckTargetId=null;u.aiStagnantTurns=0;}
   else if(!changedFormation){
-    if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-stagnation",unit:u.name,target:target.name,reason:"route-found-but-no-step-applied",routeLength:route.length,movementRemaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2))});
+    if(S.aiLabDiagnosticsEnabled){const first=route[0]||null,firstAngle=first?first.dir*Math.PI/4:u.facing,firstTurn=first?Math.abs(normalizeTurn(firstAngle-u.facing))*shape(u).front/PX_PER_IN():0,firstMove=first?terrainMovementCost(terrain(),u.x,u.y,first.x,first.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn()):0;S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-stagnation",unit:u.name,target:target.name,reason:"route-found-but-no-step-applied",routeLength:route.length,firstStep:first?{x:Number(first.x.toFixed(3)),y:Number(first.y.toFixed(3)),dir:first.dir,canPlace:canPlace(u,first.x,first.y,firstAngle),turnCost:Number(firstTurn.toFixed(2)),moveCost:Number(firstMove.toFixed(2)),totalCost:Number((firstTurn+firstMove).toFixed(2)),remaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2))}:null,movementRemaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2)),lastRouteSearch:u.aiLastRouteSearch||null});}
     const stuckContext=aiRecordStagnation(u,target,"route-found-but-no-step-applied");
     if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"stuck-context",unit:u.name,...stuckContext});
     if(u.aiStagnantTurn!==S.turn){u.aiStagnantTurns=(u.aiStuckTargetId===target.id?(u.aiStagnantTurns||0)+1:1);u.aiStagnantTurn=S.turn;}
