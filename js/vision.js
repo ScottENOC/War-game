@@ -38,6 +38,7 @@ export function createVision({ S, units, alive, dist, terrain = () => [], W, H, 
     return lineOfSight(observer,target);
   }
   function isUnitVisible(target,viewerSide){
+    if(S.aiLabInspectMode)return !!target&&alive(target)&&!target.fled&&target.deployed!==false;
     if(!target||target.side===viewerSide||!alive(target)||target.fled||target.deployed===false)return true;
     if(S.phase==="deployment")return false;
     if(target.revealedUntilMovementPhase!=null&&target.revealedUntilMovementPhase===S.movementPhaseId)return true;
