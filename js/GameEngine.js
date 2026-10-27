@@ -6,7 +6,7 @@ import { createWarbandExpedition } from "./warbandExpedition.js?v=20261020-warba
 import { createArmyBuilder } from "./armyBuilder.js?v=20261021-wyvern-roster-v1";
 import { createCollectionManager } from "./collection.js?v=20261021-wyvern-roster-v1";
 import { createGameState } from "./gameState.js";
-import { createAI } from "./ai.js?v=20261027-centre-pivot-v1";
+import { createAI } from "./ai.js?v=20261028-first-stall-pause-v2";
 import { createRules } from "./rules.js?v=20261022-rules-scope-fix-v1";
 import { createShooting } from "./shooting.js?v=20261023-ai-lab-fast-v3";
 import { createCombat } from "./combat.js?v=20261020-wood-elf-v1";
@@ -473,8 +473,8 @@ function pauseAiLabForInspection(){
 }
 function runAiLabMovement(){
  if(!S.aiBattleLab||S.finished)return;beginMovementPhase();S.activationSide="player";units().filter(u=>u.fled&&alive(u)).forEach(rallyUnit);
- const before=aiLabSnapshot();aiLabTrace("movement-phase-start",{state:aiLabDistanceSummary(),units:units().filter(u=>alive(u)&&!u.fled).map(u=>({unit:u.name,id:u.id,side:u.side,kind:u.kind||u.type||null,isCharacter:!!u.isCharacter,attachedTo:u.attachedTo||null,engaged:!!u.engaged,eligible:eligibleForActivation(u),exclusion:!alive(u)?"dead":u.fled?"fleeing":u.attachedTo?"attached-to-parent":u.engaged?"engaged":u.activated?"already-activated":null}))});
- let guard=0,redActivationLoops=0,blueActivationLoops=0,redActive=true,blueActive=true,nextActivationSide=S.turn%2===1?"red":"blue";while((redActive||blueActive)&&guard++<60&&!S.aiLabPauseRequested){const current=nextActivationSide;nextActivationSide=current==="red"?"blue":"red";if(current==="red"&&redActive){S.activationSide="player";if(LAB_RED_AI.runAiActivation())redActivationLoops++;else redActive=false;}else if(current==="blue"&&blueActive){S.activationSide="ai";if(LAB_BLUE_AI.runAiActivation())blueActivationLoops++;else blueActive=false;}}
+ const before=aiLabSnapshot();aiLabTrace("movement-phase-start",{pauseOnStuck:!!S.aiLabPauseOnStuck,state:aiLabDistanceSummary(),units:units().filter(u=>alive(u)&&!u.fled).map(u=>({unit:u.name,id:u.id,side:u.side,kind:u.kind||u.type||null,isCharacter:!!u.isCharacter,attachedTo:u.attachedTo||null,engaged:!!u.engaged,eligible:eligibleForActivation(u),exclusion:!alive(u)?"dead":u.fled?"fleeing":u.attachedTo?"attached-to-parent":u.engaged?"engaged":u.activated?"already-activated":null}))});
+ let guard=0,redActivationLoops=0,blueActivationLoops=0,redActive=true,blueActive=true,nextActivationSide=S.turn%2===1?"red":"blue";while((redActive||blueActive)&&guard++<60&&!S.aiLabPauseRequested){const current=nextActivationSide;nextActivationSide=current==="red"?"blue":"red";if(current==="red"&&redActive){S.activationSide="player";if(LAB_RED_AI.runAiActivation())redActivationLoops++;else redActive=false;if(S.aiLabPauseRequested)break;}else if(current==="blue"&&blueActive){S.activationSide="ai";if(LAB_BLUE_AI.runAiActivation())blueActivationLoops++;else blueActive=false;if(S.aiLabPauseRequested)break;}}
  if(S.aiLabPauseRequested){pauseAiLabForInspection();return;}
  updateObjectiveInteractions();const moved=[];for(const u of units()){const b=before.get(u.id);if(b&&(Math.abs(u.x-b.x)>.0001||Math.abs(u.y-b.y)>.0001))moved.push({unit:u.name,side:u.side,from:[Number(b.x.toFixed(3)),Number(b.y.toFixed(3))],to:[Number(u.x.toFixed(3)),Number(u.y.toFixed(3))],inches:Number(Math.hypot((u.x-b.x)*BATTLEFIELD_WIDTH_IN,(u.y-b.y)*BATTLEFIELD_HEIGHT_IN).toFixed(2))});}
  aiLabTrace("movement-phase-end",{redActivationLoops,blueActivationLoops,moved,state:aiLabDistanceSummary()});const beforeCombat=aiLabSnapshot();beginCombatPhase();const combatChanges=[];for(const u of units()){const b=beforeCombat.get(u.id);if(b&&u.models!==b.models)combatChanges.push({unit:u.name,side:u.side,modelsBefore:b.models,modelsAfter:u.models});}aiLabTrace("combat-resolution-result",{changes:combatChanges,state:aiLabDistanceSummary()});
