@@ -1,7 +1,7 @@
 import "./tooltips.js";
 import { installSaveBackupControls } from "./saveBackup.js?v=20261016-save-backup-v1";
-import { startGame } from "./GameEngine.js?v=20261020-expedition-objectives-v1";
-import { startGrandCampaign } from "./grandCampaign.js?v=20261020-silvershade-island-road-v1";
+import { startGame } from "./GameEngine.js?v=20261028-first-stall-pause-v3";
+import { startGrandCampaign } from "./grandCampaign.js?v=20261027-campaign-ai-v1-impact-report-v1";
 
 startGrandCampaign();
 startGame();

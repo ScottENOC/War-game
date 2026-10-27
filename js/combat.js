@@ -175,10 +175,10 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     if(units().filter(alive).filter(u=>u.side==="player").length===0){finishBattle("Opponent wins the battle!");return;}
     if(units().filter(alive).filter(u=>u.side==="ai").length===0){finishBattle("Player wins the battle!");return;}
     if(tests.length){S.breakTests=tests.sort((a,b)=>b.diff-a.diff);nextBreakTest();}
-    else{say("Combat drawn; engaged units hold.");reformCombatPairs?.();S.combatResolved=true;render();}
+    else{say("Combat drawn; engaged units hold.");reformCombatPairs?.();S.combatResolved=true;if(S.aiBattleLab){endTurn();return;}render();}
   }
   function hasStubborn(u){if(u.stubborn)return true;return units().some(source=>source!==u&&source.grantsStubbornAura&&source.side===u.side&&alive(source)&&!source.fled&&dist(u,source)<=12);}
-  function nextBreakTest(){while(S.breakTests&&S.breakTests.length){const next=S.breakTests.shift();if(alive(next.loser)&&next.loser.engaged){S.loser=next.loser;S.crDiff=next.diff;if(next.automaticFear){S.autoFearBreak=true;resolveBreak();return true;}S.phase="break";render();return true;}}S.loser=null;return false;}
+  function nextBreakTest(){while(S.breakTests&&S.breakTests.length){const next=S.breakTests.shift();if(alive(next.loser)&&next.loser.engaged){S.loser=next.loser;S.crDiff=next.diff;if(next.automaticFear){S.autoFearBreak=true;resolveBreak();return true;}S.phase="break";if(S.aiBattleLab){resolveBreak();return true;}render();return true;}}S.loser=null;return false;}
   function resolveBreak(){
     const u=S.loser;if(!u||!alive(u)){endTurn();return;}
     const automaticFearBreak=!!S.autoFearBreak;S.autoFearBreak=false;
@@ -201,7 +201,7 @@ export function createCombat({ S, units, alive, dist, meleeAttack, applyDamage, 
     if(units().filter(alive).every(v=>v.fled)||units().filter(v=>v.side==="player"&&alive(v)).length===0||units().filter(v=>v.side==="ai"&&alive(v)).length===0){finishBattle(units().some(v=>v.side==="player"&&alive(v)&&!v.fled)?"Player wins the battle!":"Opponent wins the battle!");return;}
     if(nextBreakTest())return;
     if(holds)reformCombatPairs?.();
-    S.phase="combat";S.combatResolved=true;render();
+    S.phase="combat";S.combatResolved=true;if(S.aiBattleLab){endTurn();return;}render();
   }
   return { resolveCombat, resolveBreak, continueBreakTests: nextBreakTest };
 }

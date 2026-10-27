@@ -32,6 +32,7 @@ export function unitCost(config, faction) {
   return models*(elf?12:8)+meleeCost+rangedCost+(config.elvenArchery&&elf&&ranged==="bow"?2*models:0)+(config.champion?(elf?9:6):0)+(config.lightArmour&&!elf?models:0)+(config.shield&&!(elf&&type==="swordsmen")?0.5*models:0)+(woodElfStyle&&config.heavyArmour?models:0)+(woodElfStyle&&weapons.includes("offhandWeapon")?models:0)+upgrades+skillCost;
 }
 function buildUnit(template,config,faction,opposing=false) {
+  template=template||Object.values(FACTIONS).map(group=>group.units?.[config.type]).find(Boolean)||{name:String(config.type||"Unknown unit"),short:String(config.type||"Unit"),kind:"melee",models:Math.max(1,Number(config.models)||1),stats:{M:4,WS:3,BS:3,S:3,T:3,W:1,I:3,A:1,Ld:6}};
   if(faction==="dwarfs"&&(config.rangedWeapon==="bow"||config.weapon==="bow"||config.bow)){
     config={...config,rangedWeapon:"crossbow",weapon:config.weapon==="bow"?"handWeapon":config.weapon,bow:false};
   }
@@ -59,7 +60,9 @@ function buildUnit(template,config,faction,opposing=false) {
   for(const key of ["M","WS","BS","S","T","I","Ld"])if(config.type!=="pegasusChampion"&&config.upgrades&&config.upgrades[key]&&!(template.spellcaster&&!elf&&["WS","S"].includes(key)))stats[key]+=(isSiegeEngine&&key==="M"?0.5:1);
   
   const campaignStats=config.campaignStats||{};
-  for(const key of ["WS","BS","S","T","Ld"])if(!(template.spellcaster&&!elf&&["WS","S"].includes(key)))stats[key]+=Math.max(0,campaignStats[key]||0);
+  for(const key of ["WS","BS","S","T","Ld"])if(!(template.spellcaster&&!elf&&["WS","S"].includes(key)))stats[key]+=Number.isFinite(Number(campaignStats[key]))?Number(campaignStats[key]):0;
+  if(isCharacter&&config.campaignRank==="hero"){stats.WS+=1;stats.Ld+=1;}
+  else if(isCharacter&&config.campaignRank==="champion"){stats.Ld=Math.max(1,stats.Ld-1);}
   if(campaignStats.M)stats.M+=Math.max(0,campaignStats.M);
   if(campaignStats.I)stats.I+=Math.max(0,campaignStats.I);
   if(campaignStats.MI){stats.M+=isSiegeEngine?campaignStats.MI*0.5:campaignStats.MI;stats.I+=campaignStats.MI;}
@@ -84,7 +87,7 @@ function buildUnit(template,config,faction,opposing=false) {
     moveUsed:0,damage:0,shootCasualties:0,panicTested:false,terrorTested:false,terrorFledThisTurn:false,failedFearCharge:false,skirmishing:isSiegeEngine||isEagleMounted,cover:isSiegeEngine?"soft":null,stats,champion:{enabled:!!config.champion&&!isCharacter&&!isCavalry,bonus:config.championBonus||(config.type==="archers"?"BS":"A"),stats:null},attachedCharacters:[],
     characterWounds:isCharacter?template.stats.W:null,delayedDeath:false,delayedDeathSnapshot:null,championAlive:!!config.champion,championWounds:config.champion?template.stats.W:0};
 }
-export function createUnitsFromArmy(army,faction="empire") {
+export function createUnitsFromArmy(army,faction="empire",options={}) {
   const units={},playerFaction=["highElves","dwarfs","greenskins","undead"].includes(faction)?faction:"empire";
   army.forEach((entry,index)=>{
     const n=index+1,y=n/(army.length+1),playerEntry={...entry},aiEntry={...entry};
@@ -104,14 +107,48 @@ export function createUnitsFromArmy(army,faction="empire") {
       const riderType=entry.type==="orcLord"?"orcLord":"lord",rider=buildUnit(FACTIONS[playerFaction].units[riderType],{...playerEntry,type:riderType,mounted:false,mountType:"none",id:"p"+n+"r",index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
       rider.points=unitCost(entry,playerFaction)-host.points;rider.isDragonRider=true;rider.mounted=true;rider.mountType=dragonType;rider.flyingMount=true;rider.flightAltitudeIn=12;rider.baseWidthIn=host.baseWidthIn;rider.baseDepthIn=host.baseDepthIn;rider.heightIn=3.5;rider.attachedTo=host.id;host.attachedCharacters=[rider.id];units[host.id]=host;units[rider.id]=rider;
     }else units["p"+n]=buildUnit(FACTIONS[playerFaction].units[entry.type],{...playerEntry,id:"p"+n,index:n,side:"player",x:.22,y,facing:0},playerFaction,false);
-    const opposingType=entry.type==="deepflameDragon"?"deepflameDragon":entry.type==="cannon"&&FACTIONS.empire.units.cannon?"cannon":FACTIONS.opposing.units[entry.type]?entry.type:(["cannon","boltThrower","catapult","skeletonChariot","humanChariot","elfChariot","goblinChariot","orcChariot","wyvern","youngDragon","dragon","ancientDragon","dwarfInfantry","dwarfWarriors","dwarfThunderers","dwarfQuarrellers","dwarfLongbeards","dwarfIronbreakers","goblins","orcBoyz","wolfRiders","boarBoyz","skeletonHorses","trolls","giant","zombies","skeletons"].includes(entry.type)?"swordsmen":["dwarfCaptain","goblinHero","orcHero","goblinShaman","orcShaman","mageHero","necromancer","masterNecromancer","vampireHero"].includes(entry.type)?"captain":(["legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfLord","goblinLord","orcLord","goblinGreatShaman","orcGreatShaman","mageLord","vampireLord"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
-    const opposingTemplate=FACTIONS.opposing.units[opposingType]||FACTIONS.empire.units[opposingType]||FACTIONS.highElves.units[opposingType]||FACTIONS.opposing.units.swordsmen;
-    units["a"+n]=buildUnit(opposingTemplate,{...opposingEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},"empire",true);
+    const opposingType=options.preserveFactionForOpponent&&FACTIONS[playerFaction].units[entry.type]?entry.type:entry.type==="deepflameDragon"?"deepflameDragon":entry.type==="cannon"&&FACTIONS.empire.units.cannon?"cannon":FACTIONS.opposing.units[entry.type]?entry.type:(["cannon","boltThrower","catapult","skeletonChariot","humanChariot","elfChariot","goblinChariot","orcChariot","wyvern","youngDragon","dragon","ancientDragon","dwarfInfantry","dwarfWarriors","dwarfThunderers","dwarfQuarrellers","dwarfLongbeards","dwarfIronbreakers","goblins","orcBoyz","wolfRiders","boarBoyz","skeletonHorses","trolls","giant","zombies","skeletons"].includes(entry.type)?"swordsmen":["dwarfCaptain","goblinHero","orcHero","goblinShaman","orcShaman","mageHero","necromancer","masterNecromancer","vampireHero"].includes(entry.type)?"captain":(["legendaryLord","shadowElf","pegasusChampion","rifleman","captainWeiss","dwarfLord","goblinLord","orcLord","goblinGreatShaman","orcGreatShaman","mageLord","vampireLord"].includes(entry.type)?"lord":entry.type));const opposingEntry={...aiEntry,type:opposingType};
+    const opposingTemplate=options.preserveFactionForOpponent?(FACTIONS[playerFaction].units[opposingType]||Object.values(FACTIONS).map(group=>group.units?.[opposingType]).find(Boolean)||FACTIONS.empire.units.swordsmen):(FACTIONS.opposing.units[opposingType]||FACTIONS.empire.units[opposingType]||FACTIONS.highElves.units[opposingType]||FACTIONS.opposing.units.swordsmen);
+    units["a"+n]=buildUnit(opposingTemplate,{...opposingEntry,id:"a"+n,index:n,side:"ai",x:.78,y,facing:Math.PI},options.preserveFactionForOpponent?playerFaction:"empire",!options.preserveFactionForOpponent);
   });
-  Object.values(units).filter(u=>u.side==="ai"&&u.isCharacter&&!u.hasRangedWeapon).forEach(hero=>{
-    const host=Object.values(units).find(u=>u.side==="ai"&&!u.isCharacter&&u.models>0&&!!u.isCavalry===!!hero.mounted);
-    if(!host)return;hero.attachedTo=host.id;hero.x=host.x;hero.y=host.y;host.attachedCharacters=[...new Set([...(host.attachedCharacters||[]),hero.id])];host.stats.M=Math.min(host.baseMove??host.stats.M,hero.stats.M);
+  // Assign AI characters by battlefield role, not by the mere presence of a ranged weapon.
+  // A melee lord carrying a backup bow remains a melee/leadership character.
+  const attachCharactersForSide=attachmentSide=>{
+  const aiHosts=Object.values(units).filter(u=>u.side===attachmentSide&&!u.isCharacter&&u.models>0);
+  const aiHeroes=Object.values(units).filter(u=>u.side===attachmentSide&&u.isCharacter&&!u.attachedTo);
+  const characterRole=hero=>{
+    const type=hero.type||"";
+    if(["mageHero","mageLord","starwardenLord","necromancer","masterNecromancer","vampireLord","goblinShaman","goblinGreatShaman","orcShaman","orcGreatShaman"].includes(type)||(hero.spellcaster&&(hero.casterLevel||0)>=2))return "caster";
+    if(["rifleman","shadowElf"].includes(type)||hero.characterRole==="ranged")return "ranged";
+    // Elf lords/captains with a modest spell level are hybrids; their melee/leadership
+    // role takes precedence unless they are explicitly a caster archetype.
+    return "melee";
+  };
+  const assignedHosts=new Set();
+  aiHeroes.sort((a,b)=>{
+    const roleRank=u=>characterRole(u)==="caster"?0:characterRole(u)==="ranged"?1:2;
+    return roleRank(a)-roleRank(b)||(b.stats.Ld||0)-(a.stats.Ld||0);
+  }).forEach(hero=>{
+    const role=characterRole(hero),mounted=!!hero.mounted;
+    const candidates=aiHosts.filter(host=>!!host.isCavalry===mounted);
+    const score=host=>{
+      const already=(host.attachedCharacters||[]).filter(id=>units[id]?.models>0).length;
+      const ranged=!!host.hasRangedWeapon||host.kind==="archer"||host.type==="archers"||host.type==="dwarfThunderers"||host.type==="dwarfQuarrellers";
+      const melee=host.kind==="melee"||["swordsmen","dwarfInfantry","dwarfWarriors","dwarfLongbeards","dwarfIronbreakers","orcBoyz","skeletons","zombies","trolls"].includes(host.type)||host.isCavalry&&!ranged;
+      let fit=role==="caster"?(ranged?8:melee?2:0):role==="ranged"?(ranged?10:melee?-2:0):(melee?9:ranged?-3:1);
+      return fit-already*7+(assignedHosts.has(host.id)?-1:0)+Math.min(2,(host.models||1)/10);
+    };
+    const host=candidates.filter(h=>!h.attachedCharacters?.some(id=>units[id]?.models>0)).sort((a,b)=>score(b)-score(a))[0]
+      ||candidates.sort((a,b)=>score(b)-score(a))[0];
+    if(!host)return;
+    hero.attachedTo=host.id;hero.x=host.x;hero.y=host.y;
+    host.attachedCharacters=[...new Set([...(host.attachedCharacters||[]),hero.id])];
+    host.stats.M=Math.min(host.baseMove??host.stats.M,hero.stats.M);
+    assignedHosts.add(host.id);
   });
+  };
+  attachCharactersForSide("ai");
+  if(options.autoAttachCharacters)attachCharactersForSide("player");
   for(const side of ["player","ai"]){const eligible=Object.values(units).filter(u=>u.side===side&&u.isCharacter);const general=(faction==="undead"&&side==="player"?eligible.filter(u=>u.spellcaster):eligible).sort((a,b)=>b.stats.Ld-a.stats.Ld)[0];if(general)general.isGeneral=true;}
   return units;
 }

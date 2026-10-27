@@ -91,7 +91,7 @@ export function createWarbandExpedition({ $, getInventory, getBypass, startBattl
     if (run.state === "setup") {
       const factionLabel = document.createElement("label"); factionLabel.className = "faction-choice"; factionLabel.textContent = "Faction ";
       const select = document.createElement("select"); select.id = "warband-expedition-faction";
-      [["empire","Humans"],["highElves","High Elves"],["dwarfs","Dwarfs"],["greenskins","Greenskins"],["undead","Undead"]].forEach(([value,label]) => { const o=document.createElement("option");o.value=value;o.textContent=label;select.append(o); });
+      [["empire","Humans"],["highElves","Elves"],["dwarfs","Dwarfs"],["greenskins","Greenskins"],["undead","Undead"]].forEach(([value,label]) => { const o=document.createElement("option");o.value=value;o.textContent=label;select.append(o); });
       select.value = run.faction; select.addEventListener("change",()=>{run.faction=select.value;run.fighters=[];save();render();}); content.prepend(factionLabel); factionLabel.append(select);
       const models = inventory(); const picked = new Set(run.fighters.map(f=>f.collectionId));
       const list = document.createElement("div"); list.className = "warband-model-list";
