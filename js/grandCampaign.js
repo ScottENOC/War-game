@@ -2230,7 +2230,7 @@ function campaignSupplyPath(campaign,army){
  const friendly=id=>supplyOwnerAtNode(campaign,id)===owner;
  const queue=[],previous=new Map();for(const r of campaign.regions||[]){if(politicalOwner(r)===owner){const id="city-"+r.id;if(campaign.graph.nodes[id]){queue.push(id);previous.set(id,null);}}}
  while(queue.length){const at=queue.shift();if(at===start){const path=[];let cur=at;while(cur!==null){path.push(cur);cur=previous.get(cur);}path.reverse();return path.length-1<=campaignSupplyRange(army,campaign)?path:[];}
-  for(const e of campaign.graph.edges[at]||[]){if(previous.has(e.to))continue;if(!friendly(e.to))continue;previous.set(e.to,at);queue.push(e.to);}
+  for(const e of campaign.graph.edges[at]||[]){if(previous.has(e.to))continue;if(!friendly(e.to)&&e.to!==start)continue;previous.set(e.to,at);queue.push(e.to);}
  }
  return [];
 }
