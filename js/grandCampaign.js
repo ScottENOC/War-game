@@ -992,7 +992,22 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
    });
    campaign.factionStates.forEach(state=>{state.alive=true;});
    activeCampaign=campaign;
-   const eliminatedAt={},eliminationReasons={},errors=[],errorCounts={},turnLog=[];
+   const eliminatedAt={},eliminationReasons={},errors=[],errorCounts={},turnLog=[],decisionStats={},decisionLog=[];
+   const recordDecision=(faction,message,eventText)=>{
+    const text=String(message||"");
+    const combined=(text+" "+String(eventText||"")).trim();
+    const id=faction.id,name=faction.name;
+    const stats=decisionStats[id]||(decisionStats[id]={id,name,turns:0,attacks:0,rejectedAttacks:0,battleResults:0,territoryGains:0,territoryLosses:0,idleTurns:0,examples:[]});
+    stats.turns++;
+    let category="other";
+    if(/declines an unfavourable attack|too well defended|checks its charge|holds its defensive line/i.test(combined)){category="rejected-attack";stats.rejectedAttacks++;}
+    else if(/defeats|repels|wins .*battle|loses .*battle/i.test(eventText||"")){category="battle-result";stats.battleResults++;}
+    else if(/attacks |attacks!|wages war against|declares war on/i.test(text)){category="attack";stats.attacks++;}
+    else if(/earns .* pays .* upkeep|no hostile|remains passive|could not locate/i.test(text)){category="idle";stats.idleTurns++;}
+    const item={turn:campaign.turn,factionId:id,faction:name,category,message:text,event:category==="battle-result"?String(eventText||""):""};
+    if(category==="attack"||category==="rejected-attack"||category==="battle-result"||campaign.turn<=5)decisionLog.push(item);
+    if(stats.examples.length<8&&category!=="other")stats.examples.push("T"+campaign.turn+" "+category+": "+text+(item.event?" | "+item.event:""));
+   };
    const initialSnapshot=campaign.factionStates.filter(f=>!f.passive).map(f=>{const a=(campaign.armies||[]).find(x=>(x.owner||x.factionId)===f.id);return {id:f.id,name:f.name,homeRegion:f.homeRegion,homeOwner:politicalOwner(campaign.regions.find(r=>r.id===f.homeRegion)),namedCommander:f.namedCommander||null,rosterUnits:a?.roster?.length||0,models:(a?.roster||[]).reduce((n,u)=>n+Math.max(0,Number(u.models)||0),0),armyPoints:a?.points||0,strategicArmyPoints:campaignStrategicArmyPowerPoints(a,100)};});
    const recordError=message=>{const key=String(message||"Unknown error");errorCounts[key]=(errorCounts[key]||0)+1;if(errors.length<100)errors.push(key);};
    let outcome="turn-limit",turns=0,winner=null;
@@ -1015,7 +1030,14 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
      for(const id of campaign.factionTurnOrder||[]){
       const faction=campaign.factionStates.find(f=>f.id===id);
       if(!faction||!faction.alive||faction.passive||FACTION_BY_ID[id]?.passive)continue;
-      try{const message=runAIFactionTurn(campaign,faction);if(turn<=5)actions.push(faction.name+": "+String(message||"no action message"));}catch(e){recordError("Turn "+turn+" / "+faction.name+": "+String(e?.stack||e?.message||e));}
+      try{
+       const eventBefore=campaign.lastEvent||"";
+       const message=runAIFactionTurn(campaign,faction);
+       const eventAfter=campaign.lastEvent||"";
+       const eventText=eventAfter!==eventBefore?eventAfter:"";
+       if(turn<=5)actions.push(faction.name+": "+String(message||"no action message"));
+       recordDecision(faction,message,eventText);
+      }catch(e){recordError("Turn "+turn+" / "+faction.name+": "+String(e?.stack||e?.message||e));}
      }
      processCampaignLogistics(campaign);
     }catch(e){recordError("Turn "+turn+": "+String(e?.stack||e?.message||e));}
@@ -1027,12 +1049,17 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
      if(eliminatedAt[f.id]===turn)eliminatedThisTurn.push(f.name+" ("+eliminationReasons[f.id]+")");
     }
     const changes=campaign.regions.map((r,i)=>({region:r.name,from:ownersBefore[i].owner,to:politicalOwner(r)})).filter(x=>x.from!==x.to);
-    if(turn<=5||changes.length||eliminatedThisTurn.length)turnLog.push({turn,actions:turn<=5?actions:[],ownershipChanges:changes,eliminated:eliminatedThisTurn});
+    for(const change of changes){
+     if(change.to&&decisionStats[change.to])decisionStats[change.to].territoryGains++;
+     if(change.from&&decisionStats[change.from])decisionStats[change.from].territoryLosses++;
+    }
+    const turnDecisions=decisionLog.filter(d=>d.turn===turn);
+    if(turn<=5||changes.length||eliminatedThisTurn.length||turnDecisions.length)turnLog.push({turn,actions:turn<=5?actions:[],decisions:turnDecisions,ownershipChanges:changes,eliminated:eliminatedThisTurn});
     const end=checkEnd();if(end){outcome=end.outcome;winner=end.winner;break;}
    }
    const counts=cityCounts(),living=campaign.factionStates.filter(f=>f.alive&&!f.passive&&counts[f.id]>0).map(f=>({id:f.id,name:f.name,cities:counts[f.id],armyPoints:f.armyPoints||0,treasury:f.treasury||0})).sort((a,b)=>b.cities-a.cities);
    const eliminated=campaign.factionStates.filter(f=>!f.passive&&(!f.alive||!counts[f.id])).map(f=>({id:f.id,name:f.name,turn:eliminatedAt[f.id]||null,reason:eliminationReasons[f.id]||"elimination turn not recorded"})).sort((a,b)=>(a.turn||999)-(b.turn||999));
-   results.push({run:run+1,seed:20261022+run*7919,outcome,winner,turns,cities:counts,initialSnapshot,turnLog,living,eliminated,errors,errorCounts});
+   results.push({run:run+1,seed:20261022+run*7919,outcome,winner,turns,cities:counts,initialSnapshot,turnLog,decisionStats:Object.values(decisionStats).sort((a,b)=>b.attacks-a.attacks||b.rejectedAttacks-a.rejectedAttacks),decisionLog,living,eliminated,errors,errorCounts});
   }
  }finally{Math.random=oldRandom;activeCampaign=oldActive;}
  const outcomes={},factionWins={},factionSurvival={};
@@ -3338,7 +3365,11 @@ export function startGrandCampaign(){
    lines.push("  Living: "+(r.living.map(f=>f.name+" ("+f.cities+" cities, army "+f.armyPoints+", treasury "+f.treasury+")").join("; ")||"none"));
    lines.push("  Eliminated: "+(r.eliminated.map(f=>f.name+(f.turn?" at turn "+f.turn:" (elimination turn not recorded)")+" ["+(f.reason||"unknown reason")+"]").join("; ")||"none"));
    lines.push("  Initial faction state: "+(r.initialSnapshot||[]).map(f=>f.name+" {home "+f.homeRegion+" owned by "+f.homeOwner+", units "+f.rosterUnits+", models "+f.models+", points "+f.armyPoints+(f.strategicArmyPoints!==undefined?", strategic points "+f.strategicArmyPoints:"")+(f.namedCommander?", named commander "+f.namedCommander:"")+"}").join("; "));
-   lines.push("  Early-turn diagnostics:");
+   lines.push("  Decision summary (attacks / rejected attacks / battle results / city gains / city losses / idle turns):");
+   for(const d of r.decisionStats||[])lines.push("    "+d.name+": "+d.attacks+" / "+d.rejectedAttacks+" / "+d.battleResults+" / "+d.territoryGains+" / "+d.territoryLosses+" / "+d.idleTurns+" (logged turns "+d.turns+")");
+   lines.push("  Strategic decision log:");
+   for(const d of r.decisionLog||[])lines.push("    Turn "+d.turn+" | "+d.faction+" | "+d.category+" | "+d.message+(d.event?" | outcome: "+d.event:""));
+   lines.push("  Turn and territorial diagnostics:");
    for(const t of (r.turnLog||[])){lines.push("    Turn "+t.turn+" | ownership changes: "+(t.ownershipChanges.map(c=>c.region+": "+c.from+" -> "+c.to).join("; ")||"none")+" | eliminations: "+(t.eliminated.join("; ")||"none"));for(const a of t.actions||[])lines.push("      "+a);}
    lines.push("  Errors observed: "+Object.values(r.errorCounts||{}).reduce((a,b)=>a+b,0)+" (up to 100 example stack traces stored)");
   }
