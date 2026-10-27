@@ -92,7 +92,7 @@ function findRouteCore(u,target,desiredGap){
 }
 function aiNow(){return typeof performance!=="undefined"&&typeof performance.now==="function"?performance.now():Date.now();}
 function findRoute(u,target,desiredGap){
- const started=aiNow();
+ const started=aiNow();u.aiLastRouteSearch=null;
  try{return findRouteCore(u,target,desiredGap);}
  finally{
   if(S.aiBattleLab){
