@@ -114,10 +114,25 @@ if(S.phase==="movement"&&u?.spellcaster&&u.side==="player"){const remaining=Math
         btn("Reverse march (4x movement cost)","down",()=>{S.movementOrder="backward";render();},!u||u.side!=="player",S.movementOrder==="backward");
       }
       if(S.moreMovementOptions){
-      const turnCost=u&&shape&&PX_PER_IN?shape(u).front/PX_PER_IN()*Math.PI/4:1;
-      btn("Turn in place left 45° (cost "+turnCost.toFixed(1)+" Move)", "↶", () => {if(!u)return;const before=captureMovementState(u),f=u.facing-Math.PI/4,cost=u.skirmishing?0:turnCost;const reversing=canReverseTurn(S,u,"left");if(u.moveUsed+cost>u.stats.M&&!reversing){say("Not enough movement remaining to turn.");return;}if(canPlace(u,u.x,u.y,f)){u.facing=f;u.moveUsed+=cost;u.moved=true;const result=commitMovementAction(S,u,before,"turn-left");say(result==="reversed"?u.name+" reverses its previous turn; no movement spent.":u.name+" turns in place left 45°"+(cost?" (−"+cost.toFixed(1)+" Move).":"."));render();}else say("There is not enough room to turn here.");},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.charged||u.shot||u.moveUsed+(u.skirmishing?0:turnCost)>u.stats.M&&!canReverseTurn(S,u,"left"));
-      btn("Turn in place right 45° (cost "+turnCost.toFixed(1)+" Move)", "↷", () => {if(!u)return;const before=captureMovementState(u),f=u.facing+Math.PI/4,cost=u.skirmishing?0:turnCost;const reversing=canReverseTurn(S,u,"right");if(u.moveUsed+cost>u.stats.M&&!reversing){say("Not enough movement remaining to turn.");return;}if(canPlace(u,u.x,u.y,f)){u.facing=f;u.moveUsed+=cost;u.moved=true;const result=commitMovementAction(S,u,before,"turn-right");say(result==="reversed"?u.name+" reverses its previous turn; no movement spent.":u.name+" turns in place right 45°"+(cost?" (−"+cost.toFixed(1)+" Move).":"."));render();}else say("There is not enough room to turn here.");},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.charged||u.shot||u.moveUsed+(u.skirmishing?0:turnCost)>u.stats.M&&!canReverseTurn(S,u,"right"));
-      btn("Widen formation", "＋", () => {if(u&&u.formationWidth<Math.max(1,u.models)&&u.moveUsed+u.stats.M/2<=u.stats.M){const before=captureMovementState(u);u.formationWidth++;if(canPlace(u,u.x,u.y,u.facing)){u.moveUsed+=u.stats.M/2;u.moved=true;commitMovementAction(S,u,before,"widen-formation");}else{u.formationWidth--;}render();}},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.shot||u.formationWidth>=u.models||u.moveUsed+u.stats.M/2>u.stats.M);
+      const pivotCost=u?u.stats.M*.75:0,canPivot=!!u&&u.side==="player"&&!u.activated&&!u.engaged&&!u.fled&&!u.charged&&!u.shot&&u.moveUsed<=u.stats.M*.25+.001;
+       const pivotLabel=document.createElement("label");pivotLabel.className="movement-pivot-control";pivotLabel.style.cssText="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 6px;font-size:12px";
+       pivotLabel.append(document.createTextNode("Pivot angle (°)"));
+       const pivotInput=document.createElement("input");pivotInput.type="number";pivotInput.min="-180";pivotInput.max="180";pivotInput.step="1";pivotInput.value="180";pivotInput.inputMode="numeric";pivotInput.setAttribute("aria-label","Pivot angle in degrees");pivotInput.style.cssText="width:68px;min-height:34px";
+       pivotLabel.append(pivotInput);el.append(pivotLabel);
+       btn("Pivot around centre line (cost 75% of starting Move)", "⤾", () => {
+         if(!u)return;
+         const degrees=Number(pivotInput.value);
+         if(!Number.isFinite(degrees)||degrees < -180||degrees>180||Math.abs(degrees)<.5){say("Choose a pivot angle between −180° and 180°, excluding 0°.");return;}
+         const cost=u.stats.M*.75;
+         if(u.stats.M-u.moveUsed+0.001<cost){say("Pivoting requires at least 75% of starting movement remaining.");return;}
+         const before=captureMovementState(S,u),f=u.facing+degrees*Math.PI/180;
+         if(!canPlace(u,u.x,u.y,f)){say("There is not enough room to pivot the unit into that facing.");return;}
+         u.facing=Math.atan2(Math.sin(f),Math.cos(f));u.moveUsed+=cost;u.moved=true;
+         commitMovementAction(S,u,before,"pivot");
+         say(u.name+" pivots "+(degrees>0?"right ":"left ")+Math.abs(degrees)+"° around its centre line (−"+cost.toFixed(2)+" Move).");
+         render();
+       },!canPivot||!u||u.stats.M-u.moveUsed+0.001<pivotCost);
+       btn("Widen formation", "＋", () => {if(u&&u.formationWidth<Math.max(1,u.models)&&u.moveUsed+u.stats.M/2<=u.stats.M){const before=captureMovementState(u);u.formationWidth++;if(canPlace(u,u.x,u.y,u.facing)){u.moveUsed+=u.stats.M/2;u.moved=true;commitMovementAction(S,u,before,"widen-formation");}else{u.formationWidth--;}render();}},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.shot||u.formationWidth>=u.models||u.moveUsed+u.stats.M/2>u.stats.M);
       btn("Narrow formation", "－", () => {if(u&&u.formationWidth>1&&u.moveUsed+u.stats.M/2<=u.stats.M){const before=captureMovementState(u);u.formationWidth--;if(canPlace(u,u.x,u.y,u.facing)){u.moveUsed+=u.stats.M/2;u.moved=true;commitMovementAction(S,u,before,"narrow-formation");}else{u.formationWidth++;}render();}},!u||u.side!=="player"||u.activated||u.engaged||u.fled||u.shot||u.formationWidth<=1||u.moveUsed+u.stats.M/2>u.stats.M);
       }
       if(u?.isDragon)btn(S.mode==="dragonBreathAim"?"Cancel breath aim":u.breathUsed?"Breath expended":"Aim breath attack","🔥",()=>{S.mode=S.mode==="dragonBreathAim"?null:"dragonBreathAim";S.dragonBreathAim=null;say(S.mode==="dragonBreathAim"?"Drag from the dragon toward the centre of the breath cone. Range 12 inches, 45° wide; each model in the cone is hit automatically. This can be used once per battle.":"Breath aiming cancelled.");render();},!u||u.side!=="player"||u.activated||u.breathUsed||u.shot||u.engaged||u.fled,S.mode==="dragonBreathAim");
