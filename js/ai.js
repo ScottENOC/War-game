@@ -209,7 +209,7 @@ function aiPivotAndAdvance(u,target,retargeted=null){
     say(u.name+" cannot find a passable route to "+target.name+" this turn.");return false;
   }
   if(!route.length)return changedFormation;
-  const frontIn=shape(u).front/PX_PER_IN();let travelled=0,lastMovementAttempt=null;
+  const frontIn=shape(u).front/PX_PER_IN();let travelled=0,turned=false,lastMovementAttempt=null;
   for(const point of route){
     const startX=u.x,startY=u.y,startFacing=u.facing,startUsed=u.moveUsed;
     const angle=point.dir*Math.PI/4,turn=normalizeTurn(angle-u.facing),turnCost=Math.abs(turn)*frontIn;
@@ -235,7 +235,7 @@ function aiPivotAndAdvance(u,target,retargeted=null){
         }
         lastMovementAttempt.partialTurnCandidatesRejected=rejected;
         if(accepted){
-          u.facing=accepted.facing;u.moveUsed+=Math.abs(accepted.turn)*frontIn;u.moved=true;
+          u.facing=accepted.facing;u.moveUsed+=Math.abs(accepted.turn)*frontIn;u.moved=true;turned=Math.abs(accepted.turn)>.001;
           lastMovementAttempt.stage=accepted.fraction===1?"partial-turn-budget":"partial-turn-budget-plan-b";
           lastMovementAttempt.partialTurnRadians=Number(accepted.turn.toFixed(4));
           lastMovementAttempt.partialTurnFraction=accepted.fraction;
@@ -247,7 +247,7 @@ function aiPivotAndAdvance(u,target,retargeted=null){
       break;
     }
     if(!turnPlaceable){lastMovementAttempt.stage="turn-position-blocked";break;}
-    u.facing=angle;u.moveUsed+=turnCost;u.moved=true;
+    u.facing=angle;u.moveUsed+=turnCost;u.moved=true;turned=turned||Math.abs(turn)>.001;
     const remaining=Math.max(0,u.stats.M-u.moveUsed);
     if(moveCost<=remaining+.001&&endpointPlaceable){
       u.x=point.x;u.y=point.y;u.moveUsed+=moveCost;travelled+=moveCost;
@@ -291,7 +291,7 @@ function aiPivotAndAdvance(u,target,retargeted=null){
     break;
   }
   if(travelled>0){say(u.name+" advances "+travelled.toFixed(1)+'" along a passable route toward '+target.name+".");u.aiStuckTargetId=null;u.aiStagnantTurns=0;}
-  else if(!changedFormation){
+  else if(!changedFormation&&!turned){
     if(S.aiLabDiagnosticsEnabled){const first=route[0]||null,firstAngle=first?first.dir*Math.PI/4:u.facing,firstTurn=first?Math.abs(normalizeTurn(firstAngle-u.facing))*shape(u).front/PX_PER_IN():0,firstMove=first?terrainMovementCost(terrain(),u.x,u.y,first.x,first.y,BATTLEFIELD_WIDTH_IN,fieldHeightIn(),BATTLEFIELD_WIDTH_IN,fieldHeightIn()):0;S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-stagnation",unit:u.name,target:target.name,reason:"route-found-but-no-step-applied",routeLength:route.length,firstStep:first?{x:Number(first.x.toFixed(3)),y:Number(first.y.toFixed(3)),dir:first.dir,canPlace:canPlace(u,first.x,first.y,firstAngle),turnCost:Number(firstTurn.toFixed(2)),moveCost:Number(firstMove.toFixed(2)),totalCost:Number((firstTurn+firstMove).toFixed(2)),remaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2))}:null,movementAttempt:lastMovementAttempt,movementRemaining:Number(Math.max(0,u.stats.M-u.moveUsed).toFixed(2)),lastRouteSearch:u.aiLastRouteSearch||null});}
     const stuckContext=aiRecordStagnation(u,target,"route-found-but-no-step-applied");
     if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"stuck-context",unit:u.name,...stuckContext});
@@ -304,7 +304,8 @@ function aiPivotAndAdvance(u,target,retargeted=null){
     }
     say(u.name+" cannot make progress toward "+target.name+" this turn; it will reconsider its target and route next turn.");
   }
-  return travelled>0||changedFormation;
+  if(turned&&!travelled&&!changedFormation){u.aiStuckTargetId=null;u.aiStagnantTurns=0;if(S.aiLabDiagnosticsEnabled)S.aiLabDiagnostics.push({turn:S.turn,phase:S.phase,side,kind:"movement-turn-only",unit:u.name,target:target.name,reason:"legal-turn-applied-but-no-movement-budget-left",movementUsed:Number(u.moveUsed.toFixed(2)),movementBudget:Number(u.stats.M.toFixed(2)),facing:Number(u.facing.toFixed(3))});}
+  return travelled>0||changedFormation||turned;
 }
 function aiSiegeLadder(u){
   if(S.battleType!=="siege"||u.side!==side||u.isCharacter||u.isCavalry||u.isSiegeEngine||u.models<1)return false;
