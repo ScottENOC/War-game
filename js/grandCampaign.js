@@ -1017,7 +1017,7 @@ function runCampaignAiLab({runs=10,maxTurns=100}={}){
     const battleResult=/defeats|repels|wins .*battle|loses .*battle/i.test(eventText||"");
     const siege=/begins a siege|maintains the siege|assaults .* after starving|abandons the siege/i.test(text);
     const raid=/raids .*supply line|moves to threaten .*supply line/i.test(text);
-    const defence=/prioritises defending|diverts its army to relieve|reinforce its threatened capital|rushes to relieve the siege|holds .* behind its defences|sallies out/i.test(text);
+    const defence=/prioritises defending|diverts its army to relieve|reinforce its threatened capital|rushes to relieve the siege|holds .* behind its defences|sallies out|protect .* from a raid|fights to defend/i.test(text);
     const idle=/earns .* pays .* upkeep|no hostile|remains passive|could not locate/i.test(text);
     if(attack)stats.attacks++;
     if(rejected)stats.rejectedAttacks++;
@@ -3350,12 +3350,13 @@ function campaignAiRaidSupplyLine(campaign,army){
  for(const enemy of campaign.armies||[]){
   const owner=enemy.owner||enemy.factionId;if(owner===own||!enemy.roster?.length)continue;
   const race=FACTION_BY_ID[owner]?.race||campaign.factionStates?.find(f=>f.id===owner)?.race||"human";
-  if(race==="undead"||campaignAreAllied(campaign,own,owner))continue;
+  if(race==="undead"||campaignAreAllied(campaign,own,owner)||!(campaign.activeWars||[]).includes(campaignWarKey(own,owner)))continue;
   const supply=campaignSupplyPath(campaign,enemy);if(!supply.length)continue;
-  const approach=new Set(supply);
+  const approach=new Set();
   for(const id of supply)for(const edge of graph.edges[id]||[])approach.add(edge.to);
   for(const nodeId of approach){
    if(!graph.nodes[nodeId])continue;
+   if(nodeId.startsWith("city-")&&politicalOwner(campaign.regions.find(r=>r.id===graph.nodes[nodeId].region))!==own)continue;
    const path=campaignMovementPath(campaign,from,nodeId);if(!path)continue;
    candidates.push({enemy,nodeId,path,cost:campaignPathCost(campaign,path)});
   }
